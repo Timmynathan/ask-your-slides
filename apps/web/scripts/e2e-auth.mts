@@ -13,8 +13,9 @@ loadEnvConfig(path.resolve(import.meta.dirname, "../../.."));
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const PUBLISHABLE = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const SECRET = process.env.SUPABASE_SECRET_KEY!;
+// E2E_BASE_URL=http://localhost:3000 tests an already-running server (e.g. your `npm run dev`).
 const PORT = 3100 + Math.floor(Math.random() * 500);
-const BASE = `http://localhost:${PORT}`;
+const BASE = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
 
 const admin = createClient(URL_, SECRET, { auth: { persistSession: false, autoRefreshToken: false } });
 const anon = createClient(URL_, PUBLISHABLE, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -74,7 +75,7 @@ async function main() {
   for (const k of Object.keys(serverEnv)) {
     if (/SUPABASE|ANTHROPIC|VOYAGE|DATABASE_URL|PRIVACY/.test(k)) delete serverEnv[k];
   }
-  const server = spawn("npx", ["next", process.env.E2E_MODE === "dev" ? "dev" : "start", "-p", String(PORT)], {
+  const server = process.env.E2E_BASE_URL ? null : spawn("npx", ["next", "start", "-p", String(PORT)], {
     cwd: path.resolve(import.meta.dirname, ".."), stdio: "ignore", env: serverEnv,
   });
   const testEmail = `e2e-${Date.now()}@pau.edu.ng`;
@@ -118,6 +119,12 @@ async function main() {
     const thirtyDays = 60 * 60 * 24 * 30;
     check(jar.maxAges.length > 0 && jar.maxAges.every((a) => a === thirtyDays), "session cookie lasts 30 days", `max-age ${jar.maxAges.join(",")}`);
 
+    // 5a. The display-name step renders for a first-time student.
+    res = await fetch(`${BASE}/welcome`, { headers: { cookie: jar.header() }, redirect: "manual" });
+    jar.take(res);
+    const welcome = await res.text();
+    check(res.status === 200 && welcome.includes("What should we call you"), "first-time student sees the display-name step", String(res.status));
+
     // 5. Signed in: dashboard renders with the student's email and the course list (read through RLS).
     res = await fetch(`${BASE}/dashboard`, { headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
@@ -138,7 +145,7 @@ async function main() {
     check(res.status === 307, "after sign-out, /dashboard redirects to sign-in", String(res.status));
   } finally {
     await deleteUserByEmail(testEmail);
-    server.kill();
+    server?.kill();
   }
   console.log(failures ? `\n${failures} check(s) failed` : "\nPhase 3 end-to-end: all checks passed.");
   process.exit(failures ? 1 : 0);
