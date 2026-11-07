@@ -60,13 +60,35 @@ npm run ingest:verify -- --course CSC420 --sample 30   # checks + random slides 
 - `verify` fails if the database doesn't match the manifest, any slide lacks an embedding or image,
   or fewer than 80% of topics are found by searching their own title.
 
+## Web app and sign-in
+
+```bash
+npm --prefix apps/web install
+npm run dev            # http://localhost:3000 (reads the repo-root .env)
+```
+
+Sign-in is a 6-digit email code, `@pau.edu.ng` only, enforced twice: the `/api/auth/otp` route
+rejects other domains before Supabase is called, and the `public.hook_before_user_created` auth hook
+makes Supabase itself refuse to create non-PAU accounts. Sessions last 30 days from last use.
+
+One-time Supabase dashboard settings (can't be set from a migration):
+
+1. **Authentication → Hooks → Before User Created** → Postgres → `public.hook_before_user_created`.
+2. **Authentication → Email Templates**: both **Confirm signup** and **Magic Link** must show the
+   code, e.g. `Your PAU Study Assistant code is {{ .Token }}`. (New students get the first, returning
+   students the second.)
+3. **Authentication → SMTP**: Resend, sender `noreply@mail.askyourslides.com` (done).
+
+`npm run test:e2e:auth` signs a temporary test student in and out against the real project without
+sending any email, checks the auth hook, then deletes the test user.
+
 ## Status
 
 | Phase | Scope | Proof |
 |---|---|---|
 | 1 ✅ | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` (19 checks, passing on hosted Supabase) |
 | 2 ✅ | Ingestion CLI (manifest-driven) | `npm run test:ingest` (offline) + `npm run ingest:verify -- --course CSC420` |
-| 3 | `@pau.edu.ng` OTP auth | — |
+| 3 ✅ | `@pau.edu.ng` OTP auth | `npm run test:web` + `npm run test:e2e:auth` + `npm run test:db` |
 | 4 | `/api/chat` agent, citations, traces | — |
 | 5 | Dashboard + chat UI | — |
 | 6 | Summaries, quiz, feedback, cap | — |

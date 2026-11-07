@@ -6,6 +6,10 @@
     "test:db": "bash scripts/test-db.sh",
     "ingest": "uv run --project ingestion python ingestion/ingest.py",
     "ingest:verify": "uv run --project ingestion python ingestion/verify.py",
-    "test:ingest": "cd ingestion && uv run pytest -q"
+    "test:ingest": "cd ingestion && uv run pytest -q",
+    "dev": "npm --prefix apps/web run dev",
+    "build": "npm --prefix apps/web run build",
+    "test:web": "npm --prefix apps/web test",
+    "test:e2e:auth": "npm --prefix apps/web run build && npm --prefix apps/web run test:e2e:auth"
   }
 }
