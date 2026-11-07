@@ -114,8 +114,22 @@ async function main() {
     await page.goto(`${BASE}/dashboard`);
     await page.waitForURL(/\/study\/[A-Z]{3}\d{3}/);
     check(true, "dashboard opens the first course", new URL(page.url()).pathname);
-    await page.getByRole("link", { name: /CSC 420/ }).click();
-    await page.waitForURL(/\/study\/CSC420/);
+    // Switching courses happens in the browser: no server round trip, sidebar never disappears.
+    const sidebarHandle = await page.locator("aside:visible").first().elementHandle();
+    let serverHits = 0;
+    const countHits = (r: { url(): string }) => { if (/\/study\/|_rsc=/.test(r.url())) serverHits++; };
+    page.on("request", countHits);
+    const t0 = Date.now();
+    await page.getByRole("button", { name: /CSC 409/ }).click();
+    await page.getByRole("button", { name: "Foundations of research", exact: true }).waitFor();
+    await page.getByRole("button", { name: /CSC 420/ }).click();
+    await page.getByRole("button", { name: "Transactions and indexing", exact: true }).waitFor();
+    const switchMs = Date.now() - t0;
+    page.off("request", countHits);
+    check(serverHits === 0, "switching courses makes no server request (no loading screen)", `${serverHits} requests`);
+    check(await sidebarHandle!.evaluate((el) => el.isConnected), "sidebar stays on screen while switching");
+    check(/\/study\/CSC420$/.test(new URL(page.url()).pathname), "URL follows the selected course", new URL(page.url()).pathname);
+    check(switchMs < 1500, "two course switches feel instant", `${switchMs} ms incl. animations`);
     await page.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     check(await page.getByRole("button", { name: "Summarize this topic" }).isVisible(), "topic empty state shows the three starters");

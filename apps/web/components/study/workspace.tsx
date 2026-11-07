@@ -9,45 +9,48 @@ import { SlidePreview } from "./slide-preview";
 
 // Laptop first (most students study on a laptop): sidebar | chat | slide preview side by side.
 // Below lg the sidebar is a drawer and the preview a bottom sheet.
+//
+// Courses, topics and chats are all in memory, so switching between them never waits on the
+// server: the sidebar stays put and the chat area animates in (.panel-in in globals.css).
 export function Workspace(data: WorkspaceData) {
-  const { course, topics } = data;
+  const [courseId, setCourseId] = useState(data.initialCourseId);
   const [chats, setChats] = useState<ChatItem[]>(data.chats);
   const [topicId, setTopicId] = useState<string | null>(data.initialTopicId);
   const [chatId, setChatId] = useState<string | null>(data.initialChatId);
-  // Remounts the chat panel only when the student picks a chat or starts a new one, never when a
-  // brand-new chat gets its id mid-stream.
-  const [panelKey, setPanelKey] = useState(() => data.initialChatId ?? `new-${data.initialTopicId ?? "course"}`);
+  // Remounts (and re-animates) the chat panel when the student picks a course, topic or chat,
+  // never when a brand-new chat gets its id mid-stream.
+  const [panelKey, setPanelKey] = useState(() => data.initialChatId ?? `new-${data.initialCourseId}-${data.initialTopicId ?? "course"}`);
   const [preview, setPreview] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [used, setUsed] = useState(data.usage.used);
   const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
 
+  const course = useMemo(() => data.courses.find((c) => c.id === courseId)!, [data.courses, courseId]);
+  const topics = useMemo(() => data.topics.filter((t) => t.course_id === courseId), [data.topics, courseId]);
   const topic = useMemo(() => topics.find((t) => t.id === topicId) ?? null, [topics, topicId]);
 
-  // Keep the URL shareable/reloadable without remounting anything.
+  // Keep the URL shareable/reloadable without a navigation.
   useEffect(() => {
     const params = new URLSearchParams();
     if (topic) params.set("topic", String(topic.order));
     if (chatId) params.set("chat", chatId);
     const qs = params.toString();
-    window.history.replaceState(null, "", `/study/${course.code}${qs ? `?${qs}` : ""}`);
+    window.history.replaceState(window.history.state, "", `/study/${course.code}${qs ? `?${qs}` : ""}`);
+    document.title = `${displayCode(course.code)}${topic ? ` · ${topic.title}` : ""} · PAU Study Assistant`;
   }, [course.code, topic, chatId]);
 
-  const openScope = useCallback((id: string | null) => {
-    setTopicId(id);
-    setChatId(null);
-    setPanelKey(`new-${id ?? "course"}-${Date.now()}`);
+  const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {
+    setCourseId(next.courseId);
+    setTopicId(next.topicId);
+    setChatId(next.chatId);
+    setPanelKey(next.chatId ?? `new-${next.courseId}-${next.topicId ?? "course"}-${Date.now()}`);
     setPreview(null);
     setDrawerOpen(false);
   }, []);
 
-  const openChat = useCallback((chat: ChatItem) => {
-    setTopicId(chat.topic_id);
-    setChatId(chat.id);
-    setPanelKey(chat.id);
-    setPreview(null);
-    setDrawerOpen(false);
-  }, []);
+  const openCourse = useCallback((id: string) => show({ courseId: id, topicId: null, chatId: null }), [show]);
+  const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
+  const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
 
   const onChatCreated = useCallback((chat: ChatItem) => {
     setChats((prev) => [chat, ...prev]);
@@ -70,23 +73,24 @@ export function Workspace(data: WorkspaceData) {
     <div className="flex h-dvh w-full overflow-hidden bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       {/* Sidebar: fixed column on laptops, drawer below lg */}
       <div
-        className={`fixed inset-0 z-30 bg-black/30 lg:hidden ${drawerOpen ? "block" : "hidden"}`}
+        className={`fixed inset-0 z-30 bg-black/30 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
         onClick={() => setDrawerOpen(false)}
         aria-hidden
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[288px] transform border-r border-neutral-200 bg-neutral-50 transition-transform dark:border-neutral-800 dark:bg-neutral-900 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-[288px] transform border-r border-neutral-200 bg-neutral-50 transition-transform duration-200 ease-out dark:border-neutral-800 dark:bg-neutral-900 lg:static lg:translate-x-0 ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <Sidebar
           courses={data.courses}
-          course={course}
-          topics={topics}
+          topics={data.topics}
           chats={chats}
+          courseId={courseId}
           topicId={topicId}
           chatId={chatId}
           user={data.user}
+          onOpenCourse={openCourse}
           onOpenScope={openScope}
           onOpenChat={openChat}
         />
@@ -103,7 +107,7 @@ export function Workspace(data: WorkspaceData) {
               <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
             </svg>
           </button>
-          <div className="min-w-0">
+          <div key={`${courseId}-${topicId ?? "course"}`} className="title-in min-w-0">
             <p className="truncate text-sm font-semibold">
               {displayCode(course.code)} · {course.title}
             </p>
@@ -111,18 +115,19 @@ export function Workspace(data: WorkspaceData) {
           </div>
         </header>
 
-        <ChatPanel
-          key={panelKey}
-          course={course}
-          topic={topic}
-          chatId={chatId}
-          remaining={remaining}
-          onRemaining={onRemaining}
-          onChatCreated={onChatCreated}
-          onChatActive={onChatActive}
-          onCite={setPreview}
-          prefill={prefill}
-        />
+        <div key={panelKey} className="panel-in flex min-h-0 flex-1 flex-col">
+          <ChatPanel
+            course={course}
+            topic={topic}
+            chatId={chatId}
+            remaining={remaining}
+            onRemaining={onRemaining}
+            onChatCreated={onChatCreated}
+            onChatActive={onChatActive}
+            onCite={setPreview}
+            prefill={prefill}
+          />
+        </div>
       </main>
 
       {preview && (
