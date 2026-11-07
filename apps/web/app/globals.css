@@ -232,3 +232,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .demo-highlight { transition: none; }
 }
+
+/* Hero "more below" cue */
+@keyframes scroll-cue {
+  0%, 100% { transform: translate(-50%, 0); opacity: 0.6; }
+  50% { transform: translate(-50%, 6px); opacity: 1; }
+}
+.scroll-cue { animation: scroll-cue 1.8s ease-in-out infinite; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue { animation: none; }
+  html { scroll-behavior: auto; }
+}

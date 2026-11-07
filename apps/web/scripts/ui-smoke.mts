@@ -135,6 +135,13 @@ async function main() {
     const headingFont = await lp.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
     check(/Bitter/i.test(headingFont), "headings use Bitter", headingFont.slice(0, 40));
     await shot(lp, "0-landing");
+    // The demo waits until it is on screen; "See how it works" takes visitors there.
+    const typedBefore = await lp.locator("#features").getByText(/^What is a B\+/).count();
+    await lp.getByRole("link", { name: "See how it works", exact: true }).click();
+    await lp.waitForTimeout(3200);
+    const userBubble = await lp.locator("#features").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
+    check(typedBefore === 0 && userBubble === 1, "'See how it works' scrolls to the demo, which then plays from the start", `before ${typedBefore}, sent ${userBubble}`);
+    await lp.goto(`${BASE}/`);
     await lp.getByRole("link", { name: "Try for free" }).first().click();
     await lp.waitForURL(/\/sign-in\?start=1/);
     const codeStep = await lp.getByRole("button", { name: "Send code" }).waitFor({ timeout: 10000 }).then(() => true, () => false);

@@ -3,8 +3,8 @@
 // Landing showcase: a student types a question, the study partner pulls up the exact slide,
 // highlights the sentence that answers it, and replies with that sentence, cited.
 // Sample content in the style of the PAU decks: no real lecturer slide on the public page (PRD §16).
-// Plays as a loop; with reduced motion it shows the finished state.
-import { useEffect, useState } from "react";
+// Starts when scrolled into view, then loops; with reduced motion it shows the finished state.
+import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/mascot/mascot";
 
 const QUESTION = "What is a B+ tree index?";
@@ -16,8 +16,21 @@ const TIMING = { typePerChar: 70, afterType: 450, thinking: 1100, slide: 900, hi
 export function ChatDemo() {
   const [typed, setTyped] = useState(0);
   const [phase, setPhase] = useState(0);
+  const [inView, setInView] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  // Start only when the demo is on screen, so visitors see it from the first keystroke instead of
+  // arriving mid-loop.
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => entry.isIntersecting && setInView(true), { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
+    if (!inView) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const id = setTimeout(() => {
         setTyped(QUESTION.length);
@@ -42,11 +55,11 @@ export function ChatDemo() {
     };
     run();
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [inView]);
 
   const sent = phase >= 1;
   return (
-    <div className="mx-auto w-full max-w-[540px] overflow-hidden rounded-[22px] bg-white text-left shadow-xl ring-1 ring-black/10" aria-hidden>
+    <div ref={box} className="mx-auto w-full max-w-[540px] overflow-hidden rounded-[22px] bg-white text-left shadow-xl ring-1 ring-black/10" aria-hidden>
       {/* window bar */}
       <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-black/15" />

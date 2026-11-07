@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 // Landing page for signed-out visitors (signed-in students are sent to their courses by proxy.ts).
-// Structure follows studyfetch.com: banner, nav, hero, PAU courses, why us, steps, features, partners,
+// Structure follows studyfetch.com: banner, nav, hero, PAU courses, why us, how it works (demo), steps, partners,
 // closing call to action, footer. Sections with no honest content for us (user counts, research
 // claims, testimonials, pricing) are left out.
 
@@ -36,7 +36,7 @@ export default async function Landing() {
           </Link>
           <div className="hidden items-center gap-8 md:flex">
             <a href="#why" className="type-menu hover:opacity-70">Why us</a>
-            <a href="#features" className="type-menu hover:opacity-70">Features</a>
+            <a href="#features" className="type-menu hover:opacity-70">How it works</a>
             <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
           </div>
           <div className="flex items-center gap-2">
@@ -67,12 +67,23 @@ export default async function Landing() {
           >
             Try for free
           </Link>
-          <p className="mt-4 text-sm text-muted">
+          <a href="#features" className="mt-5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-medium text-brand hover:bg-pau-50">
+            See how it works
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+              <path d="M8 3v10M3.5 8.5 8 13l4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+          <p className="mt-2 text-sm text-muted">
             Already have an account?{" "}
             <Link href="/sign-in" className="text-ink underline underline-offset-4">
               Log in
             </Link>
           </p>
+          <a href="#features" aria-label="Scroll to see how it works" className="scroll-cue absolute bottom-5 left-1/2 hidden -translate-x-1/2 rounded-full p-2 text-muted hover:text-ink sm:block">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+              <path d="M5 8l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
           <BooksDoodle className="pointer-events-none absolute bottom-6 left-[4%] w-40 text-black sm:w-56 lg:left-[12%] lg:w-64 dark:text-[#faf9f5]" />
           <StudyDeskDoodle className="pointer-events-none absolute -right-6 bottom-4 w-56 text-black sm:right-0 sm:w-80 lg:right-[8%] lg:w-[400px] dark:text-[#faf9f5]" />
         </section>
@@ -137,25 +148,6 @@ export default async function Landing() {
                 ))}
               </ul>
             </div>
-          </div>
-        </section>
-
-        {/* Steps */}
-        <section className="mx-auto max-w-6xl px-5 py-20">
-          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Start studying in seconds</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-muted">No downloading decks, no uploading files, no starting over in a new chat.</p>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {[
-              ["1", "Sign in with your PAU email", "One code to confirm it's you, then a password for next time."],
-              ["2", "Choose your study partner", "Tobi, Ada, Dr. Musa or Zara: same slides, four ways of explaining."],
-              ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
-            ].map(([n, title, body]) => (
-              <div key={n} className="rounded-[25px] bg-card p-7 ring-1 ring-line">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-pau-100 font-heading text-lg font-semibold text-pau-800">{n}</span>
-                <h3 className="mt-5 font-heading text-xl font-semibold text-ink">{title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>
-              </div>
-            ))}
           </div>
         </section>
 
@@ -225,6 +217,25 @@ export default async function Landing() {
           </div>
         </section>
 
+        {/* Steps */}
+        <section className="mx-auto max-w-6xl px-5 py-20">
+          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Start studying in seconds</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-muted">No downloading decks, no uploading files, no starting over in a new chat.</p>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {[
+              ["1", "Sign in with your PAU email", "One code to confirm it's you, then a password for next time."],
+              ["2", "Choose your study partner", "Tobi, Ada, Dr. Musa or Zara: same slides, four ways of explaining."],
+              ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
+            ].map(([n, title, body]) => (
+              <div key={n} className="rounded-[25px] bg-card p-7 ring-1 ring-line">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-pau-100 font-heading text-lg font-semibold text-pau-800">{n}</span>
+                <h3 className="mt-5 font-heading text-xl font-semibold text-ink">{title}</h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Partners */}
         <section id="partners" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20">
           <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Meet your study partners</h2>
@@ -285,7 +296,7 @@ export default async function Landing() {
           <div className="flex gap-10 text-sm">
             <div className="space-y-2">
               <p className="font-medium text-ink">Product</p>
-              <a href="#features" className="block text-muted hover:text-ink">Features</a>
+              <a href="#features" className="block text-muted hover:text-ink">How it works</a>
               <a href="#partners" className="block text-muted hover:text-ink">Study partners</a>
             </div>
             <div className="space-y-2">
