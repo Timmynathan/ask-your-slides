@@ -10,7 +10,7 @@ apps/web/        Next.js app (phases 3–6)
 ingestion/       Python slide ingestion CLI (phase 2)
 supabase/        migrations (schema, RLS, match_slides) and SQL tests
 evals/           golden set + Proofline trace export (phase 4+)
-data/            slides + courses.yaml — git-ignored, never committed
+data/            courses.yaml, manifest.yaml, slides/ — git-ignored, never committed
 ```
 
 ## Prerequisites (macOS)
@@ -40,7 +40,7 @@ uv python install 3.12
 
 | Phase | Scope | Proof |
 |---|---|---|
-| 1 ✅ | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` (14 checks, passing on hosted Supabase) |
+| 1 ✅ | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` (19 checks, passing on hosted Supabase) |
 | 2 | Ingestion CLI | — |
 | 3 | `@pau.edu.ng` OTP auth | — |
 | 4 | `/api/chat` agent, citations, traces | — |
@@ -49,7 +49,10 @@ uv python install 3.12
 
 ## Notes
 
-- **Citations** use short slide keys, `[[s:CSC401-04-12]]` = course CSC401, deck 04, slide 12.
-- **Deck order** comes from the filename prefix (`01-`, `02-`) and is only used for sorting. It is
-  not shown as a week number, because lecturers number files inconsistently.
+- **Structure** comes from `data/manifest.yaml`: course → topics → materials. Each material has a
+  `kind` (slides, notes, reading, practical, outline, other, skipped). `skipped` is never ingested.
+- **Chats** are whole-course (`topic_id` null) or per topic. Topic chats search the topic first and
+  fall back to the whole course with a visible label.
+- **Citations** use short slide keys, `[[s:CSC420-02-12]]` = course CSC420, material 02, page 12.
+- **No weeks**: lecturers number files inconsistently, so the unit is the topic, never "Week n".
 - **Daily cap** resets at midnight WAT (Africa/Lagos).

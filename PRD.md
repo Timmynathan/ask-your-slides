@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Owner | Nathaniel Ilesanmi |
-| Status | v1.1 — in build |
-| Date | 7 November 2026 (v1.1: embeddings, auth email, domain, citation keys, decks instead of weeks) |
+| Status | v1.2 — in build |
+| Date | 7 November 2026 (v1.1: embeddings, auth email, domain, citation keys. v1.2: manifest-driven topics and materials, topic chats) |
 | App URL | `app.askyourslides.com` (Vercel). Auth email from `noreply@mail.askyourslides.com`. |
 | Pilot users | Final-year Computer Science students, Pan-Atlantic University (PAU) |
 | Hard deadline | Exams start **5 December 2026**. Pilot must be live by **21 November 2026**. |
@@ -42,7 +42,7 @@ Near exams, this friction costs time. Answers that mix slide content with genera
 |---|---|
 | G1 | A student can ask a question about any final-year CS course and get an answer grounded in that course's slides, with slide citations. |
 | G2 | The answer shows clearly which parts come from the slides and which parts are general knowledge. |
-| G3 | A student can ask for a summary of a topic, a week, or a deck. |
+| G3 | A student can ask for a summary of a topic, a material, or the whole course. |
 | G4 | A student can ask the assistant to quiz them on a topic. |
 | G5 | Pilot is live for students by 21 November 2026, two weeks before exams. |
 | G6 | Every request writes a trace that Proofline can use. |
@@ -67,7 +67,7 @@ Near exams, this friction costs time. Answers that mix slide content with genera
 | Persona | Description | Main need |
 |---|---|---|
 | Exam crammer | Final-year CS student, 1–3 weeks before exams. Studies late at night, often on a phone. | Fast, correct answers tied to what the lecturer taught. |
-| Catch-up student | Missed lectures. Has never opened some decks. | Summaries of weeks and decks, in order. |
+| Catch-up student | Missed lectures. Has never opened some materials. | Summaries of topics, in order. |
 | Self-tester | Knows the material, wants to check it. | Quiz questions with answers and slide references. |
 | Builder (Nathaniel) | Owner and operator. | Traces, feedback, cost visibility, easy re-ingestion of slides. |
 
@@ -102,26 +102,36 @@ The primary signal is **direct student feedback**: students say it helped, and t
 - `someone@gmail.com` → error "Use your PAU email." No email is sent.
 - `student@pau.edu.ng` → code arrives, sign-in works, session lasts 30 days.
 
-### F2. Dashboard with course chats
+### F2. Dashboard with course and topic chats
 
-- After sign-in, the student sees a sidebar with one item per course (code + title, e.g. "CSC 401 — Compiler Construction").
-- Each course has its own list of conversations ("New chat" button per course).
+- After sign-in, the student sees a sidebar with one item per course (code + title, e.g. "CSC 420 — Data Management II").
+- Under the selected course: **Whole course**, then the course's **topics** in order (from `data/manifest.yaml`). Each has its own conversations and a "New chat" button.
+- A chat is either a **whole-course chat** (`topic_id` null) or a **topic chat**.
 - The main area shows the selected conversation.
 - Works on a phone (sidebar collapses into a drawer).
 
 **Acceptance**
-- All configured courses show for every student.
-- A new chat in CSC 401 only retrieves CSC 401 slides.
+- All configured courses and their topics show for every student.
+- A chat in CSC 420 only ever retrieves CSC 420 material.
+- A topic chat retrieves from its topic first. When the topic does not cover the question, it falls back to the whole course and the answer carries a clear label (F3).
 
 ### F3. Grounded Q&A with slide citations
 
-- The agent searches the course's slides before it answers.
-- Each claim from the slides has a citation chip, e.g. `Parsing · Slide 12` (deck title + slide number; the course is already selected).
-- Clicking a chip opens a preview of the slide image and its text.
-- If the slides do not cover the question, the agent says so first.
+- The agent searches the course materials before it answers.
+- **Sources by kind** (set per file in the manifest):
+  - `slides`, `notes`: main source for answers.
+  - `reading`: supporting source, used for depth. Ranked below slides and notes on equal evidence, and labelled as a reading when cited.
+  - `practical`: hands-on tasks; used for practical questions and quizzes.
+  - `outline`: course-level overview; feeds whole-course overviews, not normal search.
+  - `other`: used only when the student asks for it directly (e.g. "the project brief").
+- Each claim from the materials has a citation chip, e.g. `Parsing · Slide 12`, `Reading: Contextual integrity · p. 4`.
+- Clicking a chip opens a preview of the slide/page image and its text.
+- **Topic chats**: search the topic first. If the topic has no good match, search the whole course and show a label above the answer: "Not in *{topic}* — from elsewhere in {course}". Chips from other topics show their topic name.
+- If no course material covers the question, the agent says so first.
 
 **Acceptance**
 - 100% of citations point to slides that the agent actually retrieved in that turn (validated on the server).
+- In a topic chat, an answer that uses material from outside the topic always carries the fallback label.
 - On the golden set, ≥ 90% of cited slides support the claim.
 
 ### F4. General knowledge marking
@@ -135,13 +145,14 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F5. Summaries
 
-- The student can ask: "Summarize the deck on Turing machines", "Summarize lecture 3", "Give me an overview of the whole course".
-- The agent loads the slides of that deck (in order) and writes a structured summary with citations.
-- The app has no reliable "week" concept: lecturers number and name files inconsistently, so one lecturer's "week 3" file can be another's "week 4". Decks are identified by **lecture title**. A request like "summarize week 3" is matched against `list_decks`; if more than one deck could fit, the agent asks which one.
+- The student can ask: "Summarize this topic", "Summarize the privacy slides", "Give me an overview of the whole course".
+- **Topic summary**: the agent reads the topic's `slides` and `notes` materials in order (readings only if asked, or as a short "go deeper" pointer) and writes a structured summary with citations.
+- **Course overview**: built from the course's `outline` materials, then one section per topic in topic order.
+- There is no "week" concept: lecturers number and name files inconsistently. The unit is the **topic**, defined in the manifest. A request like "summarize week 3" is matched against `list_topics` (which includes each material's LMS section, often a date range); if more than one topic could fit, the agent asks which one.
 
 **Acceptance**
-- A deck summary cites slides from across the deck, not only the first few.
-- "Whole course" summary works by deck (one section per deck).
+- A topic summary cites slides from across all of the topic's materials, not only the first few slides.
+- A whole-course overview has one section per topic and uses the outline when one exists.
 
 ### F6. Quiz me
 
@@ -223,7 +234,7 @@ flowchart TB
     UI --> AU
     UI --> API
     API --> AG
-    AG -- search_slides / get_deck_slides --> DB
+    AG -- search_slides / list_topics / get_material_pages --> DB
     AG --> UI
     API --> TR[(traces table)]
     TR --> PL[Proofline evals]
@@ -253,33 +264,47 @@ flowchart TB
 
 ### 9.1 Input layout
 
-Slides are never committed to git. They live in `data/slides/` (git-ignored).
+Course files are never committed to git. They live in `data/` (git-ignored).
 
 ```
 data/
-  courses.yaml
+  courses.yaml        # course code, title, lecturer, LMS id; order = sidebar order
+  manifest.yaml       # SOURCE OF TRUTH for structure: course → topics → materials
   slides/
-    CSC401/
-      01-introduction.pptx
-      02-lexical-analysis.pdf
-      ...
-    CSC403/
+    CSC420/
+      01-PAU-CSC420-Outline.pdf
+      02-PAU-CSC420-Lecture1-Transactions-Indexing.pdf
       ...
 ```
 
-`courses.yaml`:
+`manifest.yaml` (abridged):
 
 ```yaml
-- code: CSC401
-  title: Compiler Construction
-  lecturer: Dr. X        # optional
-- code: CSC403
-  title: Artificial Intelligence
+courses:
+  CSC420:
+    topics:
+    - order: 1
+      title: Transactions and indexing
+    materials:
+    - lms_order: 1                 # = material order; unique per course
+      lms_cmid: 82084              # LMS id; used to detect new files on re-sync
+      lms_section: General
+      file: slides/CSC420/01-PAU-CSC420-Outline.pdf
+      topic: null                  # null = course-level (whole-course chat only)
+      kind: outline                # slides | notes | reading | practical | outline | other | skipped
+    - lms_order: 4
+      file: null
+      kind: skipped                # never ingested
 ```
 
-The deck order comes from the filename prefix (`01-`, `02-`, ...) and is used only for sorting. It is never shown as a week number. The deck title (the lecture name) comes from the filename or the first slide's title, and is what students and citation chips see.
+Rules:
 
-Each slide gets a short, stable `slide_key`: `{course}-{deck order}-{slide}`, e.g. `CSC401-04-12`. Citation markers use it (§10.4).
+- **Topics** come only from the manifest, in its `order`. A material's `topic` must name one of its course's topics, or be `null`.
+- **Kind** decides how a material is used (F3). `skipped` rows are not ingested and not stored.
+- Rows with a `review:` note are judgment calls; ingestion prints them so they get checked, but does not block on them.
+- **Material order** = `lms_order`, used for sorting only. The material title comes from the filename (minus the order prefix and course code) or the first slide's title.
+- Each slide/page gets a short, stable `slide_key`: `{course}-{material order}-{page}`, e.g. `CSC420-02-12`. Citation markers use it (§10.4).
+- Ingestion fails fast, before any upload, if the manifest names a missing file, an unknown topic, an unknown kind, or a course not in `courses.yaml`.
 
 ### 9.2 Steps
 
@@ -300,26 +325,28 @@ flowchart LR
     J --> K[Upsert slide row + upload PNG]
 ```
 
-1. **Normalize**: convert PPTX to PDF with LibreOffice headless. This gives one page per slide and a consistent renderer.
-2. **Render**: each page → PNG (1280 px wide). Upload to Supabase Storage at `slides/{course}/{deck}/{n}.png`.
+0. **Read the manifest**, validate it (§9.1), drop `kind: skipped`, and upsert courses and topics.
+1. **Normalize**: convert PPTX/PPT to PDF with LibreOffice headless. This gives one page per slide and a consistent renderer.
+2. **Render**: each page → PNG (1280 px wide). Upload to Supabase Storage at `slides/{course}/{material order}/{n}.png`.
 3. **Extract text**: from PPTX use `python-pptx` (titles, body, tables, speaker notes). From PDF use PyMuPDF.
 4. **Describe visually**: send the PNG to the vision model **only if** the slide has an image, chart, table, or equation, or if extracted text is shorter than 40 characters (scanned slide). Prompt: describe the diagram, transcribe any equations and tables, keep it under 150 words.
-5. **Build chunk**: one chunk = one slide. Content:
+5. **Build chunk**: one chunk = one slide or page. Content:
    ```
-   Course: CSC401 Compiler Construction
-   Deck: 04 — Parsing (slide 12 of 31)
-   Title: LL(1) parsing table
+   Course: CSC420 Data Management II
+   Topic: Transactions and indexing
+   Material (slides): Transactions and Indexing (slide 12 of 31)
+   Title: B+-tree index
    Text: ...
    Visual description: ...
    Speaker notes: ...
    ```
    The header gives context to the embedding and to the model.
 6. **Embed** the chunk text with Voyage `voyage-4` (`input_type: "document"`, 1024 dims). Store the vector; Postgres generates the `tsvector` for full-text search from the chunk text.
-7. **Idempotency**: each deck has a content hash. Re-running ingestion skips unchanged decks and replaces changed ones.
+7. **Idempotency**: each material has a content hash (file bytes + its manifest row). Re-running ingestion skips unchanged materials and replaces changed ones. Moving a file to another topic or kind in the manifest updates it without re-running vision. Materials removed from the manifest (or switched to `skipped`) are deleted.
 
 ### 9.3 Size and cost estimate
 
-- About 8–10 courses × 8–12 decks × ~28 slides ≈ **2,000–3,000 slides**.
+- Pilot data (manifest of 7 Nov 2026): **7 courses, 41 topics, 62 materials** (38 PDF, 24 PPTX; 6 more listed as skipped). Page count to be measured on first ingest; readings can be long, so expect ~2,000–4,000 pages.
 - Vision calls on ~50% of slides. Total ingestion cost: about **$1–3**. Embeddings: ~1–2M tokens with Voyage, well under $1 (check current Voyage pricing and free allowance).
 - Run time: about 20–40 minutes, with parallel vision calls.
 
@@ -336,12 +363,12 @@ sequenceDiagram
     participant M as Claude Haiku 5.5
     participant D as Postgres
 
-    S->>A: message + course_id + conversation_id
+    S->>A: message + conversation_id (course and topic come from the conversation)
     A->>A: auth check, rate-limit check
     A->>M: system prompt + history + tools
     M->>A: tool call search_slides(query)
     A->>A: embed query (Voyage voyage-4, input_type query)
-    A->>D: hybrid search (course filter)
+    A->>D: hybrid search (course + topic filter; widen to course if weak)
     D-->>A: top slides
     A-->>M: slides with slide_keys
     M-->>A: streamed answer with [[s:slide_key]] markers and <general> blocks
@@ -353,20 +380,30 @@ sequenceDiagram
 
 | Tool | Input | Output | Used for |
 |---|---|---|---|
-| `search_slides` | `query: string`, `k?: number (default 8)` | List of `{slide_key, deck_title, slide_number, title, content, prev_title, next_title}` | Q&A, quiz topics |
-| `list_decks` | — | List of `{deck_id, order, title, slide_count}` for the course | Summaries, "what topics are in this course?" |
-| `get_deck_slides` | `deck_id`, `from?`, `to?` | Slides in order (max 40 per call) | Deck / week summaries |
+| `search_slides` | `query: string`, `k?: number (default 8)`, `scope?: "topic" \| "course"`, `include?: ("outline" \| "other")[]` | `{scope_used, fell_back, results: [{slide_key, material_title, material_kind, topic_title, outside_topic, slide_number, title, content, prev_title, next_title}]}` | Q&A, quizzes |
+| `list_topics` | — | Topics in order, each with its materials `{material_id, title, kind, page_count, lms_section}`, plus course-level materials (outlines, other) | Summaries, overviews, "what's in this course?" |
+| `get_material_pages` | `material_id`, `from?`, `to?` | Pages in order (max 40 per call) | Topic summaries, course overview from the outline |
 
-`course_id` is **not** a tool parameter. The server injects it from the chat. The model cannot search other courses.
+`course_id` and `topic_id` are **not** tool parameters. The server injects them from the conversation. The model cannot search other courses.
+
+**Topic-first search with fallback** (`search_slides` in a topic chat):
+
+1. Search the topic (`match_slides(..., p_topic_id)`).
+2. If the best vector similarity is below a threshold τ (calibrated on the golden set; starting value set after first ingest), or fewer than 2 results come back, search the whole course. Results from other topics carry `outside_topic: true`; the response carries `fell_back: true`.
+3. The model may also ask for `scope: "course"` when the student asks a cross-topic question.
+4. When any cited slide is outside the topic, the server sends a `fallback` flag with the answer and the UI shows the label (F3). The label comes from the server, not from the model's wording.
+
+In a whole-course chat, `search_slides` searches all topics; `scope` is ignored.
 
 ### 10.3 Hybrid search
 
+0. Candidates: slides of the course, optionally of one topic, whose material kind is in the requested set (default `slides`, `notes`, `practical`, `reading`).
 1. Vector search: top 20 by cosine similarity, filtered by `course_id`. The query is embedded with `voyage-4`, `input_type: "query"`. No vector index: one course is ~300 slides, so an exact scan is fast and never drops results the way a filtered approximate index can.
 2. Full-text search: top 20 by `ts_rank_cd` on the same course, with query terms OR-ed (AND would match almost nothing for natural questions). This catches exact terms ("LL(1)", "Dijkstra", "CSC 401").
-3. Merge with Reciprocal Rank Fusion (k = 60). Return top `k`.
+3. Merge with Reciprocal Rank Fusion (k = 60). Multiply a `reading`'s fused score by 0.85 so slides and notes win on equal evidence. Return top `k`, each with its cosine similarity (the fallback signal).
 4. Add neighbor context: for each result, include the title of the slide before and after (helps with slides that continue a topic).
 
-Implemented as one Postgres function `match_slides(course_id, query_embedding, query_text, k)`.
+Implemented as one Postgres function `match_slides(course_id, query_embedding, query_text, k, topic_id?, kinds?)`.
 
 ### 10.4 Answer format contract
 
@@ -388,8 +425,10 @@ The server and the UI enforce the contract:
 
 ### 10.5 System prompt (outline)
 
-1. Role: study assistant for `{course_code} {course_title}` at Pan-Atlantic University.
-2. Always call `search_slides` (or `get_deck_slides` for summaries) before answering a course question.
+1. Role: study assistant for `{course_code} {course_title}` at Pan-Atlantic University; in a topic chat, focused on `{topic_title}`.
+2. Always call `search_slides` (or `list_topics` + `get_material_pages` for summaries) before answering a course question.
+   - Slides and notes are the main source. Use readings for depth, and say when a point comes from a reading. Use practicals for hands-on questions. Use `other` material only when the student asks for it.
+   - In a topic chat, stay on the topic. If results are marked `outside_topic`, say plainly that this part comes from elsewhere in the course.
 3. Cite every claim that comes from the slides with `[[s:slide_key]]`.
 4. Put all content that is not from the slides inside `<general>` blocks. Keep general knowledge short and useful.
 5. If the slides do not cover the question, say "Your slides don't cover this." first, then give general knowledge inside `<general>`.
@@ -401,7 +440,7 @@ The server and the UI enforce the contract:
 ### 10.6 Context and cost controls
 
 - Send at most the last 12 messages of history.
-- Tool results: max 8 slides for search, 40 for deck reads.
+- Tool results: max 8 slides for search, 40 pages per material read.
 - Max output: 1,200 tokens (2,000 for summaries).
 - Cache the system prompt (prompt caching).
 
@@ -411,10 +450,13 @@ The server and the UI enforce the contract:
 
 ```mermaid
 erDiagram
-    COURSES ||--o{ DECKS : has
-    DECKS ||--o{ SLIDES : has
+    COURSES ||--o{ TOPICS : has
+    COURSES ||--o{ MATERIALS : has
+    TOPICS |o--o{ MATERIALS : groups
+    MATERIALS ||--o{ SLIDES : has
     PROFILES ||--o{ CONVERSATIONS : owns
     COURSES ||--o{ CONVERSATIONS : scopes
+    TOPICS |o--o{ CONVERSATIONS : focuses
     CONVERSATIONS ||--o{ MESSAGES : has
     MESSAGES ||--o{ FEEDBACK : receives
     MESSAGES ||--o| TRACES : logs
@@ -428,22 +470,32 @@ erDiagram
         text lecturer
         int sort_order
     }
-    DECKS {
+    TOPICS {
         uuid id PK
         uuid course_id FK
-        int deck_order "sort only, not a week"
-        text title "lecture name"
+        int topic_order
+        text title
+    }
+    MATERIALS {
+        uuid id PK
+        uuid course_id FK
+        uuid topic_id FK "null = course-level"
+        text kind "slides|notes|reading|practical|outline|other"
+        int material_order "= manifest lms_order; sort only"
+        text title
         text lecturer
         text source_file
         text content_hash
-        int slide_count
+        int page_count
+        int lms_cmid
+        text lms_section
     }
     SLIDES {
         uuid id PK
-        uuid deck_id FK
+        uuid material_id FK
         uuid course_id FK
-        int slide_number
-        text slide_key "e.g. CSC401-04-12"
+        int slide_number "slide or page"
+        text slide_key "e.g. CSC420-02-12"
         text title
         text body_text
         text visual_description
@@ -469,6 +521,7 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid course_id FK
+        uuid topic_id FK "null = whole-course chat"
         text title
         timestamptz updated_at
     }
@@ -521,7 +574,9 @@ erDiagram
 
 ### 11.1 Row-level security
 
-- `courses`, `decks`, `slides`: readable by any authenticated user. Writable only by the service role (ingestion).
+- `courses`, `topics`, `materials`, `slides`: readable by any authenticated user. Writable only by the service role (ingestion).
+- Integrity: a material's topic and a conversation's topic must belong to the same course (composite foreign keys). `skipped` is not a valid stored kind.
+- The `slides` table keeps its name; a row is one slide or one page of any material.
 - `conversations`, `feedback`, `pulse_responses`: a user can read and write only their own rows.
 - `messages`: a user can read only their own rows. Only the server writes messages, so a student cannot plant a fake assistant message into the history the model sees.
 - `profiles`: a user can read their own row and change only `display_name` / `onboarded`.
@@ -535,9 +590,9 @@ erDiagram
 | Method | Route | Purpose |
 |---|---|---|
 | POST | `/api/auth/otp` | Validate domain, request OTP from Supabase. |
-| POST | `/api/chat` | Stream an agent answer. Body: `{conversation_id, course_id, message}`. |
-| GET | `/api/courses` | List courses. |
-| GET/POST | `/api/conversations` | List / create conversations for a course. |
+| POST | `/api/chat` | Stream an agent answer. Body: `{conversation_id, message}`. Course and topic come from the conversation row. |
+| GET | `/api/courses` | List courses with their topics. |
+| GET/POST | `/api/conversations` | List / create conversations for a course, optionally a topic (`topic_id` null = whole course). |
 | GET | `/api/conversations/:id/messages` | Load history. |
 | POST | `/api/feedback` | Save thumbs up/down + reason. |
 | GET | `/api/slides/:id` | Slide preview: signed image URL + text. |
@@ -549,13 +604,14 @@ erDiagram
 ### 13.1 Screens
 
 1. **Sign in** — email field → OTP field. PAU branding kept neutral (no official logo unless the school approves).
-2. **Dashboard** — left sidebar: course list (code + short title). Under the selected course: its conversations + "New chat". Main area: empty state with three starter buttons: "Ask a question", "Summarize a week", "Quiz me".
+2. **Dashboard** — left sidebar: course list (code + short title). Under the selected course: **Whole course**, then its topics in order; under the selected one, its conversations + "New chat". Main area: empty state with three starter buttons. Topic chat: "Ask about {topic}", "Summarize this topic", "Quiz me on this topic". Whole-course chat: "Ask a question", "Course overview", "Quiz me".
 3. **Chat** — messages with streaming; citation chips; general-knowledge boxes; thumbs on each answer; input box with remaining daily messages shown when < 10.
-4. **Slide preview** — side panel (desktop) or bottom sheet (phone) with the slide image, deck title, slide number, and a link "Ask about this slide".
+4. **Slide preview** — side panel (desktop) or bottom sheet (phone) with the slide/page image, material title and kind, topic, slide/page number, and a link "Ask about this slide".
 
 ### 13.2 Rendering rules
 
-- Citation chip: small rounded label, course color, text `Parsing · Slide 12` (deck title, truncated on phones). Never "Week n". Multiple chips can follow one sentence.
+- Citation chip: small rounded label, course color. Text by kind: `slides` → `{material} · Slide 12`; `notes` / `practical` → `{material} · p. 12`; `reading` → `Reading: {material} · p. 4`. Truncated on phones. Never "Week n". Multiple chips can follow one sentence.
+- In a topic chat, a chip from another topic adds the topic name (`Privacy › Slides-Privacy · Slide 3`), and the answer has a label above it: "Not in *{topic}* — from elsewhere in {course}".
 - General-knowledge box: amber/neutral background, left icon, label "Not from your slides".
 - Phone first: test at 375 px width.
 
@@ -627,7 +683,7 @@ gantt
     section Setup
     Repo, Supabase, schema, auth           :a1, 2026-11-08, 2d
     section Ingestion
-    Collect slides + courses.yaml          :b0, 2026-11-08, 3d
+    Collect slides + manifest.yaml         :b0, 2026-11-08, 3d
     Ingestion pipeline                     :b1, 2026-11-09, 3d
     Ingest all courses + spot check        :b2, after b1, 1d
     section Agent and UI
@@ -663,7 +719,7 @@ gantt
 
 ## 19. Open questions
 
-1. Exact list of final-year CS courses this semester and number of decks per course.
+1. ~~Exact list of final-year CS courses and materials.~~ Resolved: `data/courses.yaml` + `data/manifest.yaml` (7 courses, 41 topics, 62 materials). Rows marked `review:` still need a check.
 2. Is the approval in writing, and does it cover all lecturers' slides?
 3. Do PAU email accounts receive external OTP emails reliably? (Resend is set up; to be tested with real PAU accounts.)
 4. ~~Name and domain for the app.~~ Resolved: `askyourslides.com`; app at `app.askyourslides.com`.
@@ -703,6 +759,7 @@ pau-study-assistant/
     lib/supabase/
   ingestion/                # Python ingestion CLI
     ingest.py
+    manifest.py             # load + validate data/manifest.yaml
     pptx_extract.py
     pdf_extract.py
     vision.py
@@ -714,5 +771,6 @@ pau-study-assistant/
     export_traces.ts
   data/                     # git-ignored
     courses.yaml
+    manifest.yaml           # course → topics → materials (source of truth)
     slides/
 ```
