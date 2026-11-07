@@ -113,7 +113,7 @@ async function main() {
     const banner = lp.getByText("New: choose your study partner", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
     check(bannerBg === "rgb(245, 213, 255)", "lilac banner across the top", bannerBg);
-    check((await lp.getByRole("img", { name: /your study partner/ }).count()) >= 6, "study partners appear on the landing page");
+    check((await lp.getByRole("img", { name: /Zara, your study partner/ }).count()) >= 1, "all four partners appear on the landing page, Zara included");
     const headingFont = await lp.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
     check(/Bitter/i.test(headingFont), "headings use Bitter", headingFont.slice(0, 40));
     await shot(lp, "0-landing");
@@ -137,7 +137,8 @@ async function main() {
       await op.getByRole("button", { name: "Continue" }).click();
       await op.getByRole("radiogroup", { name: "Study partners" }).waitFor();
       check(await op.getByText("Tolu, who do you want to study with?").isVisible(), "partner step greets the student by name");
-      check((await op.getByRole("radio").count()) === 3, "three study partners to choose from");
+      check((await op.getByRole("radio").count()) === 4, "four study partners to choose from");
+      check((await op.getByText(/^Best for:/).count()) === 4, "each partner says what they're best for");
       await shot(op, "7-onboarding-choose");
       await op.getByRole("radio", { name: /Tobi/ }).click();
       check((await op.getByRole("radio", { name: /Tobi/ }).getAttribute("aria-checked")) === "true", "choosing a partner selects it");

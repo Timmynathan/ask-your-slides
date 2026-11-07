@@ -21,7 +21,7 @@ const lightPill = `${pill} border border-line-strong bg-card text-ink hover:bg-s
 export default function Landing() {
   return (
     <div className="flex min-h-dvh flex-col bg-page">
-      <Banner text="New: choose your study partner. Tobi, Ada or Dr. Musa." linkText="Meet them" href="#partners" />
+      <Banner text="New: choose your study partner. Tobi, Ada, Dr. Musa or Zara." linkText="Meet them" href="#partners" />
 
       <header className="sticky top-0 z-20 border-b border-line/60 bg-page/85 backdrop-blur">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
@@ -94,7 +94,7 @@ export default function Landing() {
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
               ["1", "Sign in with your PAU email", "One code to confirm it's you, then a password for next time."],
-              ["2", "Choose your study partner", "Tobi, Ada or Dr. Musa: same slides, three ways of explaining."],
+              ["2", "Choose your study partner", "Tobi, Ada, Dr. Musa or Zara: same slides, four ways of explaining."],
               ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
             ].map(([n, title, body]) => (
               <div key={n} className="rounded-[25px] bg-card p-7 ring-1 ring-line">
@@ -166,20 +166,21 @@ export default function Landing() {
         <section id="partners" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20">
           <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Meet your study partners</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">
-            Choose one when you sign up and change any time. They all use the same slides; they just explain differently.
+            Pick the style you enjoy and switch any time. Every partner answers from your slides and cites every point.
           </p>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {PARTNER_IDS.map((id) => {
               const p = PARTNERS[id];
               return (
                 <div key={id} className="flex flex-col items-center rounded-[25px] bg-card p-7 text-center ring-1 ring-line">
-                  <Mascot partner={id} size={112} mood="happy" />
+                  <Mascot partner={id} size={104} mood="happy" />
                   <h3 className="mt-4 font-heading text-2xl font-semibold text-ink">{p.name}</h3>
                   <p className="text-sm text-muted">{p.role}</p>
+                  <p className={`mt-3 rounded-full px-3 py-1 text-xs font-semibold ${p.accent.bg} ${p.accent.text}`}>Best for: {p.bestFor}</p>
                   <p className={`mt-4 rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${p.accent.soft} text-ink`}>“{p.sample}”</p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
                     {p.traits.map((t) => (
-                      <span key={t} className={`rounded-full px-2.5 py-1 text-xs font-medium ${p.accent.bg} ${p.accent.text}`}>{t}</span>
+                      <span key={t} className="rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line">{t}</span>
                     ))}
                   </div>
                 </div>

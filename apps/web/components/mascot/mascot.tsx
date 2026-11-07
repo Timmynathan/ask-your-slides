@@ -17,6 +17,7 @@ interface Props {
 const LOOK = {
   tobi: { bg: "#dbeafe", skin: "#7a4a2e", skinShade: "#653c25", hair: "#1c1410", top: "#2563eb", topShade: "#1d4ed8", spark: "#2563eb" },
   ada: { bg: "#f9e7ff", skin: "#9a5f3a", skinShade: "#824e2f", hair: "#22140f", top: "#c05cdf", topShade: "#a845c7", spark: "#8a00b5" },
+  zara: { bg: "#d1fae5", skin: "#8a5534", skinShade: "#744529", hair: "#1f1410", top: "#0d9488", topShade: "#0f766e", spark: "#047857" },
   musa: { bg: "#fef3c7", skin: "#5e3721", skinShade: "#4d2d1b", hair: "#2a2522", top: "#b45309", topShade: "#92400e", spark: "#b45309" },
 } as const;
 
@@ -50,6 +51,15 @@ export function Mascot({ partner, size = 48, mood = "idle", animated = true, cla
             </>
           )}
 
+          {partner === "zara" && (
+            <>
+              <ellipse cx="60" cy="42" rx="33" ry="30" fill={c.hair} />
+              <circle cx="31" cy="50" r="9" fill={c.hair} />
+              <circle cx="89" cy="50" r="9" fill={c.hair} />
+              <path d="M38 24 q4 -3 8 0 M70 20 q5 -3 9 1 M50 16 q5 -2 9 0 M82 32 q3 -3 6 1" stroke="#3a2a22" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+            </>
+          )}
+
           {/* body */}
           <path d="M14 122 C18 94 38 84 60 84 C82 84 102 94 106 122 Z" fill={c.top} />
           {partner === "tobi" && (
@@ -64,6 +74,12 @@ export function Mascot({ partner, size = 48, mood = "idle", animated = true, cla
             </>
           )}
           {partner === "ada" && <path d="M47 86 C52 96 68 96 73 86" stroke={c.topShade} strokeWidth="3" fill="none" />}
+          {partner === "zara" && (
+            <>
+              <path d="M49 85 C53 93 67 93 71 85" fill={c.skinShade} />
+              <path d="M26 104 l10 -8 M94 104 l-10 -8" stroke={c.topShade} strokeWidth="2.5" strokeLinecap="round" />
+            </>
+          )}
           {partner === "musa" && (
             <>
               <path d="M48 85 L60 104 L72 85 Z" fill="#fffbeb" />
@@ -88,6 +104,7 @@ export function Mascot({ partner, size = 48, mood = "idle", animated = true, cla
             </>
           )}
           {partner === "ada" && <path d="M38 52 C35 32 48 26 60 26 C72 26 85 32 82 52 C79 41 71 35 60 35 C49 35 41 41 38 52 Z" fill={c.hair} />}
+          {partner === "zara" && <path d="M38 50 C37 34 49 28 60 28 C71 28 83 34 82 50 C78 41 70 36 60 36 C50 36 42 41 38 50 Z" fill={c.hair} />}
           {partner === "musa" && (
             <>
               <path d="M38 48 C37 32 49 27 60 27 C71 27 83 32 82 48 C79 39 71 35 60 35 C49 35 41 39 38 48 Z" fill={c.hair} />
@@ -142,6 +159,12 @@ export function Mascot({ partner, size = 48, mood = "idle", animated = true, cla
             <path d="M55.5 68 q4.5 -1.5 9 0.5" stroke="#3b1d12" strokeWidth="2" fill="none" strokeLinecap="round" />
           ) : (
             <path d="M53 66.5 q7 5.5 14 0" stroke="#3b1d12" strokeWidth="2" fill="none" strokeLinecap="round" />
+          )}
+          {partner === "zara" && (
+            <g stroke="#e0a100" strokeWidth="1.6" fill="none">
+              <circle cx="36.5" cy="66" r="4" />
+              <circle cx="83.5" cy="66" r="4" />
+            </g>
           )}
           {partner === "ada" && (
             <>

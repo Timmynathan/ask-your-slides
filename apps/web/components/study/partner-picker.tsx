@@ -62,7 +62,7 @@ export function PartnerPicker({ current, onClose, onChanged }: { current: Partne
                 <Mascot partner={id} size={52} mood={selected ? "happy" : "idle"} />
                 <span className="min-w-0 flex-1">
                   <span className="block font-heading text-lg font-semibold text-ink">{p.name}</span>
-                  <span className="block text-sm text-muted">{p.tagline}</span>
+                  <span className="block text-sm text-muted">Best for: {p.bestFor.toLowerCase()}</span>
                 </span>
                 {saving === id ? <Spinner /> : selected ? <span className="text-xs font-medium text-muted">Current</span> : null}
               </button>

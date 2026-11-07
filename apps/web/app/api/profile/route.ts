@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 const Body = z
   .object({
     display_name: z.string().trim().max(60).nullable().optional(),
-    study_partner: z.enum(["tobi", "ada", "musa"]).optional(),
+    study_partner: z.enum(["tobi", "ada", "musa", "zara"]).optional(),
     onboarded: z.boolean().optional(),
   })
   .strict();

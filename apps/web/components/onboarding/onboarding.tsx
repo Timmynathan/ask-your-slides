@@ -8,6 +8,13 @@ import { BusyLabel } from "@/components/ui/spinner";
 import { fill, PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
 
 type Step = "name" | "partner" | "hello";
+
+const HELLO: Record<PartnerId, string> = {
+  tobi: "Nice one, {name}! I'm Tobi. Pick a course, ask me anything, and I'll give you the gist fast, plus a trick so it sticks.",
+  ada: "Lovely to meet you, {name}. I'm Ada. Choose a course or a topic, and we'll work through it together, step by step, straight from your slides.",
+  musa: "Welcome, {name}. I'm Dr. Musa. Choose a course and ask away; I'll answer from your slides and show you how it gets marked.",
+  zara: "Hey {name}, I'm Zara! Quick answer or deep dive, I've got you, straight from your slides, with an exam tip when it helps.",
+};
 const STEPS: Step[] = ["name", "partner", "hello"];
 
 interface Props {
@@ -105,9 +112,9 @@ export function Onboarding({ initialName, initialPartner, startAtPartner }: Prop
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
-            <p className="mx-auto mt-2 max-w-lg text-muted">They all answer from your slides. They just explain differently. You can switch any time.</p>
+            <p className="mx-auto mt-2 max-w-xl text-muted">Pick the style you enjoy. Every partner answers from your slides and cites every point.</p>
 
-            <div role="radiogroup" aria-label="Study partners" className="mt-10 grid gap-4 md:grid-cols-3">
+            <div role="radiogroup" aria-label="Study partners" className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {PARTNER_IDS.map((id) => {
                 const p = PARTNERS[id];
                 const selected = partner === id;
@@ -130,14 +137,15 @@ export function Onboarding({ initialName, initialPartner, startAtPartner }: Prop
                       )}
                     </span>
                     <span className={selected ? "pop-in" : ""} key={selected ? "on" : "off"}>
-                      <Mascot partner={id} size={120} mood={selected ? "happy" : "idle"} />
+                      <Mascot partner={id} size={108} mood={selected ? "happy" : "idle"} />
                     </span>
                     <span className="mt-4 font-heading text-2xl font-semibold text-ink">{p.name}</span>
                     <span className="text-sm text-muted">{p.role}</span>
-                    <span className="mt-3 text-[15px] text-ink">{p.tagline}</span>
-                    <span className="mt-4 flex flex-wrap justify-center gap-1.5">
+                    <span className={`mt-3 rounded-full px-3 py-1 text-xs font-semibold ${p.accent.bg} ${p.accent.text}`}>Best for: {p.bestFor}</span>
+                    <span className="mt-3 text-[15px] leading-snug text-ink">{p.tagline}</span>
+                    <span className="mt-3 flex flex-wrap justify-center gap-1.5">
                       {p.traits.map((t) => (
-                        <span key={t} className={`rounded-full px-2.5 py-1 text-xs font-medium ${p.accent.bg} ${p.accent.text}`}>{t}</span>
+                        <span key={t} className="rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line">{t}</span>
                       ))}
                     </span>
                     <span
@@ -152,6 +160,10 @@ export function Onboarding({ initialName, initialPartner, startAtPartner }: Prop
               })}
             </div>
 
+            <p className="mx-auto mt-6 max-w-xl text-sm text-muted">
+              Not sure? Try switching as you go: Ada while learning a topic, Dr. Musa the week before the exam. You can change
+              from the sidebar any time.
+            </p>
             <button
               onClick={submitPartner}
               disabled={!partner || busy}
@@ -166,11 +178,7 @@ export function Onboarding({ initialName, initialPartner, startAtPartner }: Prop
           <div key="hello" className="panel-in flex w-full max-w-lg flex-col items-center text-center">
             <div className="pop-in relative rounded-[22px] bg-card px-6 py-4 text-left text-[17px] leading-relaxed text-ink shadow-lg ring-1 ring-line">
               {fill(
-                partner === "tobi"
-                  ? "Nice one, {name}! I'm Tobi. Pick a course, ask me anything, and I'll show you the exact slide every answer comes from."
-                  : partner === "ada"
-                    ? "Lovely to meet you, {name}. I'm Ada. Choose a course or a topic, and we'll work through it together, step by step, straight from your slides."
-                    : "Welcome, {name}. I'm Dr. Musa. Choose a course and ask away; I'll answer from your slides and show you what the examiner will look for.",
+                HELLO[chosen.id],
                 firstName,
               )}
               <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-card" />

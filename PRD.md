@@ -110,11 +110,12 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F1b. Onboarding and study partners
 
-- After the first sign-in: **name** (optional) → **choose your study partner** → the partner introduces themselves → studying. A progress bar shows the three steps. Students who signed up before partners existed see the partner step once.
-- Three original illustrated partners (`apps/web/lib/partners.ts`, drawn in `components/mascot/mascot.tsx`):
-  - **Tobi**, a final-year senior: upbeat, quick, memory tricks, an occasional light Nigerian expression.
-  - **Ada**, calm and organised: numbered steps, defines terms, ends longer answers with "In short:".
-  - **Dr. Musa**, a lecturer: exam-focused, common mistakes, how a short exam answer is structured.
+- After the first sign-in: **name** (optional) → **choose your study partner** (four cards) → the partner introduces themselves → studying. A progress bar shows the three steps. Students who signed up before partners existed see the partner step once.
+- Four original illustrated partners (`apps/web/lib/partners.ts`, drawn in `components/mascot/mascot.tsx`). Each is framed by the situation it suits ("Best for"), not by how serious it sounds, and each offers exam value, so no single choice looks like the "right" one:
+  - **Tobi**, quick & memorable (best for last-minute revision): the gist fast, memory tricks, an exam-day takeaway, an occasional light Nigerian expression.
+  - **Ada**, deep understanding (best for learning new topics): numbered steps, defines terms, worked examples, ends longer answers with "In short:".
+  - **Dr. Musa**, exam technique (best for exam practice): how answers are marked, common mistakes, answer structure.
+  - **Zara**, the all-rounder (best for a bit of everything): a blend of the three, depth matched to the question.
 - The partner changes **how** answers are explained, never the rules: the same retrieval, citations and `<general>` boxes apply to all three (the voice is added after the cached core prompt).
 - The partner is present everywhere: landing page, sign-in, onboarding, the sidebar ("Studying with", one tap to change), a greeting on empty chats, an avatar beside every answer, an animated "thinking" state while searching ("Ada is reading your slides…"), and the daily-limit message in their voice.
 
