@@ -218,3 +218,26 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bin-item, .bin-lid { animation: none; }
 }
+
+/* Slide showcase (components/landing/slide-ask.tsx): highlight sweeps a phrase, the partner answers. */
+@keyframes hl-sweep {
+  0%, 14% { background-size: 0% 100%; }
+  34%, 92% { background-size: 100% 100%; }
+  100% { background-size: 0% 100%; }
+}
+@keyframes ai-pop {
+  0%, 38% { opacity: 0; transform: translateY(10px) scale(0.96); }
+  46%, 92% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(10px) scale(0.96); }
+}
+.hl-sweep {
+  background-image: linear-gradient(transparent 12%, rgba(94, 163, 237, 0.45) 12%, rgba(94, 163, 237, 0.45) 92%, transparent 92%);
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  animation: hl-sweep 7s ease-in-out infinite;
+}
+.ai-pop { animation: ai-pop 7s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .hl-sweep { animation: none; background-size: 100% 100%; }
+  .ai-pop { animation: none; }
+}

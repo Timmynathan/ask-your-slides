@@ -109,7 +109,7 @@ async function main() {
     const lp = await visitor.newPage();
     lp.on("pageerror", (e) => consoleErrors.push(e.message));
     await lp.goto(`${BASE}/`);
-    check(await lp.getByRole("heading", { level: 1, name: "ChatGPT doesn't have your PAU slides. We do." }).isVisible(), "landing hero: one headline");
+    check(await lp.getByRole("heading", { level: 1, name: /Stop uploading slides to ChatGPT\.\s*We already have them all\./ }).isVisible(), "landing hero: one headline");
     check(await lp.getByRole("link", { name: "Try for free" }).first().isVisible(), "landing hero: big 'Try for free' button");
     const brand = await lp.locator("nav").getByText("Ask Your Slides").evaluate((el) => {
       const c = getComputedStyle(el);
@@ -121,8 +121,9 @@ async function main() {
     const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json().catch(() => null);
     check(manifest?.display === "standalone" && manifest?.icons?.length >= 2, "installable: web app manifest with icons");
     const { count: courseCount } = await admin.from("courses").select("*", { count: "exact", head: true });
-    check(await lp.getByText("final-year courses").locator("..").getByText(String(courseCount), { exact: true }).isVisible(),
-      "landing course count comes from the database", `${courseCount} courses`);
+    const chips = await lp.getByText("Your PAU courses are already here").locator("..").locator("span.rounded-full").filter({ hasText: /^[A-Z]{3} \d{3}$/ }).count();
+    check(chips === courseCount, "landing shows every PAU course from the database", `${chips} chips, ${courseCount} courses`);
+    check((await lp.getByRole("img", { name: /ChatGPT|Claude|Gemini/ }).count()) === 3, "comparison shows the ChatGPT, Claude and Gemini logos");
     const banner = lp.getByText("New: choose your study partner", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
     check(bannerBg === "rgb(14, 22, 100)", "PAU navy #0E1664 banner across the top", bannerBg);
