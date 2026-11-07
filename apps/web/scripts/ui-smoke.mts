@@ -78,6 +78,30 @@ async function main() {
   const consoleErrors: string[] = [];
   try {
     await waitForServer();
+    // 0. Press feedback on the sign-in page (signed out). The network is slowed so the busy state
+    //    can be observed; a double click must still send one request.
+    console.log("\nPress feedback (sign-in page)");
+    const anon = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const sp = await anon.newPage();
+    let passwordRequests = 0;
+    await sp.route("**/api/auth/password", async (route) => {
+      passwordRequests++;
+      await new Promise((r) => setTimeout(r, 1200));
+      await route.continue();
+    });
+    await sp.goto(`${BASE}/sign-in`);
+    const signInBtn = sp.getByRole("button", { name: "Sign in" });
+    check((await signInBtn.evaluate((el) => getComputedStyle(el).cursor)) === "pointer", "buttons show the hand cursor");
+    await sp.locator("#email").fill("someone@pau.edu.ng");
+    await sp.locator("#password").fill("not-the-password");
+    await signInBtn.dblclick();
+    const busyBtn = sp.getByRole("button", { name: /Signing in/ });
+    check(await busyBtn.isVisible(), "pressed button shows a spinner and 'Signing in…' at once");
+    check(await busyBtn.isDisabled(), "button is locked while it works");
+    await sp.getByRole("alert").waitFor({ timeout: 10000 });
+    check(passwordRequests === 1, "a double click sends one request", `${passwordRequests} requests`);
+    await anon.close();
+
     const cookies = await signInCookies(email);
 
     console.log("\nLaptop 1440×900");
@@ -99,8 +123,12 @@ async function main() {
     check(!!sidebarBox && sidebarBox.x === 0 && sidebarBox.width > 250, "sidebar is a fixed column on laptop", JSON.stringify(sidebarBox));
     await shot(page, "1-laptop-empty-topic");
 
+    let chatRequests = 0;
+    page.on("request", (r) => r.url().endsWith("/api/chat") && r.method() === "POST" && chatRequests++);
     await page.locator("textarea[aria-label='Your question']:visible").fill("What does ACID stand for?");
-    await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "Send" }).dblclick();
+    check(await page.getByRole("status").filter({ hasText: "Sending" }).first().isVisible().catch(() => false)
+      || await page.getByText("Searching your slides…").isVisible(), "Send reacts at once (spinner, then 'Searching your slides…')");
     await page.getByText("Searching your slides…").waitFor({ timeout: 5000 }).then(
       () => check(true, "shows 'Searching your slides…' while waiting"),
       () => check(false, "shows 'Searching your slides…' while waiting"),
@@ -108,6 +136,7 @@ async function main() {
     const chip = page.locator("li button[title^='Open ']:visible").first();
     await chip.waitFor({ timeout: 30000 });
     await page.getByRole("button", { name: "Send" }).waitFor({ timeout: 30000 }); // answer finished
+    check(chatRequests === 1, "double-clicking Send asks the question once", `${chatRequests} requests`);
     const chipText = (await chip.textContent()) ?? "";
     check(/· Slide \d+/.test(chipText), "citation chips show material · slide (after the answer finishes)", chipText);
     check(!(await page.content()).includes("[[s:"), "no raw citation markers on screen");

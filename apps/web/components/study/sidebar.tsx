@@ -1,6 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
+import { Spinner } from "@/components/ui/spinner";
+import { SignOutButton } from "@/components/ui/sign-out-button";
 import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
 import { courseDot, displayCode } from "@/lib/study/format";
 
@@ -40,7 +42,7 @@ export function Sidebar({ courses, course, topics, chats, topicId, chatId, user,
                     selected ? "bg-white font-medium shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-800 dark:ring-neutral-700" : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   }`}
                 >
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${courseDot(c.sort_order)}`} aria-hidden />
+                  <CourseDot className={courseDot(c.sort_order)} />
                   <span className="min-w-0">
                     <span className="block">{displayCode(c.code)}</span>
                     <span className="block truncate text-xs font-normal text-neutral-500 dark:text-neutral-400">{c.title}</span>
@@ -103,10 +105,18 @@ export function Sidebar({ courses, course, topics, chats, topicId, chatId, user,
         <span className="min-w-0 truncate text-neutral-600 dark:text-neutral-400" title={user.email}>
           {user.displayName ?? user.email}
         </span>
-        <form action="/api/auth/sign-out" method="post">
-          <button className="shrink-0 text-neutral-600 underline-offset-2 hover:underline dark:text-neutral-400">Sign out</button>
-        </form>
+        <SignOutButton className="shrink-0 text-neutral-600 underline-offset-2 hover:text-neutral-950 hover:underline dark:text-neutral-400 dark:hover:text-white" />
       </div>
     </nav>
+  );
+}
+
+/** The course's colour dot, replaced by a spinner while that course is loading. */
+function CourseDot({ className }: { className: string }) {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <Spinner className="mt-0.5 h-3 w-3 text-neutral-500" />
+  ) : (
+    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${className}`} aria-hidden />
   );
 }

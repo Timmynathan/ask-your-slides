@@ -100,7 +100,7 @@ export function SlidePreview({ slideKey, onClose, onAsk }: Props) {
                 onClick={() =>
                   onAsk(`Explain ${unit} ${data.slide_number} of "${data.material.title}"${data.title ? ` (${data.title})` : ""}: `)
                 }
-                className="mt-4 w-full rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+                className="mt-4 w-full rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
               >
                 Ask about this {unit}
               </button>

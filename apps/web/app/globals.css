@@ -22,5 +22,51 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Every press must be visible: students double-tapped buttons that gave no feedback. */
+@layer base {
+  button:not(:disabled),
+  a[href],
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  button,
+  a[href],
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; /* no 300 ms double-tap-zoom delay */
+    transition:
+      transform 90ms ease-out,
+      background-color 150ms ease,
+      color 150ms ease,
+      box-shadow 150ms ease,
+      opacity 150ms ease,
+      filter 150ms ease;
+  }
+  /* Pressed: a small push-in plus a darker shade, on mouse and touch alike. */
+  button:not(:disabled):active,
+  a[href]:active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.97);
+    filter: brightness(0.92);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button:not(:disabled):active,
+    a[href]:active,
+    [role="button"]:active {
+      transform: none;
+    }
+  }
+  :focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { BusyLabel } from "@/components/ui/spinner";
 
 // Sign-in (PRD F1):
 //   usual:          email + password
@@ -20,6 +21,8 @@ export function SignInForm() {
   const [step, setStep] = useState<Step>({ kind: "password" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Guards repeat presses even before React has re-rendered the disabled button.
+  const inFlight = useRef(false);
   const [showPassword, setShowPassword] = useState(false);
   // Remember the email on this browser.
   const [savedEmail, setSavedEmail] = useState("");
@@ -48,6 +51,8 @@ export function SignInForm() {
   }
 
   async function post(url: string, body: object) {
+    if (inFlight.current) return null;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -59,8 +64,17 @@ export function SignInForm() {
       setError("Couldn't reach the server. Check your connection.");
       return null;
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
+  }
+
+  // Plain submit handlers, not React form actions: state set inside an action is deferred until the
+  // action finishes, so the button showed no busy state and a double click submitted twice.
+  function run(e: FormEvent<HTMLFormElement>, handler: (form: FormData) => Promise<unknown>) {
+    e.preventDefault();
+    if (inFlight.current) return;
+    void handler(new FormData(e.currentTarget));
   }
 
   function finish(next: string | undefined) {
@@ -101,8 +115,8 @@ export function SignInForm() {
   const input =
     "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base outline-none focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-200";
   const button =
-    "mt-4 w-full rounded-lg bg-neutral-900 px-3 py-2.5 text-base font-medium text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900";
-  const link = "text-sm text-neutral-700 underline underline-offset-2 dark:text-neutral-300";
+    "mt-4 w-full rounded-lg bg-neutral-900 px-3 py-2.5 text-base font-medium text-white hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200";
+  const link = "rounded text-sm text-neutral-700 underline underline-offset-2 hover:text-neutral-950 disabled:opacity-50 dark:text-neutral-300 dark:hover:text-white";
   const emailField = (
     <>
       <label htmlFor="email" className="text-sm font-medium">
@@ -118,7 +132,7 @@ export function SignInForm() {
         <label htmlFor={id} className="text-sm font-medium">
           {label}
         </label>
-        <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-xs text-neutral-600 dark:text-neutral-400">
+        <button type="button" onClick={() => setShowPassword((v) => !v)} className="rounded px-1 text-xs text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white">
           {showPassword ? "Hide" : "Show"}
         </button>
       </div>
@@ -131,15 +145,15 @@ export function SignInForm() {
   return (
     <div className="mt-8">
       {step.kind === "password" && (
-        <form action={signIn} noValidate>
+        <form onSubmit={(e) => run(e, signIn)} noValidate>
           {emailField}
           {passwordField("password", "Password", "current-password")}
           <button type="submit" disabled={busy} className={button}>
-            {busy ? "Signing in…" : "Sign in"}
+            <BusyLabel busy={busy} label="Sign in" busyLabel="Signing in…" />
           </button>
           <p className="mt-5 text-center text-sm text-neutral-600 dark:text-neutral-400">
             First time here, or forgot your password?{" "}
-            <button type="button" onClick={() => go({ kind: "code-email" })} className={link}>
+            <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={link}>
               Get a code
             </button>
           </p>
@@ -147,22 +161,22 @@ export function SignInForm() {
       )}
 
       {step.kind === "code-email" && (
-        <form action={sendCode} noValidate>
+        <form onSubmit={(e) => run(e, sendCode)} noValidate>
           <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
             We&apos;ll email a code to your PAU address. Then you&apos;ll set a password for next time.
           </p>
           {emailField}
           <button type="submit" disabled={busy} className={button}>
-            {busy ? "Sending…" : "Send code"}
+            <BusyLabel busy={busy} label="Send code" busyLabel="Sending…" />
           </button>
-          <button type="button" onClick={() => go({ kind: "password" })} className={`${link} mt-4 block w-full text-center`}>
+          <button type="button" onClick={() => go({ kind: "password" })} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
             Back to sign in
           </button>
         </form>
       )}
 
       {step.kind === "code" && (
-        <form action={verify} noValidate>
+        <form onSubmit={(e) => run(e, verify)} noValidate>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
             We sent a code to <span className="font-medium text-neutral-900 dark:text-neutral-100">{step.email}</span>. It can
             take a minute; check your spam folder too.
@@ -173,16 +187,16 @@ export function SignInForm() {
           <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={10}
             required autoFocus className={`${input} tracking-[0.3em]`} />
           <button type="submit" disabled={busy} className={button}>
-            {busy ? "Checking…" : "Continue"}
+            <BusyLabel busy={busy} label="Continue" busyLabel="Checking…" />
           </button>
-          <button type="button" onClick={() => go({ kind: "code-email" })} className={`${link} mt-4 block w-full text-center`}>
+          <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
             Use a different email
           </button>
         </form>
       )}
 
       {step.kind === "new-password" && (
-        <form action={setPassword} noValidate>
+        <form onSubmit={(e) => run(e, setPassword)} noValidate>
           <p className="mb-2 text-sm text-neutral-600 dark:text-neutral-400">
             Email confirmed. Choose a password so you can sign in with{" "}
             <span className="font-medium text-neutral-900 dark:text-neutral-100">{step.email}</span> next time, without a code.
@@ -191,7 +205,7 @@ export function SignInForm() {
           <input type="email" name="username" autoComplete="username" value={step.email} readOnly hidden />
           {passwordField("new-password", "New password", "new-password", `At least ${MIN_PASSWORD} characters.`)}
           <button type="submit" disabled={busy} className={button}>
-            {busy ? "Saving…" : "Save password and continue"}
+            <BusyLabel busy={busy} label="Save password and continue" busyLabel="Saving…" />
           </button>
         </form>
       )}

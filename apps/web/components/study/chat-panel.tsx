@@ -5,6 +5,7 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CitationInfo } from "@/lib/study/format";
 import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
+import { Spinner } from "@/components/ui/spinner";
 import { Answer } from "./answer";
 
 type Meta = {
@@ -30,7 +31,9 @@ interface Props {
 }
 
 function textOf(m: Msg | undefined): string {
-  return (m?.parts ?? []).map((p) => (p.type === "text" ? p.text : "")).join("");
+  return (m?.parts ?? [])
+    .map((p) => (p.type === "text" ? p.text : ""))
+    .join("");
 }
 
 function errorText(e: Error | undefined): string | null {
@@ -42,12 +45,25 @@ function errorText(e: Error | undefined): string | null {
   }
 }
 
-export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onChatCreated, onChatActive, onCite, prefill }: Props) {
+export function ChatPanel({
+  course,
+  topic,
+  chatId,
+  remaining,
+  onRemaining,
+  onChatCreated,
+  onChatActive,
+  onCite,
+  prefill,
+}: Props) {
   const conversationId = useRef<string | null>(chatId);
   const [loadingHistory, setLoadingHistory] = useState(!!chatId);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [left, setLeft] = useState(remaining);
   const [input, setInput] = useState("");
+  // Set the moment Send (or a starter) is pressed, before the request starts streaming, so the
+  // button reacts at once and a second press can't send the question twice.
+  const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -58,13 +74,24 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
         // The server keeps the history; send only the new message and which chat it belongs to
         // (passed per message by submit()).
         prepareSendMessagesRequest: ({ messages, body }) => ({
-          body: { conversation_id: body?.conversation_id, message: textOf(messages.at(-1)) },
+          body: {
+            conversation_id: body?.conversation_id,
+            message: textOf(messages.at(-1)),
+          },
         }),
       }),
     [],
   );
 
-  const { messages, setMessages, sendMessage, status, error, stop, clearError } = useChat<Msg>({
+  const {
+    messages,
+    setMessages,
+    sendMessage,
+    status,
+    error,
+    stop,
+    clearError,
+  } = useChat<Msg>({
     transport,
     onFinish: ({ message }) => {
       const r = message.metadata?.remaining;
@@ -81,18 +108,28 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
     let cancelled = false;
     fetch(`/api/conversations/${chatId}/messages`)
       .then(async (res) => {
-        if (!res.ok) throw new Error((await res.json()).error ?? "Couldn't load this chat.");
+        if (!res.ok)
+          throw new Error(
+            (await res.json()).error ?? "Couldn't load this chat.",
+          );
         return res.json();
       })
       .then(({ messages: rows }) => {
         if (cancelled) return;
         setMessages(
-          rows.map((r: { id: string; role: "user" | "assistant"; content: string; citations: CitationInfo[] }) => ({
-            id: r.id,
-            role: r.role,
-            parts: [{ type: "text", text: r.content }],
-            metadata: { citations: r.citations },
-          })),
+          rows.map(
+            (r: {
+              id: string;
+              role: "user" | "assistant";
+              content: string;
+              citations: CitationInfo[];
+            }) => ({
+              id: r.id,
+              role: r.role,
+              parts: [{ type: "text", text: r.content }],
+              metadata: { citations: r.citations },
+            }),
+          ),
         );
       })
       .catch((e) => !cancelled && setHistoryError(e.message))
@@ -115,7 +152,10 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
     if (!prefill) return;
     requestAnimationFrame(() => {
       inputRef.current?.focus();
-      inputRef.current?.setSelectionRange(prefill.text.length, prefill.text.length);
+      inputRef.current?.setSelectionRange(
+        prefill.text.length,
+        prefill.text.length,
+      );
     });
   }, [prefill]);
 
@@ -123,10 +163,11 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 160)
+      el.scrollTop = el.scrollHeight;
   }, [messages, status]);
 
-  const busy = status === "submitted" || status === "streaming";
+  const busy = sending || status === "submitted" || status === "streaming";
   const errText = errorText(error);
   const capped = left <= 0 || errText === DAILY_LIMIT;
   useEffect(() => {
@@ -134,14 +175,19 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
   }, [errText, onRemaining]);
 
   async function submit(raw: string) {
-      const text = raw.trim();
-      if (!text || busy || capped) return;
+    const text = raw.trim();
+    if (!text || busy || capped) return;
+    setSending(true);
+    try {
       clearError();
       if (!conversationId.current) {
         const res = await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ course_id: course.id, topic_id: topic?.id ?? null }),
+          body: JSON.stringify({
+            course_id: course.id,
+            topic_id: topic?.id ?? null,
+          }),
         });
         if (!res.ok) {
           setHistoryError("Couldn't start a new chat. Try again.");
@@ -154,21 +200,41 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
         onChatActive(conversationId.current);
       }
       setInput("");
-      await sendMessage({ text }, { body: { conversation_id: conversationId.current } });
+      const pending = sendMessage(
+        { text },
+        { body: { conversation_id: conversationId.current } },
+      );
+      setSending(false); // from here the chat status (submitted/streaming) shows progress
+      await pending;
+    } finally {
+      setSending(false);
+    }
   }
 
   const last = messages.at(-1);
-  const waitingForWords = status === "submitted" || (status === "streaming" && (last?.role !== "assistant" || !textOf(last).trim()));
+  const waitingForWords =
+    status === "submitted" ||
+    (status === "streaming" &&
+      (last?.role !== "assistant" || !textOf(last).trim()));
 
   const starters = topic
     ? [
         { label: `Ask about ${topic.title}`, send: null },
-        { label: "Summarize this topic", send: `Summarize the topic "${topic.title}".` },
-        { label: "Quiz me on this topic", send: `Quiz me on "${topic.title}".` },
+        {
+          label: "Summarize this topic",
+          send: `Summarize the topic "${topic.title}".`,
+        },
+        {
+          label: "Quiz me on this topic",
+          send: `Quiz me on "${topic.title}".`,
+        },
       ]
     : [
         { label: "Ask a question", send: null },
-        { label: "Course overview", send: "Give me an overview of the whole course." },
+        {
+          label: "Course overview",
+          send: "Give me an overview of the whole course.",
+        },
         { label: "Quiz me", send: "Quiz me on this course." },
       ];
 
@@ -176,12 +242,20 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl px-4 py-6 lg:px-8">
-          {loadingHistory && <p className="text-sm text-neutral-500">Loading chat…</p>}
-          {historyError && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{historyError}</p>}
+          {loadingHistory && (
+            <p className="text-sm text-neutral-500">Loading chat…</p>
+          )}
+          {historyError && (
+            <p role="alert" className="text-sm text-red-700 dark:text-red-400">
+              {historyError}
+            </p>
+          )}
 
           {!loadingHistory && messages.length === 0 && (
             <div className="pt-[8vh] text-center">
-              <h2 className="text-xl font-semibold tracking-tight">{topic ? topic.title : course.title}</h2>
+              <h2 className="text-xl font-semibold tracking-tight">
+                {topic ? topic.title : course.title}
+              </h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-neutral-600 dark:text-neutral-400">
                 {topic
                   ? "Answers come from this topic's slides first, with a citation for every point."
@@ -191,9 +265,11 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
                 {starters.map((s) => (
                   <button
                     key={s.label}
-                    onClick={() => (s.send ? submit(s.send) : inputRef.current?.focus())}
-                    disabled={capped}
-                    className="rounded-full border border-neutral-300 px-4 py-2 text-sm hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+                    onClick={() =>
+                      s.send ? submit(s.send) : inputRef.current?.focus()
+                    }
+                    disabled={capped || busy}
+                    className="rounded-full border border-neutral-300 px-4 py-2 text-sm hover:border-neutral-400 hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                   >
                     {s.label}
                   </button>
@@ -227,13 +303,22 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
           </ol>
 
           {waitingForWords && (
-            <p className="mt-6 flex items-center gap-2 text-sm text-neutral-500" role="status">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-neutral-400" aria-hidden />
+            <p
+              className="mt-6 flex items-center gap-2 text-sm text-neutral-500"
+              role="status"
+            >
+              <span
+                className="inline-block h-2 w-2 animate-pulse rounded-full bg-neutral-400"
+                aria-hidden
+              />
               Searching your slides…
             </p>
           )}
           {errText && !capped && (
-            <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-400">
+            <p
+              role="alert"
+              className="mt-4 text-sm text-red-700 dark:text-red-400"
+            >
               {errText}
             </p>
           )}
@@ -259,26 +344,48 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  if (
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    !e.nativeEvent.isComposing
+                  ) {
                     e.preventDefault();
                     submit(input);
                   }
                 }}
                 rows={1}
                 maxLength={4000}
-                placeholder={topic ? `Ask about ${topic.title}…` : `Ask about ${course.title}…`}
+                placeholder={
+                  topic
+                    ? `Ask about ${topic.title}…`
+                    : `Ask about ${course.title}…`
+                }
                 className="max-h-48 min-h-[28px] flex-1 resize-none bg-transparent py-1 text-[15px] outline-none [field-sizing:content] placeholder:text-neutral-400"
                 aria-label="Your question"
               />
               {busy ? (
-                <button type="button" onClick={() => stop()} className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800">
-                  Stop
-                </button>
+                sending || status === "submitted" ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white opacity-80 dark:bg-white dark:text-neutral-900"
+                    role="status"
+                  >
+                    <Spinner className="h-3.5 w-3.5" />
+                    Sending
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => stop()}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  >
+                    Stop
+                  </button>
+                )
               ) : (
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                  className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-40 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
                 >
                   Send
                 </button>
@@ -286,8 +393,14 @@ export function ChatPanel({ course, topic, chatId, remaining, onRemaining, onCha
             </div>
           )}
           <p className="mt-1.5 flex justify-between text-[11px] text-neutral-500">
-            <span className="hidden sm:inline">Enter to send · Shift+Enter for a new line</span>
-            {!capped && left < 10 && <span>{left} message{left === 1 ? "" : "s"} left today</span>}
+            <span className="hidden sm:inline">
+              Enter to send · Shift+Enter for a new line
+            </span>
+            {!capped && left < 10 && (
+              <span>
+                {left} message{left === 1 ? "" : "s"} left today
+              </span>
+            )}
           </p>
         </form>
       </div>
