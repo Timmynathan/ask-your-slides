@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
+import re
+
 MAX_CHUNK_CHARS = 12_000
+# NUL and other C0 control characters (keep \t and \n). PDFs sometimes contain them; Postgres
+# text columns reject NUL outright.
+_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
+def sanitize(text: str | None) -> str | None:
+    if text is None:
+        return None
+    return _CONTROL.sub("", text).strip() or None
 
 
 def slide_key(course_code: str, material_order: int, number: int) -> str:
@@ -49,9 +60,26 @@ def build_chunk(
 
 
 def looks_garbled(text: str) -> bool:
-    """A real text layer is ~15% spaces. Broken font encodings print another glyph instead."""
-    flat = text.replace("\n", " ")
+    """True when a page's text layer can't be trusted, so the page should be transcribed from its image.
+
+    Broken font encodings seen in the course PDFs:
+      - spaces printed as another glyph ('sentations!at!which!speakers')  → almost no spaces
+      - glyphs mapped to symbols ('!! "##! " #  #!## # $% &')           → few letters
+      - letters substituted ('VZN' for 'the', 'QRT' for 'and')           → many words with no vowel
+    Real text (prose, bullet lists, code) is ~85% letters among non-space characters, ~15% spaces,
+    and almost every 3+ letter word has a vowel.
+    """
+    flat = " ".join(text.split())
+    non_space = len(flat) - flat.count(" ")
+    if non_space < 200:
+        return False  # too little text to judge
     letters = sum(c.isalpha() for c in flat)
-    if letters < 200:
+    if flat.count(" ") / len(flat) < 0.04:
+        return True
+    if letters / non_space < 0.5:
+        return True
+    words = [w for w in (t.strip(".,;:!?()[]\"'-") for t in flat.split()) if len(w) >= 3 and w.isalpha()]
+    if len(words) < 30:
         return False
-    return flat.count(" ") / len(flat) < 0.04
+    vowelless = sum(1 for w in words if not any(v in w.lower() for v in "aeiouy"))
+    return vowelless / len(words) > 0.25

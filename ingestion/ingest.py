@@ -20,12 +20,13 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import embed
 import pdf_extract
 import pptx_extract
 import vision
-from chunks import build_chunk, image_path, looks_garbled, slide_key, unit
+from chunks import build_chunk, image_path, looks_garbled, sanitize, slide_key, unit
 from config import DATA, PIPELINE_VERSION, VISION_MODEL, VISION_USD_PER_MTOK
 from manifest import Course, ManifestError, Material, load, title_from_filename
 from store import SlideRow, Store
@@ -53,8 +54,9 @@ class PagePlan:
     body: str
     notes: str | None
     png: bytes
-    reason: str | None  # why it goes to vision (None = it doesn't)
-    mode: str  # 'describe' | 'transcribe'
+    reason: str | None  # why it needs extra work (None = text layer is enough)
+    mode: str  # 'describe' (Claude vision) | 'transcribe' (local OCR)
+    pdf: Path
 
 
 def content_hash(m: Material) -> str:
@@ -64,8 +66,9 @@ def content_hash(m: Material) -> str:
 
 
 def plan_pages(m: Material) -> tuple[list[PagePlan], str]:
-    """Render and extract every page; decide which pages need vision. No API calls."""
-    pdf_pages = pdf_extract.read_pdf(pdf_extract.to_pdf(m.file))
+    """Render and extract every page; decide which pages need vision or OCR. No API calls."""
+    pdf_path = pdf_extract.to_pdf(m.file)
+    pdf_pages = pdf_extract.read_pdf(pdf_path)
     is_pptx = m.file.suffix.lower() == ".pptx"
     pptx_slides = pptx_extract.extract(m.file) if is_pptx else None
     if pptx_slides is not None and len(pptx_slides) != len(pdf_pages):
@@ -74,6 +77,9 @@ def plan_pages(m: Material) -> tuple[list[PagePlan], str]:
 
     pdf_template = pdf_extract.repeated_images(pdf_pages)
     pptx_template = pptx_extract.repeated_images(pptx_slides) if pptx_slides else set()
+    bodies = [s.body for s in pptx_slides] if pptx_slides else [p.text for p in pdf_pages]
+    # If most pages have a broken text layer, the file's encoding is broken: trust no page of it.
+    untrusted_file = sum(looks_garbled(b) for b in bodies) > len(bodies) / 2
     plans: list[PagePlan] = []
     for i, page in enumerate(pdf_pages):
         if pptx_slides:
@@ -84,39 +90,48 @@ def plan_pages(m: Material) -> tuple[list[PagePlan], str]:
             title, body, notes = page.title, page.text, None
             reason = pdf_extract.visual_reason(page, pdf_template)
         mode = "describe"
-        if looks_garbled(body):
+        if looks_garbled(body) or (untrusted_file and body.strip()):
             mode, reason = "transcribe", "garbled text layer"
         elif len(body) < MIN_TEXT_CHARS and m.kind not in ("slides",) and not pptx_slides:
             # A near-empty PDF page in notes/readings is usually a scan. Slides are often just a title.
             mode, reason = "transcribe", "no text layer"
         elif len(body) < MIN_TEXT_CHARS:
             reason = reason or "little text"
-        plans.append(PagePlan(page.number, title, body, notes, page.png, reason, mode))
+        plans.append(PagePlan(page.number, title, body, notes, page.png, reason, mode, pdf_path))
     return plans, unit(m.kind, is_pptx)
 
 
-def run_vision(plans: list[PagePlan], where_prefix: str, stats: Stats, workers: int) -> dict[int, tuple[str | None, str | None]]:
-    """Returns {page number: (visual_description, transcription)}."""
-    todo = [p for p in plans if p.reason]
+def enrich(plans: list[PagePlan], where_prefix: str, stats: Stats, workers: int, use_vision: bool) -> dict[int, tuple[str | None, str | None]]:
+    """Returns {page number: (visual_description, transcription)}.
+
+    transcribe → local OCR (Tesseract): verbatim, free, offline. Not Claude: a word-for-word copy of
+                 a published reading is exactly what the model declines to produce.
+    describe   → Claude vision: diagrams, charts, images, equations.
+    """
+    out: dict[int, tuple[str | None, str | None]] = {}
+    ocr_todo = [p for p in plans if p.mode == "transcribe"]
+    # Sequential: MuPDF's OCR (Leptonica) refuses to run on two threads at once.
+    for p in ocr_todo:
+        stats.transcribed += 1
+        out[p.number] = (None, pdf_extract.ocr_page(p.pdf, p.number))
+    if not use_vision:
+        return out
+
+    describe_todo = [p for p in plans if p.mode == "describe" and p.reason]
 
     def one(p: PagePlan):
-        where = f"{where_prefix}, page {p.number}"
-        r = vision.transcribe(p.png, where) if p.mode == "transcribe" else vision.describe(p.png, where, p.body)
-        return p, r
+        return p, vision.describe(p.png, f"{where_prefix}, page {p.number}", p.body)
 
-    out: dict[int, tuple[str | None, str | None]] = {}
     with ThreadPoolExecutor(workers) as pool:
-        for p, r in pool.map(one, todo):
+        for p, r in pool.map(one, describe_todo):
             stats.vision_calls += 1
             stats.vision_cached += r.cached
-            stats.refusals += r.refused
             stats.input_tokens += r.input_tokens
             stats.output_tokens += r.output_tokens
-            if p.mode == "transcribe":
-                stats.transcribed += 1
-                out[p.number] = (None, r.text)
-            else:
-                out[p.number] = (r.text, None)
+            if r.refused:
+                stats.refusals += 1
+                print(f"    ! page {p.number}: vision declined ({r.note}); kept its extracted text")
+            out[p.number] = (r.text, None)
     return out
 
 
@@ -181,11 +196,11 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
         plans, unit_name = plan_pages(m)
         stats.pages += len(plans)
         stats.image_bytes += sum(len(p.png) for p in plans)
-        n_vision = sum(1 for p in plans if p.reason)
+        n_vision = sum(1 for p in plans if p.reason and p.mode == "describe")
         n_transcribe = sum(1 for p in plans if p.mode == "transcribe")
         status = "changed" if ex else "new"
         stats.materials[status] += 1
-        summary = f"{len(plans)} {unit_name}s, vision {n_vision}" + (f" (transcribe {n_transcribe})" if n_transcribe else "")
+        summary = f"{len(plans)} {unit_name}s, vision {n_vision}" + (f", OCR {n_transcribe}" if n_transcribe else "")
         if dry:
             print(f"  + {status:8} {label}  [{summary}]")
             stats.vision_calls += n_vision
@@ -193,11 +208,13 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
             continue
 
         where = f"{unit_name}s from \"{title}\" ({m.kind}), course {course.code} {course.title}"
-        results = {} if args.no_vision else run_vision(plans, where, stats, args.workers)
+        results = enrich(plans, where, stats, args.workers, use_vision=not args.no_vision)
         slides: list[SlideRow] = []
         for p in plans:
             visual, transcript = results.get(p.number, (None, None))
-            body = transcript if transcript else p.body
+            visual, transcript = sanitize(visual), sanitize(transcript)
+            p.title, p.notes = sanitize(p.title), sanitize(p.notes)
+            body = sanitize(transcript if transcript else p.body) or ""
             chunk = build_chunk(
                 course_code=course.code, course_title=course.title, topic=m.topic, kind=m.kind,
                 material_title=title, unit_name=unit_name, number=p.number, total=len(plans),
@@ -273,7 +290,7 @@ def main() -> int:
         print("  materials: " + ", ".join(f"{k} {v}" for k, v in stats.materials.items()))
         if stats.pages:
             print(f"  pages processed: {stats.pages}  (images {stats.image_bytes / 1e6:.1f} MB, avg {stats.image_bytes / stats.pages / 1024:.0f} KB)")
-        print(f"  vision: {stats.vision_calls} calls ({stats.transcribed} transcriptions)"
+        print(f"  OCR: {stats.transcribed} pages   vision: {stats.vision_calls} calls"
               + ("" if args.dry_run else f", {stats.vision_cached} from cache, {stats.refusals} refused"))
         if not args.dry_run:
             usd = stats.input_tokens / 1e6 * VISION_USD_PER_MTOK[0] + stats.output_tokens / 1e6 * VISION_USD_PER_MTOK[1]

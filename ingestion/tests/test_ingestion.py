@@ -111,3 +111,28 @@ def test_garbled_text_layer_is_detected():
     assert looks_garbled(garbled)
     assert not looks_garbled(normal)
     assert not looks_garbled("Short title")  # too little text to judge
+
+
+def test_symbol_and_substitution_garbling_is_detected():
+    symbols = '!! "##! " # #!## # $% & \'(()*+ -. /012(-*-34 56 89:;<=;: >?<<@;?: ' * 6
+    substituted = "VZN PQ_MNVNT LX PQ_MNVNT VZN T_]` PWTQaRL^Y [ZLUZ LX QRT VZN XPQ^^Y VL`ZV QRT " * 5
+    assert looks_garbled(symbols)
+    assert looks_garbled(substituted)
+
+
+def test_slide_bullet_lists_and_code_are_not_garbled():
+    # Real INS401 slide: Title Case terms, no 'the'/'of' — must keep its text layer.
+    bullets = ("Inputs / Project Charter / Project management plan / Resource management plan / "
+               "Stakeholder engagement plan / Requirements documentation / Stakeholder register / "
+               "Enterprise environmental factors / Organizational process assets / Expert judgement / ") * 2
+    code = ("BEGIN; UPDATE account SET balance = balance - 100 WHERE account_id = 123; "
+            "UPDATE account SET balance = balance + 100 WHERE account_id = 456; COMMIT; ") * 3
+    assert not looks_garbled(bullets)
+    assert not looks_garbled(code)
+
+
+def test_sanitize_strips_nul_and_control_characters():
+    from chunks import sanitize
+    assert sanitize("Privacy\x00 and\x07 data\nline 2\tx") == "Privacy and data\nline 2\tx"
+    assert sanitize("\x00\x01") is None
+    assert sanitize(None) is None

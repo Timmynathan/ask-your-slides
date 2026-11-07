@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 import subprocess
 from collections import Counter
@@ -81,6 +82,22 @@ def read_pdf(pdf_path: Path, render: bool = True) -> list[PdfPage]:
                 )
             )
     return pages
+
+
+TESSDATA = os.environ.get("TESSDATA_PREFIX") or next(
+    (p for p in ("/opt/homebrew/share/tessdata", "/usr/local/share/tessdata", "/usr/share/tesseract-ocr/5/tessdata") if Path(p).is_dir()),
+    None,
+)
+
+
+def ocr_page(pdf_path: Path, number: int) -> str:
+    """Verbatim text of one page via Tesseract OCR (for scanned pages or broken text layers)."""
+    if TESSDATA is None:
+        raise RuntimeError("Tesseract language data not found: brew install tesseract (or set TESSDATA_PREFIX)")
+    with pymupdf.open(pdf_path) as doc:
+        page = doc[number - 1]
+        textpage = page.get_textpage_ocr(language="eng", dpi=300, full=True, tessdata=TESSDATA)
+        return clean_text(page.get_text("text", textpage=textpage))
 
 
 def repeated_images(pages: list[PdfPage]) -> set[str]:
