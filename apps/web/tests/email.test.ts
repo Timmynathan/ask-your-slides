@@ -23,3 +23,13 @@ describe("isOtpCode", () => {
     for (const c of ["12345", "abcdef", "12 3456", "", undefined]) expect(isOtpCode(c)).toBe(false);
   });
 });
+
+import { passwordProblem } from "@/lib/auth/email";
+describe("passwordProblem", () => {
+  it("accepts 8+ characters", () => expect(passwordProblem("revise4exams")).toBeNull());
+  it("rejects short, missing or over-long passwords", () => {
+    expect(passwordProblem("short")).toMatch(/at least 8/);
+    expect(passwordProblem(undefined)).toMatch(/at least 8/);
+    expect(passwordProblem("é".repeat(40))).toMatch(/too long/); // 80 bytes
+  });
+});

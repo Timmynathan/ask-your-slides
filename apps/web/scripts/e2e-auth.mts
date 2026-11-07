@@ -118,6 +118,13 @@ async function main() {
     const verified = await res.json();
     check(res.status === 200 && verified.next === "/welcome", "correct code signs in; first sign-in goes to /welcome", JSON.stringify(verified));
     check(jar.size > 0, "session cookie set");
+
+    // 4b. Right after the code: create a password (PRD F1: the code is a one-time step).
+    res = await fetch(`${BASE}/api/auth/set-password`, { method: "POST", headers: { "Content-Type": "application/json", cookie: jar.header() }, body: JSON.stringify({ password: "short" }) });
+    check(res.status === 400, "too-short password refused", String(res.status));
+    res = await fetch(`${BASE}/api/auth/set-password`, { method: "POST", headers: { "Content-Type": "application/json", cookie: jar.header() }, body: JSON.stringify({ password: "revise4exams!" }) });
+    jar.take(res);
+    check(res.status === 200, "password created after the code", `${res.status} ${JSON.stringify(await res.json())}`);
     const thirtyDays = 60 * 60 * 24 * 30;
     check(jar.maxAges.length > 0 && jar.maxAges.every((a) => a === thirtyDays), "session cookie lasts 30 days", `max-age ${jar.maxAges.join(",")}`);
 
@@ -157,6 +164,35 @@ async function main() {
     check(res.status === 307, "after sign-out, /dashboard redirects to sign-in", String(res.status));
     res = await fetch(`${BASE}/dashboard`, { headers: { cookie: other.header() }, redirect: "manual" });
     check(res.status !== 307 || !res.headers.get("location")?.endsWith("/sign-in"), "the other browser stays signed in (sign-out is per browser)", `${res.status} ${res.headers.get("location") ?? ""}`);
+
+    // 8. Next time: email + password, no code.
+    const passwordSignIn = async (password: string) => {
+      const r = await fetch(`${BASE}/api/auth/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: testEmail.toUpperCase(), password }) });
+      const j = new Jar();
+      j.take(r);
+      return { status: r.status, body: await r.json(), jar: j };
+    };
+    let p = await passwordSignIn("revise4exams!");
+    check(p.status === 200 && p.jar.size > 0, "signs in with email + password (no code)", `${p.status} ${JSON.stringify(p.body)}`);
+    res = await fetch(`${BASE}/study/CSC420`, { headers: { cookie: p.jar.header() }, redirect: "manual" });
+    check(res.status === 200, "password session opens the study page", String(res.status));
+    p = await passwordSignIn("wrong-password");
+    check(p.status === 401 && /Wrong email or password/.test(p.body.error), "wrong password refused with a neutral message", p.body.error);
+    p = await (async () => {
+      const r = await fetch(`${BASE}/api/auth/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: `nobody-${Date.now()}@pau.edu.ng`, password: "revise4exams!" }) });
+      return { status: r.status, body: await r.json(), jar: new Jar() };
+    })();
+    check(p.status === 401 && /Wrong email or password/.test(p.body.error), "unknown account gets the same message (no account probing)", p.body.error);
+
+    // 9. Forgot password: code again → new password; the old one stops working.
+    const { data: link3 } = await admin.auth.admin.generateLink({ type: "magiclink", email: testEmail });
+    const reset = new Jar();
+    res = await fetch(`${BASE}/api/auth/verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: testEmail, code: link3?.properties?.email_otp }) });
+    reset.take(res);
+    res = await fetch(`${BASE}/api/auth/set-password`, { method: "POST", headers: { "Content-Type": "application/json", cookie: reset.header() }, body: JSON.stringify({ password: "new-revision-pass" }) });
+    check(res.status === 200, "forgot password: code then a new password", String(res.status));
+    check((await passwordSignIn("revise4exams!")).status === 401, "old password no longer works");
+    check((await passwordSignIn("new-revision-pass")).status === 200, "new password works");
   } finally {
     await deleteUserByEmail(testEmail);
     server?.kill();

@@ -14,3 +14,12 @@ export function isPauEmail(raw: unknown): boolean {
 export function isOtpCode(raw: unknown): raw is string {
   return typeof raw === "string" && /^\d{6,10}$/.test(raw.trim());
 }
+
+export const MIN_PASSWORD = 8;
+export const MAX_PASSWORD = 72; // bcrypt (Supabase Auth) ignores bytes beyond 72
+
+export function passwordProblem(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters.`;
+  if (new TextEncoder().encode(raw).length > MAX_PASSWORD) return "That password is too long.";
+  return null;
+}

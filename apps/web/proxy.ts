@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
-const PUBLIC_PATHS = ["/sign-in", "/api/auth/otp", "/api/auth/verify"];
+const PUBLIC_PATHS = ["/sign-in", "/api/auth/otp", "/api/auth/verify", "/api/auth/password"];
 
 export async function proxy(request: NextRequest) {
   const { response, userId } = await updateSession(request);

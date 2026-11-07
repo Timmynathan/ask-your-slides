@@ -93,14 +93,19 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F1. Sign in with school email
 
-- The student enters an email. The app sends a 6-digit one-time code (OTP). The email template shows the code (`{{ .Token }}`), not a magic link.
-- Emails go through Resend (custom SMTP in Supabase) from `noreply@mail.askyourslides.com` on a verified domain.
-- Only `@pau.edu.ng` addresses are accepted. The server rejects all other domains before it sends a code. A Supabase auth hook enforces the same rule, so calling Supabase directly with the public key cannot bypass it.
+- **First time**: the student enters their PAU email and receives a 6-digit code (OTP) once. The code proves they own the address. They then create a password (at least 8 characters).
+- **After that**: email + password. No code.
+- **Forgot password**: the same code step, then a new password. The old password stops working.
+- The email template shows the code (`{{ .Token }}`), not a magic link. Emails go through Resend (custom SMTP in Supabase) from `noreply@mail.askyourslides.com` on a verified domain.
+- Only `@pau.edu.ng` addresses are accepted. The server rejects all other domains before it sends a code or checks a password. A Supabase auth hook enforces the same rule, so calling Supabase directly with the public key cannot bypass it.
+- A failed password sign-in gives one neutral message ("Wrong email or password…"), whether the account exists or not, so accounts can't be probed. Supabase rate-limits attempts.
+- Sessions last 30 days from last use, per browser. Signing out ends only that browser's session.
 - First sign-in asks for a display name (optional).
 
 **Acceptance**
-- `someone@gmail.com` → error "Use your PAU email." No email is sent.
-- `student@pau.edu.ng` → code arrives, sign-in works, session lasts 30 days.
+- `someone@gmail.com` → error "Use your PAU email." No email is sent, no password is checked.
+- `student@pau.edu.ng` first time → code arrives, password created, sign-in works.
+- Same student later → signs in with email + password, no code.
 
 ### F2. Dashboard with course and topic chats
 

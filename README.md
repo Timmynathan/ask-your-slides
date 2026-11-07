@@ -67,7 +67,8 @@ npm --prefix apps/web install
 npm run dev            # http://localhost:3000 (reads the repo-root .env)
 ```
 
-Sign-in is a 6-digit email code, `@pau.edu.ng` only, enforced twice: the `/api/auth/otp` route
+Sign-in: the first time (or after a forgotten password) a 6-digit email code proves the PAU
+address and the student creates a password; after that it is email + password. `@pau.edu.ng` only, enforced twice: the `/api/auth/otp` route
 rejects other domains before Supabase is called, and the `public.hook_before_user_created` auth hook
 makes Supabase itself refuse to create non-PAU accounts. Sessions last 30 days from last use.
 
