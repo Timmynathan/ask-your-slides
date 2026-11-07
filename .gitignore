@@ -7,3 +7,5 @@ node_modules/
 __pycache__/
 .venv/
 .DS_Store
+# Trace exports contain student questions
+evals/exports/

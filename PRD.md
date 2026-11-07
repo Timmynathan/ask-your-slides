@@ -364,33 +364,39 @@ sequenceDiagram
     participant D as Postgres
 
     S->>A: message + conversation_id (course and topic come from the conversation)
-    A->>A: auth check, rate-limit check
-    A->>M: system prompt + history + tools
-    M->>A: tool call search_slides(query)
+    A->>A: auth check, daily cap (atomic), save user message
     A->>A: embed query (Voyage voyage-4, input_type query)
-    A->>D: hybrid search (course + topic filter; widen to course if weak)
+    A->>D: first search_slides, run by the server (topic first; widen if another topic is clearly better)
     D-->>A: top slides
-    A-->>M: slides with slide_keys
+    A->>M: system prompt + history + question + that search as the model's own tool call
+    M-->>A: optional further tool calls (search again, list_topics, get_material_pages)
     M-->>A: streamed answer with [[s:slide_key]] markers and <general> blocks
-    A->>A: validate citations, save message + trace
+    A->>A: validate citations and drop narration on the stream, save message + trace
     A-->>S: streamed answer, rendered with chips and boxes
 ```
+
+**Why the server runs the first search.** Measured on the real courses (`npm run check:agent`):
+prompting alone did not guarantee retrieval (the model sometimes answered from memory), and forcing
+the model to call a tool cost a whole extra model round trip before the first word. Running the
+first search on the server guarantees retrieval before every answer and saves that round trip. The
+query is the student's message, plus the previous question for short follow-ups ("how is that
+different?", a quiz answer like "c").
 
 ### 10.2 Tools
 
 | Tool | Input | Output | Used for |
 |---|---|---|---|
 | `search_slides` | `query: string`, `k?: number (default 8)`, `scope?: "topic" \| "course"`, `include?: ("outline" \| "other")[]` | `{scope_used, fell_back, results: [{slide_key, material_title, material_kind, topic_title, outside_topic, slide_number, title, content, prev_title, next_title}]}` | Q&A, quizzes |
-| `list_topics` | — | Topics in order, each with its materials `{material_id, title, kind, page_count, lms_section}`, plus course-level materials (outlines, other) | Summaries, overviews, "what's in this course?" |
-| `get_material_pages` | `material_id`, `from?`, `to?` | Pages in order (max 40 per call) | Topic summaries, course overview from the outline |
+| `list_topics` | — | Topics in order, each with its materials `{material, title, kind, pages, lms_section}`, plus course-level materials (outlines, other). `material` is a short key, e.g. `CSC420-02` | Summaries, overviews, "what's in this course?", "week 3" |
+| `get_material_pages` | `material` (key from `list_topics`), `from?`, `to?` | Pages in order (max 40 per call, content capped at 1,500 characters per page) | Topic summaries, course overview from the outline |
 
 `course_id` and `topic_id` are **not** tool parameters. The server injects them from the conversation. The model cannot search other courses.
 
 **Topic-first search with fallback** (`search_slides` in a topic chat):
 
 1. Search the topic (`match_slides(..., p_topic_id)`).
-2. If the best vector similarity is below a threshold τ (calibrated on the golden set; starting value set after first ingest), or fewer than 2 results come back, search the whole course. Results from other topics carry `outside_topic: true`; the response carries `fell_back: true`.
-3. The model may also ask for `scope: "course"` when the student asks a cross-topic question.
+2. Search the whole course at the same time. **Widen** (use the whole-course results) if the topic has no results, or if the best similarity outside the topic beats the best inside it by more than a margin (0.05, to be calibrated on the golden set). A fixed similarity cutoff does not work: across the 7 courses, right-topic scores ranged 0.39–0.75 and wrong-topic scores 0.33–0.71. Results from other topics carry `outside_topic: true`; the response carries `fell_back: true`.
+3. The model may also ask for `scope: "course"`, but only when the student asks to connect topics. It is told not to widen on its own; the server decides.
 4. When any cited slide is outside the topic, the server sends a `fallback` flag with the answer and the UI shows the label (F3). The label comes from the server, not from the model's wording.
 
 In a whole-course chat, `search_slides` searches all topics; `scope` is ignored.
@@ -421,7 +427,8 @@ The server and the UI enforce the contract:
 
 - The UI renders `[[s:...]]` as a citation chip and `<general>` as a highlighted box.
 - The server checks that every cited `slide_key` was returned by a tool in this turn. The check runs on the stream: a marker is held back until it is complete, then forwarded or dropped, so the student never sees an invalid chip. Invalid citations are logged as a trace error (`citation_invalid`). This is a Proofline metric.
-- Because only this turn's slides count, the agent searches again when it needs a slide from an earlier turn (e.g. marking a quiz answer).
+- Because only this turn's slides count, the agent searches again when it needs a slide from an earlier turn (e.g. marking a quiz answer). Earlier answers go back to the model as history with their markers intact; stripping them made the model believe it had answered without searching.
+- **Narration guard**: text the model writes just before a tool call ("I'll pull all its pages…") is held back and dropped (`narration_dropped` in the trace). A text block streams as soon as it is longer than 120 characters or its step ends without a tool call.
 
 ### 10.5 System prompt (outline)
 
@@ -431,7 +438,7 @@ The server and the UI enforce the contract:
    - In a topic chat, stay on the topic. If results are marked `outside_topic`, say plainly that this part comes from elsewhere in the course.
 3. Cite every claim that comes from the slides with `[[s:slide_key]]`.
 4. Put all content that is not from the slides inside `<general>` blocks. Keep general knowledge short and useful.
-5. If the slides do not cover the question, say "Your slides don't cover this." first, then give general knowledge inside `<general>`.
+5. If the slides do not cover a question, say "Your slides don't cover this." first, then give general knowledge inside `<general>`. Only for questions: never for summaries or quizzes, and not when the slides answer part of the question (asking for the exact words without these limits made the model open summaries and quizzes with that sentence).
 6. If the slides and general knowledge disagree, follow the slides and point out the difference.
 7. Quiz mode: one question at a time; wait for the answer; mark it; cite the slide.
 8. Style: clear, short paragraphs, examples where they help, exam-focused.
@@ -441,8 +448,11 @@ The server and the UI enforce the contract:
 
 - Send at most the last 12 messages of history.
 - Tool results: max 8 slides for search, 40 pages per material read.
-- Max output: 1,200 tokens (2,000 for summaries).
-- Cache the system prompt (prompt caching).
+- Max output: 1,200 tokens (2,000 for summaries: when the message asks for a summary/overview or the agent reads whole materials).
+- Prompt caching: tools + core instructions are one shared cached prefix for every chat (Haiku 5.5 caches from 512 tokens); a second breakpoint on the new question serves the later steps of the same turn.
+- Thinking off for chat (`thinking: disabled`, allowed on Haiku 5.5 at default effort): answers are grounded in retrieved slides, and thinking delays the first word.
+
+**Measured** (agent check, 8 real questions, server on a Mac in Lagos): about $0.001 per answer ($0.0005–0.0026), so 15,000 messages ≈ $15. Time to first word: 2.5–3.7 s for questions, about 5.5 s for a whole-lecture summary. The PRD target (p95 ≤ 3 s) is not met yet; re-measure on Vercel before tuning further (the search step alone is 0.75–1.2 s from here).
 
 ---
 
@@ -645,7 +655,7 @@ Each assistant turn writes one `traces` row:
 - Tokens, cost, model, total latency, time to first token.
 - Feedback (joined later).
 
-**Export**: `npm run export:traces -- --since 2026-11-21` writes JSONL in Proofline's format.
+**Export**: `npm run export:traces -- --since 2026-11-21` writes JSONL (`evals/README.md` has the format, drafted from this section; student ids are pseudonymised). Each line also carries the deterministic checks below.
 
 **Proofline checks (deterministic first)**:
 
@@ -767,8 +777,9 @@ pau-study-assistant/
   supabase/
     migrations/             # schema, RLS, match_slides()
   evals/
+    README.md               # Proofline export format, agent check
     golden.jsonl
-    export_traces.ts
+    exports/                # git-ignored: trace exports (contain student questions)
   data/                     # git-ignored
     courses.yaml
     manifest.yaml           # course → topics → materials (source of truth)

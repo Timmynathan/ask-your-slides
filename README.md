@@ -9,7 +9,7 @@ the lecture slides, with slide citations. See [PRD.md](PRD.md) for the full spec
 apps/web/        Next.js app (phases 3–6)
 ingestion/       Python slide ingestion CLI (phase 2)
 supabase/        migrations (schema, RLS, match_slides) and SQL tests
-evals/           golden set + Proofline trace export (phase 4+)
+evals/           Proofline export format + agent check notes (README), golden set
 data/            courses.yaml, manifest.yaml, slides/ — git-ignored, never committed
 ```
 
@@ -89,7 +89,7 @@ sending any email, checks the auth hook, then deletes the test user.
 | 1 ✅ | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` (19 checks, passing on hosted Supabase) |
 | 2 ✅ | Ingestion CLI (manifest-driven) | `npm run test:ingest` (offline) + `npm run ingest:verify -- --course CSC420` |
 | 3 ✅ | `@pau.edu.ng` OTP auth | `npm run test:web` + `npm run test:e2e:auth` + `npm run test:db` |
-| 4 | `/api/chat` agent, citations, traces | — |
+| 4 ✅ | `/api/chat` agent, citations, traces, Proofline export | `npm run test:web` + `npm run check:agent` (real model, ~$0.01) |
 | 5 | Dashboard + chat UI | — |
 | 6 | Summaries, quiz, feedback, cap | — |
 
