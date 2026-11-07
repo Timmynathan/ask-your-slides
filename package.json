@@ -2,8 +2,7 @@
   "name": "pau-study-assistant",
   "private": true,
   "scripts": {
-    "db:link": "supabase link",
-    "db:push": "supabase db push",
+    "db:push": "bash -c 'set -a; source .env; set +a; supabase db push --remote=\"$DATABASE_URL\" \"$@\"' db-push",
     "test:db": "bash scripts/test-db.sh"
   }
 }

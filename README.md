@@ -25,11 +25,10 @@ uv python install 3.12
 
 1. Create a Supabase project (free tier is fine for development).
 2. `cp .env.example .env` and fill in the Supabase values.
-   `SUPABASE_DB_URL` is the **Session pooler** URI from Supabase → Connect.
+   `DATABASE_URL` is the **Session pooler** URI from Supabase → Connect.
 3. Apply the schema:
    ```bash
-   npm run db:link -- --project-ref <project-ref>   # asks for the DB password once
-   npm run db:push
+   npm run db:push        # supabase db push against DATABASE_URL
    ```
 4. Prove it works:
    ```bash
@@ -41,7 +40,7 @@ uv python install 3.12
 
 | Phase | Scope | Proof |
 |---|---|---|
-| 1 | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` |
+| 1 ✅ | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` (14 checks, passing on hosted Supabase) |
 | 2 | Ingestion CLI | — |
 | 3 | `@pau.edu.ng` OTP auth | — |
 | 4 | `/api/chat` agent, citations, traces | — |

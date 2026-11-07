@@ -53,7 +53,7 @@ create table public.slides (
   visual_description  text,
   speaker_notes       text,
   chunk_text          text not null,
-  embedding           extensions.vector(1536),
+  embedding           extensions.vector(1024),
   fts                 tsvector generated always as (to_tsvector('english', chunk_text)) stored,
   image_path          text,
   unique (deck_id, slide_number)

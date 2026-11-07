@@ -12,7 +12,7 @@
 -- ─────────────────────────────────────────────────────────────
 create or replace function public.match_slides(
   p_course_id        uuid,
-  p_query_embedding  extensions.vector(1536),
+  p_query_embedding  extensions.vector(1024),
   p_query_text       text,
   p_k                int default 8
 )

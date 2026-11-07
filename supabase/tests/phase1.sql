@@ -10,7 +10,7 @@ begin;
 create function pg_temp.vec(n int, m int default null, w float default 0)
 returns extensions.vector language sql immutable as $$
   select array_agg(case when i = n then 1.0 when i = m then w else 0.0 end order by i)::extensions.vector
-  from generate_series(1, 1536) i
+  from generate_series(1, 1024) i
 $$;
 
 insert into auth.users (id, email, aud, role, created_at, updated_at) values
