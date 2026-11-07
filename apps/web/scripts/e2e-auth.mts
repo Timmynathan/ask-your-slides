@@ -2,7 +2,7 @@
 //   npm run test:e2e:auth     (run `npm run build` first)
 //
 // No email is ever sent: the test user's code comes from the admin API (generateLink), and the
-// blocked-domain attempts are rejected before any mail is attempted.
+// blocked sign-up is rejected by the auth hook before any mail is attempted.
 import { createClient } from "@supabase/supabase-js";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -91,14 +91,16 @@ async function main() {
     const body = await res.json();
     check(res.status === 400 && body.error === "Use your PAU email.", "app rejects someone@gmail.com with 'Use your PAU email.'", `${res.status} ${JSON.stringify(body)}`);
 
-    // 3. Supabase itself refuses to create non-PAU accounts (auth hook), so bypassing the app with
-    //    the public key gets nowhere. Checked through the admin API, which never sends email.
-    const blocked = `e2e-blocked-${Date.now()}@gmail.com`;
-    const { error: hookError } = await admin.auth.admin.createUser({ email: blocked, email_confirm: true });
+    // 3. Supabase itself refuses non-PAU sign-ups made with the public key, i.e. by someone
+    //    bypassing the app (auth hook). The admin API is trusted and skips hooks, so this goes
+    //    through the public path. The address is on .invalid, a domain that can never receive
+    //    mail, so even a misconfigured hook can't email anyone.
+    const blocked = `e2e-blocked-${Date.now()}@example.invalid`;
+    const { error: hookError } = await anon.auth.signInWithOtp({ email: blocked, options: { shouldCreateUser: true } });
     const hookOn = !!hookError?.message?.includes("Use your PAU email.");
-    check(hookOn, "Supabase refuses to create a non-PAU account (auth hook)", hookOn ? "" :
-      `got: ${hookError?.message ?? "account created"} — enable it: Dashboard → Authentication → Hooks → Before User Created → public.hook_before_user_created`);
-    if (!hookOn) await deleteUserByEmail(blocked);
+    check(hookOn, "Supabase refuses a non-PAU sign-up made with the public key (auth hook)", hookOn ? "" :
+      `got: ${hookError?.message ?? "no error"} — enable it: Dashboard → Authentication → Hooks → Before User Created → public.hook_before_user_created`);
+    await deleteUserByEmail(blocked);
 
     // 4. A PAU student signs in with a code.
     const { error: createErr } = await admin.auth.admin.createUser({ email: testEmail, email_confirm: true });

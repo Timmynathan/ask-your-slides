@@ -6,6 +6,8 @@ set client_min_messages = notice;
 begin;
 
 -- ── Fixtures ────────────────────────────────────────────────
+-- Fixture courses CSC401/CSC403 don't exist in the real data; counts below are scoped to them so
+-- the test also passes on a database that holds real courses.
 -- A unit vector along dimension n (plus an optional small nudge along m), so rankings are exact.
 create function pg_temp.vec(n int, m int default null, w float default 0)
 returns extensions.vector language sql immutable as $$
@@ -161,8 +163,8 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-00000000000b","role":"authenticated"}';
 
 do $$ begin
-  if (select count(*) from slides) <> 7 then raise exception 'FAIL: signed-in user cannot read slides'; end if;
-  if (select count(*) from topics) <> 3 or (select count(*) from materials) <> 5 then raise exception 'FAIL: signed-in user cannot read topics/materials'; end if;
+  if (select count(*) from slides where course_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002')) <> 7 then raise exception 'FAIL: signed-in user cannot read slides'; end if;
+  if (select count(*) from topics where course_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002')) <> 3 or (select count(*) from materials where course_id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002')) <> 5 then raise exception 'FAIL: signed-in user cannot read topics/materials'; end if;
   if (select count(*) from match_slides('10000000-0000-0000-0000-000000000001', pg_temp.vec(1), 'parsing', 8)) = 0 then
     raise exception 'FAIL: signed-in user cannot call match_slides';
   end if;
