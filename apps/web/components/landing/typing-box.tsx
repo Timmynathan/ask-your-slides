@@ -41,7 +41,8 @@ export function TypingBox({ text }: { text: string }) {
   }, [inView, text]);
 
   return (
-    <div ref={box} className="flex h-full flex-col justify-end gap-2" aria-hidden>
+    /* Fixed height: the bubble appearing must not change the page height (it would shift everything below). */
+    <div ref={box} className="flex h-[76px] flex-col justify-end gap-2 overflow-hidden" aria-hidden>
       {sent && (
         <div className="pop-in ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-[#0e1664] px-3 py-1.5 text-[13px] text-white">{text}</div>
       )}

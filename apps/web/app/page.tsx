@@ -38,7 +38,7 @@ export default async function Landing() {
           </Link>
           <div className="hidden items-center gap-8 md:flex">
             <a href="#why" className="type-menu hover:opacity-70">Why us</a>
-            <a href="#features" className="type-menu hover:opacity-70">How it works</a>
+            <a href="#demo" className="type-menu hover:opacity-70">How it works</a>
             <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
           </div>
           <div className="flex items-center gap-2">
@@ -148,17 +148,7 @@ export default async function Landing() {
           <div className="mx-auto max-w-6xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Everything in your slides, on demand</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
-            <div className="mt-12 grid items-center gap-10 rounded-[25px] bg-card p-8 ring-1 ring-line md:grid-cols-[1fr_1.25fr] md:p-12">
-              <div>
-                <h3 className="font-heading text-3xl font-semibold tracking-tight text-ink">Ask a question. See the exact slide.</h3>
-                <p className="mt-3 text-[16px] leading-relaxed text-muted">
-                  Your study partner finds the slide that answers you, shows it, and highlights the part that matters. The answer comes
-                  straight from your lecturer&apos;s slide, not from the internet.
-                </p>
-              </div>
-              <ChatDemo />
-            </div>
-            <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <Feature title="Answers with receipts" body="Each point ends with a chip like “Transactions and Indexing · Slide 5”. Tap it to see the slide.">
                 <p className="text-sm leading-relaxed text-ink">
                   ACID stands for Atomicity, Consistency, Isolation and Durability.{" "}
@@ -188,6 +178,9 @@ export default async function Landing() {
             </div>
           </div>
         </section>
+
+        {/* The demo, full screen like a product video. "See how it works" brings it here and starts it. */}
+        <ChatDemo />
 
         {/* Steps */}
         <section className="mx-auto max-w-6xl px-5 py-20">
@@ -268,7 +261,7 @@ export default async function Landing() {
           <div className="flex gap-10 text-sm">
             <div className="space-y-2">
               <p className="font-medium text-ink">Product</p>
-              <a href="#features" className="block text-muted hover:text-ink">How it works</a>
+              <a href="#demo" className="block text-muted hover:text-ink">How it works</a>
               <a href="#partners" className="block text-muted hover:text-ink">Study partners</a>
             </div>
             <div className="space-y-2">

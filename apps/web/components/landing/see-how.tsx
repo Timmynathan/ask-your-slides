@@ -1,6 +1,6 @@
 "use client";
 
-// "See how it works": brings the chat demo to the middle of the screen and starts it at once, so the
+// "See how it works": fills the screen with the chat demo and starts it at once, so the
 // visitor sees it from the first keystroke. Without JS it is a plain link to #demo.
 export const DEMO_PLAY_EVENT = "ays:demo-play";
 
@@ -9,7 +9,7 @@ function go(e: React.MouseEvent<HTMLAnchorElement>) {
   if (!demo) return;
   e.preventDefault();
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  demo.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  demo.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
   window.dispatchEvent(new Event(DEMO_PLAY_EVENT));
 }
 

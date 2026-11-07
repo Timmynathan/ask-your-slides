@@ -145,10 +145,10 @@ async function main() {
     check(halfStarted === 0, "demo stays still while only half of it is on screen");
     await lp.evaluate(() => window.scrollTo(0, 0));
     await lp.waitForTimeout(400);
-    const typedBefore = await lp.locator("#features").getByText(/^What is a B\+/).count();
+    const typedBefore = await lp.locator("#demo").getByText(/^What is a B\+/).count();
     await lp.getByRole("link", { name: "See how it works", exact: true }).click();
     await lp.waitForTimeout(4800);
-    const userBubble = await lp.locator("#features").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
+    const userBubble = await lp.locator("#demo").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
     check(typedBefore === 0 && userBubble === 1, "'See how it works' scrolls to the demo, which then plays from the start", `before ${typedBefore}, sent ${userBubble}`);
     await lp.goto(`${BASE}/`);
     await lp.getByRole("link", { name: "Try for free" }).first().click();
