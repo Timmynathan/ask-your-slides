@@ -1,0 +1,9 @@
+{
+  "name": "pau-study-assistant",
+  "private": true,
+  "scripts": {
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "test:db": "bash scripts/test-db.sh"
+  }
+}

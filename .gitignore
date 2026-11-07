@@ -1,0 +1,9 @@
+# Course slides: never commit
+data/
+node_modules/
+.next/
+.env*
+!.env.example
+__pycache__/
+.venv/
+.DS_Store
