@@ -10,7 +10,7 @@ const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] }
 
 export const metadata: Metadata = {
   title: "Ask Your Slides",
-  description: "Stop uploading slides to ChatGPT. We already have them all. All your course slides are already here: no uploads, no screenshots, answers straight from your slides with the exact slide shown."
+  description: "Stop uploading slides to ChatGPT. All your course slides are already here: no uploads, no screenshots, answers straight from your slides with the exact slide shown."
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

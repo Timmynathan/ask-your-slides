@@ -3,7 +3,8 @@
 // Landing showcase: a student types a question, the study partner pulls up the exact slide,
 // highlights the sentence that answers it, and replies with that sentence, cited.
 // Sample content in the style of the PAU decks: no real lecturer slide on the public page (PRD §16).
-// Starts when scrolled into view, then loops; with reduced motion it shows the finished state.
+// Starts when scrolled into view, then loops: zooms in on the question box while it is typed and
+// back out when it is sent. With reduced motion it shows the finished state, no zoom.
 import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/mascot/mascot";
 
@@ -41,7 +42,7 @@ export function ChatDemo() {
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
     const run = () => {
-      let t = 400;
+      let t = 900; // let the zoom-in land before the first keystroke
       at(0, () => {
         setPhase(0);
         setTyped(0);
@@ -58,8 +59,11 @@ export function ChatDemo() {
   }, [inView]);
 
   const sent = phase >= 1;
+  const zoomed = inView && phase === 0;
   return (
     <div ref={box} className="mx-auto w-full max-w-[540px] overflow-hidden rounded-[22px] bg-white text-left shadow-xl ring-1 ring-black/10" aria-hidden>
+      {/* Zoom layer: close-up on the question box while it is typed, back out once it is sent. */}
+      <div className={`demo-zoom ${zoomed ? "is-zoomed" : ""}`}>
       {/* window bar */}
       <div className="flex items-center gap-2 border-b border-black/5 px-4 py-3">
         <span className="h-2.5 w-2.5 rounded-full bg-black/15" />
@@ -113,6 +117,7 @@ export function ChatDemo() {
         <span className={`rounded-full px-3.5 py-2 text-xs font-medium text-white transition-colors ${!sent && typed === QUESTION.length ? "bg-[#0e1664]" : "bg-[#0e1664]/40"}`}>
           Send
         </span>
+      </div>
       </div>
     </div>
   );

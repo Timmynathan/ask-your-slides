@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
 import { ChoreBin } from "@/components/landing/chore-bin";
 import { ChatDemo } from "@/components/landing/chat-demo";
+import { TypingBox } from "@/components/landing/typing-box";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
 import { getCatalog, joinList, spacedCode } from "@/lib/catalog";
@@ -54,8 +55,7 @@ export default async function Landing() {
         {/* Hero: the value in one line (no more uploading slides to a chatbot), one button. */}
         <section className="relative flex min-h-[calc(100dvh-7.5rem)] flex-col items-center justify-center overflow-hidden px-5 pb-40 pt-16 text-center sm:pb-48">
           <h1 className="max-w-6xl font-heading text-[2.4rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-6xl lg:text-[4.25rem]">
-            Stop uploading slides to ChatGPT. <br className="hidden sm:block" />
-            We already have them all.
+            Stop uploading slides to ChatGPT.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
             All your {departments ? `${departments} ` : ""}course slides are already here, so there&apos;s nothing to upload. Ask a question
@@ -180,12 +180,8 @@ export default async function Landing() {
                   ))}
                 </div>
               </Feature>
-              <Feature title="Summaries in order" body="“Summarise the risk lecture” reads the whole deck, slide by slide, not just the first few.">
-                <div className="space-y-2">
-                  {[85, 70, 92, 60].map((w, i) => (
-                    <div key={i} className="h-2 rounded-full bg-sunken" style={{ width: `${w}%` }} />
-                  ))}
-                </div>
+              <Feature title="Summaries in order" body="Ask for a lecture, a topic or the whole course. It reads every slide, in order, not just the first few.">
+                <TypingBox text="Summarise this entire course" />
               </Feature>
               <Feature title="Quiz me" body="One question at a time. Answer, get marked, see the slide with the right answer.">
                 <div className="rounded-xl bg-sunken p-3 text-sm text-ink">
@@ -195,22 +191,6 @@ export default async function Landing() {
                       <span key={o} className="rounded-full bg-card px-2.5 py-1 ring-1 ring-line">{o}</span>
                     ))}
                   </div>
-                </div>
-              </Feature>
-              <Feature title="See the actual slide" body="Open any cited slide next to the chat, then ask about it in one tap.">
-                <div className="aspect-[4/3] rounded-xl bg-[#00163a] p-3">
-                  <div className="h-2.5 w-2/3 rounded bg-white/90" />
-                  <div className="mt-3 space-y-1.5">
-                    <div className="h-1.5 w-full rounded bg-white/50" />
-                    <div className="h-1.5 w-5/6 rounded bg-white/50" />
-                    <div className="h-1.5 w-4/6 rounded bg-white/50" />
-                  </div>
-                </div>
-              </Feature>
-              <Feature title="Know what's from your slides" body="Anything that isn't from your slides sits in its own labelled box, so you know what was taught.">
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  <p className="font-semibold">Not from your slides: general knowledge</p>
-                  <p className="mt-1 text-amber-800/80">A handy way to remember it…</p>
                 </div>
               </Feature>
             </div>

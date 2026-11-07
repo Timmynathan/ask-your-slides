@@ -109,7 +109,7 @@ async function main() {
     const lp = await visitor.newPage();
     lp.on("pageerror", (e) => consoleErrors.push(e.message));
     await lp.goto(`${BASE}/`);
-    check(await lp.getByRole("heading", { level: 1, name: /Stop uploading slides to ChatGPT\.\s*We already have them all\./ }).isVisible(), "landing hero: one headline");
+    check(await lp.getByRole("heading", { level: 1, name: /^Stop uploading slides to ChatGPT\.$/ }).isVisible(), "landing hero: one headline");
     check(await lp.getByRole("link", { name: "Try for free" }).first().isVisible(), "landing hero: big 'Try for free' button");
     const brand = await lp.locator("nav").getByText("Ask Your Slides").evaluate((el) => {
       const c = getComputedStyle(el);
@@ -138,7 +138,7 @@ async function main() {
     // The demo waits until it is on screen; "See how it works" takes visitors there.
     const typedBefore = await lp.locator("#features").getByText(/^What is a B\+/).count();
     await lp.getByRole("link", { name: "See how it works", exact: true }).click();
-    await lp.waitForTimeout(3200);
+    await lp.waitForTimeout(4800);
     const userBubble = await lp.locator("#features").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
     check(typedBefore === 0 && userBubble === 1, "'See how it works' scrolls to the demo, which then plays from the start", `before ${typedBefore}, sent ${userBubble}`);
     await lp.goto(`${BASE}/`);

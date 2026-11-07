@@ -244,3 +244,13 @@ html { scroll-behavior: smooth; }
   .scroll-cue { animation: none; }
   html { scroll-behavior: auto; }
 }
+
+/* Chat demo zoom: close-up on the question box while it's typed. */
+.demo-zoom {
+  transform-origin: 2% 100%;
+  transition: transform 650ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.demo-zoom.is-zoomed { transform: scale(1.5); }
+@media (prefers-reduced-motion: reduce) {
+  .demo-zoom, .demo-zoom.is-zoomed { transform: none; transition: none; }
+}
