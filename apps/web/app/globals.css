@@ -167,3 +167,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y { animation: none; }
 }
+
+/* Brand name and menus (brand spec): Inter 400, 16px / 24px, black. */
+.type-menu {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  font-style: normal;
+  color: #000000;
+}
+@media (prefers-color-scheme: dark) {
+  .type-menu {
+    color: var(--ink);
+  }
+}

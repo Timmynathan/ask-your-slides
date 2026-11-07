@@ -33,3 +33,16 @@ describe("passwordProblem", () => {
     expect(passwordProblem("é".repeat(40))).toMatch(/too long/); // 80 bytes
   });
 });
+
+import { safeNext } from "@/lib/auth/next";
+describe("safeNext", () => {
+  it("keeps in-app paths", () => {
+    expect(safeNext("/study/CSC420")).toBe("/study/CSC420");
+    expect(safeNext("/study/CSC420?topic=1")).toBe("/study/CSC420?topic=1");
+  });
+  it("refuses anything that could leave the app or loop", () => {
+    for (const bad of ["https://evil.com", "//evil.com", "/\\evil.com", "evil.com", "/sign-in", "/welcome?next=/x", "/api/chat", 42, null]) {
+      expect(safeNext(bad)).toBeNull();
+    }
+  });
+});

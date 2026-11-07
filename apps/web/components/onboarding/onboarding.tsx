@@ -21,12 +21,14 @@ const STEPS: Step[] = ["name", "partner", "hello"];
 interface Props {
   /** The student's department, from the courses data; null when it can't be told (several). */
   department: string | null;
+  /** Where to go after onboarding (e.g. a course link shared in a class group). */
+  next: string | null;
   initialName: string;
   initialPartner: PartnerId | null;
   startAtPartner: boolean;
 }
 
-export function Onboarding({ department, initialName, initialPartner, startAtPartner }: Props) {
+export function Onboarding({ department, next, initialName, initialPartner, startAtPartner }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startAtPartner ? "partner" : "name");
   const [name, setName] = useState(initialName);
@@ -192,7 +194,7 @@ export function Onboarding({ department, initialName, initialPartner, startAtPar
             </div>
             <button
               onClick={() => {
-                router.replace("/dashboard");
+                router.replace(next ?? "/dashboard");
                 router.refresh();
               }}
               className="mt-8 rounded-full bg-ink px-10 py-3.5 text-base font-medium text-page hover:opacity-90"

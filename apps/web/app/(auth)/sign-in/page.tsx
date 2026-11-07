@@ -3,15 +3,16 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Mascot } from "@/components/mascot/mascot";
+import { safeNext } from "@/lib/auth/next";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
 
-type Props = { searchParams: Promise<{ start?: string }> };
+type Props = { searchParams: Promise<{ start?: string; next?: string }> };
 
 async function Form({ searchParams }: Props) {
-  const { start } = await searchParams;
-  return <SignInForm startWithCode={start === "1"} />;
+  const { start, next } = await searchParams;
+  return <SignInForm startWithCode={start === "1"} next={safeNext(next)} />;
 }
 
 export default function SignInPage(props: Props) {

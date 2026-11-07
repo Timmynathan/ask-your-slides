@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
+import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
 import { getCatalog, joinList, roughCount, spacedCode, type Catalog } from "@/lib/catalog";
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
@@ -16,8 +17,6 @@ export const metadata: Metadata = {
 // claims, testimonials, pricing) are left out.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
-const darkPill = `${pill} bg-ink text-page hover:opacity-90`;
-const lightPill = `${pill} border border-line-strong bg-card text-ink hover:bg-sunken`;
 
 export default async function Landing() {
   // Departments, courses and counts come from the database (cached hourly), not from the copy.
@@ -27,57 +26,70 @@ export default async function Landing() {
     <div className="flex min-h-dvh flex-col bg-page">
       <Banner text="New: choose your study partner. Tobi, Ada, Dr. Musa or Zara." linkText="Meet them" href="#partners" />
 
-      <header className="sticky top-0 z-20 border-b border-line/60 bg-page/85 backdrop-blur">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+      <header className="sticky top-0 z-20 px-3 pt-3 sm:px-5">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-line bg-page/85 pl-5 pr-2 backdrop-blur">
           <Link href="/" aria-label="Ask Your Slides home">
             <Logo />
           </Link>
-          <div className="hidden items-center gap-8 text-sm text-muted md:flex">
-            <a href="#features" className="hover:text-ink">Features</a>
-            <a href="#partners" className="hover:text-ink">Study partners</a>
-            <a href="#faq" className="hover:text-ink">FAQ</a>
+          <div className="hidden items-center gap-8 md:flex">
+            <a href="#features" className="type-menu hover:opacity-70">Features</a>
+            <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
+            <a href="#faq" className="type-menu hover:opacity-70">FAQ</a>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/sign-in" className="rounded-full px-4 py-2 text-sm font-medium text-ink hover:bg-sunken">
-              Sign in
+            <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
+              Log in
             </Link>
-            <Link href="/sign-in?start=1" className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-page hover:opacity-90">
-              Get started
+            <Link href="/sign-in?start=1" className="type-menu rounded-full bg-black px-5 py-2.5 !text-white hover:opacity-85 dark:bg-[#faf9f5] dark:!text-[#191919]">
+              Try for free
             </Link>
           </div>
         </nav>
       </header>
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-14 md:grid-cols-[1.05fr_1fr] md:pt-20">
-          <div>
-            <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-xs font-medium text-muted ring-1 ring-line">
-              <span className="h-1.5 w-1.5 rounded-full bg-lilac-800" /> For final-year {departments || "students"} at PAU
-            </p>
-            <h1 className="font-heading text-[2.6rem] font-semibold leading-[1.08] tracking-tight text-ink md:text-6xl">
-              Study smarter from your own lecture slides
-            </h1>
-            <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
-              Ask anything about your courses. Every answer comes from your lecturers&apos; slides and shows you exactly which
-              slide it used, with a study partner who explains it your way.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/sign-in?start=1" className={darkPill}>
-                Get started free
-              </Link>
-              <Link href="/sign-in" className={lightPill}>
-                Sign in
-              </Link>
+        {/* Hero: one line, one button (reference: studyfetch.com). Everything else is below the fold. */}
+        <section className="relative flex min-h-[calc(100dvh-7.5rem)] flex-col items-center justify-center overflow-hidden px-5 pb-40 pt-16 text-center sm:pb-48">
+          <h1 className="max-w-4xl font-heading text-[2.75rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-7xl">
+            Studying that adapts to you
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
+            Ask anything about your {departments ? `${departments} ` : ""}courses. Answers come straight from your school slides, explained
+            by a study partner you choose.
+          </p>
+          <Link
+            href="/sign-in?start=1"
+            className="mt-10 inline-flex items-center justify-center rounded-full bg-black px-12 py-5 text-lg font-medium text-white hover:opacity-85 dark:bg-[#faf9f5] dark:text-[#191919]"
+          >
+            Try for free
+          </Link>
+          <p className="mt-4 text-sm text-muted">
+            Already have an account?{" "}
+            <Link href="/sign-in" className="text-ink underline underline-offset-4">
+              Log in
+            </Link>
+          </p>
+          <BooksDoodle className="pointer-events-none absolute bottom-6 left-[4%] w-40 text-black sm:w-56 lg:left-[12%] lg:w-64 dark:text-[#faf9f5]" />
+          <StudyDeskDoodle className="pointer-events-none absolute -right-6 bottom-4 w-56 text-black sm:right-0 sm:w-80 lg:right-[8%] lg:w-[400px] dark:text-[#faf9f5]" />
+        </section>
+
+        {/* Made for PAU: the student's own course codes, read from the database. */}
+        <section className="border-t border-line bg-card/60">
+          <div className="mx-auto max-w-6xl px-5 py-8 text-center">
+            <p className="text-sm text-muted">Your PAU courses are already here. Same slides as on the e-learning portal, no downloading.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {catalog.courseCodes.map((code) => (
+                <span key={code} className="rounded-full bg-page px-3.5 py-1.5 text-sm font-medium text-ink ring-1 ring-line">
+                  {spacedCode(code)}
+                </span>
+              ))}
             </div>
-            <p className="mt-4 text-xs text-muted">Sign in with your @pau.edu.ng email. No uploads needed: your slides are already here.</p>
           </div>
-          <HeroScene />
         </section>
 
         {/* Numbers */}
-        <section className="border-y border-line bg-card/60">
-          <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 text-center sm:grid-cols-3">
+        <section className="border-b border-line bg-card/60">
+          <div className="mx-auto grid max-w-6xl gap-8 px-5 pb-12 pt-4 text-center sm:grid-cols-3">
             {[
               [String(catalog.courseCount), "final-year courses"],
               [roughCount(catalog.slideCount), "slides, notes and readings"],
@@ -278,32 +290,6 @@ function Feature({ title, body, children }: { title: string; body: string; child
       <div className="min-h-[104px] rounded-2xl bg-page p-4">{children}</div>
       <h3 className="mt-5 font-heading text-lg font-semibold text-ink">{title}</h3>
       <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{body}</p>
-    </div>
-  );
-}
-
-function HeroScene() {
-  return (
-    <div className="relative mx-auto h-[380px] w-full max-w-[480px]" aria-hidden>
-      <div className="absolute inset-6 rounded-[40px] bg-[#F5D5FF]" />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-[58%]">
-        <Mascot partner="ada" size={170} mood="happy" />
-      </div>
-      <div className="float-y absolute left-0 top-8">
-        <Mascot partner="tobi" size={88} />
-      </div>
-      <div className="float-y absolute bottom-6 right-0" style={{ animationDelay: "1.2s" }}>
-        <Mascot partner="musa" size={92} />
-      </div>
-      {/* floating cards */}
-      <div className="float-y absolute right-2 top-10 w-52 rounded-2xl bg-card p-3 text-left text-xs shadow-lg ring-1 ring-line" style={{ animationDelay: "0.6s" }}>
-        <p className="text-ink">A B+ tree keeps keys sorted, so range queries are fast.</p>
-        <span className="mt-2 inline-block rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-800 ring-1 ring-teal-200">Indexing · Slide 21</span>
-      </div>
-      <div className="float-y absolute bottom-10 left-3 w-48 rounded-2xl bg-card p-3 text-left text-xs shadow-lg ring-1 ring-line" style={{ animationDelay: "1.8s" }}>
-        <p className="font-medium text-ink">Quiz · Question 1</p>
-        <p className="mt-1 text-muted">What does the D in ACID stand for?</p>
-      </div>
     </div>
   );
 }

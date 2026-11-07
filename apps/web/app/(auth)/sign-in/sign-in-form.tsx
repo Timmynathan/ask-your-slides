@@ -16,7 +16,7 @@ type Step =
 
 const MIN_PASSWORD = 8;
 
-export function SignInForm({ startWithCode = false }: { startWithCode?: boolean }) {
+export function SignInForm({ startWithCode = false, next = null }: { startWithCode?: boolean; next?: string | null }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startWithCode ? { kind: "code-email" } : { kind: "password" });
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +77,12 @@ export function SignInForm({ startWithCode = false }: { startWithCode?: boolean 
     void handler(new FormData(e.currentTarget));
   }
 
-  function finish(next: string | undefined) {
-    router.replace(next ?? "/dashboard");
+  // The server says /welcome (onboarding) or /dashboard; a link the student came from wins, and
+  // survives onboarding too.
+  function finish(serverNext: string | undefined) {
+    const target =
+      serverNext === "/welcome" ? `/welcome${next ? `?next=${encodeURIComponent(next)}` : ""}` : (next ?? serverNext ?? "/dashboard");
+    router.replace(target);
     router.refresh();
   }
 

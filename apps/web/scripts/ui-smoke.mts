@@ -109,7 +109,17 @@ async function main() {
     const lp = await visitor.newPage();
     lp.on("pageerror", (e) => consoleErrors.push(e.message));
     await lp.goto(`${BASE}/`);
-    check(await lp.getByRole("heading", { level: 1, name: /Study smarter from your own lecture slides/ }).isVisible(), "landing hero shows");
+    check(await lp.getByRole("heading", { level: 1, name: "Studying that adapts to you" }).isVisible(), "landing hero: one headline");
+    check(await lp.getByRole("link", { name: "Try for free" }).first().isVisible(), "landing hero: big 'Try for free' button");
+    const brand = await lp.locator("nav").getByText("Ask Your Slides").evaluate((el) => {
+      const c = getComputedStyle(el);
+      return `${c.fontFamily.split(",")[0]} ${c.fontWeight} ${c.fontSize}/${c.lineHeight} ${c.color}`;
+    });
+    check(/Inter.* 400 16px\/24px rgb\(0, 0, 0\)/.test(brand), "brand name: Inter 400 16/24 black", brand);
+    const icon = await (await fetch(`${BASE}/icon.svg`)).text();
+    check(icon.includes('fill="#000"'), "favicon is the black mark");
+    const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json().catch(() => null);
+    check(manifest?.display === "standalone" && manifest?.icons?.length >= 2, "installable: web app manifest with icons");
     const { count: courseCount } = await admin.from("courses").select("*", { count: "exact", head: true });
     check(await lp.getByText("final-year courses").locator("..").getByText(String(courseCount), { exact: true }).isVisible(),
       "landing course count comes from the database", `${courseCount} courses`);
@@ -120,11 +130,35 @@ async function main() {
     const headingFont = await lp.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
     check(/Bitter/i.test(headingFont), "headings use Bitter", headingFont.slice(0, 40));
     await shot(lp, "0-landing");
-    await lp.getByRole("link", { name: "Get started free" }).first().click();
+    await lp.getByRole("link", { name: "Try for free" }).first().click();
     await lp.waitForURL(/\/sign-in\?start=1/);
     const codeStep = await lp.getByRole("button", { name: "Send code" }).waitFor({ timeout: 10000 }).then(() => true, () => false);
     check(codeStep, "'Get started' opens the code step directly");
     await visitor.close();
+
+    console.log("\nShared course link survives sign-in (email + password through the form)");
+    const linkUser = `ui-link-${Date.now()}@pau.edu.ng`;
+    try {
+      await admin.auth.admin.createUser({ email: linkUser, password: "revise4exams!", email_confirm: true });
+      const { data: lu } = await admin.from("profiles").select("id").eq("email", linkUser).single();
+      await admin.from("profiles").update({ onboarded: true, study_partner: "zara" }).eq("id", lu!.id);
+      const linkCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const lk = await linkCtx.newPage();
+      await lk.goto(`${BASE}/study/CSC419?topic=1`);
+      await lk.waitForURL(/\/sign-in\?next=/);
+      check(new URL(lk.url()).searchParams.get("next") === "/study/CSC419?topic=1", "signed-out visitor keeps the link it came from", lk.url());
+      await lk.locator("#email").fill(linkUser);
+      await lk.locator("#password").fill("revise4exams!");
+      await lk.getByRole("button", { name: "Sign in" }).click();
+      await lk.waitForURL(/\/study\/CSC419/);
+      check(new URL(lk.url()).pathname === "/study/CSC419", "after signing in, lands on the shared course", lk.url());
+      const [popup] = await Promise.all([linkCtx.waitForEvent("page"), lk.getByRole("button", { name: "Invite coursemates" }).click()]);
+      const shared = decodeURIComponent(popup.url());
+      check(/wa\.me|whatsapp/.test(popup.url()) && shared.includes("/study/CSC419"), "'Invite coursemates' opens WhatsApp with a link to the course", shared.slice(0, 140));
+      await linkCtx.close();
+    } finally {
+      await cleanup(linkUser);
+    }
 
     console.log("\nOnboarding: name → choose your study partner → hello");
     const newbie = `ui-newbie-${Date.now()}@pau.edu.ng`;

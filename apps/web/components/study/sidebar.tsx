@@ -24,6 +24,7 @@ interface Props {
 
 export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, user, partner, onChangePartner, onOpenCourse, onOpenScope, onOpenChat }: Props) {
   const p = PARTNERS[partner];
+  const currentCode = courses.find((c) => c.id === courseId)?.code ?? courses[0]?.code ?? "";
   return (
     <nav className="flex h-full flex-col" aria-label="Courses and chats">
       <div className="flex h-14 shrink-0 items-center px-4">
@@ -59,12 +60,12 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                   aria-current={selected ? "page" : undefined}
                   aria-expanded={selected}
                   className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-[background-color,box-shadow] duration-200 ${
-                    selected ? "bg-card font-medium shadow-sm ring-1 ring-line" : "hover:bg-sunken"
+                    selected ? "bg-card shadow-sm ring-1 ring-line" : "hover:bg-sunken"
                   }`}
                 >
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full transition-transform duration-200 ${courseDot(c.sort_order)} ${selected ? "scale-125" : ""}`} aria-hidden />
                   <span className="min-w-0">
-                    <span className="block">{displayCode(c.code)}</span>
+                    <span className="type-menu block">{displayCode(c.code)}</span>
                     <span className="block truncate text-xs font-normal text-muted">{c.title}</span>
                   </span>
                 </button>
@@ -85,8 +86,8 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                           <li key={s.id ?? "course"}>
                             <button
                               onClick={() => onOpenScope(s.id)}
-                              className={`w-full truncate rounded-md px-2 py-1 text-left text-[13px] transition-colors ${
-                                active ? "bg-lilac-100 font-medium" : "text-ink/80 hover:bg-sunken"
+                              className={`type-menu w-full truncate rounded-lg px-2 py-1 text-left transition-colors ${
+                                active ? "bg-lilac-100" : "hover:bg-sunken"
                               }`}
                               title={s.label}
                             >
@@ -97,7 +98,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                                 <li>
                                   <button
                                     onClick={() => onOpenScope(s.id)}
-                                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-muted hover:bg-sunken"
+                                    className="type-menu flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left !text-muted hover:bg-sunken"
                                   >
                                     <span aria-hidden className="text-base leading-none">+</span> New chat
                                   </button>
@@ -107,7 +108,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                                     <button
                                       onClick={() => onOpenChat(ch)}
                                       aria-current={ch.id === chatId ? "true" : undefined}
-                                      className={`w-full truncate rounded-md px-2 py-1 text-left text-[13px] ${
+                                      className={`type-menu w-full truncate rounded-lg px-2 py-1 text-left ${
                                         ch.id === chatId ? "bg-card shadow-sm ring-1 ring-line" : "text-muted hover:bg-sunken"
                                       }`}
                                       title={ch.title}
@@ -128,6 +129,24 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
             );
           })}
         </ul>
+      </div>
+
+      {/* Growth inside PAU: one tap to share the course you're studying with your class group. */}
+      <div className="shrink-0 px-2 pb-2">
+        <button
+          type="button"
+          // Built on click: the site address is only known in the browser (no server/client mismatch).
+          onClick={() => {
+            const text = `I'm revising ${displayCode(currentCode)} with Ask Your Slides: answers straight from our lecture slides, with the slide cited. Try it: ${window.location.origin}/study/${currentCode}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-card px-3 py-2 text-sm font-medium text-ink ring-1 ring-line hover:bg-sunken"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden className="text-[#25D366]">
+            <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4 5.2 5.2 0 0 0 3.2.7 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z" />
+          </svg>
+          Invite coursemates
+        </button>
       </div>
 
       <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line px-4 py-3 text-xs">

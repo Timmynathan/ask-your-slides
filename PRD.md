@@ -640,7 +640,16 @@ erDiagram
 - Fonts: **Bitter** (headings), **Inter** (text), **JetBrains Mono** (code), all free via Google Fonts.
 - Colours: warm cream page `#f7f6ef`, white cards, ink `#191919`, muted `#716d66`, sand lines; lilac accent `#F5D5FF` (banner, highlights) with a lilac scale up to `#8a00b5`. Dark mode uses the matching dark tokens.
 - Shapes: pill buttons, 25 px card corners, soft rings instead of heavy borders.
-- Landing page (`/`, signed-out only): lilac announcement banner, nav, hero with the partners, real numbers (7 courses, 1,500+ slides, every answer cited), "start in seconds", features, meet your study partners, FAQ, closing call to action, footer stating it is independent of PAU. No user counts, testimonials or pricing (no honest data for them).
+- Logo and favicon: one black mark (a slide with a speech tail and a spark), `apps/web/app/icon.svg`. Brand name and menus (landing nav, sidebar items): Inter 400, 16 px / 24 px, black (`.type-menu`).
+- Landing hero: one headline ("Studying that adapts to you"), one sentence, one big black "Try for free" button, black line drawings in the bottom corners; everything else below the fold.
+
+### 13.0b Adoption at PAU (low friction)
+
+- Every course link is shareable: a signed-out visitor to `/study/CSC420` signs in and lands on CSC 420 (the target survives sign-in and onboarding; only in-app paths are accepted).
+- "Invite coursemates" in the sidebar opens WhatsApp with a message and a link to the course being studied.
+- Installable on phones (web app manifest + icons): opens like an app, straight into the courses.
+- The landing page lists the student's own PAU course codes and says the slides are the same as on the e-learning portal, so there is nothing to download or upload.
+- Landing page (`/`, signed-out only): lilac announcement banner, pill-shaped nav, simple hero (see below), real numbers (7 courses, 1,500+ slides, every answer cited), "start in seconds", features, meet your study partners, FAQ, closing call to action, footer stating it is independent of PAU. No user counts, testimonials or pricing (no honest data for them).
 
 ### 13.1 Screens
 

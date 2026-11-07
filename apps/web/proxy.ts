@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
-const PUBLIC_PATHS = ["/sign-in", "/api/auth/otp", "/api/auth/verify", "/api/auth/password"];
+const PUBLIC_PATHS = ["/manifest.webmanifest", "/sign-in", "/api/auth/otp", "/api/auth/verify", "/api/auth/password"];
 
 export async function proxy(request: NextRequest) {
   const { response, userId } = await updateSession(request);
@@ -14,7 +14,10 @@ export async function proxy(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Sign in first." }, { status: 401 });
     }
-    return redirectKeepingCookies(new URL("/sign-in", request.url), response);
+    // Keep where they were going, so a shared course link survives sign-in.
+    const target = new URL("/sign-in", request.url);
+    if (pathname !== "/dashboard") target.searchParams.set("next", pathname + request.nextUrl.search);
+    return redirectKeepingCookies(target, response);
   }
   if (userId && (pathname === "/sign-in" || pathname === "/")) {
     return redirectKeepingCookies(new URL("/dashboard", request.url), response);
