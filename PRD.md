@@ -66,7 +66,7 @@ Near exams, this friction costs time. Answers that mix slide content with genera
 
 | Persona | Description | Main need |
 |---|---|---|
-| Exam crammer | Final-year CS student, 1–3 weeks before exams. Studies late at night, often on a phone. | Fast, correct answers tied to what the lecturer taught. |
+| Exam crammer | Final-year CS student, 1–3 weeks before exams. Studies late at night, mostly on a laptop, sometimes on a phone. | Fast, correct answers tied to what the lecturer taught. |
 | Catch-up student | Missed lectures. Has never opened some materials. | Summaries of topics, in order. |
 | Self-tester | Knows the material, wants to check it. | Quiz questions with answers and slide references. |
 | Builder (Nathaniel) | Owner and operator. | Traces, feedback, cost visibility, easy re-ingestion of slides. |
@@ -108,7 +108,8 @@ The primary signal is **direct student feedback**: students say it helped, and t
 - Under the selected course: **Whole course**, then the course's **topics** in order (from `data/manifest.yaml`). Each has its own conversations and a "New chat" button.
 - A chat is either a **whole-course chat** (`topic_id` null) or a **topic chat**.
 - The main area shows the selected conversation.
-- Works on a phone (sidebar collapses into a drawer).
+- **Laptop first** (most students study on a laptop): sidebar, chat and slide preview side by side. Still works on a phone: the sidebar becomes a drawer and the preview a bottom sheet.
+- Topics with no material yet are hidden from the sidebar (they stay in the manifest and appear once a file is ingested).
 
 **Acceptance**
 - All configured courses and their topics show for every student.
@@ -616,14 +617,14 @@ erDiagram
 1. **Sign in** — email field → OTP field. PAU branding kept neutral (no official logo unless the school approves).
 2. **Dashboard** — left sidebar: course list (code + short title). Under the selected course: **Whole course**, then its topics in order; under the selected one, its conversations + "New chat". Main area: empty state with three starter buttons. Topic chat: "Ask about {topic}", "Summarize this topic", "Quiz me on this topic". Whole-course chat: "Ask a question", "Course overview", "Quiz me".
 3. **Chat** — messages with streaming; citation chips; general-knowledge boxes; thumbs on each answer; input box with remaining daily messages shown when < 10.
-4. **Slide preview** — side panel (desktop) or bottom sheet (phone) with the slide/page image, material title and kind, topic, slide/page number, and a link "Ask about this slide".
+4. **Slide preview** — side panel next to the chat (laptop) or bottom sheet at 75% height (phone) with the slide/page image, material title and kind, topic, slide/page number, and a link "Ask about this slide".
 
 ### 13.2 Rendering rules
 
-- Citation chip: small rounded label, course color. Text by kind: `slides` → `{material} · Slide 12`; `notes` / `practical` → `{material} · p. 12`; `reading` → `Reading: {material} · p. 4`. Truncated on phones. Never "Week n". Multiple chips can follow one sentence.
-- In a topic chat, a chip from another topic adds the topic name (`Privacy › Slides-Privacy · Slide 3`), and the answer has a label above it: "Not in *{topic}* — from elsewhere in {course}".
+- Citation chip: small rounded label, course color. The slide/page number is never truncated; only the title part is shortened. Text by kind: `slides` → `{material} · Slide 12`; `notes` / `practical` → `{material} · p. 12`; `reading` → `Reading: {material} · p. 4`. Truncated on phones. Never "Week n". Multiple chips can follow one sentence.
+- In a topic chat, a chip from another topic adds the topic name (`Privacy › Slides-Privacy · Slide 3`) unless the material title already says it, and the answer has a label above it: "Not in *{topic}*: from elsewhere in {course}".
 - General-knowledge box: amber/neutral background, left icon, label "Not from your slides".
-- Phone first: test at 375 px width.
+- Laptop first: designed and tested at 1440×900; also tested at 375 px (no sideways scrolling, drawer, bottom sheet).
 
 ---
 

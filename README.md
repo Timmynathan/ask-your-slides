@@ -90,7 +90,7 @@ sending any email, checks the auth hook, then deletes the test user.
 | 2 ✅ | Ingestion CLI (manifest-driven) | `npm run test:ingest` (offline) + `npm run ingest:verify -- --course CSC420` |
 | 3 ✅ | `@pau.edu.ng` OTP auth | `npm run test:web` + `npm run test:e2e:auth` + `npm run test:db` |
 | 4 ✅ | `/api/chat` agent, citations, traces, Proofline export | `npm run test:web` + `npm run check:agent` (real model, ~$0.01) |
-| 5 | Dashboard + chat UI | — |
+| 5 ✅ | Study UI (laptop first): courses, topics, chats, citation chips, general-knowledge boxes, slide preview | `npm run check:ui` (real browser, laptop + phone, ~$0.002) |
 | 6 | Summaries, quiz, feedback, cap | — |
 
 ## Notes
