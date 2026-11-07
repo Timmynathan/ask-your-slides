@@ -14,7 +14,7 @@ def make_data(tmp_path: Path, materials: list[dict], topics=("Intro", "Parsing")
     (tmp_path / "slides" / "CSC401").mkdir(parents=True)
     for f in files:
         (tmp_path / "slides" / "CSC401" / f).write_bytes(b"x")
-    (tmp_path / "courses.yaml").write_text(yaml.safe_dump([{"code": "CSC401", "title": "Compilers"}]))
+    (tmp_path / "courses.yaml").write_text(yaml.safe_dump([{"code": "CSC401", "title": "Compilers", "department": "Computer Science"}]))
     manifest = {"courses": {"CSC401": {
         "topics": [{"order": i + 1, "title": t} for i, t in enumerate(topics)],
         "materials": materials,
@@ -74,7 +74,7 @@ def test_duplicate_order_and_cmid_are_rejected(tmp_path):
 
 def test_course_must_be_in_courses_yaml(tmp_path):
     data = make_data(tmp_path, [row(1, "slides/CSC401/01-a.pdf")])
-    (data / "courses.yaml").write_text(yaml.safe_dump([{"code": "CSC999", "title": "Other"}]))
+    (data / "courses.yaml").write_text(yaml.safe_dump([{"code": "CSC999", "title": "Other", "department": "Computer Science"}]))
     with pytest.raises(ManifestError, match="not in courses.yaml"):
         load(data)
 
@@ -136,3 +136,10 @@ def test_sanitize_strips_nul_and_control_characters():
     assert sanitize("Privacy\x00 and\x07 data\nline 2\tx") == "Privacy and data\nline 2\tx"
     assert sanitize("\x00\x01") is None
     assert sanitize(None) is None
+
+
+def test_course_needs_a_department(tmp_path):
+    data = make_data(tmp_path, [row(1, "slides/CSC401/01-a.pdf")])
+    (data / "courses.yaml").write_text(yaml.safe_dump([{"code": "CSC401", "title": "Compilers"}]))
+    with pytest.raises(ManifestError, match="has no department"):
+        load(data)

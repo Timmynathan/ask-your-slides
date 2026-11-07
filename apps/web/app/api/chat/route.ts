@@ -42,11 +42,11 @@ export async function POST(request: Request) {
   // from this row, never from the request body.
   const { data: convo } = await supabase
     .from("conversations")
-    .select("id, title, course_id, topic_id, courses(code, title), topics(title)")
+    .select("id, title, course_id, topic_id, courses(code, title, department), topics(title)")
     .eq("id", conversationId)
     .maybeSingle();
   if (!convo) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
-  const course = convo.courses as unknown as { code: string; title: string };
+  const course = convo.courses as unknown as { code: string; title: string; department: string };
   const topic = convo.topics as unknown as { title: string } | null;
 
   const { data: profile } = await supabase.from("profiles").select("display_name, study_partner").eq("id", auth.user.id).single();
@@ -83,6 +83,7 @@ export async function POST(request: Request) {
     courseId: convo.course_id,
     courseCode: course.code,
     courseTitle: course.title,
+    department: course.department,
     topicId: convo.topic_id,
     topicTitle: topic?.title ?? null,
     userMessage: message,

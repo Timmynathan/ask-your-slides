@@ -20,6 +20,7 @@ export interface ChatTurn {
   courseId: string;
   courseCode: string;
   courseTitle: string;
+  department?: string | null;
   topicId: string | null;
   topicTitle: string | null;
   userMessage: string;

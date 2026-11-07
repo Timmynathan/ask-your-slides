@@ -52,6 +52,7 @@ class Material:
 class Course:
     code: str
     title: str
+    department: str
     lecturer: str | None
     sort_order: int
     lms_id: int | None
@@ -78,6 +79,8 @@ def load(data_dir: Path) -> list[Course]:
             problems.append(f"courses.yaml: {code} listed twice")
         elif not c.get("title"):
             problems.append(f"courses.yaml: {code} has no title")
+        elif not str(c.get("department") or "").strip():
+            problems.append(f"courses.yaml: {code} has no department (e.g. department: Computer Science)")
         else:
             course_info[code] = (i + 1, c)
 
@@ -165,6 +168,7 @@ def load(data_dir: Path) -> list[Course]:
             Course(
                 code=code,
                 title=str(info["title"]).strip(),
+                department=str(info["department"]).strip(),
                 lecturer=info.get("lecturer") or None,
                 sort_order=sort_order,
                 lms_id=info.get("lms_id"),

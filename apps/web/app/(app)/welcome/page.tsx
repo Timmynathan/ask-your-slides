@@ -9,10 +9,17 @@ export const metadata: Metadata = { title: "Welcome · Ask Your Slides" };
 
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const { data: profile } = await supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single();
+  const [{ data: profile }, { data: courses }] = await Promise.all([
+    supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
+    supabase.from("courses").select("department"),
+  ]);
+  // One department → the partner can name it ("I know Computer Science can be hard"). Several
+  // (once more departments are added and students choose theirs) → a neutral "your courses".
+  const departments = [...new Set((courses ?? []).map((c) => c.department as string))];
   if (profile?.onboarded && isPartnerId(profile.study_partner)) redirect("/dashboard");
   return (
     <Onboarding
+      department={departments.length === 1 ? departments[0] : null}
       initialName={profile?.display_name ?? ""}
       initialPartner={isPartnerId(profile?.study_partner) ? profile.study_partner : null}
       // Students who signed up before partners existed only need to choose one.

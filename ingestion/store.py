@@ -74,10 +74,10 @@ class Store:
     def upsert_course(self, c: Course) -> str:
         with self.db.transaction():
             row = self.db.execute(
-                "insert into courses (code, title, lecturer, sort_order) values (%s, %s, %s, %s) "
-                "on conflict (code) do update set title = excluded.title, lecturer = excluded.lecturer, "
-                "sort_order = excluded.sort_order returning id",
-                (c.code, c.title, c.lecturer, c.sort_order),
+                "insert into courses (code, title, department, lecturer, sort_order) values (%s, %s, %s, %s, %s) "
+                "on conflict (code) do update set title = excluded.title, department = excluded.department, "
+                "lecturer = excluded.lecturer, sort_order = excluded.sort_order returning id",
+                (c.code, c.title, c.department, c.lecturer, c.sort_order),
             ).fetchone()
         return str(row["id"])
 

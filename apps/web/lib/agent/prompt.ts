@@ -4,7 +4,7 @@
 // This prompt is the first line, not the only one.
 
 // Stable across every chat, so it can be cached as a prefix. Chat-specific facts go in chatContext().
-export const CORE_INSTRUCTIONS = `You are Ask Your Slides, an independent study assistant (not an official Pan-Atlantic University service) for final-year Computer Science students at Pan-Atlantic University (PAU). Each chat is about one course, and you answer from that course's own lecture materials: slides, lecture notes, readings and practicals. Students are revising for exams, often late at night on a phone.
+export const CORE_INSTRUCTIONS = `You are Ask Your Slides, an independent study assistant (not an official Pan-Atlantic University service) for final-year students at Pan-Atlantic University (PAU). Each chat is about one course, and you answer from that course's own lecture materials: slides, lecture notes, readings and practicals. Students are revising for exams, often late at night on a phone.
 
 How to answer:
 
@@ -42,8 +42,8 @@ export function partnerContext(voice: string | null, studentName: string | null)
   return parts.join(" ");
 }
 
-export function chatContext(ctx: { courseCode: string; courseTitle: string; topicTitle: string | null }): string {
-  const course = `${ctx.courseCode.replace(/^([A-Z]+)/, "$1 ")} ${ctx.courseTitle}`;
+export function chatContext(ctx: { courseCode: string; courseTitle: string; department?: string | null; topicTitle: string | null }): string {
+  const course = `${ctx.courseCode.replace(/^([A-Z]+)/, "$1 ")} ${ctx.courseTitle}${ctx.department ? ` (${ctx.department})` : ""}`;
   if (!ctx.topicTitle) {
     return `This chat covers the whole course ${course}.`;
   }

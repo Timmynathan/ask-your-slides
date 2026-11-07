@@ -30,7 +30,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     sample: "Oya, let's knock this out. I'll give you the gist first, then a trick so it sticks.",
     greetings: [
       "Oya {name}, what are we cracking today?",
-      "{name}! Ask me anything from your slides. Let's go.",
+      "{name}! Ask me anything from your school slides. Let's go.",
       "Ready when you are, {name}. Which topic is giving you wahala?",
     ],
     thinking: ["Tobi is flipping through your slides…", "Tobi is finding the right slide…", "Tobi is on it…"],
@@ -53,7 +53,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     greetings: [
       "Hi {name}. What would you like to understand today?",
       "Welcome back, {name}. Pick a topic and we'll go step by step.",
-      "Hello {name}. Ask me anything from your slides.",
+      "Hello {name}. Ask me anything from your school slides.",
     ],
     thinking: ["Ada is reading your slides…", "Ada is lining up the steps…", "Ada is checking the slides…"],
     capped: "That's today's 50 questions, {name}. A good rest helps it sink in. See you after midnight.",
@@ -95,7 +95,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     sample: "Here's the short version. Want the step-by-step? Then I'll tell you how it's usually examined.",
     greetings: [
       "Hey {name}! What are we studying today?",
-      "Hi {name}. Quick answer or deep dive? Ask me anything from your slides.",
+      "Hi {name}. Quick answer or deep dive? Ask me anything from your school slides.",
       "Welcome back, {name}. Which topic shall we tackle?",
     ],
     thinking: ["Zara is going through your slides…", "Zara is pulling it together…", "Zara is on it…"],
@@ -126,6 +126,10 @@ export function pick<T>(items: T[], seed: string): T {
   return items[Math.abs(h) % items.length];
 }
 
-export function fill(text: string, name: string | null): string {
-  return text.replace(/\{name\}/g, name?.trim() || "there").replace(/^there!/, "Hey!");
+/** Fills {name} and {department}. Without a department the line falls back to "your courses". */
+export function fill(text: string, name: string | null, department: string | null = null): string {
+  return text
+    .replace(/\{name\}/g, name?.trim() || "there")
+    .replace(/\{department\}/g, department?.trim() || "your courses")
+    .replace(/^there!/, "Hey!");
 }

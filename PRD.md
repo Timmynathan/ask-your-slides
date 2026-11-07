@@ -116,6 +116,7 @@ The primary signal is **direct student feedback**: students say it helped, and t
   - **Ada**, deep understanding (best for learning new topics): numbered steps, defines terms, worked examples, ends longer answers with "In short:".
   - **Dr. Musa**, exam technique (best for exam practice): how answers are marked, common mistakes, answer structure.
   - **Zara**, the all-rounder (best for a bit of everything): a blend of the three, depth matched to the question.
+- The partner's first words acknowledge the student's subject ("I know Computer Science can be hard, but I've got you") and say answers come "straight from your school slides". The department is never written into the copy: it comes from `courses.department` (set from `data/courses.yaml`), as do the landing page's department, course list and counts, so adding a department needs no code change.
 - The partner changes **how** answers are explained, never the rules: the same retrieval, citations and `<general>` boxes apply to all three (the voice is added after the cached core prompt).
 - The partner is present everywhere: landing page, sign-in, onboarding, the sidebar ("Studying with", one tap to change), a greeting on empty chats, an avatar beside every answer, an animated "thinking" state while searching ("Ada is reading your slides…"), and the daily-limit message in their voice.
 
@@ -290,7 +291,7 @@ Course files are never committed to git. They live in `data/` (git-ignored).
 
 ```
 data/
-  courses.yaml        # course code, title, lecturer, LMS id; order = sidebar order
+  courses.yaml        # course code, title, department (required), lecturer, LMS id; order = sidebar order
   manifest.yaml       # SOURCE OF TRUTH for structure: course → topics → materials
   slides/
     CSC420/

@@ -110,6 +110,9 @@ async function main() {
     lp.on("pageerror", (e) => consoleErrors.push(e.message));
     await lp.goto(`${BASE}/`);
     check(await lp.getByRole("heading", { level: 1, name: /Study smarter from your own lecture slides/ }).isVisible(), "landing hero shows");
+    const { count: courseCount } = await admin.from("courses").select("*", { count: "exact", head: true });
+    check(await lp.getByText("final-year courses").locator("..").getByText(String(courseCount), { exact: true }).isVisible(),
+      "landing course count comes from the database", `${courseCount} courses`);
     const banner = lp.getByText("New: choose your study partner", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
     check(bannerBg === "rgb(245, 213, 255)", "lilac banner across the top", bannerBg);
@@ -145,6 +148,11 @@ async function main() {
       await op.getByRole("button", { name: "Study with Tobi" }).click();
       await op.getByRole("button", { name: "Start studying" }).waitFor();
       check(await op.getByText("I'm Tobi").isVisible(), "chosen partner introduces themselves");
+      const hello = (await op.getByText("I'm Tobi").textContent()) ?? "";
+      const { data: depts } = await admin.from("courses").select("department");
+      const dept = [...new Set((depts ?? []).map((d) => d.department))];
+      check(dept.length !== 1 || (hello.includes(`I know ${dept[0]}`) && hello.includes("school slides")),
+        "welcome names the department (from the data) and says 'school slides'", hello.slice(0, 120));
       await shot(op, "8-onboarding-hello");
       await op.getByRole("button", { name: "Start studying" }).click();
       await op.waitForURL(/\/study\//);

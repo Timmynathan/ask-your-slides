@@ -9,21 +9,24 @@ import { fill, PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
 
 type Step = "name" | "partner" | "hello";
 
+// First words from the chosen partner. {department} comes from the courses' data, never hard-coded.
 const HELLO: Record<PartnerId, string> = {
-  tobi: "Nice one, {name}! I'm Tobi. Pick a course, ask me anything, and I'll give you the gist fast, plus a trick so it sticks.",
-  ada: "Lovely to meet you, {name}. I'm Ada. Choose a course or a topic, and we'll work through it together, step by step, straight from your slides.",
-  musa: "Welcome, {name}. I'm Dr. Musa. Choose a course and ask away; I'll answer from your slides and show you how it gets marked.",
-  zara: "Hey {name}, I'm Zara! Quick answer or deep dive, I've got you, straight from your slides, with an exam tip when it helps.",
+  tobi: "Nice one, {name}! I'm Tobi. I know {department} can be a lot, but we'll break it down together. Ask me anything and I'll give you the gist fast, straight from your school slides, plus a trick so it sticks.",
+  ada: "Lovely to meet you, {name}. I'm Ada. I know {department} can feel like a lot at once, so we'll take it one step at a time, straight from your school slides.",
+  musa: "Welcome, {name}. I'm Dr. Musa. I know {department} can be demanding, and the exams reward clear, well-structured answers. I'll show you how, straight from your school slides.",
+  zara: "Hey {name}, I'm Zara! I know {department} can be hard, but I've got you. Quick answer or deep dive, straight from your school slides, with an exam tip when it helps.",
 };
 const STEPS: Step[] = ["name", "partner", "hello"];
 
 interface Props {
+  /** The student's department, from the courses data; null when it can't be told (several). */
+  department: string | null;
   initialName: string;
   initialPartner: PartnerId | null;
   startAtPartner: boolean;
 }
 
-export function Onboarding({ initialName, initialPartner, startAtPartner }: Props) {
+export function Onboarding({ department, initialName, initialPartner, startAtPartner }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startAtPartner ? "partner" : "name");
   const [name, setName] = useState(initialName);
@@ -112,7 +115,7 @@ export function Onboarding({ initialName, initialPartner, startAtPartner }: Prop
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
-            <p className="mx-auto mt-2 max-w-xl text-muted">Pick the style you enjoy. Every partner answers from your slides and cites every point.</p>
+            <p className="mx-auto mt-2 max-w-xl text-muted">Pick the style you enjoy. Every partner answers from your school slides and cites every point.</p>
 
             <div role="radiogroup" aria-label="Study partners" className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {PARTNER_IDS.map((id) => {
@@ -180,6 +183,7 @@ export function Onboarding({ initialName, initialPartner, startAtPartner }: Prop
               {fill(
                 HELLO[chosen.id],
                 firstName,
+                department,
               )}
               <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-card" />
             </div>

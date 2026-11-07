@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
 import { Mascot } from "@/components/mascot/mascot";
+import { getCatalog, joinList, roughCount, spacedCode, type Catalog } from "@/lib/catalog";
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
 export const metadata: Metadata = {
@@ -18,7 +19,10 @@ const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 tex
 const darkPill = `${pill} bg-ink text-page hover:opacity-90`;
 const lightPill = `${pill} border border-line-strong bg-card text-ink hover:bg-sunken`;
 
-export default function Landing() {
+export default async function Landing() {
+  // Departments, courses and counts come from the database (cached hourly), not from the copy.
+  const catalog = await getCatalog();
+  const departments = joinList(catalog.departments);
   return (
     <div className="flex min-h-dvh flex-col bg-page">
       <Banner text="New: choose your study partner. Tobi, Ada, Dr. Musa or Zara." linkText="Meet them" href="#partners" />
@@ -49,7 +53,7 @@ export default function Landing() {
         <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-14 md:grid-cols-[1.05fr_1fr] md:pt-20">
           <div>
             <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-card px-3 py-1 text-xs font-medium text-muted ring-1 ring-line">
-              <span className="h-1.5 w-1.5 rounded-full bg-lilac-800" /> For final-year Computer Science at PAU
+              <span className="h-1.5 w-1.5 rounded-full bg-lilac-800" /> For final-year {departments || "students"} at PAU
             </p>
             <h1 className="font-heading text-[2.6rem] font-semibold leading-[1.08] tracking-tight text-ink md:text-6xl">
               Study smarter from your own lecture slides
@@ -75,8 +79,8 @@ export default function Landing() {
         <section className="border-y border-line bg-card/60">
           <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 text-center sm:grid-cols-3">
             {[
-              ["7", "final-year courses"],
-              ["1,500+", "slides, notes and readings"],
+              [String(catalog.courseCount), "final-year courses"],
+              [roughCount(catalog.slideCount), "slides, notes and readings"],
               ["Every", "answer cited to a slide"],
             ].map(([big, small]) => (
               <div key={small}>
@@ -166,7 +170,7 @@ export default function Landing() {
         <section id="partners" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20">
           <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Meet your study partners</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">
-            Pick the style you enjoy and switch any time. Every partner answers from your slides and cites every point.
+            Pick the style you enjoy and switch any time. Every partner answers from your school slides and cites every point.
           </p>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {PARTNER_IDS.map((id) => {
@@ -194,7 +198,7 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Frequently asked questions</h2>
             <div className="mt-10 divide-y divide-line rounded-[25px] bg-card ring-1 ring-line">
-              {FAQ.map(([q, a]) => (
+              {faq(catalog).map(([q, a]) => (
                 <details key={q} className="group px-6 py-5">
                   <summary className="flex list-none items-center justify-between gap-4 font-medium text-ink">
                     {q}
@@ -257,13 +261,16 @@ export default function Landing() {
   );
 }
 
-const FAQ: [string, string][] = [
-  ["Is this an official PAU tool?", "No. Ask Your Slides is an independent study tool built for PAU final-year CS students. It is not affiliated with or endorsed by Pan-Atlantic University."],
-  ["Where do the answers come from?", "From your courses' lecture slides, notes and readings. Every point is linked to the slide it came from. Anything that isn't from your slides is shown in a separate box marked “Not from your slides”."],
-  ["Which courses are included?", "All final-year Computer Science courses this semester: CSC 402, 409, 412, 418, 419, 420 and INS 401. Everyone sees every course."],
-  ["Is it free?", "Yes, during the pilot. There's a daily limit of 50 questions per student so everyone gets a fair share."],
-  ["What happens to my chats?", "We store your PAU email, an optional display name and your conversations. Conversations and ratings are used to improve the app. Your data is never sold or used to train AI models. You can ask for it to be deleted."],
-];
+function faq(c: Catalog): [string, string][] {
+  const dept = joinList(c.departments);
+  return [
+    ["Is this an official PAU tool?", "No. Ask Your Slides is an independent study tool built for PAU students. It is not affiliated with or endorsed by Pan-Atlantic University."],
+    ["Where do the answers come from?", "From your courses' lecture slides, notes and readings from school. Every point is linked to the slide it came from. Anything that isn't from your slides is shown in a separate box marked “Not from your slides”."],
+    ["Which courses are included?", `All final-year ${dept ? `${dept} ` : ""}courses this semester: ${joinList(c.courseCodes.map(spacedCode))}. Everyone sees every course. More departments are coming.`],
+    ["Is it free?", "Yes, during the pilot. There's a daily limit of 50 questions per student so everyone gets a fair share."],
+    ["What happens to my chats?", "We store your PAU email, an optional display name, your study partner and your conversations. Conversations and ratings are used to improve the app. Your data is never sold or used to train AI models. You can ask for it to be deleted."],
+  ];
+}
 
 function Feature({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
   return (
