@@ -36,12 +36,36 @@ uv python install 3.12
    ```
    This runs `supabase/tests/*.sql` inside a transaction that is rolled back, so it leaves no data behind.
 
+## Ingestion
+
+Course files live in `data/` (git-ignored): `courses.yaml`, `manifest.yaml` (course → topics →
+materials, each with a `kind`) and `slides/`. Needs `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`,
+`SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SUPABASE_URL` and `DATABASE_URL` in `.env`.
+
+```bash
+npm run ingest -- --course CSC420 --dry-run   # validate + plan; no API calls, no writes
+npm run ingest -- --course CSC420             # ingest one course
+npm run ingest                                # all courses
+npm run ingest -- --remove-course CSC420      # delete a course, its rows and images
+npm run ingest:verify -- --course CSC420 --sample 30   # checks + random slides with image links
+```
+
+- **Re-runs are cheap.** Unchanged files are skipped. A file moved to another topic or kind is
+  re-embedded only. Vision results are cached in `data/.cache/`, so `--force` costs only embeddings.
+- **Vision** (Claude Haiku 5.5) describes slides with real images, charts, equations or diagrams,
+  and **transcribes** pages whose text layer is missing or garbled (some PDFs print `!` instead of
+  spaces). Template images (logos, banners on most pages) don't count.
+- **`kind: skipped`** rows are never ingested. Rows with `review:` are ingested as written and
+  listed at the start of each run so they get checked.
+- `verify` fails if the database doesn't match the manifest, any slide lacks an embedding or image,
+  or fewer than 80% of topics are found by searching their own title.
+
 ## Status
 
 | Phase | Scope | Proof |
 |---|---|---|
 | 1 ✅ | Schema, RLS, `match_slides()`, daily-cap functions | `npm run test:db` (19 checks, passing on hosted Supabase) |
-| 2 | Ingestion CLI | — |
+| 2 ✅ | Ingestion CLI (manifest-driven) | `npm run test:ingest` (offline) + `npm run ingest:verify -- --course CSC420` |
 | 3 | `@pau.edu.ng` OTP auth | — |
 | 4 | `/api/chat` agent, citations, traces | — |
 | 5 | Dashboard + chat UI | — |

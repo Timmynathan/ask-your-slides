@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "db:push": "bash -c 'set -a; source .env; set +a; supabase db push --remote=\"$DATABASE_URL\" \"$@\"' db-push",
-    "test:db": "bash scripts/test-db.sh"
+    "test:db": "bash scripts/test-db.sh",
+    "ingest": "uv run --project ingestion python ingestion/ingest.py",
+    "ingest:verify": "uv run --project ingestion python ingestion/verify.py",
+    "test:ingest": "cd ingestion && uv run pytest -q"
   }
 }
