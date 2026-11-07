@@ -143,21 +143,15 @@ export default async function Landing() {
           </div>
         </section>
 
-        {/* Features */}
+        {/* The demo, framed as a full-screen video player. "See how it works" brings it here and plays it. */}
+        <ChatDemo />
+
+        {/* Features: heading and the four cards, below the demo and separate from it. */}
         <section id="features" className="scroll-mt-20 bg-tint py-20">
           <div className="mx-auto max-w-6xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Everything in your slides, on demand</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
-          </div>
-        </section>
-
-        {/* The demo, full screen like a product video. "See how it works" brings it here and starts it. */}
-        <ChatDemo />
-
-        {/* What else it does: the four feature cards, below the demo. */}
-        <section className="bg-tint py-20">
-          <div className="mx-auto max-w-6xl px-5">
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
               <Feature title="Answers with receipts" body="Each point ends with a chip like “Transactions and Indexing · Slide 5”. Tap it to see the slide.">
                 <p className="text-sm leading-relaxed text-ink">
                   ACID stands for Atomicity, Consistency, Isolation and Durability.{" "}

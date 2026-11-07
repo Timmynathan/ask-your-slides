@@ -150,6 +150,12 @@ async function main() {
     await lp.waitForTimeout(4800);
     const userBubble = await lp.locator("#demo").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
     check(typedBefore === 0 && userBubble === 1, "'See how it works' scrolls to the demo, which then plays from the start", `before ${typedBefore}, sent ${userBubble}`);
+    // It is a video: Pause stops it where it is, and it does not loop by itself.
+    await lp.getByRole("button", { name: "Pause demo" }).click();
+    const frozen = await lp.locator("#demo").innerText();
+    await lp.waitForTimeout(1500);
+    check(frozen === (await lp.locator("#demo").innerText()), "demo pauses when Pause is pressed");
+    check(await lp.getByRole("button", { name: "Play demo" }).isVisible(), "paused demo shows a Play button");
     await lp.goto(`${BASE}/`);
     await lp.getByRole("link", { name: "Try for free" }).first().click();
     await lp.waitForURL(/\/sign-in\?start=1/);

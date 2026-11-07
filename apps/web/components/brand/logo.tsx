@@ -1,12 +1,10 @@
-// Ask Your Slides mark: a single black slide with a speech tail and a small spark. One colour, so
+// Ask Your Slides mark: a black AI sparkle (a large four-point star and a small one). One colour, so
 // it works as the favicon (app/icon.svg is the same drawing) and at any size.
 export function LogoMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="shrink-0 text-black dark:text-[#faf9f5]">
-      <path d="M7 4h18a5 5 0 0 1 5 5v11a5 5 0 0 1-5 5H13l-6 5v-5a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5Z" fill="currentColor" />
-      <rect x="7.5" y="11" width="11" height="2.4" rx="1.2" className="fill-white dark:fill-[#191919]" />
-      <rect x="7.5" y="16" width="7" height="2.4" rx="1.2" className="fill-white dark:fill-[#191919]" />
-      <path d="M23.5 9.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z" className="fill-white dark:fill-[#191919]" />
+      <path d="M14 4.5Q15.4 15.6 26.5 17Q15.4 18.4 14 29.5Q12.6 18.4 1.5 17Q12.6 15.6 14 4.5Z" fill="currentColor" />
+      <path d="M26 1.5Q26.6 5.4 30.5 6Q26.6 6.6 26 10.5Q25.4 6.6 21.5 6Q25.4 5.4 26 1.5Z" fill="currentColor" />
     </svg>
   );
 }

@@ -1,14 +1,16 @@
 "use client";
 
-// Landing showcase, full screen like a product video: a student types a question, the study partner
-// pulls up the exact slide, highlights the sentence that answers it, and replies with that sentence,
-// cited. Then the student types "I still don't understand" and the partner re-explains it in plain
-// words: the analogy sits in a labelled "not from your slides" box, as in the real app, and points
-// back to the slide.
+// Landing demo, framed as a video player that fills the screen: a student types a question, the study
+// partner pulls up the exact slide, highlights the sentence that answers it, and replies with that
+// sentence, cited. Then the student types "I still don't understand" and the partner re-explains it in
+// plain words: the analogy sits in a labelled "not from your slides" box, as in the real app, and
+// points back to the slide.
 // Sample content in the style of the PAU decks: no real lecturer slide on the public page (PRD §16).
-// Starts only when the whole section is on screen or "See how it works" is pressed, then loops:
-// zooms in on the question box while each message is typed and back out when it is sent.
-// With reduced motion it shows the finished state, no zoom.
+//
+// Playback: plays once (no loop) when the whole player is on screen or "See how it works" is pressed;
+// pauses when scrolled away; Play / Pause / Replay button and a progress bar. Everything on screen is
+// derived from one clock (elapsed ms), so pausing is just stopping the clock. With reduced motion,
+// Play jumps to the finished conversation, no zoom.
 import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/mascot/mascot";
 import { DEMO_PLAY_EVENT } from "./see-how";
@@ -17,47 +19,116 @@ const QUESTION = "What is a B+ tree index?";
 const ANSWER = "A B+ tree index keeps keys sorted, so lookups take O(log n) steps instead of scanning every row.";
 const FOLLOW_UP = "I still don't understand";
 
-// phase: 0 typing · 1 sent + thinking · 2 slide pops up · 3 highlight sweeps · 4 answer
-//        5 typing the follow-up · 6 sent + thinking · 7 plain-words explanation · (hold, restart)
-const TIMING = { zoomIn: 900, typePerChar: 70, afterType: 450, thinking: 1100, slide: 900, highlight: 1300, read: 2800, hold: 5600 };
+// Timeline (ms). Zoom in, type, send, think, slide, highlight, answer, read; zoom in, type the
+// follow-up, send, think, explanation, hold.
+const PER_CHAR = 70;
+const TYPE_1 = 900;
+const SEND_1 = TYPE_1 + QUESTION.length * PER_CHAR + 450;
+const SLIDE = SEND_1 + 1100;
+const HIGHLIGHT = SLIDE + 900;
+const ANSWERED = HIGHLIGHT + 1300;
+const ZOOM_2 = ANSWERED + 2800;
+const TYPE_2 = ZOOM_2 + 900;
+const SEND_2 = TYPE_2 + FOLLOW_UP.length * PER_CHAR + 450;
+const EXPLAINED = SEND_2 + 1100;
+const TOTAL = EXPLAINED + 3000;
+
+// phase: 0 typing · 1 sent + thinking · 2 slide · 3 highlight · 4 answer · 5 typing follow-up · 6 thinking · 7 explanation
+function phaseAt(e: number): number {
+  return [SEND_1, SLIDE, HIGHLIGHT, ANSWERED, ZOOM_2, SEND_2, EXPLAINED].filter((t) => e >= t).length;
+}
+const typedAt = (e: number, start: number, len: number) => Math.max(0, Math.min(len, Math.floor((e - start) / PER_CHAR)));
 
 // Type scale: phone, tablet, laptop and up.
 const TEXT = "text-[15px] sm:text-[18px] lg:text-[20px]";
 const CHIP = "whitespace-nowrap rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-200 sm:text-[13px]";
 
 export function ChatDemo() {
-  const [typed, setTyped] = useState(0);
-  const [typed2, setTyped2] = useState(0);
-  const [phase, setPhase] = useState(0);
-  const [inView, setInView] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
   const [origin, setOrigin] = useState("0px 100%");
+  const clock = useRef(0);
   const box = useRef<HTMLElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLDivElement>(null);
 
-  // Start only when the whole demo is on screen (or "See how it works" is pressed), so visitors see it
-  // from the first keystroke instead of arriving mid-loop.
+  const ended = elapsed >= TOTAL;
+
+  // Kept in a ref so the observer and the "See how it works" listener always call the latest version.
+  type Control = { play: (restart: boolean) => void; pause: () => void; started: boolean; ended: boolean };
+  const control = useRef<Control>({ play: () => {}, pause: () => {}, started: false, ended: false });
+  useEffect(() => {
+    control.current = {
+      started,
+      ended,
+      pause: () => setPlaying(false),
+      play: (restart: boolean) => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          clock.current = TOTAL;
+          setElapsed(TOTAL);
+          setStarted(true);
+          return;
+        }
+        if (restart || clock.current >= TOTAL) {
+          clock.current = 0;
+          setElapsed(0);
+        }
+        setStarted(true);
+        setPlaying(true);
+      },
+    };
+  });
+
+  // Auto-start once, when the whole player is on screen; pause when it is mostly scrolled away.
+  // "See how it works" plays it from the start (or resumes it if it was paused part-way).
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const start = () => setInView(true);
+    // "Seen" = the player has been fully on screen since it was last started from elsewhere. Pausing on
+    // scroll-away applies only then, so "See how it works" isn't paused while the page scrolls to it.
+    let seen = false;
     const io = new IntersectionObserver(
       ([entry]) => {
-        const fills = entry.intersectionRect.height >= window.innerHeight * 0.9;
-        if (entry.intersectionRatio >= 0.95 || fills) start();
+        const c = control.current;
+        const full = entry.intersectionRatio >= 0.95 || entry.intersectionRect.height >= window.innerHeight * 0.9;
+        if (full) {
+          seen = true;
+          if (!c.started) c.play(true);
+        }
+        if (seen && entry.intersectionRatio < 0.4) c.pause();
       },
-      { threshold: [0.5, 0.75, 0.9, 0.95, 1] },
+      { threshold: [0, 0.4, 0.5, 0.75, 0.9, 0.95, 1] },
     );
     io.observe(el);
-    window.addEventListener(DEMO_PLAY_EVENT, start);
+    const onPlay = () => {
+      seen = false;
+      control.current.play(!control.current.started || control.current.ended);
+    };
+    window.addEventListener(DEMO_PLAY_EVENT, onPlay);
     return () => {
       io.disconnect();
-      window.removeEventListener(DEMO_PLAY_EVENT, start);
+      window.removeEventListener(DEMO_PLAY_EVENT, onPlay);
     };
   }, []);
 
+  // The clock: runs only while playing, stops by itself at the end (no loop).
+  useEffect(() => {
+    if (!playing) return;
+    let last = performance.now();
+    const id = setInterval(() => {
+      const now = performance.now();
+      clock.current = Math.min(TOTAL, clock.current + (now - last));
+      last = now;
+      setElapsed(clock.current);
+      if (clock.current >= TOTAL) setPlaying(false);
+    }, 40);
+    return () => clearInterval(id);
+  }, [playing]);
+
   // Zoom towards the start of the question box, wherever the centred column sits at this width.
   useEffect(() => {
-    const el = box.current;
+    const el = layer.current;
     const field = input.current;
     if (!el || !field) return;
     const ro = new ResizeObserver(() => {
@@ -69,134 +140,176 @@ export function ChatDemo() {
     return () => ro.disconnect();
   }, []);
 
-  useEffect(() => {
-    if (!inView) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const id = setTimeout(() => {
-        setTyped(QUESTION.length);
-        setTyped2(FOLLOW_UP.length);
-        setPhase(7);
-      }, 0);
-      return () => clearTimeout(id);
-    }
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
-    const run = () => {
-      let t = TIMING.zoomIn; // let the zoom-in land before the first keystroke
-      at(0, () => {
-        setPhase(0);
-        setTyped(0);
-        setTyped2(0);
-      });
-      for (let i = 1; i <= QUESTION.length; i++) at((t += TIMING.typePerChar), () => setTyped(i));
-      at((t += TIMING.afterType), () => setPhase(1));
-      at((t += TIMING.thinking), () => setPhase(2));
-      at((t += TIMING.slide), () => setPhase(3));
-      at((t += TIMING.highlight), () => setPhase(4));
-      at((t += TIMING.read), () => setPhase(5));
-      t += TIMING.zoomIn;
-      for (let i = 1; i <= FOLLOW_UP.length; i++) at((t += TIMING.typePerChar), () => setTyped2(i));
-      at((t += TIMING.afterType), () => setPhase(6));
-      at((t += TIMING.thinking), () => setPhase(7));
-      at((t += TIMING.hold), run);
-    };
-    run();
-    return () => timers.forEach(clearTimeout);
-  }, [inView]);
-
+  const phase = phaseAt(elapsed);
   const typing = phase === 0 || phase === 5;
+  const typed = typedAt(elapsed, TYPE_1, QUESTION.length);
+  const typed2 = typedAt(elapsed, TYPE_2, FOLLOW_UP.length);
   const draft = phase === 0 ? QUESTION.slice(0, typed) : FOLLOW_UP.slice(0, typed2);
   const ready = phase === 0 ? typed === QUESTION.length : typed2 === FOLLOW_UP.length;
-  const zoomed = inView && typing;
+  const zoomed = started && typing && !ended;
+
+  const button = !started
+    ? { label: "Play demo", icon: <PlayIcon />, text: "Play" }
+    : playing
+      ? { label: "Pause demo", icon: <PauseIcon />, text: "Pause" }
+      : ended
+        ? { label: "Replay demo", icon: <ReplayIcon />, text: "Replay" }
+        : { label: "Play demo", icon: <PlayIcon />, text: "Play" };
+  const toggle = () => (playing ? setPlaying(false) : control.current.play(ended));
 
   return (
     <section
       ref={box}
       id="demo"
-      aria-label="Demo: a student asks what a B+ tree index is; Ada shows the slide, highlights the answer, then explains it again in plain words."
+      aria-label="Demo video"
       /* overflow-anchor: none, or the browser scrolls the page whenever a message appears inside the demo */
-      className="relative h-[100dvh] min-h-[560px] w-full overflow-hidden bg-[#f5f8fc] text-left [overflow-anchor:none]"
+      className="h-[100dvh] min-h-[600px] w-full scroll-mt-0 bg-page px-3 pb-3 pt-[88px] [overflow-anchor:none] sm:px-5 sm:pb-5 sm:pt-[96px]"
     >
-      {/* Zoom layer: close-up on the question box while it is typed, back out once it is sent. */}
-      <div aria-hidden className={`demo-zoom flex h-full flex-col ${zoomed ? "is-zoomed" : ""}`} style={{ transformOrigin: origin }}>
-        {/* room for the floating menu bar, then the chat's course */}
-        <div className="flex shrink-0 justify-center pt-24 sm:pt-28">
-          <span className="rounded-full bg-white px-4 py-1.5 text-[13px] font-medium text-[#191919] ring-1 ring-black/10 sm:text-sm">
-            CSC 420 · Transactions and indexing
+      <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] bg-[#f5f8fc] text-left shadow-xl ring-2 ring-brand">
+        {/* Player bar: says plainly that this is a demo, and holds the controls. */}
+        <div className="flex shrink-0 items-center gap-3 border-b border-black/5 bg-white px-3 py-2.5 sm:px-5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
+            <span className={`h-1.5 w-1.5 rounded-full ${playing ? "animate-pulse bg-[#5ea3ed]" : "bg-white/60"}`} />
+            Demo
           </span>
+          <span className="hidden truncate text-sm font-medium text-ink sm:inline">How Ask Your Slides answers a question</span>
+          <span className="ml-auto hidden text-[13px] text-muted md:inline">CSC 420 · Transactions and indexing</span>
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={button.label}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-pau-50 py-1.5 pl-2 pr-3.5 text-sm font-semibold text-brand ring-1 ring-brand/20 transition hover:bg-pau-100 active:scale-95 md:ml-3"
+          >
+            {button.icon}
+            {button.text}
+          </button>
+        </div>
+        <div className="h-1 shrink-0 bg-pau-100" aria-hidden>
+          <div className="h-full bg-brand" style={{ width: `${(elapsed / TOTAL) * 100}%` }} />
         </div>
 
-        {/* Newest messages sit at the bottom; older ones scroll off the top, like a real chat. */}
-        <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_64px)]">
-          <div className="mx-auto flex w-full max-w-[920px] flex-col gap-4 px-4 pb-5 sm:gap-5 sm:px-8">
-            {phase >= 1 && <UserBubble text={QUESTION} />}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          {/* Zoom layer: close-up on the question box while it is typed, back out once it is sent. */}
+          <div
+            ref={layer}
+            aria-hidden
+            className={`demo-zoom flex h-full flex-col ${zoomed ? "is-zoomed" : ""}`}
+            style={{ transformOrigin: origin }}
+          >
+            {/* Newest messages sit at the bottom; older ones scroll off the top, like a real chat. */}
+            <div className="flex min-h-0 flex-1 flex-col justify-end overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_56px)]">
+              <div className="mx-auto flex w-full max-w-[920px] flex-col gap-4 px-4 pb-5 sm:gap-5 sm:px-8">
+                {phase >= 1 && <UserBubble text={QUESTION} />}
 
-            {phase === 1 && <Thinking text="Ada is finding the slide…" />}
+                {phase === 1 && <Thinking text="Ada is finding the slide…" />}
 
-            {phase >= 2 && (
-              <div className="pop-in flex shrink-0 items-start gap-3">
-                <Mascot partner="ada" size={40} mood={phase >= 4 ? "happy" : "thinking"} animated={false} />
-                <div className="min-w-0 flex-1 space-y-3">
-                  <Slide highlight={phase >= 3} />
-                  {phase >= 4 && (
-                    <div className={`pop-in rounded-2xl rounded-tl-md bg-white p-4 leading-relaxed text-[#191919] ring-1 ring-black/5 ${TEXT}`}>
-                      <span className="mr-1 text-[#5f6673]">From your slide:</span>“{ANSWER}” <span className={CHIP}>Indexing · Slide 21</span>
+                {phase >= 2 && (
+                  <div className="pop-in flex shrink-0 items-start gap-3">
+                    <Mascot partner="ada" size={40} mood={phase >= 4 ? "happy" : "thinking"} animated={false} />
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <Slide highlight={phase >= 3} />
+                      {phase >= 4 && (
+                        <div className={`pop-in rounded-2xl rounded-tl-md bg-white p-4 leading-relaxed text-[#191919] ring-1 ring-black/5 ${TEXT}`}>
+                          <span className="mr-1 text-[#5f6673]">From your slide:</span>“{ANSWER}” <span className={CHIP}>Indexing · Slide 21</span>
+                        </div>
+                      )}
                     </div>
+                  </div>
+                )}
+
+                {phase >= 6 && <UserBubble text={FOLLOW_UP} />}
+
+                {phase === 6 && <Thinking text="Ada is putting it another way…" />}
+
+                {phase >= 7 && (
+                  <div className="pop-in flex shrink-0 items-start gap-3">
+                    <Mascot partner="ada" size={40} mood="happy" animated={false} />
+                    <div className={`min-w-0 flex-1 space-y-3 rounded-2xl rounded-tl-md bg-white p-4 leading-relaxed text-[#191919] ring-1 ring-black/5 ${TEXT}`}>
+                      <p>Let&apos;s take it one step at a time, with a picture you know.</p>
+                      <div className="rounded-xl bg-amber-50 p-3.5 ring-1 ring-amber-200">
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800 sm:text-[12px]">
+                          My explanation · not from your slides
+                        </p>
+                        <p>
+                          Think of the library. You don&apos;t check every shelf for one book: you read the signs (“A–F this aisle”, then the
+                          “C” shelf) and you&apos;re there in a few steps. A B+ tree index is those signs for a table.
+                        </p>
+                      </div>
+                      <p>
+                        <b>In short:</b> the index takes the database straight to the row, which is why your slide says lookups take{" "}
+                        <b>O(log n) steps</b>. <span className={CHIP}>Indexing · Slide 21</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* input */}
+            <div className="shrink-0 border-t border-black/5 bg-white">
+              <div className="mx-auto flex w-full max-w-[920px] items-center gap-3 px-4 py-4 sm:px-8 sm:py-5">
+                <div ref={input} className={`min-h-[24px] flex-1 rounded-full bg-[#f5f8fc] px-5 py-3 text-[#191919] ${TEXT}`}>
+                  {typing && started ? (
+                    <>
+                      {draft}
+                      <span className="ml-px inline-block h-[1.1em] w-px translate-y-[0.15em] animate-pulse bg-[#191919]" />
+                    </>
+                  ) : (
+                    <span className="text-[#5f6673]/70">Ask about Transactions and indexing…</span>
                   )}
                 </div>
+                <span
+                  className={`rounded-full px-5 py-3 text-sm font-medium text-white transition-colors sm:text-base ${typing && ready ? "bg-[#0e1664]" : "bg-[#0e1664]/40"}`}
+                >
+                  Send
+                </span>
               </div>
-            )}
-
-            {phase >= 6 && <UserBubble text={FOLLOW_UP} />}
-
-            {phase === 6 && <Thinking text="Ada is putting it another way…" />}
-
-            {phase >= 7 && (
-              <div className="pop-in flex shrink-0 items-start gap-3">
-                <Mascot partner="ada" size={40} mood="happy" animated={false} />
-                <div className={`min-w-0 flex-1 space-y-3 rounded-2xl rounded-tl-md bg-white p-4 leading-relaxed text-[#191919] ring-1 ring-black/5 ${TEXT}`}>
-                  <p>Let&apos;s take it one step at a time, with a picture you know.</p>
-                  <div className="rounded-xl bg-amber-50 p-3.5 ring-1 ring-amber-200">
-                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800 sm:text-[12px]">
-                      My explanation · not from your slides
-                    </p>
-                    <p>
-                      Think of the library. You don&apos;t check every shelf for one book: you read the signs (“A–F this aisle”, then the
-                      “C” shelf) and you&apos;re there in a few steps. A B+ tree index is those signs for a table.
-                    </p>
-                  </div>
-                  <p>
-                    <b>In short:</b> the index takes the database straight to the row, which is why your slide says lookups take{" "}
-                    <b>O(log n) steps</b>. <span className={CHIP}>Indexing · Slide 21</span>
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* input */}
-        <div className="shrink-0 border-t border-black/5 bg-white">
-          <div className="mx-auto flex w-full max-w-[920px] items-center gap-3 px-4 py-4 sm:px-8 sm:py-5">
-            <div ref={input} className={`min-h-[24px] flex-1 rounded-full bg-[#f5f8fc] px-5 py-3 text-[#191919] ${TEXT}`}>
-              {typing ? (
-                <>
-                  {draft}
-                  <span className="ml-px inline-block h-[1.1em] w-px translate-y-[0.15em] animate-pulse bg-[#191919]" />
-                </>
-              ) : (
-                <span className="text-[#5f6673]/70">Ask about Transactions and indexing…</span>
-              )}
             </div>
-            <span
-              className={`rounded-full px-5 py-3 text-sm font-medium text-white transition-colors sm:text-base ${typing && ready ? "bg-[#0e1664]" : "bg-[#0e1664]/40"}`}
-            >
-              Send
-            </span>
           </div>
+
+          {/* Poster: before it starts, one big play button. */}
+          {!started && (
+            <div className="absolute inset-0 grid place-items-center bg-white/50 backdrop-blur-[2px]">
+              <button
+                type="button"
+                onClick={() => control.current.play(true)}
+                className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition active:scale-95"
+              >
+                <span className="cue-ring grid h-20 w-20 place-items-center rounded-full bg-brand text-white shadow-lg transition group-hover:scale-105 sm:h-24 sm:w-24">
+                  <svg width="30" height="30" viewBox="0 0 12 12" aria-hidden>
+                    <path d="M3.2 1.6v8.8L10.4 6z" fill="currentColor" />
+                  </svg>
+                </span>
+                <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Watch the demo</span>
+                <span className="text-sm text-muted">{Math.round(TOTAL / 1000)} seconds · ask, see the slide, get it explained</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </section>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden>
+      <path d="M3 1.8v8.4L10 6z" fill="currentColor" />
+    </svg>
+  );
+}
+function PauseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 12 12" aria-hidden>
+      <path d="M3 2h2.2v8H3zM6.8 2H9v8H6.8z" fill="currentColor" />
+    </svg>
+  );
+}
+function ReplayIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+      <path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" />
+    </svg>
   );
 }
 
