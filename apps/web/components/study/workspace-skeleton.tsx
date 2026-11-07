@@ -5,7 +5,7 @@ export function WorkspaceSkeleton() {
     <div className="flex h-dvh w-full overflow-hidden bg-white dark:bg-neutral-950" aria-busy="true" aria-label="Loading">
       <div className="hidden w-[288px] shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 lg:flex">
         <div className="flex h-14 items-center border-b border-neutral-200 px-4 dark:border-neutral-800">
-          <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">PAU Study Assistant</span>
+          <span className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">Ask Your Slides</span>
         </div>
         <div className="space-y-4 px-4 py-4">
           {Array.from({ length: 7 }, (_, i) => (

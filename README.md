@@ -1,4 +1,4 @@
-# PAU Study Assistant
+# Ask Your Slides
 
 Course-scoped study chat for final-year CS students at Pan-Atlantic University. Answers come from
 the lecture slides, with slide citations. See [PRD.md](PRD.md) for the full spec.
@@ -76,7 +76,7 @@ One-time Supabase dashboard settings (can't be set from a migration):
 
 1. **Authentication → Hooks → Before User Created** → Postgres → `public.hook_before_user_created`.
 2. **Authentication → Email Templates**: both **Confirm signup** and **Magic Link** must show the
-   code, e.g. `Your PAU Study Assistant code is {{ .Token }}`. (New students get the first, returning
+   code, e.g. `Your Ask Your Slides code is {{ .Token }}`. (New students get the first, returning
    students the second.)
 3. **Authentication → SMTP**: Resend, sender `noreply@mail.askyourslides.com` (done).
 

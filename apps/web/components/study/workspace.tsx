@@ -36,7 +36,7 @@ export function Workspace(data: WorkspaceData) {
     if (chatId) params.set("chat", chatId);
     const qs = params.toString();
     window.history.replaceState(window.history.state, "", `/study/${course.code}${qs ? `?${qs}` : ""}`);
-    document.title = `${displayCode(course.code)}${topic ? ` · ${topic.title}` : ""} · PAU Study Assistant`;
+    document.title = `${displayCode(course.code)}${topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
   }, [course.code, topic, chatId]);
 
   const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {

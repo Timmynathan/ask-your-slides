@@ -21,7 +21,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
   return (
     <nav className="flex h-full flex-col" aria-label="Courses and chats">
       <div className="flex h-14 shrink-0 items-center border-b border-neutral-200 px-4 dark:border-neutral-800">
-        <span className="text-sm font-semibold tracking-tight">PAU Study Assistant</span>
+        <span className="text-sm font-semibold tracking-tight">Ask Your Slides</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">

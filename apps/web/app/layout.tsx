@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PAU Study Assistant",
+  title: "Ask Your Slides",
   description: "Answers from your final-year CS lecture slides, with citations.",
 };
 

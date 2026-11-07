@@ -1,10 +1,11 @@
-# PAU Study Assistant — Product Requirements Document
+# Ask Your Slides — Product Requirements Document
 
 | Field | Value |
 |---|---|
 | Owner | Nathaniel Ilesanmi |
 | Status | v1.2 — in build |
 | Date | 7 November 2026 (v1.1: embeddings, auth email, domain, citation keys. v1.2: manifest-driven topics and materials, topic chats) |
+| Product name | **Ask Your Slides** (askyourslides.com). An independent study tool for PAU students, not an official PAU product: no PAU branding or logo in the app. |
 | App URL | `app.askyourslides.com` (Vercel). Auth email from `noreply@mail.askyourslides.com`. |
 | Pilot users | Final-year Computer Science students, Pan-Atlantic University (PAU) |
 | Hard deadline | Exams start **5 December 2026**. Pilot must be live by **21 November 2026**. |
@@ -13,7 +14,7 @@
 
 ## 1. Summary
 
-PAU Study Assistant is a web app. Final-year CS students sign in with their `@pau.edu.ng` email. They see one chat for each course. Each chat answers questions from that course's lecture slides, and it cites the slide it used.
+Ask Your Slides is a web app. Final-year CS students sign in with their `@pau.edu.ng` email. They see one chat for each course. Each chat answers questions from that course's lecture slides, and it cites the slide it used.
 
 The slides are already loaded. The student does not upload anything.
 

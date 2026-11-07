@@ -6,7 +6,7 @@ import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
 
-export const metadata: Metadata = { title: "PAU Study Assistant" };
+export const metadata: Metadata = { title: "Ask Your Slides" };
 
 type Props = {
   params: Promise<{ code: string }>;

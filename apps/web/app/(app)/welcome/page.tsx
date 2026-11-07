@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { SaveButtons } from "@/components/ui/form-buttons";
 import { requireUser } from "@/lib/auth/session";
 
-export const metadata: Metadata = { title: "Welcome · PAU Study Assistant" };
+export const metadata: Metadata = { title: "Welcome · Ask Your Slides" };
 
 async function saveName(form: FormData) {
   "use server";
