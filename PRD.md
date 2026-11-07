@@ -638,10 +638,11 @@ erDiagram
 
 - Reference: studyfetch.com, used for structure and feel, not copied (no text, artwork, logo or mascot reused).
 - Fonts: **Bitter** (headings), **Inter** (text), **JetBrains Mono** (code), all free via Google Fonts.
-- Colours: white page and cards, near-black ink `#191919`, cool greys; **PAU blue** accents taken from pau.edu.ng's theme stylesheet: primary `#2E3A6E` (buttons, links, the student's chat bubbles, selected states) and secondary `#5EA3ED` (its tints for the banner, highlights and focus rings). Logo and line drawings stay black. Dark mode uses matching dark tokens with `#5EA3ED` as the accent.
+- Colours: white page and cards, near-black ink `#191919`, cool greys; **PAU navy `#0E1664`** as the brand colour (banner with white text, buttons, links, the student's chat bubbles, selected states), with tints of it for highlights and `#5EA3ED` (from pau.edu.ng's theme) as the bright accent. Logo and line drawings stay black. Dark mode uses matching dark tokens with `#5EA3ED` as the accent.
 - Shapes: pill buttons, 25 px card corners, soft rings instead of heavy borders.
 - Logo and favicon: one black mark (a slide with a speech tail and a spark), `apps/web/app/icon.svg`. Brand name and menus (landing nav, sidebar items): Inter 400, 16 px / 24 px, black (`.type-menu`).
-- Landing hero: one headline stating the value, **"Ask your lecture slides anything"**, one sentence ("All your {department} course slides are already here, so there's nothing to upload. Ask a question and get the answer straight from your slides, with the exact slide shown."), one big PAU-navy "Try for free" button, black line drawings in the bottom corners; everything else below the fold.
+- Landing hero: **"ChatGPT doesn't have your PAU slides. We do."**, one sentence ("All your {department} course slides are already here, so there's nothing to upload…"), one big navy "Try for free" button, "✕ No PDFs to upload ✕ No screenshots ✕ No starting over", black line drawings in the bottom corners.
+- "Why not just use ChatGPT, Claude or Gemini?": a section comparing a general chatbot (find, download, upload, screenshot, in every chat; no link to the slide) with Ask Your Slides, plus an FAQ answer. An animation drops those chores (PDF, screenshot, upload, new chat) into a bin. Competitors are named in text only; their logos are not used.
 
 ### 13.0b Adoption at PAU (low friction)
 

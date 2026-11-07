@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
+import { ChoreBin } from "@/components/landing/chore-bin";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
 import { getCatalog, joinList, roughCount, spacedCode, type Catalog } from "@/lib/catalog";
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
 export const metadata: Metadata = {
-  title: "Ask Your Slides: ask your lecture slides anything",
+  title: "Ask Your Slides: ChatGPT doesn't have your PAU slides. We do.",
 };
 
 // Landing page for signed-out visitors (signed-in students are sent to their courses by proxy.ts).
@@ -32,6 +33,7 @@ export default async function Landing() {
             <Logo />
           </Link>
           <div className="hidden items-center gap-8 md:flex">
+            <a href="#why" className="type-menu hover:opacity-70">Why us</a>
             <a href="#features" className="type-menu hover:opacity-70">Features</a>
             <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
             <a href="#faq" className="type-menu hover:opacity-70">FAQ</a>
@@ -48,10 +50,10 @@ export default async function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Hero: the value in one line (ask your own lecture slides; nothing to upload), one button. */}
+        {/* Hero: the value in one line (we already have your slides; general chatbots don't), one button. */}
         <section className="relative flex min-h-[calc(100dvh-7.5rem)] flex-col items-center justify-center overflow-hidden px-5 pb-40 pt-16 text-center sm:pb-48">
-          <h1 className="max-w-4xl font-heading text-[2.75rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-7xl">
-            Ask your lecture slides anything
+          <h1 className="max-w-5xl font-heading text-[2.6rem] font-semibold leading-[1.06] tracking-tight text-ink sm:text-7xl">
+            ChatGPT doesn&apos;t have your PAU slides. We do.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
             All your {departments ? `${departments} ` : ""}course slides are already here, so there&apos;s nothing to upload. Ask a question
@@ -63,7 +65,12 @@ export default async function Landing() {
           >
             Try for free
           </Link>
-          <p className="mt-4 text-sm text-muted">
+          <p className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm font-medium text-ink">
+            <span>✕ No PDFs to upload</span>
+            <span>✕ No screenshots</span>
+            <span>✕ No starting over</span>
+          </p>
+          <p className="mt-3 text-sm text-muted">
             Already have an account?{" "}
             <Link href="/sign-in" className="text-ink underline underline-offset-4">
               Log in
@@ -83,6 +90,53 @@ export default async function Landing() {
                   {spacedCode(code)}
                 </span>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Why not a general chatbot? */}
+        <section id="why" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20">
+          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Why not just use ChatGPT, Claude or Gemini?</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-center text-muted">
+            They&apos;re great, but they don&apos;t have your slides. You&apos;d have to find the deck, download it, upload it, and screenshot every
+            diagram, again in every new chat.
+          </p>
+          <div className="mt-10 grid items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
+            <div className="rounded-[25px] bg-tint p-7 ring-1 ring-line">
+              <p className="text-sm font-medium uppercase tracking-wide text-muted">A general AI chatbot</p>
+              <ul className="mt-4 space-y-3 text-[15px] text-ink">
+                {[
+                  "Find the deck on the portal and download it",
+                  "Upload the PDF again in every new chat, and hit file limits",
+                  "Screenshot diagrams and slides it can't read",
+                  "Answers can mix in general knowledge, with no link back to your lecturer's slide",
+                ].map((t) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sunken text-xs text-muted" aria-hidden>✕</span>
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex flex-col items-center">
+              <ChoreBin className="w-64 text-black dark:text-white" />
+              <p className="mt-1 text-sm font-medium text-ink">Leave the busywork behind</p>
+            </div>
+            <div className="rounded-[25px] bg-brand p-7 text-white">
+              <p className="text-sm font-medium uppercase tracking-wide text-white/70">Ask Your Slides</p>
+              <ul className="mt-4 space-y-3 text-[15px]">
+                {[
+                  "Every course's slides are already here",
+                  "Nothing to upload, ever, in any chat",
+                  "Diagrams and images already read for you",
+                  "Every point shows the exact slide; anything else is clearly marked",
+                ].map((t) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-xs font-bold text-brand" aria-hidden>✓</span>
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>
@@ -276,6 +330,7 @@ export default async function Landing() {
 function faq(c: Catalog): [string, string][] {
   const dept = joinList(c.departments);
   return [
+    ["Why not just use ChatGPT, Claude or Gemini?", "They don't have your slides. You'd have to find each deck, download it, upload it and screenshot the diagrams, in every new chat. Here every course's slides are already loaded, diagrams included, and every answer shows the exact slide it came from."],
     ["Is this an official PAU tool?", "No. Ask Your Slides is an independent study tool built for PAU students. It is not affiliated with or endorsed by Pan-Atlantic University."],
     ["Where do the answers come from?", "From your courses' lecture slides, notes and readings from school. Every point is linked to the slide it came from. Anything that isn't from your slides is shown in a separate box marked “Not from your slides”."],
     ["Which courses are included?", `All final-year ${dept ? `${dept} ` : ""}courses this semester: ${joinList(c.courseCodes.map(spacedCode))}. Everyone sees every course. More departments are coming.`],

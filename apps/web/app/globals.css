@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
-/* Palette: white page, PAU blue accents (pau.edu.ng theme: primary #2E3A6E, secondary #5EA3ED),
-   near-black ink. Layout and type follow the studyfetch.com reference. */
+/* Palette: white page, PAU navy #0E1664 as the brand colour (with #5EA3ED from pau.edu.ng as a light
+   accent), near-black ink. Layout and type follow the studyfetch.com reference. */
 :root {
   --page: #ffffff;
   --card: #ffffff;
@@ -11,7 +11,7 @@
   --line-strong: #cfd7e3;
   --ink: #191919;
   --muted: #5f6673;
-  --brand: #2e3a6e; /* PAU primary */
+  --brand: #0e1664; /* PAU navy: banner, buttons, links, selected states */
   --brand-ink: #ffffff; /* text on --brand */
 }
 @media (prefers-color-scheme: dark) {
@@ -40,15 +40,15 @@
   --color-muted: var(--muted);
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
-  /* PAU blue scale: tints of #5EA3ED, shades of #2E3A6E */
-  --color-pau-50: #f2f7fe;
-  --color-pau-100: #e4eefb;
-  --color-pau-200: #c9ddf7;
-  --color-pau-300: #9fc5f2;
+  /* PAU navy scale around #0E1664 (tints for highlights, #5EA3ED as the bright accent) */
+  --color-pau-50: #f3f5fc;
+  --color-pau-100: #e6e9f7;
+  --color-pau-200: #c8cdec;
+  --color-pau-300: #9aa3da;
   --color-pau-400: #5ea3ed;
-  --color-pau-700: #3c4c8f;
-  --color-pau-800: #2e3a6e;
-  --color-pau-900: #1f2850;
+  --color-pau-700: #2a3591;
+  --color-pau-800: #0e1664;
+  --color-pau-900: #0a0f47;
   --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-heading: var(--font-bitter), Georgia, serif;
   --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -190,4 +190,31 @@ body {
   .type-menu {
     color: var(--ink);
   }
+}
+
+/* Chore bin (components/landing/chore-bin.tsx): every 2 s one chore falls in and the lid flips. */
+@keyframes bin-drop {
+  0%, 12% { transform: none; opacity: 1; }
+  18% { transform: translateY(-6px) rotate(-6deg); opacity: 1; }
+  34% { transform: translate(var(--dx), var(--dy)) rotate(28deg) scale(0.35); opacity: 0; }
+  88% { transform: none; opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+@keyframes bin-lid {
+  0%, 22% { transform: none; }
+  30%, 44% { transform: rotate(-24deg); }
+  54%, 100% { transform: none; }
+}
+.bin-item {
+  transform-box: view-box;
+  animation: bin-drop 8s cubic-bezier(0.5, 0, 0.7, 0.4) infinite both;
+}
+.bin-lid {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: bin-lid 2s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bin-item, .bin-lid { animation: none; }
 }
