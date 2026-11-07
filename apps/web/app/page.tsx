@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
 import { ChoreBin } from "@/components/landing/chore-bin";
-import { SlideAsk } from "@/components/landing/slide-ask";
+import { ChatDemo } from "@/components/landing/chat-demo";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
 import { getCatalog, joinList, spacedCode } from "@/lib/catalog";
@@ -166,15 +166,13 @@ export default async function Landing() {
             <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
             <div className="mt-12 grid items-center gap-10 rounded-[25px] bg-card p-8 ring-1 ring-line md:grid-cols-[1fr_1.25fr] md:p-12">
               <div>
-                <h3 className="font-heading text-3xl font-semibold tracking-tight text-ink">Ask about anything on a slide</h3>
+                <h3 className="font-heading text-3xl font-semibold tracking-tight text-ink">Ask a question. See the exact slide.</h3>
                 <p className="mt-3 text-[16px] leading-relaxed text-muted">
-                  Point at a term, a diagram or a formula, and your study partner explains it, straight from that slide, with the slide
-                  number so you can check it yourself.
+                  Your study partner finds the slide that answers you, shows it, and highlights the part that matters. The answer comes
+                  straight from your lecturer&apos;s slide, not from the internet.
                 </p>
               </div>
-              <div className="pb-12">
-                <SlideAsk />
-              </div>
+              <ChatDemo />
             </div>
             <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               <Feature title="Answers with receipts" body="Each point ends with a chip like “Transactions and Indexing · Slide 5”. Tap it to see the slide.">
