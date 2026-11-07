@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from functools import lru_cache
 
 import httpx
 
@@ -31,8 +32,13 @@ def embed_documents(texts: list[str]) -> list[list[float]]:
     return out
 
 
+@lru_cache(maxsize=512)
+def _embed_query_cached(text: str) -> tuple[float, ...]:
+    return tuple(_embed([text], "query")[0])
+
+
 def embed_query(text: str) -> list[float]:
-    return _embed([text], "query")[0]
+    return list(_embed_query_cached(text))
 
 
 def _embed(texts: list[str], input_type: str) -> list[list[float]]:
@@ -40,7 +46,13 @@ def _embed(texts: list[str], input_type: str) -> list[list[float]]:
     headers = {"Authorization": f"Bearer {env('VOYAGE_API_KEY')}"}
     body = {"input": texts, "model": EMBED_MODEL, "input_type": input_type, "output_dimension": EMBED_DIMS}
     for attempt in range(6):
-        response = httpx.post(URL, json=body, headers=headers, timeout=120)
+        try:
+            response = httpx.post(URL, json=body, headers=headers, timeout=120)
+        except httpx.TransportError as e:  # dropped connection, timeout: retry like a 5xx
+            if attempt == 5:
+                raise RuntimeError(f"Voyage embeddings unreachable after retries: {e}") from e
+            time.sleep(min(60, 2 ** attempt * 2))
+            continue
         if response.status_code == 429 or response.status_code >= 500:
             time.sleep(min(60, 2 ** attempt * 2))
             continue
