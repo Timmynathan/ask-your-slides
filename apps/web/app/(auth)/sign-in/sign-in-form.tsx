@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Step = { kind: "email" } | { kind: "code"; email: string };
 
@@ -10,6 +10,17 @@ export function SignInForm() {
   const [step, setStep] = useState<Step>({ kind: "email" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Remember the email on this browser, so signing in again is: open, tap "Send code", type it.
+  const [savedEmail, setSavedEmail] = useState("");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("pau.email");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading browser storage after mount
+      if (v) setSavedEmail(v);
+    } catch {
+      /* storage blocked: just don't prefill */
+    }
+  }, []);
 
   async function post(url: string, body: object) {
     const res = await fetch(url, {
@@ -27,6 +38,11 @@ export function SignInForm() {
     const { ok, data } = await post("/api/auth/otp", { email });
     setBusy(false);
     if (!ok) return setError(data.error ?? "Something went wrong. Try again.");
+    try {
+      localStorage.setItem("pau.email", email.trim().toLowerCase());
+    } catch {
+      /* storage blocked */
+    }
     setStep({ kind: "code", email: email.trim().toLowerCase() });
   }
 
@@ -56,7 +72,7 @@ export function SignInForm() {
             PAU email
           </label>
           <input id="email" name="email" type="email" inputMode="email" autoComplete="email" required
-            placeholder="you@pau.edu.ng" className={input} />
+            key={savedEmail} defaultValue={savedEmail} placeholder="you@pau.edu.ng" className={input} />
           <button type="submit" disabled={busy} className={button}>
             {busy ? "Sending…" : "Send code"}
           </button>

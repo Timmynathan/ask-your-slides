@@ -127,24 +127,36 @@ async function main() {
     const welcome = await res.text();
     check(res.status === 200 && welcome.includes("What should we call you"), "first-time student sees the display-name step", String(res.status));
 
-    // 5. Signed in: dashboard renders with the student's email and the course list (read through RLS).
-    res = await fetch(`${BASE}/dashboard`, { headers: { cookie: jar.header() }, redirect: "manual" });
+    // 5. Signed in (after the welcome step): the study page shows the student and every course,
+    //    read through RLS. (/dashboard forwards here.)
+    const { data: prof } = await admin.from("profiles").select("id").eq("email", testEmail).single();
+    await admin.from("profiles").update({ onboarded: true }).eq("id", prof!.id);
+    res = await fetch(`${BASE}/study/CSC420`, { headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
     const html = await res.text();
-    check(res.status === 200 && html.includes(testEmail), "signed-in /dashboard shows the student", String(res.status));
-    const { count } = await admin.from("courses").select("*", { count: "exact", head: true });
-    const shown = (html.match(/ — <!-- -->|— /g) ?? []).length;
-    check(!!count && html.includes("CSC 420"), `course list visible to the student (${count} courses in DB)`, `${shown} rows matched`);
+    check(res.status === 200 && html.includes(testEmail), "signed-in study page shows the student", String(res.status));
+    const { data: allCourses } = await admin.from("courses").select("code");
+    const missing = (allCourses ?? []).map((c) => c.code.replace(/^([A-Z]+)/, "$1 ")).filter((c) => !html.includes(c));
+    check(!!allCourses?.length && missing.length === 0, `all ${allCourses?.length} courses visible to the student`, missing.join(", "));
 
     // 6. Signed in users are kept off /sign-in.
     res = await fetch(`${BASE}/sign-in`, { headers: { cookie: jar.header() }, redirect: "manual" });
     check(res.status === 307 && res.headers.get("location")?.endsWith("/dashboard") === true, "signed-in /sign-in redirects to /dashboard");
+
+    // 6b. A second browser for the same student (e.g. phone), to check sign-out is per browser.
+    const { data: link2 } = await admin.auth.admin.generateLink({ type: "magiclink", email: testEmail });
+    const other = new Jar();
+    res = await fetch(`${BASE}/api/auth/verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: testEmail, code: link2?.properties?.email_otp }) });
+    other.take(res);
+    check(res.status === 200, "same student signs in on a second browser");
 
     // 7. Sign out clears the session.
     res = await fetch(`${BASE}/api/auth/sign-out`, { method: "POST", headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
     res = await fetch(`${BASE}/dashboard`, { headers: { cookie: jar.header() }, redirect: "manual" });
     check(res.status === 307, "after sign-out, /dashboard redirects to sign-in", String(res.status));
+    res = await fetch(`${BASE}/dashboard`, { headers: { cookie: other.header() }, redirect: "manual" });
+    check(res.status !== 307 || !res.headers.get("location")?.endsWith("/sign-in"), "the other browser stays signed in (sign-out is per browser)", `${res.status} ${res.headers.get("location") ?? ""}`);
   } finally {
     await deleteUserByEmail(testEmail);
     server?.kill();
