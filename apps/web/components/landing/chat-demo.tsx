@@ -3,7 +3,7 @@
 // Landing demo, framed as a video player that fills the screen: a student types a question, the study
 // partner pulls up the exact slide, highlights the sentence that answers it, and replies with that
 // sentence, cited. Then the student types "I still don't understand" and the partner re-explains it in
-// plain words: the analogy sits in a labelled "not from your slides" box, as in the real app, and
+// plain words: the analogy sits in the "Ada's explanation · beyond your slides" box, as in the real app, and
 // points back to the slide.
 // Sample content in the style of the PAU decks: no real lecturer slide on the public page (PRD §16).
 //
@@ -13,6 +13,7 @@
 // Play jumps to the finished conversation, no zoom.
 import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/mascot/mascot";
+import { BEYOND_BOX, BeyondSlidesLabel } from "@/components/study/beyond-slides";
 import { DEMO_PLAY_EVENT } from "./see-how";
 
 const QUESTION = "What is a B+ tree index?";
@@ -226,10 +227,8 @@ export function ChatDemo() {
                     <Mascot partner="ada" size={40} mood="happy" animated={false} />
                     <div className={`min-w-0 flex-1 space-y-3 rounded-2xl rounded-tl-md bg-white p-4 leading-relaxed text-[#191919] ring-1 ring-black/5 ${TEXT}`}>
                       <p>Let&apos;s take it one step at a time, with a picture you know.</p>
-                      <div className="rounded-xl bg-amber-50 p-3.5 ring-1 ring-amber-200">
-                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800 sm:text-[12px]">
-                          My explanation · not from your slides
-                        </p>
+                      <div className={BEYOND_BOX}>
+                        <BeyondSlidesLabel name="Ada" className="text-[12px] sm:text-[14px]" />
                         <p>
                           Think of the library. You don&apos;t check every shelf for one book: you read the signs (“A–F this aisle”, then the
                           “C” shelf) and you&apos;re there in a few steps. A B+ tree index is those signs for a table.

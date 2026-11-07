@@ -313,6 +313,7 @@ export function ChatPanel({
                     courseCode={course.code}
                     sortOrder={course.sort_order}
                     onCite={onCite}
+                    partnerName={p.name}
                   />
                   </div>
                 </li>

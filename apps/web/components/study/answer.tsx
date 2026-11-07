@@ -14,6 +14,7 @@ import {
   splitAnswer,
   type CitationInfo,
 } from "@/lib/study/format";
+import { BEYOND_BOX, BeyondSlidesLabel } from "./beyond-slides";
 
 interface Props {
   text: string;
@@ -23,9 +24,11 @@ interface Props {
   courseCode: string;
   sortOrder: number;
   onCite(slideKey: string): void;
+  /** Study partner's name, for the "beyond your slides" box. */
+  partnerName?: string;
 }
 
-export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, sortOrder, onCite }: Props) {
+export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, sortOrder, onCite, partnerName = "Your study partner" }: Props) {
   const byKey = new Map(citations.map((c) => [c.slide_key, c]));
   const segments = splitAnswer(text);
   // The label comes from the server (citations outside the topic), not from the model's wording.
@@ -99,17 +102,8 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
       )}
       {segments.map((seg, i) =>
         seg.kind === "general" ? (
-          <aside
-            key={i}
-            className="my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-ink first:mt-0 dark:border-amber-900/60 dark:bg-amber-950/40"
-          >
-            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-                <circle cx="8" cy="8" r="6.25" />
-                <path d="M8 7.25V11M8 5v.01" strokeLinecap="round" />
-              </svg>
-              Not from your slides — general knowledge
-            </p>
+          <aside key={i} className={`my-4 first:mt-0 ${BEYOND_BOX}`}>
+            <BeyondSlidesLabel name={partnerName} />
             {md(seg.text)}
           </aside>
         ) : (
