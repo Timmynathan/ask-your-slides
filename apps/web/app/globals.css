@@ -239,9 +239,16 @@ body {
   50% { transform: translate(-50%, 6px); opacity: 1; }
 }
 .scroll-cue { animation: scroll-cue 1.8s ease-in-out infinite; }
+/* "See how it works": a soft navy ring that pulses outward every few seconds to draw the eye. */
+@keyframes cue-ring {
+  0%, 55% { box-shadow: 0 0 0 0 rgb(14 22 100 / 0.28); }
+  100% { box-shadow: 0 0 0 14px rgb(14 22 100 / 0); }
+}
+.cue-ring { animation: cue-ring 2.6s ease-out infinite; }
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   .scroll-cue { animation: none; }
+  .cue-ring { animation: none; }
   html { scroll-behavior: auto; }
 }
 

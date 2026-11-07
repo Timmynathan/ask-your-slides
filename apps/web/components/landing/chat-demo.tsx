@@ -9,6 +9,7 @@
 // and back out when it is sent. With reduced motion it shows the finished state, no zoom.
 import { useEffect, useRef, useState } from "react";
 import { Mascot } from "@/components/mascot/mascot";
+import { DEMO_PLAY_EVENT } from "./see-how";
 
 const QUESTION = "What is a B+ tree index?";
 const ANSWER = "A B+ tree index keeps keys sorted, so lookups take O(log n) steps instead of scanning every row.";
@@ -25,14 +26,26 @@ export function ChatDemo() {
   const [inView, setInView] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
-  // Start only when the demo is on screen, so visitors see it from the first keystroke instead of
-  // arriving mid-loop.
+  // Start only when the whole demo is on screen (or "See how it works" is pressed), so visitors see it
+  // from the first keystroke instead of arriving mid-loop. On a screen shorter than the demo,
+  // "whole" means it fills most of the screen.
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const io = new IntersectionObserver(([entry]) => entry.isIntersecting && setInView(true), { threshold: 0.4 });
+    const start = () => setInView(true);
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const fills = entry.intersectionRect.height >= window.innerHeight * 0.9;
+        if (entry.intersectionRatio >= 0.95 || fills) start();
+      },
+      { threshold: [0.5, 0.75, 0.9, 0.95, 1] },
+    );
     io.observe(el);
-    return () => io.disconnect();
+    window.addEventListener(DEMO_PLAY_EVENT, start);
+    return () => {
+      io.disconnect();
+      window.removeEventListener(DEMO_PLAY_EVENT, start);
+    };
   }, []);
 
   useEffect(() => {
@@ -75,7 +88,7 @@ export function ChatDemo() {
   const ready = phase === 0 ? typed === QUESTION.length : typed2 === FOLLOW_UP.length;
   const zoomed = inView && typing;
   return (
-    <div ref={box} className="mx-auto w-full max-w-[540px] overflow-hidden rounded-[22px] bg-white text-left shadow-xl ring-1 ring-black/10" aria-hidden>
+    <div ref={box} id="demo" className="scroll-mt-24 mx-auto w-full max-w-[540px] overflow-hidden rounded-[22px] bg-white text-left shadow-xl ring-1 ring-black/10" aria-hidden>
       {/* Zoom layer: close-up on the question box while it is typed, back out once it is sent. */}
       <div className={`demo-zoom ${zoomed ? "is-zoomed" : ""}`}>
       {/* window bar */}
@@ -131,7 +144,7 @@ export function ChatDemo() {
           <div className="pop-in flex shrink-0 items-start gap-2">
             <Mascot partner="ada" size={28} mood="happy" animated={false} />
             <div className="min-w-0 flex-1 space-y-2 rounded-2xl rounded-tl-md bg-white p-3 text-[13.5px] leading-relaxed text-[#191919] ring-1 ring-black/5">
-              <p>No wahala, let&apos;s try it another way.</p>
+              <p>Let&apos;s take it one step at a time, with a picture you know.</p>
               <div className="rounded-xl bg-amber-50 p-2.5 ring-1 ring-amber-200">
                 <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-wide text-amber-800">My explanation · not from your slides</p>
                 <p>
@@ -140,7 +153,8 @@ export function ChatDemo() {
                 </p>
               </div>
               <p>
-                That&apos;s why your slide says lookups take <b>O(log n) steps</b> instead of scanning every row.{" "}
+                <b>In short:</b> the index takes the database straight to the row, which is why your slide says lookups
+                take <b>O(log n) steps</b>.{" "}
                 <span className="whitespace-nowrap rounded-full bg-teal-50 px-2 py-0.5 text-[10.5px] font-medium text-teal-800 ring-1 ring-teal-200">
                   Indexing · Slide 21
                 </span>

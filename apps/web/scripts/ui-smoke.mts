@@ -135,7 +135,16 @@ async function main() {
     const headingFont = await lp.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
     check(/Bitter/i.test(headingFont), "headings use Bitter", headingFont.slice(0, 40));
     await shot(lp, "0-landing");
-    // The demo waits until it is on screen; "See how it works" takes visitors there.
+    // The demo waits until it is fully on screen; "See how it works" takes visitors there and starts it.
+    await lp.evaluate(() => {
+      const r = document.getElementById("demo")!.getBoundingClientRect();
+      window.scrollTo(0, window.scrollY + r.top - window.innerHeight + r.height / 2); // top half showing only
+    });
+    await lp.waitForTimeout(2500);
+    const halfStarted = await lp.locator("#demo").getByText(/^What is a B\+/).count();
+    check(halfStarted === 0, "demo stays still while only half of it is on screen");
+    await lp.evaluate(() => window.scrollTo(0, 0));
+    await lp.waitForTimeout(400);
     const typedBefore = await lp.locator("#features").getByText(/^What is a B\+/).count();
     await lp.getByRole("link", { name: "See how it works", exact: true }).click();
     await lp.waitForTimeout(4800);

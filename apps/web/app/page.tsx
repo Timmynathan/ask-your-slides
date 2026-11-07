@@ -5,6 +5,7 @@ import { Banner } from "@/components/landing/banner";
 import { ChoreBin } from "@/components/landing/chore-bin";
 import { ChatDemo } from "@/components/landing/chat-demo";
 import { TypingBox } from "@/components/landing/typing-box";
+import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
 import { getCatalog, joinList, spacedCode } from "@/lib/catalog";
@@ -67,23 +68,14 @@ export default async function Landing() {
           >
             Try for free
           </Link>
-          <a href="#features" className="mt-5 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-medium text-brand hover:bg-pau-50">
-            See how it works
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <path d="M8 3v10M3.5 8.5 8 13l4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
+          <SeeHowItWorks />
           <p className="mt-2 text-sm text-muted">
             Already have an account?{" "}
             <Link href="/sign-in" className="text-ink underline underline-offset-4">
               Log in
             </Link>
           </p>
-          <a href="#features" aria-label="Scroll to see how it works" className="scroll-cue absolute bottom-5 left-1/2 hidden -translate-x-1/2 rounded-full p-2 text-muted hover:text-ink sm:block">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <path d="M5 8l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
+          <ScrollCue />
           <BooksDoodle className="pointer-events-none absolute bottom-6 left-[4%] w-40 text-black sm:w-56 lg:left-[12%] lg:w-64 dark:text-[#faf9f5]" />
           <StudyDeskDoodle className="pointer-events-none absolute -right-6 bottom-4 w-56 text-black sm:right-0 sm:w-80 lg:right-[8%] lg:w-[400px] dark:text-[#faf9f5]" />
         </section>
