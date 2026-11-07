@@ -20,6 +20,8 @@ export interface ChatItem {
   updated_at: string;
 }
 
+import type { PartnerId } from "@/lib/partners";
+
 export interface WorkspaceData {
   courses: CourseItem[];
   /** Every course's topics that have material (empty ones are hidden), loaded once so switching
@@ -31,5 +33,6 @@ export interface WorkspaceData {
   initialTopicId: string | null;
   initialChatId: string | null;
   user: { email: string; displayName: string | null };
+  partner: PartnerId;
   usage: { used: number; cap: number };
 }

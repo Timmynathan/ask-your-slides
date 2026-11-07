@@ -64,9 +64,9 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
     h1: ({ children }) => <h3 className="mb-2 mt-5 font-semibold first:mt-0">{children}</h3>,
     h2: ({ children }) => <h3 className="mb-2 mt-5 font-semibold first:mt-0">{children}</h3>,
     h3: ({ children }) => <h4 className="mb-1.5 mt-4 font-semibold first:mt-0">{children}</h4>,
-    code: ({ children }) => <code className="rounded bg-neutral-100 px-1 py-0.5 font-mono text-[13px] dark:bg-neutral-800">{children}</code>,
+    code: ({ children }) => <code className="rounded bg-sunken px-1 py-0.5 font-mono text-[13px]">{children}</code>,
     pre: ({ children }) => (
-      <pre className="my-3 overflow-x-auto rounded-lg bg-neutral-100 p-3 font-mono text-[13px] leading-relaxed dark:bg-neutral-900 [&_code]:bg-transparent [&_code]:p-0">
+      <pre className="my-3 overflow-x-auto rounded-lg bg-sunken p-3 font-mono text-[13px] leading-relaxed [&_code]:bg-transparent [&_code]:p-0">
         {children}
       </pre>
     ),
@@ -75,8 +75,8 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
         <table className="w-full border-collapse text-sm">{children}</table>
       </div>
     ),
-    th: ({ children }) => <th className="border-b border-neutral-300 px-2 py-1.5 text-left font-semibold dark:border-neutral-700">{children}</th>,
-    td: ({ children }) => <td className="border-b border-neutral-200 px-2 py-1.5 align-top dark:border-neutral-800">{children}</td>,
+    th: ({ children }) => <th className="border-b border-line-strong px-2 py-1.5 text-left font-semibold">{children}</th>,
+    td: ({ children }) => <td className="border-b border-line px-2 py-1.5 align-top">{children}</td>,
   };
 
   const md = (s: string): ReactNode => (
@@ -86,9 +86,9 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
   );
 
   return (
-    <div className="text-[15px] text-neutral-900 dark:text-neutral-100">
+    <div className="text-[15px] text-ink">
       {usedOtherTopics && (
-        <p className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-neutral-100 px-2.5 py-1 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+        <p className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-sunken px-2.5 py-1 text-xs text-ink/80">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
             <path d="M2 8h11M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -101,7 +101,7 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
         seg.kind === "general" ? (
           <aside
             key={i}
-            className="my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-neutral-800 first:mt-0 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-neutral-200"
+            className="my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-ink first:mt-0 dark:border-amber-900/60 dark:bg-amber-950/40"
           >
             <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>

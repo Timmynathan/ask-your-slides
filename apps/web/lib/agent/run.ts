@@ -2,7 +2,7 @@ import "server-only";
 import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
-import { CORE_INSTRUCTIONS, chatContext } from "./prompt";
+import { CORE_INSTRUCTIONS, chatContext, partnerContext } from "./prompt";
 import { buildTools, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
 
@@ -24,6 +24,9 @@ export interface ChatTurn {
   topicTitle: string | null;
   userMessage: string;
   history: ModelMessage[];
+  /** Study partner's voice (lib/partners.ts) and the student's first name, if known. */
+  partnerVoice?: string | null;
+  studentName?: string | null;
   assistantMessageId: string;
   startedAt: number;
   abortSignal?: AbortSignal;
@@ -181,7 +184,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: chatContext(turn) },
+      { role: "system", content: [chatContext(turn), partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null)].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

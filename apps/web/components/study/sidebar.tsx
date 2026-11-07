@@ -1,6 +1,9 @@
 "use client";
 
+import { Logo } from "@/components/brand/logo";
+import { Mascot } from "@/components/mascot/mascot";
 import { SignOutButton } from "@/components/ui/sign-out-button";
+import { PARTNERS, type PartnerId } from "@/lib/partners";
 import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
 import { courseDot, displayCode } from "@/lib/study/format";
 
@@ -12,20 +15,35 @@ interface Props {
   topicId: string | null;
   chatId: string | null;
   user: { email: string; displayName: string | null };
+  partner: PartnerId;
+  onChangePartner(): void;
   onOpenCourse(courseId: string): void;
   onOpenScope(topicId: string | null): void;
   onOpenChat(chat: ChatItem): void;
 }
 
-export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, user, onOpenCourse, onOpenScope, onOpenChat }: Props) {
+export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, user, partner, onChangePartner, onOpenCourse, onOpenScope, onOpenChat }: Props) {
+  const p = PARTNERS[partner];
   return (
     <nav className="flex h-full flex-col" aria-label="Courses and chats">
-      <div className="flex h-14 shrink-0 items-center border-b border-neutral-200 px-4 dark:border-neutral-800">
-        <span className="text-sm font-semibold tracking-tight">Ask Your Slides</span>
+      <div className="flex h-14 shrink-0 items-center px-4">
+        <Logo size={24} />
+      </div>
+
+      {/* The study partner is always here: who you're studying with, one tap to change. */}
+      <div className="mx-2 flex items-center gap-3 rounded-2xl bg-card p-2.5 pr-3 ring-1 ring-line">
+        <Mascot key={partner} partner={partner} size={42} className="pop-in" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10.5px] font-medium uppercase tracking-wide text-muted">Studying with</p>
+          <p className="truncate font-heading text-[15px] font-semibold text-ink">{p.name}</p>
+        </div>
+        <button onClick={onChangePartner} className="rounded-full px-2.5 py-1 text-xs font-medium text-ink ring-1 ring-line hover:bg-sunken">
+          Change
+        </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-neutral-500">Courses</p>
+        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">Courses</p>
         <ul className="space-y-0.5">
           {courses.map((c) => {
             const selected = c.id === courseId;
@@ -41,13 +59,13 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                   aria-current={selected ? "page" : undefined}
                   aria-expanded={selected}
                   className={`flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-[background-color,box-shadow] duration-200 ${
-                    selected ? "bg-white font-medium shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-800 dark:ring-neutral-700" : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    selected ? "bg-card font-medium shadow-sm ring-1 ring-line" : "hover:bg-sunken"
                   }`}
                 >
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full transition-transform duration-200 ${courseDot(c.sort_order)} ${selected ? "scale-125" : ""}`} aria-hidden />
                   <span className="min-w-0">
                     <span className="block">{displayCode(c.code)}</span>
-                    <span className="block truncate text-xs font-normal text-neutral-500 dark:text-neutral-400">{c.title}</span>
+                    <span className="block truncate text-xs font-normal text-muted">{c.title}</span>
                   </span>
                 </button>
 
@@ -59,7 +77,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                   inert={!selected}
                 >
                   <div className="overflow-hidden">
-                    <ul className="mb-2 ml-4 mt-1 space-y-0.5 border-l border-neutral-200 pl-2 dark:border-neutral-700">
+                    <ul className="mb-2 ml-4 mt-1 space-y-0.5 border-l border-line pl-2">
                       {scopes.map((s) => {
                         const active = selected && s.id === topicId;
                         const scopeChats = active ? chats.filter((ch) => ch.course_id === c.id && ch.topic_id === s.id) : [];
@@ -68,7 +86,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                             <button
                               onClick={() => onOpenScope(s.id)}
                               className={`w-full truncate rounded-md px-2 py-1 text-left text-[13px] transition-colors ${
-                                active ? "bg-neutral-200/70 font-medium dark:bg-neutral-700" : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                                active ? "bg-lilac-100 font-medium" : "text-ink/80 hover:bg-sunken"
                               }`}
                               title={s.label}
                             >
@@ -79,7 +97,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                                 <li>
                                   <button
                                     onClick={() => onOpenScope(s.id)}
-                                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                                    className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[13px] text-muted hover:bg-sunken"
                                   >
                                     <span aria-hidden className="text-base leading-none">+</span> New chat
                                   </button>
@@ -90,7 +108,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                                       onClick={() => onOpenChat(ch)}
                                       aria-current={ch.id === chatId ? "true" : undefined}
                                       className={`w-full truncate rounded-md px-2 py-1 text-left text-[13px] ${
-                                        ch.id === chatId ? "bg-white shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-800 dark:ring-neutral-700" : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                                        ch.id === chatId ? "bg-card shadow-sm ring-1 ring-line" : "text-muted hover:bg-sunken"
                                       }`}
                                       title={ch.title}
                                     >
@@ -112,11 +130,11 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
         </ul>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-neutral-200 px-4 py-3 text-xs dark:border-neutral-800">
-        <span className="min-w-0 truncate text-neutral-600 dark:text-neutral-400" title={user.email}>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-line px-4 py-3 text-xs">
+        <span className="min-w-0 truncate text-muted" title={user.email}>
           {user.displayName ?? user.email}
         </span>
-        <SignOutButton className="shrink-0 text-neutral-600 underline-offset-2 hover:text-neutral-950 hover:underline dark:text-neutral-400 dark:hover:text-white" />
+        <SignOutButton className="shrink-0 text-muted underline-offset-2 hover:text-ink hover:underline" />
       </div>
     </nav>
   );

@@ -1,29 +1,69 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
+import { Logo } from "@/components/brand/logo";
+import { Mascot } from "@/components/mascot/mascot";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
 
-export default function SignInPage() {
+type Props = { searchParams: Promise<{ start?: string }> };
+
+async function Form({ searchParams }: Props) {
+  const { start } = await searchParams;
+  return <SignInForm startWithCode={start === "1"} />;
+}
+
+export default function SignInPage(props: Props) {
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Ask Your Slides</h1>
-      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-        Ask questions about your final-year CS lecture slides.
-      </p>
-      <SignInForm />
-      <PrivacyNotice />
-    </main>
+    <div className="grid min-h-dvh lg:grid-cols-2">
+      <main className="flex flex-col px-5 py-6 sm:px-10">
+        <Link href="/" className="w-fit" aria-label="Ask Your Slides home">
+          <Logo />
+        </Link>
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
+          <div className="mb-6 flex -space-x-3 lg:hidden" aria-hidden>
+            <Mascot partner="tobi" size={44} />
+            <Mascot partner="ada" size={44} />
+            <Mascot partner="musa" size={44} />
+          </div>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink">Welcome to Ask Your Slides</h1>
+          <p className="mt-2 text-[15px] text-muted">Your final-year CS slides, explained by a study partner you choose.</p>
+          <Suspense fallback={<div className="mt-8 h-64" />}>
+            <Form {...props} />
+          </Suspense>
+          <PrivacyNotice />
+        </div>
+      </main>
+      <aside className="relative hidden overflow-hidden bg-[#F5D5FF] lg:flex lg:flex-col lg:items-center lg:justify-center" aria-hidden>
+        <div className="relative">
+          <div className="pop-in rounded-[22px] bg-white px-5 py-4 text-[15px] text-[#191919] shadow-lg">
+            Sign in and let&apos;s pick up where you stopped.
+            <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-white" />
+          </div>
+        </div>
+        <div className="mt-6">
+          <Mascot partner="ada" size={190} mood="happy" />
+        </div>
+        <div className="float-y absolute left-[12%] top-[18%]">
+          <Mascot partner="tobi" size={96} />
+        </div>
+        <div className="float-y absolute bottom-[14%] right-[12%]" style={{ animationDelay: "1.4s" }}>
+          <Mascot partner="musa" size={104} />
+        </div>
+      </aside>
+    </div>
   );
 }
 
 function PrivacyNotice() {
   const contact = process.env.NEXT_PUBLIC_PRIVACY_CONTACT;
   return (
-    <section className="mt-8 rounded-lg border border-neutral-200 p-3 text-xs leading-relaxed text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
-      <h2 className="mb-1 font-medium text-neutral-800 dark:text-neutral-200">What we store</h2>
+    <section className="mt-10 rounded-2xl bg-card p-4 text-xs leading-relaxed text-muted ring-1 ring-line">
+      <h2 className="mb-1 font-medium text-ink">What we store</h2>
       <p>
-        Your PAU email, an optional display name, and your conversations. Conversations and ratings
-        are used to improve the app. Your data is never sold or used to train AI models.
+        Your PAU email, an optional display name, your study partner and your conversations. Conversations and ratings are
+        used to improve the app. Your data is never sold or used to train AI models.
       </p>
       <p className="mt-1">
         To have your data deleted,{" "}

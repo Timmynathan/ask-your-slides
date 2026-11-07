@@ -1,30 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bitter, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Haptics } from "@/components/ui/haptics";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Type system (reference: studyfetch.com): Bitter for headings, Inter for text, JetBrains Mono for code.
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const bitter = Bitter({ variable: "--font-bitter", subsets: ["latin"], weight: ["500", "600", "700"] });
+const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Ask Your Slides",
-  description: "Answers from your final-year CS lecture slides, with citations.",
+  description: "Study smarter from your own lecture slides: cited answers, summaries and quizzes, with a study partner you choose.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+    <html lang="en" className={`${inter.variable} ${bitter.variable} ${mono.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col bg-page text-ink">
         <Haptics />
         {children}
       </body>

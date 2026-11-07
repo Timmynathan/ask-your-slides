@@ -2,6 +2,7 @@ import { createUIMessageStreamResponse, toUIMessageStream, type ModelMessage } f
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { HISTORY_LIMIT, historyText, runChatTurn } from "@/lib/agent/run";
+import { isPartnerId, PARTNERS } from "@/lib/partners";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,6 +49,9 @@ export async function POST(request: Request) {
   const course = convo.courses as unknown as { code: string; title: string };
   const topic = convo.topics as unknown as { title: string } | null;
 
+  const { data: profile } = await supabase.from("profiles").select("display_name, study_partner").eq("id", auth.user.id).single();
+  const partner = isPartnerId(profile?.study_partner) ? PARTNERS[profile.study_partner] : null;
+
   const db = adminClient();
   const cap = dailyCap();
   const [usage] = must(await db.rpc("consume_message", { p_user_id: auth.user.id, p_cap: cap })) as { allowed: boolean; used: number }[];
@@ -83,6 +87,8 @@ export async function POST(request: Request) {
     topicTitle: topic?.title ?? null,
     userMessage: message,
     history,
+    partnerVoice: partner?.voice ?? null,
+    studentName: profile?.display_name?.split(/\s+/)[0] ?? null,
     assistantMessageId,
     startedAt,
   });

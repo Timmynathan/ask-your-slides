@@ -1,28 +1,55 @@
 @import "tailwindcss";
 
+/* Palette (reference: studyfetch.com): warm cream page, white cards, near-black ink, lilac accents. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --page: #f7f6ef;
+  --card: #ffffff;
+  --sunken: #eceae0;
+  --line: #e2dfd4;
+  --line-strong: #d6d3ca;
+  --ink: #191919;
+  --muted: #716d66;
+  --lilac: #f5d5ff;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --page: #191919;
+    --card: #242220;
+    --sunken: #2e2b26;
+    --line: #37342e;
+    --line-strong: #4a463f;
+    --ink: #faf9f5;
+    --muted: #b8b4ab;
+    --lilac: #3e2d5e;
   }
 }
 
+@theme inline {
+  --color-page: var(--page);
+  --color-card: var(--card);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-lilac: var(--lilac);
+  --color-lilac-50: #fcf6ff;
+  --color-lilac-100: #f9e7ff;
+  --color-lilac-200: #f5d5ff;
+  --color-lilac-600: #e4bef0;
+  --color-lilac-700: #cd8de1;
+  --color-lilac-800: #c05cdf;
+  --color-lilac-900: #8a00b5;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: var(--font-bitter), Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-card: 25px;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
 }
 
 /* Every press must be visible: students double-tapped buttons that gave no feedback. */
@@ -107,4 +134,36 @@ body {
   .list-in {
     animation: none;
   }
+}
+
+/* Study partners: alive but calm. */
+@keyframes mascot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+@keyframes mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes mascot-spark {
+  0%, 100% { opacity: 0.55; transform: scale(0.85) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.1) rotate(20deg); }
+}
+.mascot-alive .mascot-bob { animation: mascot-bob 3.2s ease-in-out infinite; }
+.mascot-alive .mascot-eyes { transform-box: fill-box; transform-origin: center; animation: mascot-blink 4.6s infinite; }
+.mascot-alive .mascot-spark { transform-box: fill-box; transform-origin: center; animation: mascot-spark 3s ease-in-out infinite; }
+.mascot-thinking .mascot-spark { animation-duration: 0.9s; }
+.mascot-thinking .mascot-bob { animation-duration: 1.4s; }
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.92) translateY(6px); }
+  100% { opacity: 1; transform: none; }
+}
+.pop-in { animation: pop-in 320ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.float-y { animation: float-y 5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y { animation: none; }
 }

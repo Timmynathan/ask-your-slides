@@ -137,7 +137,7 @@ async function main() {
     // 5. Signed in (after the welcome step): the study page shows the student and every course,
     //    read through RLS. (/dashboard forwards here.)
     const { data: prof } = await admin.from("profiles").select("id").eq("email", testEmail).single();
-    await admin.from("profiles").update({ onboarded: true }).eq("id", prof!.id);
+    await admin.from("profiles").update({ onboarded: true, study_partner: "ada" }).eq("id", prof!.id);
     res = await fetch(`${BASE}/study/CSC420`, { headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
     const html = await res.text();

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Workspace } from "@/components/study/workspace";
 import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
 import { requireUser } from "@/lib/auth/session";
+import { isPartnerId } from "@/lib/partners";
 import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
 
 export const metadata: Metadata = { title: "Ask Your Slides" };
@@ -22,12 +23,12 @@ async function Loaded({ params, searchParams }: Props) {
 
   const [{ data: courses }, { data: profile }, { data: used }, { data: topicRows }, { data: chats }] = await Promise.all([
     supabase.from("courses").select("id, code, title, sort_order").order("sort_order"),
-    supabase.from("profiles").select("display_name, onboarded").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
   ]);
-  if (profile && !profile.onboarded) redirect("/welcome");
+  if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
   const course = (courses as CourseItem[] | null)?.find((c) => c.code === code);
   if (!course) notFound();
 
@@ -50,6 +51,7 @@ async function Loaded({ params, searchParams }: Props) {
       initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
       initialChatId={initialChat?.id ?? null}
       user={{ email: user.email ?? "", displayName: profile?.display_name ?? null }}
+      partner={profile.study_partner}
       usage={{ used: (used as number | null) ?? 0, cap }}
     />
   );

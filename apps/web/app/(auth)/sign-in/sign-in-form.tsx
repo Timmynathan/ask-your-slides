@@ -16,9 +16,9 @@ type Step =
 
 const MIN_PASSWORD = 8;
 
-export function SignInForm() {
+export function SignInForm({ startWithCode = false }: { startWithCode?: boolean }) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>({ kind: "password" });
+  const [step, setStep] = useState<Step>(startWithCode ? { kind: "code-email" } : { kind: "password" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Guards repeat presses even before React has re-rendered the disabled button.
@@ -113,10 +113,10 @@ export function SignInForm() {
   }
 
   const input =
-    "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-base outline-none focus:border-neutral-900 focus:ring-2 focus:ring-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-neutral-200";
+    "mt-1.5 w-full rounded-xl border border-line-strong bg-card px-4 py-3 text-base text-ink outline-none transition-shadow placeholder:text-muted/70 focus:border-ink focus:ring-4 focus:ring-lilac-200";
   const button =
-    "mt-4 w-full rounded-lg bg-neutral-900 px-3 py-2.5 text-base font-medium text-white hover:bg-neutral-700 disabled:opacity-60 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200";
-  const link = "rounded text-sm text-neutral-700 underline underline-offset-2 hover:text-neutral-950 disabled:opacity-50 dark:text-neutral-300 dark:hover:text-white";
+    "mt-5 w-full rounded-full bg-ink px-4 py-3 text-base font-medium text-page hover:opacity-90 disabled:opacity-60";
+  const link = "rounded text-sm font-medium text-ink underline decoration-lilac-700 decoration-2 underline-offset-4 hover:decoration-lilac-900 disabled:opacity-50";
   const emailField = (
     <>
       <label htmlFor="email" className="text-sm font-medium">
@@ -132,13 +132,13 @@ export function SignInForm() {
         <label htmlFor={id} className="text-sm font-medium">
           {label}
         </label>
-        <button type="button" onClick={() => setShowPassword((v) => !v)} className="rounded px-1 text-xs text-neutral-600 hover:text-neutral-950 dark:text-neutral-400 dark:hover:text-white">
+        <button type="button" onClick={() => setShowPassword((v) => !v)} className="rounded px-1 text-xs text-muted hover:text-ink">
           {showPassword ? "Hide" : "Show"}
         </button>
       </div>
       <input id={id} name="password" type={showPassword ? "text" : "password"} autoComplete={autoComplete} required
         minLength={autoComplete === "new-password" ? MIN_PASSWORD : undefined} className={input} />
-      {hint && <p className="mt-1 text-xs text-neutral-500">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
     </>
   );
 
@@ -151,7 +151,7 @@ export function SignInForm() {
           <button type="submit" disabled={busy} className={button}>
             <BusyLabel busy={busy} label="Sign in" busyLabel="Signing in…" />
           </button>
-          <p className="mt-5 text-center text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mt-5 text-center text-sm text-muted">
             First time here, or forgot your password?{" "}
             <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={link}>
               Get a code
@@ -162,7 +162,7 @@ export function SignInForm() {
 
       {step.kind === "code-email" && (
         <form onSubmit={(e) => run(e, sendCode)} noValidate>
-          <p className="mb-4 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mb-4 text-sm text-muted">
             We&apos;ll email a code to your PAU address. Then you&apos;ll set a password for next time.
           </p>
           {emailField}
@@ -177,8 +177,8 @@ export function SignInForm() {
 
       {step.kind === "code" && (
         <form onSubmit={(e) => run(e, verify)} noValidate>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            We sent a code to <span className="font-medium text-neutral-900 dark:text-neutral-100">{step.email}</span>. It can
+          <p className="text-sm text-muted">
+            We sent a code to <span className="font-medium text-ink">{step.email}</span>. It can
             take a minute; check your spam folder too.
           </p>
           <label htmlFor="code" className="mt-4 block text-sm font-medium">
@@ -197,9 +197,9 @@ export function SignInForm() {
 
       {step.kind === "new-password" && (
         <form onSubmit={(e) => run(e, setPassword)} noValidate>
-          <p className="mb-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <p className="mb-2 text-sm text-muted">
             Email confirmed. Choose a password so you can sign in with{" "}
-            <span className="font-medium text-neutral-900 dark:text-neutral-100">{step.email}</span> next time, without a code.
+            <span className="font-medium text-ink">{step.email}</span> next time, without a code.
           </p>
           {/* Lets password managers save the pair. */}
           <input type="email" name="username" autoComplete="username" value={step.email} readOnly hidden />
@@ -211,7 +211,7 @@ export function SignInForm() {
       )}
 
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-700 dark:text-red-400">
+        <p role="alert" className="mt-3 text-sm text-red-700">
           {error}
         </p>
       )}

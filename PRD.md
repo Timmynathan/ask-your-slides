@@ -108,6 +108,20 @@ The primary signal is **direct student feedback**: students say it helped, and t
 - `student@pau.edu.ng` first time → code arrives, password created, sign-in works.
 - Same student later → signs in with email + password, no code.
 
+### F1b. Onboarding and study partners
+
+- After the first sign-in: **name** (optional) → **choose your study partner** → the partner introduces themselves → studying. A progress bar shows the three steps. Students who signed up before partners existed see the partner step once.
+- Three original illustrated partners (`apps/web/lib/partners.ts`, drawn in `components/mascot/mascot.tsx`):
+  - **Tobi**, a final-year senior: upbeat, quick, memory tricks, an occasional light Nigerian expression.
+  - **Ada**, calm and organised: numbered steps, defines terms, ends longer answers with "In short:".
+  - **Dr. Musa**, a lecturer: exam-focused, common mistakes, how a short exam answer is structured.
+- The partner changes **how** answers are explained, never the rules: the same retrieval, citations and `<general>` boxes apply to all three (the voice is added after the cached core prompt).
+- The partner is present everywhere: landing page, sign-in, onboarding, the sidebar ("Studying with", one tap to change), a greeting on empty chats, an avatar beside every answer, an animated "thinking" state while searching ("Ada is reading your slides…"), and the daily-limit message in their voice.
+
+**Acceptance**
+- A new student cannot reach the study workspace without choosing a partner.
+- The choice is saved (`profiles.study_partner`) and can be changed any time from the sidebar.
+
 ### F2. Dashboard with course and topic chats
 
 - After sign-in, the student sees a sidebar with one item per course (code + title, e.g. "CSC 420 — Data Management II").
@@ -617,6 +631,14 @@ erDiagram
 ---
 
 ## 13. UI
+
+### 13.0 Design system
+
+- Reference: studyfetch.com, used for structure and feel, not copied (no text, artwork, logo or mascot reused).
+- Fonts: **Bitter** (headings), **Inter** (text), **JetBrains Mono** (code), all free via Google Fonts.
+- Colours: warm cream page `#f7f6ef`, white cards, ink `#191919`, muted `#716d66`, sand lines; lilac accent `#F5D5FF` (banner, highlights) with a lilac scale up to `#8a00b5`. Dark mode uses the matching dark tokens.
+- Shapes: pill buttons, 25 px card corners, soft rings instead of heavy borders.
+- Landing page (`/`, signed-out only): lilac announcement banner, nav, hero with the partners, real numbers (7 courses, 1,500+ slides, every answer cited), "start in seconds", features, meet your study partners, FAQ, closing call to action, footer stating it is independent of PAU. No user counts, testimonials or pricing (no honest data for them).
 
 ### 13.1 Screens
 

@@ -7,7 +7,8 @@ const PUBLIC_PATHS = ["/sign-in", "/api/auth/otp", "/api/auth/verify", "/api/aut
 export async function proxy(request: NextRequest) {
   const { response, userId } = await updateSession(request);
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  // "/" is the landing page for visitors; signed-in students go straight to their courses.
+  const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!userId && !isPublic) {
     if (pathname.startsWith("/api/")) {
@@ -15,7 +16,7 @@ export async function proxy(request: NextRequest) {
     }
     return redirectKeepingCookies(new URL("/sign-in", request.url), response);
   }
-  if (userId && pathname === "/sign-in") {
+  if (userId && (pathname === "/sign-in" || pathname === "/")) {
     return redirectKeepingCookies(new URL("/dashboard", request.url), response);
   }
   return response;

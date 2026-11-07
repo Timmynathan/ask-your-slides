@@ -35,7 +35,7 @@ async function shot(page: Page, name: string) {
   console.log(`  shot ${file}`);
 }
 
-async function signInCookies(email: string) {
+async function signInCookies(email: string, opts: { fresh?: boolean } = {}) {
   await admin.auth.admin.createUser({ email, email_confirm: true });
   const { data } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   const res = await fetch(`${BASE}/api/auth/verify`, {
@@ -43,8 +43,10 @@ async function signInCookies(email: string) {
     body: JSON.stringify({ email, code: data.properties!.email_otp }),
   });
   if (!res.ok) throw new Error(`sign-in failed: ${res.status}`);
-  const { data: u } = await admin.from("profiles").select("id").eq("email", email).single();
-  await admin.from("profiles").update({ onboarded: true, display_name: "Test Student" }).eq("id", u!.id);
+  if (!opts.fresh) {
+    const { data: u } = await admin.from("profiles").select("id").eq("email", email).single();
+    await admin.from("profiles").update({ onboarded: true, display_name: "Test Student", study_partner: "ada" }).eq("id", u!.id);
+  }
   return res.headers.getSetCookie().map((c) => {
     const [pair] = c.split(";");
     const i = pair.indexOf("=");
@@ -102,6 +104,60 @@ async function main() {
     check(passwordRequests === 1, "a double click sends one request", `${passwordRequests} requests`);
     await anon.close();
 
+    console.log("\nLanding page (signed out)");
+    const visitor = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const lp = await visitor.newPage();
+    lp.on("pageerror", (e) => consoleErrors.push(e.message));
+    await lp.goto(`${BASE}/`);
+    check(await lp.getByRole("heading", { level: 1, name: /Study smarter from your own lecture slides/ }).isVisible(), "landing hero shows");
+    const banner = lp.getByText("New: choose your study partner", { exact: false }).first();
+    const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
+    check(bannerBg === "rgb(245, 213, 255)", "lilac banner across the top", bannerBg);
+    check((await lp.getByRole("img", { name: /your study partner/ }).count()) >= 6, "study partners appear on the landing page");
+    const headingFont = await lp.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
+    check(/Bitter/i.test(headingFont), "headings use Bitter", headingFont.slice(0, 40));
+    await shot(lp, "0-landing");
+    await lp.getByRole("link", { name: "Get started free" }).first().click();
+    await lp.waitForURL(/\/sign-in\?start=1/);
+    const codeStep = await lp.getByRole("button", { name: "Send code" }).waitFor({ timeout: 10000 }).then(() => true, () => false);
+    check(codeStep, "'Get started' opens the code step directly");
+    await visitor.close();
+
+    console.log("\nOnboarding: name → choose your study partner → hello");
+    const newbie = `ui-newbie-${Date.now()}@pau.edu.ng`;
+    try {
+      const fresh = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      await fresh.addCookies(await signInCookies(newbie, { fresh: true }));
+      const op = await fresh.newPage();
+      op.on("pageerror", (e) => consoleErrors.push(e.message));
+      await op.goto(`${BASE}/dashboard`);
+      await op.waitForURL(/\/welcome/);
+      check(true, "new student is sent to onboarding");
+      await op.getByLabel("Your name").fill("Tolu");
+      await op.getByRole("button", { name: "Continue" }).click();
+      await op.getByRole("radiogroup", { name: "Study partners" }).waitFor();
+      check(await op.getByText("Tolu, who do you want to study with?").isVisible(), "partner step greets the student by name");
+      check((await op.getByRole("radio").count()) === 3, "three study partners to choose from");
+      await shot(op, "7-onboarding-choose");
+      await op.getByRole("radio", { name: /Tobi/ }).click();
+      check((await op.getByRole("radio", { name: /Tobi/ }).getAttribute("aria-checked")) === "true", "choosing a partner selects it");
+      await op.getByRole("button", { name: "Study with Tobi" }).click();
+      await op.getByRole("button", { name: "Start studying" }).waitFor();
+      check(await op.getByText("I'm Tobi").isVisible(), "chosen partner introduces themselves");
+      await shot(op, "8-onboarding-hello");
+      await op.getByRole("button", { name: "Start studying" }).click();
+      await op.waitForURL(/\/study\//);
+      await op.getByText("Studying with").waitFor();
+      check(await op.locator("nav").getByText("Tobi", { exact: true }).isVisible(), "Tobi is the partner in the study workspace");
+      check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
+      await shot(op, "9-study-empty-tobi");
+      const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name").eq("email", newbie).single();
+      check(prof?.study_partner === "tobi" && prof?.onboarded === true && prof?.display_name === "Tolu", "choices saved to the profile", JSON.stringify(prof));
+      await fresh.close();
+    } finally {
+      await cleanup(newbie);
+    }
+
     const cookies = await signInCookies(email);
 
     console.log("\nLaptop 1440×900");
@@ -141,9 +197,9 @@ async function main() {
     page.on("request", (r) => r.url().endsWith("/api/chat") && r.method() === "POST" && chatRequests++);
     await page.locator("textarea[aria-label='Your question']:visible").fill("What does ACID stand for?");
     await page.getByRole("button", { name: "Send" }).dblclick();
-    check(await page.getByRole("status").filter({ hasText: "Sending" }).first().isVisible().catch(() => false)
-      || await page.getByText("Searching your slides…").isVisible(), "Send reacts at once (spinner, then 'Searching your slides…')");
-    await page.getByText("Searching your slides…").waitFor({ timeout: 5000 }).then(
+    check(await page.getByRole("status").filter({ hasText: /Sending|Ada is/ }).first().isVisible().catch(() => false),
+      "Send reacts at once (spinner, then Ada thinking)");
+    await page.getByText("Searching your slides…").waitFor({ timeout: 5000, state: "attached" }).then(
       () => check(true, "shows 'Searching your slides…' while waiting"),
       () => check(false, "shows 'Searching your slides…' while waiting"),
     );
@@ -175,19 +231,19 @@ async function main() {
 
     await page.reload();
     await page.locator("li button[title^='Open ']:visible").first().waitFor({ timeout: 15000 });
-    const restored = await page.locator("main ol > li:visible").count();
+    const restored = await page.locator("main li[data-message]:visible").count();
     check(restored === 2, "reloading restores the chat (question + answer, with chips)", `${restored} messages`);
 
     // Off-topic question in the topic chat: labelled fallback, chips name the other topic.
     await page.locator("textarea[aria-label='Your question']:visible").fill("What's the difference between a function and a stored procedure?");
     await page.keyboard.press("Enter");
-    await page.getByText("Searching your slides…").waitFor({ timeout: 5000 }).catch(() => {});
+    await page.getByText("Searching your slides…").waitFor({ timeout: 5000, state: "attached" }).catch(() => {});
     await page.getByRole("button", { name: "Send" }).waitFor({ timeout: 40000 });
     const label = page.locator("main p:visible", { hasText: "Not in Transactions and indexing" });
     check((await label.count()) === 1, "fallback label shown above the off-topic answer", (await label.first().textContent().catch(() => "")) ?? "");
     const otherChip = page.locator("li button[title^='Open Functions, Procedures and Triggers · Slide']:visible");
     check((await otherChip.count()) > 0, "off-topic chips name the other material, slide number never cut", (await otherChip.first().textContent().catch(() => "none")) ?? "");
-    await page.locator("main ol > li:visible").last().scrollIntoViewIfNeeded();
+    await page.locator("main li[data-message]:visible").last().scrollIntoViewIfNeeded();
     await shot(page, "3b-laptop-fallback");
 
     console.log("\nPhone 375×812");

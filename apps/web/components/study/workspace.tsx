@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
 import { displayCode } from "@/lib/study/format";
+import type { PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
+import { PartnerPicker } from "./partner-picker";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 
@@ -24,6 +26,9 @@ export function Workspace(data: WorkspaceData) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [used, setUsed] = useState(data.usage.used);
   const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
+  const [partner, setPartner] = useState<PartnerId>(data.partner);
+  const [pickingPartner, setPickingPartner] = useState(false);
+  const studentName = data.user.displayName?.trim().split(/\s+/)[0] ?? null;
 
   const course = useMemo(() => data.courses.find((c) => c.id === courseId)!, [data.courses, courseId]);
   const topics = useMemo(() => data.topics.filter((t) => t.course_id === courseId), [data.topics, courseId]);
@@ -70,7 +75,7 @@ export function Workspace(data: WorkspaceData) {
   const scopeTitle = topic ? topic.title : "Whole course";
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+    <div className="flex h-dvh w-full overflow-hidden bg-card text-ink">
       {/* Sidebar: fixed column on laptops, drawer below lg */}
       <div
         className={`fixed inset-0 z-30 bg-black/30 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
@@ -78,7 +83,7 @@ export function Workspace(data: WorkspaceData) {
         aria-hidden
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-[288px] transform border-r border-neutral-200 bg-neutral-50 transition-transform duration-200 ease-out dark:border-neutral-800 dark:bg-neutral-900 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-[288px] transform border-r border-line bg-page transition-transform lg:border-r-0 duration-200 ease-out lg:static lg:translate-x-0 ${
           drawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -90,16 +95,18 @@ export function Workspace(data: WorkspaceData) {
           topicId={topicId}
           chatId={chatId}
           user={data.user}
+          partner={partner}
+          onChangePartner={() => setPickingPartner(true)}
           onOpenCourse={openCourse}
           onOpenScope={openScope}
           onOpenChat={openChat}
         />
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-neutral-200 px-4 dark:border-neutral-800">
+      <main className="flex min-w-0 flex-1 flex-col bg-card lg:my-2 lg:mr-2 lg:overflow-hidden lg:rounded-[25px] lg:ring-1 lg:ring-line">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-4">
           <button
-            className="-ml-1 rounded-md p-1.5 text-neutral-600 hover:bg-neutral-100 lg:hidden dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className="-ml-1 rounded-md p-1.5 text-muted hover:bg-sunken lg:hidden"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open course list"
           >
@@ -111,7 +118,7 @@ export function Workspace(data: WorkspaceData) {
             <p className="truncate text-sm font-semibold">
               {displayCode(course.code)} · {course.title}
             </p>
-            <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">{scopeTitle}</p>
+            <p className="truncate text-xs text-muted">{scopeTitle}</p>
           </div>
         </header>
 
@@ -120,6 +127,8 @@ export function Workspace(data: WorkspaceData) {
             course={course}
             topic={topic}
             chatId={chatId}
+            partner={partner}
+            studentName={studentName}
             remaining={remaining}
             onRemaining={onRemaining}
             onChatCreated={onChatCreated}
@@ -129,6 +138,17 @@ export function Workspace(data: WorkspaceData) {
           />
         </div>
       </main>
+
+      {pickingPartner && (
+        <PartnerPicker
+          current={partner}
+          onClose={() => setPickingPartner(false)}
+          onChanged={(id) => {
+            setPartner(id);
+            setPickingPartner(false);
+          }}
+        />
+      )}
 
       {preview && (
         <SlidePreview

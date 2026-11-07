@@ -60,7 +60,11 @@ npm run ingest:verify -- --course CSC420 --sample 30   # checks + random slides 
 - `verify` fails if the database doesn't match the manifest, any slide lacks an embedding or image,
   or fewer than 80% of topics are found by searching their own title.
 
-## Web app and sign-in
+## Web app, onboarding and study partners
+
+The landing page is `/` (signed out). After the first sign-in students give a name and choose a study partner (Tobi, Ada or Dr. Musa: `apps/web/lib/partners.ts`), who then appears throughout the app. Design notes: PRD §13.0.
+
+## Sign-in
 
 ```bash
 npm --prefix apps/web install
