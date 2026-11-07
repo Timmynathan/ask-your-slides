@@ -87,7 +87,7 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
                             <button
                               onClick={() => onOpenScope(s.id)}
                               className={`type-menu w-full truncate rounded-lg px-2 py-1 text-left transition-colors ${
-                                active ? "bg-lilac-100" : "hover:bg-sunken"
+                                active ? "bg-pau-100" : "hover:bg-sunken"
                               }`}
                               title={s.label}
                             >

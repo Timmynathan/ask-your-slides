@@ -29,14 +29,14 @@ export default function SignInPage(props: Props) {
             <Mascot partner="musa" size={44} />
           </div>
           <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink">Welcome to Ask Your Slides</h1>
-          <p className="mt-2 text-[15px] text-muted">Your school slides, explained by a study partner you choose.</p>
+          <p className="mt-2 text-[15px] text-muted">Ask your lecture slides anything. They&apos;re already here, nothing to upload.</p>
           <Suspense fallback={<div className="mt-8 h-64" />}>
             <Form {...props} />
           </Suspense>
           <PrivacyNotice />
         </div>
       </main>
-      <aside className="relative hidden overflow-hidden bg-[#F5D5FF] lg:flex lg:flex-col lg:items-center lg:justify-center" aria-hidden>
+      <aside className="relative hidden overflow-hidden bg-pau-100 lg:flex lg:flex-col lg:items-center lg:justify-center" aria-hidden>
         <div className="relative">
           <div className="pop-in rounded-[22px] bg-white px-5 py-4 text-[15px] text-[#191919] shadow-lg">
             Sign in and let&apos;s pick up where you stopped.

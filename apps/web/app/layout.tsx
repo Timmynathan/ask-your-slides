@@ -10,7 +10,7 @@ const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] }
 
 export const metadata: Metadata = {
   title: "Ask Your Slides",
-  description: "Study smarter from your own lecture slides: cited answers, summaries and quizzes, with a study partner you choose.",
+  description: "Ask your lecture slides anything. All your course slides are already here: no uploads, answers straight from your slides with the exact slide shown.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -109,7 +109,7 @@ async function main() {
     const lp = await visitor.newPage();
     lp.on("pageerror", (e) => consoleErrors.push(e.message));
     await lp.goto(`${BASE}/`);
-    check(await lp.getByRole("heading", { level: 1, name: "Studying that adapts to you" }).isVisible(), "landing hero: one headline");
+    check(await lp.getByRole("heading", { level: 1, name: "Ask your lecture slides anything" }).isVisible(), "landing hero: one headline");
     check(await lp.getByRole("link", { name: "Try for free" }).first().isVisible(), "landing hero: big 'Try for free' button");
     const brand = await lp.locator("nav").getByText("Ask Your Slides").evaluate((el) => {
       const c = getComputedStyle(el);
@@ -125,7 +125,11 @@ async function main() {
       "landing course count comes from the database", `${courseCount} courses`);
     const banner = lp.getByText("New: choose your study partner", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
-    check(bannerBg === "rgb(245, 213, 255)", "lilac banner across the top", bannerBg);
+    check(bannerBg === "rgb(228, 238, 251)", "light PAU-blue banner across the top", bannerBg);
+    const ctaBg = await lp.getByRole("link", { name: "Try for free" }).last().evaluate((el) => getComputedStyle(el).backgroundColor);
+    check(ctaBg === "rgb(46, 58, 110)", "main button is PAU blue #2E3A6E", ctaBg);
+    const pageBg = await lp.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    check(pageBg === "rgb(255, 255, 255)", "page background is white", pageBg);
     check((await lp.getByRole("img", { name: /Zara, your study partner/ }).count()) >= 1, "all four partners appear on the landing page, Zara included");
     const headingFont = await lp.locator("h1").evaluate((el) => getComputedStyle(el).fontFamily);
     check(/Bitter/i.test(headingFont), "headings use Bitter", headingFont.slice(0, 40));

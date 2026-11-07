@@ -638,10 +638,10 @@ erDiagram
 
 - Reference: studyfetch.com, used for structure and feel, not copied (no text, artwork, logo or mascot reused).
 - Fonts: **Bitter** (headings), **Inter** (text), **JetBrains Mono** (code), all free via Google Fonts.
-- Colours: warm cream page `#f7f6ef`, white cards, ink `#191919`, muted `#716d66`, sand lines; lilac accent `#F5D5FF` (banner, highlights) with a lilac scale up to `#8a00b5`. Dark mode uses the matching dark tokens.
+- Colours: white page and cards, near-black ink `#191919`, cool greys; **PAU blue** accents taken from pau.edu.ng's theme stylesheet: primary `#2E3A6E` (buttons, links, the student's chat bubbles, selected states) and secondary `#5EA3ED` (its tints for the banner, highlights and focus rings). Logo and line drawings stay black. Dark mode uses matching dark tokens with `#5EA3ED` as the accent.
 - Shapes: pill buttons, 25 px card corners, soft rings instead of heavy borders.
 - Logo and favicon: one black mark (a slide with a speech tail and a spark), `apps/web/app/icon.svg`. Brand name and menus (landing nav, sidebar items): Inter 400, 16 px / 24 px, black (`.type-menu`).
-- Landing hero: one headline ("Studying that adapts to you"), one sentence, one big black "Try for free" button, black line drawings in the bottom corners; everything else below the fold.
+- Landing hero: one headline stating the value, **"Ask your lecture slides anything"**, one sentence ("All your {department} course slides are already here, so there's nothing to upload. Ask a question and get the answer straight from your slides, with the exact slide shown."), one big PAU-navy "Try for free" button, black line drawings in the bottom corners; everything else below the fold.
 
 ### 13.0b Adoption at PAU (low friction)
 

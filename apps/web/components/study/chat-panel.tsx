@@ -283,7 +283,7 @@ export function ChatPanel({
                       s.send ? submit(s.send) : inputRef.current?.focus()
                     }
                     disabled={capped || busy}
-                    className="rounded-full bg-card px-4 py-2 text-sm font-medium text-ink ring-1 ring-line-strong hover:bg-lilac-50 hover:ring-lilac-700 disabled:opacity-50"
+                    className="rounded-full bg-card px-4 py-2 text-sm font-medium text-ink ring-1 ring-line-strong hover:bg-pau-50 hover:ring-pau-400 disabled:opacity-50"
                   >
                     {s.label}
                   </button>
@@ -296,7 +296,7 @@ export function ChatPanel({
             {messages.map((m) =>
               m.role === "user" ? (
                 <li key={m.id} data-message="user" className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-[20px] rounded-br-md bg-lilac-100 px-4 py-2.5 text-[15px] leading-relaxed text-[#191919]">
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-[20px] rounded-br-md bg-brand px-4 py-2.5 text-[15px] leading-relaxed text-brand-ink">
                     {textOf(m)}
                   </div>
                 </li>
@@ -362,7 +362,7 @@ export function ChatPanel({
               </p>
             </div>
           ) : (
-            <div className="flex items-end gap-2 rounded-[22px] border border-line-strong bg-card py-2 pl-4 pr-2 shadow-sm transition-shadow focus-within:border-ink focus-within:ring-4 focus-within:ring-lilac-200">
+            <div className="flex items-end gap-2 rounded-[22px] border border-line-strong bg-card py-2 pl-4 pr-2 shadow-sm transition-shadow focus-within:border-brand focus-within:ring-4 focus-within:ring-pau-200">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -390,7 +390,7 @@ export function ChatPanel({
               {busy ? (
                 sending || status === "submitted" ? (
                   <span
-                    className="inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-page opacity-80"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-ink opacity-80"
                     role="status"
                   >
                     <Spinner className="h-3.5 w-3.5" />
@@ -409,7 +409,7 @@ export function ChatPanel({
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  className="rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-page hover:opacity-90 disabled:opacity-40"
+                  className="rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-ink hover:opacity-90 disabled:opacity-40"
                 >
                   Send
                 </button>

@@ -117,10 +117,10 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
   }
 
   const input =
-    "mt-1.5 w-full rounded-xl border border-line-strong bg-card px-4 py-3 text-base text-ink outline-none transition-shadow placeholder:text-muted/70 focus:border-ink focus:ring-4 focus:ring-lilac-200";
+    "mt-1.5 w-full rounded-xl border border-line-strong bg-card px-4 py-3 text-base text-ink outline-none transition-shadow placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-pau-200";
   const button =
-    "mt-5 w-full rounded-full bg-ink px-4 py-3 text-base font-medium text-page hover:opacity-90 disabled:opacity-60";
-  const link = "rounded text-sm font-medium text-ink underline decoration-lilac-700 decoration-2 underline-offset-4 hover:decoration-lilac-900 disabled:opacity-50";
+    "mt-5 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60";
+  const link = "rounded text-sm font-medium text-ink underline decoration-pau-400 decoration-2 underline-offset-4 hover:decoration-pau-800 disabled:opacity-50";
   const emailField = (
     <>
       <label htmlFor="email" className="text-sm font-medium">

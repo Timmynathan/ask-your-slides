@@ -79,7 +79,7 @@ export function Onboarding({ department, next, initialName, initialPartner, star
           </span>
           <div className="flex gap-1.5" aria-hidden>
             {STEPS.map((s, i) => (
-              <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i <= index ? "w-8 bg-ink" : "w-4 bg-line-strong"}`} />
+              <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i <= index ? "w-8 bg-brand" : "w-4 bg-line-strong"}`} />
             ))}
           </div>
         </div>
@@ -103,9 +103,9 @@ export function Onboarding({ department, next, initialName, initialPartner, star
               autoComplete="given-name"
               placeholder="e.g. Tolu"
               aria-label="Your name"
-              className="mt-8 w-full rounded-full border border-line-strong bg-card px-6 py-3.5 text-center text-lg text-ink outline-none placeholder:text-muted/60 focus:border-ink focus:ring-4 focus:ring-lilac-200"
+              className="mt-8 w-full rounded-full border border-line-strong bg-card px-6 py-3.5 text-center text-lg text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-pau-200"
             />
-            <button type="submit" disabled={busy} className="mt-5 w-full rounded-full bg-ink px-4 py-3.5 text-base font-medium text-page hover:opacity-90 disabled:opacity-60">
+            <button type="submit" disabled={busy} className="mt-5 w-full rounded-full bg-brand px-4 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60">
               <BusyLabel busy={busy} label={name.trim() ? "Continue" : "Skip for now"} busyLabel="Saving…" />
             </button>
           </form>
@@ -113,7 +113,7 @@ export function Onboarding({ department, next, initialName, initialPartner, star
 
         {step === "partner" && (
           <div key="partner" className="panel-in w-full max-w-5xl text-center">
-            <p className="text-sm font-medium uppercase tracking-wide text-lilac-900">Choose your study partner</p>
+            <p className="text-sm font-medium uppercase tracking-wide text-pau-800">Choose your study partner</p>
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
@@ -134,7 +134,7 @@ export function Onboarding({ department, next, initialName, initialPartner, star
                       selected ? `ring-[3px] ${p.accent.ring} shadow-lg` : "ring-line"
                     }`}
                   >
-                    <span className={`absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full border-2 transition-colors ${selected ? "border-ink bg-ink" : "border-line-strong"}`} aria-hidden>
+                    <span className={`absolute right-4 top-4 grid h-6 w-6 place-items-center rounded-full border-2 transition-colors ${selected ? "border-brand bg-brand" : "border-line-strong"}`} aria-hidden>
                       {selected && (
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--page)" strokeWidth="2">
                           <path d="M2.5 6.2l2.3 2.3 4.7-4.9" strokeLinecap="round" strokeLinejoin="round" />
@@ -172,7 +172,7 @@ export function Onboarding({ department, next, initialName, initialPartner, star
             <button
               onClick={submitPartner}
               disabled={!partner || busy}
-              className="mt-10 rounded-full bg-ink px-10 py-3.5 text-base font-medium text-page hover:opacity-90 disabled:opacity-40"
+              className="mt-10 rounded-full bg-brand px-10 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-40"
             >
               <BusyLabel busy={busy} label={chosen ? `Study with ${chosen.name}` : "Pick a partner"} busyLabel="Saving…" />
             </button>
@@ -197,7 +197,7 @@ export function Onboarding({ department, next, initialName, initialPartner, star
                 router.replace(next ?? "/dashboard");
                 router.refresh();
               }}
-              className="mt-8 rounded-full bg-ink px-10 py-3.5 text-base font-medium text-page hover:opacity-90"
+              className="mt-8 rounded-full bg-brand px-10 py-3.5 text-base font-medium text-brand-ink hover:opacity-90"
             >
               Start studying
             </button>

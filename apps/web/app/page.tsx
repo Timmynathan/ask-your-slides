@@ -8,7 +8,7 @@ import { getCatalog, joinList, roughCount, spacedCode, type Catalog } from "@/li
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
 export const metadata: Metadata = {
-  title: "Ask Your Slides: study smarter from your own lecture slides",
+  title: "Ask Your Slides: ask your lecture slides anything",
 };
 
 // Landing page for signed-out visitors (signed-in students are sent to their courses by proxy.ts).
@@ -40,7 +40,7 @@ export default async function Landing() {
             <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
               Log in
             </Link>
-            <Link href="/sign-in?start=1" className="type-menu rounded-full bg-black px-5 py-2.5 !text-white hover:opacity-85 dark:bg-[#faf9f5] dark:!text-[#191919]">
+            <Link href="/sign-in?start=1" className="type-menu rounded-full bg-brand px-5 py-2.5 !text-brand-ink hover:opacity-90">
               Try for free
             </Link>
           </div>
@@ -48,18 +48,18 @@ export default async function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Hero: one line, one button (reference: studyfetch.com). Everything else is below the fold. */}
+        {/* Hero: the value in one line (ask your own lecture slides; nothing to upload), one button. */}
         <section className="relative flex min-h-[calc(100dvh-7.5rem)] flex-col items-center justify-center overflow-hidden px-5 pb-40 pt-16 text-center sm:pb-48">
           <h1 className="max-w-4xl font-heading text-[2.75rem] font-semibold leading-[1.05] tracking-tight text-ink sm:text-7xl">
-            Studying that adapts to you
+            Ask your lecture slides anything
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            Ask anything about your {departments ? `${departments} ` : ""}courses. Answers come straight from your school slides, explained
-            by a study partner you choose.
+            All your {departments ? `${departments} ` : ""}course slides are already here, so there&apos;s nothing to upload. Ask a question
+            and get the answer straight from your slides, with the exact slide shown.
           </p>
           <Link
             href="/sign-in?start=1"
-            className="mt-10 inline-flex items-center justify-center rounded-full bg-black px-12 py-5 text-lg font-medium text-white hover:opacity-85 dark:bg-[#faf9f5] dark:text-[#191919]"
+            className="mt-10 inline-flex items-center justify-center rounded-full bg-brand px-12 py-5 text-lg font-medium text-brand-ink hover:opacity-90"
           >
             Try for free
           </Link>
@@ -74,7 +74,7 @@ export default async function Landing() {
         </section>
 
         {/* Made for PAU: the student's own course codes, read from the database. */}
-        <section className="border-t border-line bg-card/60">
+        <section className="border-t border-line bg-tint">
           <div className="mx-auto max-w-6xl px-5 py-8 text-center">
             <p className="text-sm text-muted">Your PAU courses are already here. Same slides as on the e-learning portal, no downloading.</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -88,7 +88,7 @@ export default async function Landing() {
         </section>
 
         {/* Numbers */}
-        <section className="border-b border-line bg-card/60">
+        <section className="border-b border-line bg-tint">
           <div className="mx-auto grid max-w-6xl gap-8 px-5 pb-12 pt-4 text-center sm:grid-cols-3">
             {[
               [String(catalog.courseCount), "final-year courses"],
@@ -114,7 +114,7 @@ export default async function Landing() {
               ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
             ].map(([n, title, body]) => (
               <div key={n} className="rounded-[25px] bg-card p-7 ring-1 ring-line">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-lilac-100 font-heading text-lg font-semibold text-lilac-900">{n}</span>
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-pau-100 font-heading text-lg font-semibold text-pau-800">{n}</span>
                 <h3 className="mt-5 font-heading text-xl font-semibold text-ink">{title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>
               </div>
@@ -123,7 +123,7 @@ export default async function Landing() {
         </section>
 
         {/* Features */}
-        <section id="features" className="scroll-mt-20 bg-card/60 py-20">
+        <section id="features" className="scroll-mt-20 bg-tint py-20">
           <div className="mx-auto max-w-6xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Everything your slides know, on demand</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
@@ -206,7 +206,7 @@ export default async function Landing() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="scroll-mt-20 bg-card/60 py-20">
+        <section id="faq" className="scroll-mt-20 bg-tint py-20">
           <div className="mx-auto max-w-3xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Frequently asked questions</h2>
             <div className="mt-10 divide-y divide-line rounded-[25px] bg-card ring-1 ring-line">
@@ -225,17 +225,17 @@ export default async function Landing() {
 
         {/* Closing call to action */}
         <section className="mx-auto max-w-6xl px-5 py-20">
-          <div className="flex flex-col items-center gap-8 rounded-[25px] bg-[#F5D5FF] px-6 py-14 text-center md:flex-row md:justify-between md:px-14 md:text-left">
+          <div className="flex flex-col items-center gap-8 rounded-[25px] bg-pau-100 px-6 py-14 text-center md:flex-row md:justify-between md:px-14 md:text-left">
             <div>
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-[#191919] md:text-4xl">Exams are coming. Your slides are ready.</h2>
-              <p className="mt-3 text-[#3d3a35]">Pick a partner and ask your first question in under a minute.</p>
-              <Link href="/sign-in?start=1" className={`${pill} mt-6 bg-[#191919] text-[#faf9f5] hover:opacity-90`}>
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 md:text-4xl">Exams are coming. Your slides are ready.</h2>
+              <p className="mt-3 text-pau-900/80">Pick a partner and ask your first question in under a minute.</p>
+              <Link href="/sign-in?start=1" className={`${pill} mt-6 bg-brand text-brand-ink hover:opacity-90`}>
                 Get started free
               </Link>
             </div>
             <div className="flex -space-x-4">
               {PARTNER_IDS.map((id) => (
-                <span key={id} className="rounded-full ring-4 ring-[#F5D5FF]">
+                <span key={id} className="rounded-full ring-4 ring-pau-100">
                   <Mascot partner={id} size={84} />
                 </span>
               ))}
