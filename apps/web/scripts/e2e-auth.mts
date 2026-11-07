@@ -68,7 +68,15 @@ async function deleteUserByEmail(email: string) {
 }
 
 async function main() {
-  const server = spawn("npx", ["next", "start", "-p", String(PORT)], { cwd: path.resolve(import.meta.dirname, ".."), stdio: "ignore" });
+  // The server gets NO Supabase/model variables from this script: it must load .env itself,
+  // exactly as `npm run dev` / `npm start` do. (Inheriting them once hid a dev-only env bug.)
+  const serverEnv = { ...process.env };
+  for (const k of Object.keys(serverEnv)) {
+    if (/SUPABASE|ANTHROPIC|VOYAGE|DATABASE_URL|PRIVACY/.test(k)) delete serverEnv[k];
+  }
+  const server = spawn("npx", ["next", process.env.E2E_MODE === "dev" ? "dev" : "start", "-p", String(PORT)], {
+    cwd: path.resolve(import.meta.dirname, ".."), stdio: "ignore", env: serverEnv,
+  });
   const testEmail = `e2e-${Date.now()}@pau.edu.ng`;
   try {
     await waitForServer();
