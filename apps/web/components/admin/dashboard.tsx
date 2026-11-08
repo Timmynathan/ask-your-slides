@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { RANGES, type Overview, type Range } from "@/lib/admin";
+import { RANGES, type Overview, type Range } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
 
 const tz = "Africa/Lagos";
