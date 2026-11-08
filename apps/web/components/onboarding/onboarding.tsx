@@ -151,10 +151,6 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
-            <p className="mx-auto mt-2 max-w-xl text-muted">
-              We&apos;ve picked <span className="font-medium text-ink">Zara</span> for you: a bit of everything. Happy with her? Just
-              continue, or tap someone else.
-            </p>
 
             <div role="radiogroup" aria-label="Study partners" className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {ORDER.map((id) => {
