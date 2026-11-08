@@ -19,7 +19,7 @@ export function AccountMenu({ user }: { user: { email: string; displayName: stri
         onClick={() => setOpen((o) => !o)}
         aria-label="Account"
         aria-expanded={open}
-        className="grid h-10 w-10 place-items-center rounded-full bg-brand text-[17px] font-medium uppercase text-white transition hover:opacity-90 active:scale-90"
+        className="grid h-10 w-10 place-items-center rounded-full bg-brand text-[17px] font-medium uppercase text-brand-ink transition hover:opacity-90 active:scale-90"
       >
         {name.trim().charAt(0) || "?"}
       </button>

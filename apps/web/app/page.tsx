@@ -79,7 +79,7 @@ export default async function Landing() {
         </section>
 
         {/* Made for PAU: the student's own course codes, read from the database. */}
-        <section className="relative overflow-hidden bg-brand text-white">
+        <section className="relative overflow-hidden bg-navy text-white">
           <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-pau-400/30 blur-3xl" aria-hidden />
           <div className="pointer-events-none absolute -bottom-28 right-0 h-80 w-80 rounded-full bg-[#2a3591] blur-3xl" aria-hidden />
           <div className="relative mx-auto max-w-6xl px-5 py-12 text-center">
@@ -89,7 +89,7 @@ export default async function Landing() {
               {catalog.courseCodes.map((code, i) => (
                 <span
                   key={code}
-                  className="pop-in inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[15px] font-semibold text-brand shadow-lg shadow-black/20 transition-transform hover:-translate-y-0.5"
+                  className="pop-in inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[15px] font-semibold text-[#0e1664] shadow-lg shadow-black/20 transition-transform hover:-translate-y-0.5"
                   style={{ animationDelay: `${i * 70}ms` }}
                 >
                   <span className={`h-2.5 w-2.5 rounded-full ${courseDot(i + 1)}`} aria-hidden />
@@ -124,14 +124,14 @@ export default async function Landing() {
                 ))}
               </ul>
             </div>
-            <div className="rounded-[25px] bg-brand p-7 text-white">
-              <span className="inline-flex rounded-full bg-white px-3.5 py-1.5">
+            <div className="rounded-[25px] bg-navy p-7 text-white">
+              <span className="inline-flex rounded-full bg-page px-3.5 py-1.5">
                 <Logo size={24} />
               </span>
               <ul className="mt-5 space-y-3 text-[16px]">
                 {["All your slides are already here", "Every answer shows the exact slide", "Built for your PAU courses"].map((t) => (
                   <li key={t} className="flex gap-3">
-                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-xs font-bold text-brand" aria-hidden>✓</span>
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-xs font-bold text-[#0e1664]" aria-hidden>✓</span>
                     {t}
                   </li>
                 ))}
@@ -184,7 +184,7 @@ export default async function Landing() {
               ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
             ].map(([n, title, body]) => (
               <div key={n} className="rounded-[25px] bg-card p-7 ring-1 ring-line">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-pau-100 font-heading text-lg font-semibold text-pau-800">{n}</span>
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-pau-100 font-heading text-lg font-semibold text-pau-800 dark:text-pau-400">{n}</span>
                 <h3 className="mt-5 font-heading text-xl font-semibold text-ink">{title}</h3>
                 <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>
               </div>
@@ -223,8 +223,8 @@ export default async function Landing() {
         <section className="mx-auto max-w-6xl px-5 py-20">
           <div className="flex flex-col items-center gap-8 rounded-[25px] bg-pau-100 px-6 py-14 text-center md:flex-row md:justify-between md:px-14 md:text-left">
             <div>
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 md:text-4xl">Exams are coming.</h2>
-              <p className="mt-3 text-pau-900/80">Pick a partner and ask your first question in under a minute.</p>
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 dark:text-ink md:text-4xl">Exams are coming.</h2>
+              <p className="mt-3 text-pau-900/80 dark:text-ink/80">Pick a partner and ask your first question in under a minute.</p>
               <Link href="/sign-up" className={`${pill} mt-6 bg-brand text-brand-ink hover:opacity-90`}>
                 Get started free
               </Link>

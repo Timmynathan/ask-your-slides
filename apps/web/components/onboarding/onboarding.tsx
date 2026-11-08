@@ -147,7 +147,7 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
 
         {step === "partner" && (
           <div key="partner" className="panel-in w-full max-w-5xl text-center">
-            <p className="text-sm font-medium uppercase tracking-wide text-pau-800">Choose your study partner</p>
+            <p className="text-sm font-medium uppercase tracking-wide text-pau-800 dark:text-pau-400">Choose your study partner</p>
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
@@ -176,7 +176,7 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
                       )}
                     </span>
                     {isDefault && (
-                      <span className="absolute -top-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-md">
+                      <span className="absolute -top-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-ink shadow-md">
                         ✦ Picked for you
                       </span>
                     )}

@@ -426,7 +426,7 @@ export function ChatPanel({
               )}
               {busy ? (
                 sending || status === "submitted" ? (
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-white" role="status">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-brand-ink" role="status">
                     <Spinner className="h-4 w-4" />
                     <span className="sr-only">Sending</span>
                   </span>
@@ -449,7 +449,7 @@ export function ChatPanel({
                   disabled={!input.trim()}
                   aria-label="Send"
                   title="Send"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:opacity-90 active:scale-90 disabled:bg-black/10 disabled:text-white"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-brand-ink transition hover:opacity-90 active:scale-90 disabled:bg-black/10 disabled:text-white dark:disabled:bg-white/15"
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     <path d="M12 19V5M6 11l6-6 6 6" />

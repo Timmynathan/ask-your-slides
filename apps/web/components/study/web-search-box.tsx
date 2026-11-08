@@ -86,7 +86,7 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
               } catch {}
             }}
             className={`flex-1 rounded-full py-1 text-[12px] transition active:scale-95 ${
-              engine === k ? "bg-white font-medium text-brand" : "text-white/65 hover:text-white"
+              engine === k ? "bg-white font-medium text-[#0e1664]" : "text-white/65 hover:text-white"
             }`}
           >
             {ENGINES[k].label}

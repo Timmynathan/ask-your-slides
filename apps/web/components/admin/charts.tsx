@@ -6,7 +6,8 @@
 // also in the tables, so the tooltip never gates anything).
 import { useState } from "react";
 
-const NAVY = "#0e1664";
+// The brand colour: PAU navy on light, the lighter PAU blue on dark (readable on both surfaces).
+const NAVY = "var(--brand)";
 
 function niceMax(v: number) {
   if (v <= 0) return 1;

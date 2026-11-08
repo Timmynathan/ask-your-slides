@@ -74,7 +74,7 @@ export function AdminDashboard({ data, range, email }: { data: Overview; range: 
           <Link href="/dashboard" aria-label="My courses">
             <Logo size={24} />
           </Link>
-          <span className="rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white">Admin</span>
+          <span className="rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-ink">Admin</span>
           <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="Sections">
             {SECTIONS.map(([id, label]) => (
               <a key={id} href={`#${id}`} className="rounded-full px-3 py-1.5 text-sm text-ink/80 hover:bg-sunken hover:text-ink">
@@ -395,7 +395,7 @@ function Students({ data }: { data: Overview }) {
 
 function Tile({ label, value, sub, warn = false }: { label: string; value: string; sub?: string; warn?: boolean }) {
   return (
-    <div className={`rounded-[22px] p-4 ${warn ? "bg-amber-50 ring-1 ring-amber-200" : "bg-sunken/60"}`}>
+    <div className={`rounded-[22px] p-4 ${warn ? "bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:ring-amber-400/30" : "bg-sunken/60"}`}>
       <p className="text-[13px] text-muted">{label}</p>
       <p className="mt-1 text-[26px] font-semibold tabular-nums tracking-tight">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
@@ -468,7 +468,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick(): void; childre
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`rounded-full px-3 py-1.5 text-[13px] transition active:scale-95 ${on ? "bg-brand text-white" : "bg-sunken text-ink hover:bg-pau-100"}`}
+      className={`rounded-full px-3 py-1.5 text-[13px] transition active:scale-95 ${on ? "bg-brand text-brand-ink" : "bg-sunken text-ink hover:bg-pau-100"}`}
     >
       {children}
     </button>

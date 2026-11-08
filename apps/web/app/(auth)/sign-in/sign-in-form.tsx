@@ -211,7 +211,7 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
         <ol className="mt-4 flex items-center gap-2 text-xs text-muted" aria-label={`Step ${signupStep} of 3`}>
           {["Email", "Code", "Password"].map((l, i) => (
             <li key={l} className="flex items-center gap-2">
-              <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold ${i + 1 <= signupStep ? "bg-brand text-white" : "bg-sunken text-muted"}`}>
+              <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold ${i + 1 <= signupStep ? "bg-brand text-brand-ink" : "bg-sunken text-muted"}`}>
                 {i + 1}
               </span>
               <span className={i + 1 === signupStep ? "font-medium text-ink" : ""}>{l}</span>
@@ -254,7 +254,7 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
               <p className="mt-1 text-sm text-muted">
                 <span className="font-medium text-ink">{notice.email}</span> is already signed up. Log in with your password.
               </p>
-              <button type="button" onClick={() => switchMode("login")} className="mt-4 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-white transition hover:opacity-90 active:scale-[0.98]">
+              <button type="button" onClick={() => switchMode("login")} className="mt-4 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]">
                 Log in
               </button>
               <button type="button" onClick={() => switchMode("reset")} className={`${link} mt-3 block w-full text-center`}>
@@ -267,7 +267,7 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
               <p className="mt-1 text-sm text-muted">
                 Create one with <span className="font-medium text-ink">{notice.email}</span>: it takes a minute.
               </p>
-              <button type="button" onClick={() => switchMode("signup")} className="mt-4 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-white transition hover:opacity-90 active:scale-[0.98]">
+              <button type="button" onClick={() => switchMode("signup")} className="mt-4 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]">
                 Create account
               </button>
             </>

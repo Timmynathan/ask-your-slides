@@ -174,7 +174,7 @@ export function Dashboard({ courses, user, resume }: Props) {
           {resume && (
             <Link
               href={resume.href}
-              className="ml-auto inline-flex max-w-full items-center gap-2 rounded-full bg-brand py-2.5 pl-4 pr-5 text-[15px] font-medium text-white shadow-sm transition hover:bg-pau-900 active:scale-95"
+              className="ml-auto inline-flex max-w-full items-center gap-2 rounded-full bg-brand py-2.5 pl-4 pr-5 text-[15px] font-medium text-brand-ink shadow-sm transition hover:bg-navy-hover active:scale-95"
               title={resume.label}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -211,7 +211,7 @@ function meta(c: DashboardCourse) {
 
 function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
-    <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-brand p-7 text-white transition hover:bg-pau-900 hover:shadow-lg has-[a:active]:scale-[0.985]">
+    <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-navy p-7 text-white transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
       <Link href={`/study/${c.code}`} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
       <div className="flex items-start justify-between">
@@ -357,7 +357,7 @@ function Empty({ tab, query, onAll }: { tab: Tab; query: string; onAll(): void }
       ) : tab === "recent" ? (
         <>
           <p className="text-ink">You haven&apos;t studied a course yet.</p>
-          <button onClick={onAll} className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-white transition active:scale-95">
+          <button onClick={onAll} className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-ink transition active:scale-95">
             See all courses
           </button>
         </>

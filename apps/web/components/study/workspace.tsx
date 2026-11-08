@@ -133,7 +133,7 @@ export function Workspace(data: WorkspaceData) {
           aria-hidden
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-brand text-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] ${
+          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-navy text-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >

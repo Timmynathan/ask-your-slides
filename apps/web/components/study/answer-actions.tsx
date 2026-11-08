@@ -117,7 +117,7 @@ export function AnswerActions({ messageId, text, initial }: { messageId: string;
             aria-label="What was wrong"
             className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted"
           />
-          <button type="submit" className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-white active:scale-95">
+          <button type="submit" className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-brand-ink active:scale-95">
             Send
           </button>
         </form>

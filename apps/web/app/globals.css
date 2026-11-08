@@ -13,6 +13,13 @@
   --muted: #5f6673;
   --brand: #0e1664; /* PAU navy: banner, buttons, links, selected states */
   --brand-ink: #ffffff; /* text on --brand */
+  /* Navy surfaces with white text (Topics panel, course cards, banner): deep navy in both modes. */
+  --navy: #0e1664;
+  --navy-hover: #0a0f47;
+  /* Highlight tints: pale navy on light, dark navy on dark (text on them is always --ink). */
+  --pau-50: #f3f5fc;
+  --pau-100: #e6e9f7;
+  --pau-200: #c8cdec;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -26,6 +33,11 @@
     --muted: #a3abba;
     --brand: #5ea3ed; /* the lighter PAU blue reads better on dark */
     --brand-ink: #0d1424;
+    --navy: #1b2670;
+    --navy-hover: #233190;
+    --pau-50: #1a2042;
+    --pau-100: #232c56;
+    --pau-200: #34417c;
   }
 }
 
@@ -40,10 +52,12 @@
   --color-muted: var(--muted);
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
+  --color-navy: var(--navy);
+  --color-navy-hover: var(--navy-hover);
   /* PAU navy scale around #0E1664 (tints for highlights, #5EA3ED as the bright accent) */
-  --color-pau-50: #f3f5fc;
-  --color-pau-100: #e6e9f7;
-  --color-pau-200: #c8cdec;
+  --color-pau-50: var(--pau-50);
+  --color-pau-100: var(--pau-100);
+  --color-pau-200: var(--pau-200);
   --color-pau-300: #9aa3da;
   --color-pau-400: #5ea3ed;
   --color-pau-700: #2a3591;

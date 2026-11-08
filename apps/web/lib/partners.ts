@@ -35,7 +35,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     ],
     thinking: ["Tobi is flipping through your slides…", "Tobi is finding the right slide…", "Tobi is on it…"],
     capped: "We've hit today's 50 questions, {name}. Rest your brain. We go again after midnight.",
-    accent: { bg: "bg-sky-100", ring: "ring-sky-300", text: "text-sky-800", soft: "bg-sky-50" },
+    accent: { bg: "bg-sky-100", ring: "ring-sky-300", text: "text-sky-800", soft: "bg-sky-50 dark:bg-sky-400/10" },
     voice:
       "You speak as Tobi, a friendly final-year student who did well in these courses and enjoys helping juniors. " +
       "Be warm, upbeat and brief. Lead with the gist in a sentence or two, then the detail. Add a quick memory trick or " +
@@ -57,7 +57,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     ],
     thinking: ["Ada is reading your slides…", "Ada is lining up the steps…", "Ada is checking the slides…"],
     capped: "That's today's 50 questions, {name}. A good rest helps it sink in. See you after midnight.",
-    accent: { bg: "bg-fuchsia-100", ring: "ring-fuchsia-300", text: "text-fuchsia-800", soft: "bg-fuchsia-50" },
+    accent: { bg: "bg-fuchsia-100", ring: "ring-fuchsia-300", text: "text-fuchsia-800", soft: "bg-fuchsia-50 dark:bg-fuchsia-400/10" },
     voice:
       "You speak as Ada, a calm, organised study partner. Explain in clear numbered steps when there is a process, define " +
       "each technical term the first time you use it, use a small worked example when it makes the idea click, and keep a " +
@@ -79,7 +79,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     ],
     thinking: ["Dr. Musa is reviewing your slides…", "Dr. Musa is checking the lecture notes…", "Dr. Musa is preparing an answer…"],
     capped: "That's the 50 questions for today, {name}. Review what we covered; we continue after midnight.",
-    accent: { bg: "bg-amber-100", ring: "ring-amber-300", text: "text-amber-900", soft: "bg-amber-50" },
+    accent: { bg: "bg-amber-100", ring: "ring-amber-300", text: "text-amber-900", soft: "bg-amber-50 dark:bg-amber-400/10" },
     voice:
       "You speak as Dr. Musa, an experienced, kind lecturer. Be measured and encouraging, a little formal but warm. Point " +
       "out what an examiner looks for and the most common mistake on the point, and when it fits, show how a short exam " +
@@ -100,7 +100,7 @@ export const PARTNERS: Record<PartnerId, Partner> = {
     ],
     thinking: ["Zara is going through your slides…", "Zara is pulling it together…", "Zara is on it…"],
     capped: "That's today's 50 questions, {name}. Nice work. We pick up again after midnight.",
-    accent: { bg: "bg-emerald-100", ring: "ring-emerald-300", text: "text-emerald-800", soft: "bg-emerald-50" },
+    accent: { bg: "bg-emerald-100", ring: "ring-emerald-300", text: "text-emerald-800", soft: "bg-emerald-50 dark:bg-emerald-400/10" },
     voice:
       "You speak as Zara, a friendly all-rounder who blends three styles. Start with the gist in a sentence or two; then, " +
       "if the topic needs it, give clear steps and define key terms; finish, when it fits, with one short exam tip (how it " +

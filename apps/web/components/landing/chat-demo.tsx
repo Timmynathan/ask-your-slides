@@ -194,7 +194,7 @@ export function ChatDemo() {
       <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] bg-[#f5f8fc] text-left shadow-xl ring-2 ring-brand">
         {/* Player bar: says plainly that this is a demo, and holds the controls. */}
         <div className="flex shrink-0 items-center gap-3 border-b border-black/5 bg-white px-3 py-2.5 sm:px-5">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0e1664] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
             <span className={`h-1.5 w-1.5 rounded-full ${playing ? "animate-pulse bg-[#5ea3ed]" : "bg-white/60"}`} />
             Demo
           </span>
@@ -211,7 +211,7 @@ export function ChatDemo() {
           </button>
         </div>
         <div className="h-1 shrink-0 bg-pau-100" aria-hidden>
-          <div className="h-full bg-brand" style={{ width: `${(elapsed / TOTAL) * 100}%` }} />
+          <div className="h-full bg-[#0e1664]" style={{ width: `${(elapsed / TOTAL) * 100}%` }} />
         </div>
 
         <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -302,7 +302,7 @@ export function ChatDemo() {
                 aria-label={started ? "Watch again" : "Watch the demo"}
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition active:scale-95"
               >
-                <span className="cue-ring grid h-20 w-20 place-items-center rounded-full bg-brand text-white shadow-lg transition group-hover:scale-105 sm:h-24 sm:w-24">
+                <span className="cue-ring grid h-20 w-20 place-items-center rounded-full bg-[#0e1664] text-white shadow-lg transition group-hover:scale-105 sm:h-24 sm:w-24">
                   {started ? (
                     <svg width="34" height="34" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
                       <path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" />

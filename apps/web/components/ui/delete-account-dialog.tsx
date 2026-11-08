@@ -4,6 +4,7 @@
 // the button (no accidental clicks). On success the student lands on sign-in with a notice.
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Spinner } from "./spinner";
 
 export function DeleteAccountDialog({ onClose }: { onClose(): void }) {
@@ -36,14 +37,15 @@ export function DeleteAccountDialog({ onClose }: { onClose(): void }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4" onClick={() => !inFlight.current && onClose()}>
+  // Rendered on <body>: inside the blurred top bar, "fixed" would be trapped in the bar.
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={() => !inFlight.current && onClose()}>
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Delete your account"
         onClick={(e) => e.stopPropagation()}
-        className="pop-in w-full max-w-md rounded-[28px] bg-page p-6 text-left shadow-xl"
+        className="pop-in w-full max-w-md rounded-[28px] bg-page p-6 text-left shadow-xl ring-1 ring-line"
       >
         <h2 className="text-[20px] text-ink">Delete your account?</h2>
         <p className="mt-2 text-[15px] leading-relaxed text-muted">
@@ -82,6 +84,7 @@ export function DeleteAccountDialog({ onClose }: { onClose(): void }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

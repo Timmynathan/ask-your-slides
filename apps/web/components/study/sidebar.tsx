@@ -53,7 +53,7 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                 onClick={() => onOpenScope(s.id)}
                 aria-current={active ? "location" : undefined}
                 className={`w-full rounded-2xl px-3 py-2.5 text-left text-[15px] leading-snug transition-colors ${
-                  active ? "bg-white font-medium text-brand" : "text-white/85 hover:bg-white/10 hover:text-white"
+                  active ? "bg-white font-medium text-[#0e1664]" : "text-white/85 hover:bg-white/10 hover:text-white"
                 }`}
                 title={s.label}
               >

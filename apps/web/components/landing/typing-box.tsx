@@ -50,8 +50,8 @@ export function TypingBox({ text }: { text: string }) {
           {!sent && <span className="ml-px inline-block h-4 w-px translate-y-0.5 animate-pulse bg-ink" />}
         </span>
         <span
-          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-white transition-all duration-200 ${
-            sent ? "scale-90 bg-brand" : done ? "bg-brand" : "bg-black/10"
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-brand-ink transition-all duration-200 ${
+            sent ? "scale-90 bg-brand" : done ? "bg-brand" : "bg-black/10 text-white dark:bg-white/15"
           }`}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
