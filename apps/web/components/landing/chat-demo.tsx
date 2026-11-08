@@ -8,7 +8,7 @@
 // Sample content in the style of the PAU decks: no real lecturer slide on the public page (PRD §16).
 //
 // Playback: never starts by itself. Plays once (no loop) when "See how it works", Watch or Play is pressed;
-// pauses when scrolled away; Play / Pause / Replay button and a progress bar. Everything on screen is
+// pauses when scrolled away; a corner Pause/Play button and a progress line while it runs. Everything on screen is
 // derived from one clock (elapsed ms), so pausing is just stopping the clock. With reduced motion,
 // Play jumps to the finished conversation, no zoom.
 import { useEffect, useRef, useState } from "react";
@@ -176,13 +176,6 @@ export function ChatDemo() {
   // From the question box the camera glides up to the searching line (transform-origin is animated).
   const origin = searching ? origins.search : origins.input;
 
-  const button = !started
-    ? { label: "Play demo", icon: <PlayIcon />, text: "Play" }
-    : playing
-      ? { label: "Pause demo", icon: <PauseIcon />, text: "Pause" }
-      : ended
-        ? { label: "Replay demo", icon: <ReplayIcon />, text: "Replay" }
-        : { label: "Play demo", icon: <PlayIcon />, text: "Play" };
   const toggle = () => (playing ? setPlaying(false) : control.current.play(ended));
 
   return (
@@ -194,28 +187,6 @@ export function ChatDemo() {
       className="h-[100dvh] min-h-[600px] w-full scroll-mt-0 bg-page px-3 pb-3 pt-[88px] [overflow-anchor:none] sm:px-5 sm:pb-5 sm:pt-[96px]"
     >
       <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] bg-[#f5f8fc] text-left shadow-xl ring-2 ring-brand">
-        {/* Player bar: says plainly that this is a demo, and holds the controls. */}
-        <div className="flex shrink-0 items-center gap-3 border-b border-black/5 bg-white px-3 py-2.5 sm:px-5">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0e1664] px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
-            <span className={`h-1.5 w-1.5 rounded-full ${playing ? "animate-pulse bg-[#5ea3ed]" : "bg-white/60"}`} />
-            Demo
-          </span>
-          <span className="hidden truncate text-sm font-medium text-ink sm:inline">How Ask Your Slides answers a question</span>
-          <span className="ml-auto hidden text-[13px] text-muted md:inline">CSC 420 · Transactions and indexing</span>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={button.label}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-pau-50 py-1.5 pl-2 pr-3.5 text-sm font-semibold text-brand ring-1 ring-brand/20 transition hover:bg-pau-100 active:scale-95 md:ml-3"
-          >
-            {button.icon}
-            {button.text}
-          </button>
-        </div>
-        <div className="h-1 shrink-0 bg-pau-100" aria-hidden>
-          <div className="h-full bg-[#0e1664]" style={{ width: `${(elapsed / TOTAL) * 100}%` }} />
-        </div>
-
         <div className="relative min-h-0 flex-1 overflow-hidden">
           {/* Zoom layer: close-up on the question box while it is typed, back out once it is sent. */}
           <div
@@ -293,6 +264,25 @@ export function ChatDemo() {
             </div>
           </div>
 
+          {/* While it plays (or is paused part-way): a quiet pause/play button in the corner and a thin
+              progress line along the bottom, as on a video. */}
+          {started && !ended && (
+            <>
+              <button
+                type="button"
+                onClick={toggle}
+                aria-label={playing ? "Pause demo" : "Play demo"}
+                title={playing ? "Pause" : "Play"}
+                className="absolute right-3 top-3 z-10 grid h-10 w-10 sm:right-4 sm:top-4 place-items-center rounded-full bg-[#0e1664]/85 text-white shadow-md backdrop-blur transition hover:bg-[#0e1664] active:scale-90"
+              >
+                {playing ? <PauseIcon /> : <PlayIcon />}
+              </button>
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-pau-100" aria-hidden>
+                <div className="h-full bg-[#0e1664]" style={{ width: `${(elapsed / TOTAL) * 100}%` }} />
+              </div>
+            </>
+          )}
+
           {/* Poster before it starts; end screen (blurred chat, big replay) once it has played. */}
           {(!started || (ended && !instant)) && (
             <div
@@ -340,14 +330,6 @@ function PauseIcon() {
     </svg>
   );
 }
-function ReplayIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-      <path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" />
-    </svg>
-  );
-}
-
 function UserBubble({ text }: { text: string }) {
   return (
     <div className={`pop-in ml-auto max-w-[80%] shrink-0 rounded-2xl rounded-br-md bg-[#0e1664] px-4 py-2.5 text-white ${TEXT}`}>{text}</div>
