@@ -310,10 +310,13 @@ async function main() {
     await viewer.getByRole("button", { name: "Close preview" }).click();
     // Search the web: a separate box that hands the question to the student's own chatbot.
     await page.evaluate(() => { (window as any).__opened = null; window.open = ((u: string) => { (window as any).__opened = u; return null; }) as any; });
+    await page.getByRole("radio", { name: "Claude" }).click();
+    check(await page.getByRole("radio", { name: "Claude" }).getAttribute("aria-checked") === "true", "web search engine is a clear one-tap switch");
     await page.getByRole("textbox", { name: "Search the web" }).fill("latest PostgreSQL version");
     await page.keyboard.press("Enter");
     const webUrl = await page.evaluate(() => (window as any).__opened as string | null);
     check(!!webUrl && /^https:\/\/(chatgpt\.com|claude\.ai|www\.google\.com)\//.test(webUrl) && webUrl.includes("PostgreSQL"), "Search the web opens the student's own chatbot with the question", (webUrl ?? "").slice(0, 80));
+    check(!!webUrl && webUrl.startsWith("https://claude.ai/new?q="), "the chosen engine (Claude) gets the question");
     await topicsPanel.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     const sidebarBox = await page.locator("aside:visible").first().boundingBox();

@@ -71,27 +71,28 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
           </svg>
         </button>
       </div>
-      <label className="ml-[25px] mt-1 inline-flex items-center gap-1 text-[12px] text-muted">
-        with
-        <select
-          value={engine}
-          onChange={(e) => {
-            const v = e.target.value as Engine;
-            setEngine(v);
-            try {
-              localStorage.setItem(KEY, v);
-            } catch {}
-          }}
-          aria-label="Search with"
-          className="cursor-pointer appearance-none bg-transparent pr-1 text-[12px] text-ink underline decoration-line-strong underline-offset-2 outline-none"
-        >
-          {(Object.keys(ENGINES) as Engine[]).map((k) => (
-            <option key={k} value={k}>
-              {ENGINES[k].label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* Which chatbot gets the question: a one-tap switch, remembered per browser. */}
+      <div role="radiogroup" aria-label="Search with" className="mt-2 flex rounded-full bg-sunken p-0.5">
+        {(Object.keys(ENGINES) as Engine[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={engine === k}
+            onClick={() => {
+              setEngine(k);
+              try {
+                localStorage.setItem(KEY, k);
+              } catch {}
+            }}
+            className={`flex-1 rounded-full py-1 text-[12px] transition active:scale-95 ${
+              engine === k ? "bg-page font-medium text-ink shadow-[0_1px_2px_rgb(0_0_0/0.08)]" : "text-muted hover:text-ink"
+            }`}
+          >
+            {ENGINES[k].label}
+          </button>
+        ))}
+      </div>
     </form>
   );
 }
