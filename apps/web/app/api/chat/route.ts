@@ -19,7 +19,14 @@ const Body = z.object({
       m.parts.filter((p) => p.type === "text").map((p) => p.text ?? "").join(""),
     ),
   ]).pipe(z.string().trim().min(1, "Type a question first.").max(4000, "That message is too long.")),
+  // The question's id as the chat shows it, so it can be edited later under the same id.
+  message_id: z.string().uuid().optional(),
+  // True when the student edited an earlier question: that question and everything after it is
+  // replaced by this one.
+  edit: z.boolean().optional(),
 });
+
+const EDIT_GONE_MESSAGE = "That question can't be edited any more. Refresh the page and try again.";
 
 function dailyCap() {
   const n = Number(process.env.DAILY_MESSAGE_CAP);
@@ -36,7 +43,8 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Bad request." }, { status: 400 });
   }
-  const { conversation_id: conversationId, message } = parsed.data;
+  const { conversation_id: conversationId, message, message_id: messageId, edit } = parsed.data;
+  if (edit && !messageId) return NextResponse.json({ error: EDIT_GONE_MESSAGE }, { status: 400 });
 
   // Read as the student: RLS returns the conversation only if it is theirs. Course and topic come
   // from this row, never from the request body.
@@ -49,6 +57,20 @@ export async function POST(request: Request) {
   const course = convo.courses as unknown as { code: string; title: string; department: string };
   const topic = convo.topics as unknown as { title: string } | null;
 
+  // Editing: the question must be one of the student's own, in this chat (RLS + the filters).
+  let editFrom: { created_at: string } | null = null;
+  if (edit) {
+    const { data: original } = await supabase
+      .from("messages")
+      .select("created_at")
+      .eq("id", messageId!)
+      .eq("conversation_id", conversationId)
+      .eq("role", "user")
+      .maybeSingle();
+    if (!original) return NextResponse.json({ error: EDIT_GONE_MESSAGE }, { status: 409 });
+    editFrom = original;
+  }
+
   const { data: profile } = await supabase.from("profiles").select("display_name, study_partner").eq("id", auth.user.id).single();
   const partner = isPartnerId(profile?.study_partner) ? PARTNERS[profile.study_partner] : null;
 
@@ -57,6 +79,19 @@ export async function POST(request: Request) {
   const [usage] = must(await db.rpc("consume_message", { p_user_id: auth.user.id, p_cap: cap })) as { allowed: boolean; used: number }[];
   if (!usage.allowed) {
     return NextResponse.json({ error: DAILY_LIMIT_MESSAGE, remaining: 0 }, { status: 429 });
+  }
+
+  let editsFirstQuestion = false;
+  if (editFrom) {
+    // Like ChatGPT/Claude: the edited question and every message after it go; the chat continues
+    // from the new wording. Ratings on the removed answers go with them (on delete cascade).
+    const { count } = await db
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", conversationId)
+      .lt("created_at", editFrom.created_at);
+    editsFirstQuestion = count === 0;
+    must(await db.from("messages").delete().eq("conversation_id", conversationId).gte("created_at", editFrom.created_at));
   }
 
   const recent = must(
@@ -71,8 +106,17 @@ export async function POST(request: Request) {
     .reverse()
     .map((m) => ({ role: m.role, content: m.role === "assistant" ? historyText(m.content) : m.content }));
 
-  must(await db.from("messages").insert({ conversation_id: conversationId, user_id: auth.user.id, role: "user", content: message }));
-  if (convo.title === "New chat") {
+  const row: { id?: string; conversation_id: string; user_id: string; role: "user"; content: string } = {
+    conversation_id: conversationId,
+    user_id: auth.user.id,
+    role: "user",
+    content: message,
+  };
+  let saved = await db.from("messages").insert(messageId ? { ...row, id: messageId } : row).select("id").single();
+  // The id is already taken (never by this chat's live questions): save under a fresh id instead.
+  if (saved.error?.code === "23505") saved = await db.from("messages").insert(row).select("id").single();
+  const userMessageId = (must(saved) as { id: string }).id;
+  if (convo.title === "New chat" || editsFirstQuestion) {
     await db.from("conversations").update({ title: message.slice(0, 80) }).eq("id", conversationId);
   }
 
@@ -91,6 +135,7 @@ export async function POST(request: Request) {
     partnerVoice: partner?.voice ?? null,
     studentName: profile?.display_name?.split(/\s+/)[0] ?? null,
     assistantMessageId,
+    userMessageId,
     startedAt,
   });
 

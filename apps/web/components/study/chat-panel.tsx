@@ -11,6 +11,7 @@ import { fill, PARTNERS, pick, type PartnerId } from "@/lib/partners";
 import { Answer } from "./answer";
 import { AnswerActions, type Rating } from "./answer-actions";
 import { PulseCard } from "./pulse-card";
+import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
 
 type Meta = {
@@ -92,10 +93,14 @@ export function ChatPanel({
         api: "/api/chat",
         // The server keeps the history; send only the new message and which chat it belongs to
         // (passed per message by submit()).
-        prepareSendMessagesRequest: ({ messages, body }) => ({
+        // An edit (sendMessage with messageId) also says so: the server then replaces that
+        // question and everything after it.
+        prepareSendMessagesRequest: ({ messages, body, messageId }) => ({
           body: {
             conversation_id: body?.conversation_id,
             message: textOf(messages.at(-1)),
+            message_id: messages.at(-1)?.id,
+            edit: messageId != null,
           },
         }),
       }),
@@ -112,6 +117,8 @@ export function ChatPanel({
     clearError,
   } = useChat<Msg>({
     transport,
+    // UUIDs, so a question's id here is its id in the database (needed to edit it later).
+    generateId: () => crypto.randomUUID(),
     onFinish: ({ message }) => {
       const r = message.metadata?.remaining;
       if (typeof r === "number") {
@@ -232,6 +239,15 @@ export function ChatPanel({
     }
   }
 
+  // Edit an earlier question: the chat drops it and everything after it, then answers the new wording.
+  async function editQuestion(id: string, raw: string) {
+    const text = raw.trim();
+    if (!text || busy || capped || !conversationId.current) return;
+    clearError();
+    onQuestion();
+    await sendMessage({ text, messageId: id }, { body: { conversation_id: conversationId.current } });
+  }
+
   const last = messages.at(-1);
   const waitingForWords =
     status === "submitted" ||
@@ -301,9 +317,7 @@ export function ChatPanel({
             {messages.map((m) =>
               m.role === "user" ? (
                 <li key={m.id} data-message="user" className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-[22px] bg-sunken px-4 py-2.5 text-[15px] leading-relaxed text-ink">
-                    {textOf(m)}
-                  </div>
+                  <UserMessage text={textOf(m)} canEdit={!busy && !capped} onEdit={(t) => editQuestion(m.id, t)} />
                 </li>
               ) : (
                 <li key={m.id} data-message="assistant" className="flex gap-3">

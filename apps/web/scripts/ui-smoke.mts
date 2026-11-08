@@ -505,6 +505,32 @@ async function main() {
     await page.locator("main li[data-message]:visible").last().scrollIntoViewIfNeeded();
     await shot(page, "3b-laptop-fallback");
 
+    // Edit a sent question (like ChatGPT/Claude): it and its answer are replaced, the rest stays.
+    const lastQuestion = page.locator("main li[data-message='user']:visible").last();
+    await lastQuestion.hover();
+    await lastQuestion.getByRole("button", { name: "Edit question" }).click();
+    const editBox = page.getByRole("textbox", { name: "Edit your question" });
+    check(await editBox.inputValue() === "What's the difference between a function and a stored procedure?", "Edit opens the question in a box, text kept");
+    await editBox.fill("What does the D in ACID mean?");
+    await page.locator("main").getByRole("button", { name: "Send", exact: true }).first().click();
+    await page.getByText("Searching your slides…").waitFor({ timeout: 5000, state: "attached" }).catch(() => {});
+    await page.locator("form").getByRole("button", { name: "Send" }).last().waitFor({ timeout: 40000 });
+    await page.locator("main li[data-message='assistant']:visible").nth(1).waitFor({ timeout: 40000 });
+    await page.waitForTimeout(1500); // the answer is saved when it finishes
+    const shown = await page.locator("main li[data-message]:visible").count();
+    check(shown === 4, "after the edit the chat still has 4 messages (edited question + new answer)", `${shown}`);
+    check(await page.locator("main li[data-message='user']:visible").last().innerText().then((t) => t.includes("What does the D in ACID mean?")), "the edited wording is shown");
+    const editedChat = new URL(page.url()).searchParams.get("chat")!;
+    const { data: rows } = await admin.from("messages").select("role, content").eq("conversation_id", editedChat).order("created_at");
+    check(
+      rows?.length === 4 && rows[2].content === "What does the D in ACID mean?" && !rows.some((r) => r.content.includes("stored procedure?")),
+      "the database holds the edited question and its new answer; the old one is gone",
+      JSON.stringify(rows?.map((r) => `${r.role}:${r.content.slice(0, 30)}`)),
+    );
+    await page.reload();
+    await page.locator("main li[data-message]:visible").first().waitFor({ timeout: 15000 });
+    check(await page.locator("main li[data-message='user']:visible").last().innerText().then((t) => t.includes("What does the D in ACID mean?")), "the edit survives a reload");
+
     // Admin dashboard: hidden from students; the owner sees the pilot, including this test's activity.
     console.log("\nAdmin dashboard");
     const chatUrl = page.url(); // the phone checks below reopen this chat

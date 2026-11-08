@@ -29,6 +29,9 @@ export interface ChatTurn {
   partnerVoice?: string | null;
   studentName?: string | null;
   assistantMessageId: string;
+  /** The saved question this turn answers. If the student edits it (deleting it) before the
+   *  answer finishes, the stale answer is not saved. */
+  userMessageId?: string;
   startedAt: number;
   abortSignal?: AbortSignal;
 }
@@ -222,7 +225,14 @@ export async function runChatTurn(turn: ChatTurn) {
     for (const t of ctx.toolLog) if (t.status === "failed") errors.push({ code: "tool_failed", detail: `${t.name}: ${t.error}` });
     const citations = [...cited.values()];
     let messageId: string | null = null;
-    if (output.trim()) {
+    // Superseded: the student edited this question (or an earlier one) while the answer was still
+    // finishing in the background. Saving it would put an orphan answer back into the chat.
+    const superseded =
+      !!turn.userMessageId &&
+      !(await db.from("messages").select("id").eq("id", turn.userMessageId).maybeSingle()).data;
+    if (superseded) {
+      errors.push({ code: "superseded", detail: "question was edited before the answer finished; answer not saved" });
+    } else if (output.trim()) {
       must(
         await db.from("messages").insert({
           id: turn.assistantMessageId,
