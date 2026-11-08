@@ -43,7 +43,8 @@ const typedAt = (e: number, start: number, len: number) => Math.max(0, Math.min(
 
 // Type scale: phone, tablet, laptop and up.
 const TEXT = "text-[15px] sm:text-[18px] lg:text-[20px]";
-const CHIP = "whitespace-nowrap rounded-full bg-teal-50 px-2.5 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-200 sm:text-[13px]";
+// Same quiet grey pill as the citation chips in the real chat (components/study/answer.tsx).
+const CHIP = "whitespace-nowrap rounded-full bg-[#eef2f8] px-2 py-px align-middle text-[11.5px] text-[#191919]/70 sm:text-[13px]";
 
 export function ChatDemo() {
   const [elapsed, setElapsed] = useState(0);
@@ -235,7 +236,7 @@ export function ChatDemo() {
                       <Slide highlight={phase >= 3} />
                       {phase >= 4 && (
                         <div className={`pop-in rounded-2xl rounded-tl-md bg-white p-4 leading-relaxed text-[#191919] ring-1 ring-black/5 ${TEXT}`}>
-                          <span className="mr-1 text-[#5f6673]">From your slide:</span>“{ANSWER}” <span className={CHIP}>Indexing · Slide 21</span>
+                          {ANSWER} <span className={CHIP}>Transactions and Indexing · Slide 21</span>
                         </div>
                       )}
                     </div>
@@ -260,7 +261,7 @@ export function ChatDemo() {
                       </div>
                       <p>
                         <b>In short:</b> the index takes the database straight to the row, which is why your slide says lookups take{" "}
-                        <b>O(log n) steps</b>. <span className={CHIP}>Indexing · Slide 21</span>
+                        <b>O(log n) steps</b>. <span className={CHIP}>Transactions and Indexing · Slide 21</span>
                       </p>
                     </div>
                   </div>
