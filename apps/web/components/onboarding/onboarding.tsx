@@ -180,7 +180,7 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
                       )}
                     </span>
                     {isDefault && (
-                      <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
+                      <span className="absolute -top-3 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-md">
                         ✦ Picked for you
                       </span>
                     )}
