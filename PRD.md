@@ -126,7 +126,7 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F2. Dashboard with course and topic chats
 
-- After sign-in, the student sees a sidebar with one item per course (code + title, e.g. "CSC 420 — Data Management II").
+- After sign-in, the student lands on **My courses**: one card per course (see §13), like a notebook library. Opening a course shows the study workspace, whose sidebar lists every course (code + title, e.g. "CSC 420 — Data Management II") with a link back to My courses.
 - Under the selected course: **Whole course**, then the course's **topics** in order (from `data/manifest.yaml`). Each has its own conversations and a "New chat" button.
 - A chat is either a **whole-course chat** (`topic_id` null) or a **topic chat**.
 - The main area shows the selected conversation.
