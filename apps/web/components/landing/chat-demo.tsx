@@ -359,7 +359,7 @@ function SeeHowNote() {
       <svg viewBox="0 0 40 56" className="h-[42px] w-[30px] overflow-visible text-ink sm:h-[56px] sm:w-[40px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 8C17 3 31 9 33 22c1.5 9-2 18-8 27" />
         {/* Arrowhead: two equal wings either side of where the line ends, so it reads as a full arrow. */}
-        <path d="M21.5 40.5 25 49l6.8-5.9" />
+        <path d="M20.3 36.9 25 49l9.8-8.5" />
       </svg>
     </div>
   );
