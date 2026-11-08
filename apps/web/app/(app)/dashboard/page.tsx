@@ -12,12 +12,14 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", t
 
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const [{ data: courses }, { data: profile }, { data: chats }] = await Promise.all([
+  const [{ data: allCourses }, { data: profile }, { data: chats }] = await Promise.all([
     supabase.from("courses").select("id, code, title, department, sort_order, materials(count)").order("sort_order"),
-    supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
     supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
   ]);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
+  // The student's department's courses; everything when they haven't chosen one (older accounts).
+  const courses = (allCourses ?? []).filter((c) => !profile.department || c.department === profile.department);
 
   const chatRows = (chats ?? []) as { id: string; course_id: string; title: string; updated_at: string }[];
   const list: DashboardCourse[] = (courses ?? [])

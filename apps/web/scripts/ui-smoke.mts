@@ -202,6 +202,12 @@ async function main() {
       await op.waitForURL(/\/welcome/);
       check(true, "new student is sent to onboarding");
       await op.getByLabel("Your name").fill("Tolu");
+      const studying = op.getByRole("combobox", { name: "What are you studying?" });
+      check(await op.getByRole("button", { name: "Continue" }).isDisabled(), "Continue waits until a department is chosen");
+      const disabledDepts = await studying.locator("option[disabled]").allTextContents();
+      check(["Engineering", "Economics", "Business Administration"].every((d) => disabledDepts.some((t) => t.startsWith(d))),
+        "only Computer Science can be chosen; the others say coming soon", disabledDepts.join(" | "));
+      await studying.selectOption("Computer Science");
       await op.getByRole("button", { name: "Continue" }).click();
       await op.getByRole("radiogroup", { name: "Study partners" }).waitFor();
       check(await op.getByText("Tolu, who do you want to study with?").isVisible(), "partner step greets the student by name");
@@ -228,8 +234,8 @@ async function main() {
       check(await op.getByRole("button", { name: /Studying with Tobi/ }).isVisible(), "Tobi is the partner in the study workspace");
       check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
       await shot(op, "9-study-empty-tobi");
-      const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name").eq("email", newbie).single();
-      check(prof?.study_partner === "tobi" && prof?.onboarded === true && prof?.display_name === "Tolu", "choices saved to the profile", JSON.stringify(prof));
+      const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name, department").eq("email", newbie).single();
+      check(prof?.study_partner === "tobi" && prof?.onboarded === true && prof?.display_name === "Tolu" && prof?.department === "Computer Science", "choices saved to the profile", JSON.stringify(prof));
       await fresh.close();
     } finally {
       await cleanup(newbie);

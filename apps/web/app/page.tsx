@@ -157,7 +157,7 @@ export default async function Landing() {
                 </div>
               </Feature>
               <Feature title="Summaries in order" body="Ask for a lecture, a topic or the whole course. It reads every slide, in order, not just the first few.">
-                <TypingBox text="Summarize CSC 401" />
+                <TypingBox text="Summarize CSC 402" />
               </Feature>
               <Feature title="Quiz me" body="One question at a time. Answer, get marked, see the slide with the right answer.">
                 <div className="rounded-xl bg-sunken p-3 text-sm text-ink">

@@ -12,7 +12,7 @@ async function Loaded({ searchParams }: { searchParams: Promise<{ next?: string 
   const next = safeNext((await searchParams).next);
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { data: courses }] = await Promise.all([
-    supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
     supabase.from("courses").select("department"),
   ]);
   // One department → the partner can name it ("I know Computer Science can be hard"). Several
@@ -24,6 +24,7 @@ async function Loaded({ searchParams }: { searchParams: Promise<{ next?: string 
       department={departments.length === 1 ? departments[0] : null}
       next={next}
       initialName={profile?.display_name ?? ""}
+      initialDepartment={profile?.department ?? null}
       initialPartner={isPartnerId(profile?.study_partner) ? profile.study_partner : null}
       // Students who signed up before partners existed only need to choose one.
       startAtPartner={!!profile?.onboarded}

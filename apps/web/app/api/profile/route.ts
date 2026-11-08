@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { AVAILABLE_DEPARTMENTS } from "@/lib/departments";
 import { createClient } from "@/lib/supabase/server";
 
-// Runs as the student: RLS + column grants allow only display_name, onboarded and study_partner.
+// Runs as the student: RLS + column grants allow only display_name, onboarded, study_partner and department.
+// Only departments whose courses are in the app can be chosen (lib/departments.ts).
 const Body = z
   .object({
     display_name: z.string().trim().max(60).nullable().optional(),
     study_partner: z.enum(["tobi", "ada", "musa", "zara"]).optional(),
     onboarded: z.boolean().optional(),
+    department: z.enum(AVAILABLE_DEPARTMENTS).optional(),
   })
   .strict();
 
-/** POST {display_name?, study_partner?, onboarded?} → updates the signed-in student's profile. */
+/** POST {display_name?, study_partner?, onboarded?, department?} → updates the signed-in student's profile. */
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
