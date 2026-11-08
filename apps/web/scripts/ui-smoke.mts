@@ -50,7 +50,8 @@ async function signInCookies(email: string, opts: { fresh?: boolean } = {}) {
   return res.headers.getSetCookie().map((c) => {
     const [pair] = c.split(";");
     const i = pair.indexOf("=");
-    return { name: pair.slice(0, i), value: pair.slice(i + 1), domain: "localhost", path: "/" };
+    const url = new URL(BASE); // localhost, or the live site when E2E_BASE_URL is set
+    return { name: pair.slice(0, i), value: pair.slice(i + 1), domain: url.hostname, path: "/", secure: url.protocol === "https:" };
   });
 }
 

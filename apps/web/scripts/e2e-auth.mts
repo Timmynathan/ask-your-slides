@@ -142,9 +142,14 @@ async function main() {
     jar.take(res);
     const html = await res.text();
     check(res.status === 200 && html.includes(testEmail), "signed-in study page shows the student", String(res.status));
-    const { data: allCourses } = await admin.from("courses").select("code");
-    const missing = (allCourses ?? []).map((c) => c.code.replace(/^([A-Z]+)/, "$1 ")).filter((c) => !html.includes(c));
-    check(!!allCourses?.length && missing.length === 0, `all ${allCourses?.length} courses visible to the student`, missing.join(", "));
+    // Every course with material is on My courses (a course page lists only its own topics).
+    res = await fetch(`${BASE}/dashboard`, { headers: { cookie: jar.header() }, redirect: "manual" });
+    jar.take(res);
+    const dash = await res.text();
+    const { data: allCourses } = await admin.from("courses").select("code, materials(count)");
+    const studyable = (allCourses ?? []).filter((c: any) => (c.materials?.[0]?.count ?? 0) > 0);
+    const missing = studyable.map((c) => c.code.replace(/^([A-Z]+)/, "$1 ")).filter((c) => !dash.includes(c));
+    check(res.status === 200 && studyable.length > 0 && missing.length === 0, `all ${studyable.length} courses on My courses`, missing.join(", "));
 
     // 6. Signed in users are kept off /sign-in.
     res = await fetch(`${BASE}/sign-in`, { headers: { cookie: jar.header() }, redirect: "manual" });
