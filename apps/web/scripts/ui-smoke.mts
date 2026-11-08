@@ -154,7 +154,7 @@ async function main() {
       window.scrollTo(0, window.scrollY + r.top - window.innerHeight + r.height / 2); // top half showing only
     });
     await lp.waitForTimeout(2500);
-    const halfStarted = await lp.locator("#demo").getByText(/^What is a B\+/).count();
+    const halfStarted = await lp.locator("#demo").getByText(/^What do my CSC 420/).count();
     check(halfStarted === 0, "demo stays still while only half of it is on screen");
     await lp.evaluate(() => window.scrollTo(0, 0));
     await lp.waitForTimeout(400);
@@ -164,10 +164,14 @@ async function main() {
     check(await lp.getByRole("button", { name: /^Watch the demo, \d+:\d\d$/ }).isVisible(), "scrolling to the demo doesn't play it; the poster shows Watch and its length");
     await lp.evaluate(() => window.scrollTo(0, 0));
     await lp.waitForTimeout(400);
-    const typedBefore = await lp.locator("#demo").getByText(/^What is a B\+/).count();
+    const typedBefore = await lp.locator("#demo").getByText(/^What do my CSC 420/).count();
     await lp.getByRole("link", { name: "See how it works", exact: true }).click();
-    await lp.waitForTimeout(6500); // scroll, unzoomed opening, zoom in, type, send
-    const userBubble = await lp.locator("#demo").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
+    await lp.waitForTimeout(1800); // scroll, then the courses scene
+    check(await lp.locator("#demo").getByText("No uploads. Your slides are already here.").isVisible(), "the demo opens on the courses with caption 1 (no uploads)");
+    check(await lp.locator("#demo").getByText("4 decks · 147 slides").isVisible(), "the courses scene shows CSC 420 with its slides already there");
+    check(await lp.getByRole("button", { name: "Mute" }).isVisible(), "the playing demo has a Mute button (it has music)");
+    await lp.waitForTimeout(8000); // tap, chat opens, zoom in, type, send
+    const userBubble = await lp.locator("#demo").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What do my CSC 420 slides say about B+ tree indexes?" }).count();
     check(typedBefore === 0 && userBubble === 1, "'See how it works' scrolls to the demo, which then plays from the start", `before ${typedBefore}, sent ${userBubble}`);
     // It is a video: Pause stops it where it is, and it does not loop by itself.
     await lp.getByRole("button", { name: "Pause demo" }).click();
@@ -177,7 +181,8 @@ async function main() {
     check(await lp.getByRole("button", { name: "Play demo" }).isVisible(), "paused demo shows a Play button");
     await lp.getByRole("button", { name: "Play demo" }).click();
     const endScreen = await lp.getByRole("button", { name: /Watch again/ }).waitFor({ timeout: 20000 }).then(() => true, () => false);
-    check(endScreen, "when the demo ends it stops on a blurred end screen with a big replay button");
+    check(endScreen, "when the demo ends it stops on an end card with Watch again");
+    check(await lp.locator("#demo").getByRole("link", { name: "Try it free" }).getAttribute("href") === "/sign-up", "the end card's 'Try it free' goes to sign-up");
     await lp.goto(`${BASE}/`);
     await lp.getByRole("link", { name: "Try for free" }).first().click();
     await lp.waitForURL(/\/sign-up$/);

@@ -269,9 +269,17 @@ html { scroll-behavior: smooth; }
 .demo-zoom.is-zoomed { transform: scale(1.5); }
 /* Phones: a gentler close-up, so the whole "searching your slides ..." line still fits. */
 @media (max-width: 639px) { .demo-zoom.is-zoomed { transform: scale(1.25); } }
+/* The first question is long: a gentler close-up so all of it stays in frame. */
+.demo-zoom.is-zoomed.is-long { transform: scale(1.28); }
+@media (max-width: 639px) { .demo-zoom.is-zoomed.is-long { transform: scale(1.15); } }
 @media (prefers-reduced-motion: reduce) {
   .demo-zoom, .demo-zoom.is-zoomed { transform: none; transition: none; }
 }
+
+/* Demo: the tap on a course card (a ripple that grows and fades). */
+@keyframes demo-tap { from { transform: translateY(-50%) scale(0.3); opacity: 1; } to { transform: translateY(-50%) scale(2.2); opacity: 0; } }
+.demo-tap { animation: demo-tap 650ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .demo-tap { animation: none; opacity: 0; } }
 
 /* Demo end screen: the blur and replay button fade in rather than snap. */
 @keyframes fade-in { from { opacity: 0; } }
