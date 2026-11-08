@@ -223,7 +223,7 @@ async function main() {
       check(new URL(op.url()).pathname === "/dashboard", "after onboarding the student lands on their courses");
       await op.getByRole("list", { name: "Courses" }).getByRole("link").first().click();
       await op.waitForURL(/\/study\//);
-      await op.getByText("Studying with").waitFor();
+      await op.getByRole("button", { name: /Studying with/ }).waitFor();
       check(await op.getByRole("button", { name: /Studying with Tobi/ }).isVisible(), "Tobi is the partner in the study workspace");
       check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
       await shot(op, "9-study-empty-tobi");

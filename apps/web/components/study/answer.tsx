@@ -7,7 +7,6 @@ import {
   chipLabel,
   chipParts,
   citeKey,
-  courseColour,
   displayCode,
   isCiteHref,
   markersToLinks,
@@ -28,7 +27,7 @@ interface Props {
   partnerName?: string;
 }
 
-export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, sortOrder, onCite, partnerName = "Your study partner" }: Props) {
+export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, onCite, partnerName = "Your study partner" }: Props) {
   const byKey = new Map(citations.map((c) => [c.slide_key, c]));
   const segments = splitAnswer(text);
   // The label comes from the server (citations outside the topic), not from the model's wording.
@@ -46,7 +45,7 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
             type="button"
             onClick={() => onCite(key)}
             title={`Open ${label}`}
-            className={`mx-0.5 inline-flex max-w-[20rem] translate-y-[-1px] items-center rounded-full px-2 py-px align-middle text-[11.5px] font-medium ring-1 ring-inset transition-colors ${courseColour(sortOrder)}`}
+            className="mx-0.5 inline-flex max-w-[20rem] translate-y-[-1px] items-center rounded-full bg-sunken px-2 py-px align-middle text-[11.5px] text-ink/70 transition-colors hover:bg-pau-100 hover:text-brand"
           >
             {parts.title && <span className="min-w-0 truncate">{parts.title}</span>}
             <span className="shrink-0 whitespace-pre">{parts.title ? " · " : ""}{parts.unit}</span>

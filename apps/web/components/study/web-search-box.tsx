@@ -44,64 +44,54 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
         ev.preventDefault();
         go();
       }}
-      className="rounded-2xl bg-sunken p-2.5"
+      className="rounded-2xl bg-page px-3 pb-2 pt-2.5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]"
       aria-label="Search the web"
     >
-      <textarea
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            go();
-          }
-        }}
-        rows={2}
-        placeholder="Search the web for anything else"
-        aria-label="Search the web"
-        className="block w-full resize-none bg-transparent px-1.5 py-1 text-[14px] text-ink outline-none placeholder:text-muted"
-      />
-      <div className="mt-1.5 flex items-center gap-2">
-        <label className="relative flex items-center">
-          <span className="sr-only">Search with</span>
-          <svg className="pointer-events-none absolute left-2.5 text-muted" width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden>
-            <circle cx="8" cy="8" r="6.2" />
-            <path d="M1.8 8h12.4M8 1.8c1.8 1.8 2.6 3.9 2.6 6.2S9.8 12.4 8 14.2C6.2 12.4 5.4 10.3 5.4 8S6.2 3.6 8 1.8Z" />
-          </svg>
-          <select
-            value={engine}
-            onChange={(e) => {
-              const v = e.target.value as Engine;
-              setEngine(v);
-              try {
-                localStorage.setItem(KEY, v);
-              } catch {}
-            }}
-            className="h-8 appearance-none rounded-full bg-card py-0 pl-8 pr-7 text-[13px] text-ink ring-1 ring-line outline-none focus:ring-brand"
-          >
-            {(Object.keys(ENGINES) as Engine[]).map((k) => (
-              <option key={k} value={k}>
-                {ENGINES[k].label}
-              </option>
-            ))}
-          </select>
-          <svg className="pointer-events-none absolute right-2.5 text-muted" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-            <path d="m2 3.5 3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </label>
-        <span className="flex-1" />
+      <div className="flex items-center gap-2">
+        <svg className="shrink-0 text-muted" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M4 12h16M12 4c2.2 2.2 3.3 4.9 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-4.9-3.3-8S9.8 6.2 12 4Z" />
+        </svg>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search the web"
+          aria-label="Search the web"
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted"
+        />
         <button
           type="submit"
           disabled={!q.trim()}
           aria-label={`Search with ${ENGINES[engine].label}`}
           title={`Search with ${ENGINES[engine].label} (opens a new tab)`}
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-card text-ink ring-1 ring-line transition hover:bg-pau-50 active:scale-90 disabled:opacity-40"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink transition hover:bg-sunken active:scale-90 disabled:opacity-30"
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M3 8h10M9 4l4 4-4 4" />
           </svg>
         </button>
       </div>
+      <label className="ml-[25px] mt-1 inline-flex items-center gap-1 text-[12px] text-muted">
+        with
+        <select
+          value={engine}
+          onChange={(e) => {
+            const v = e.target.value as Engine;
+            setEngine(v);
+            try {
+              localStorage.setItem(KEY, v);
+            } catch {}
+          }}
+          aria-label="Search with"
+          className="cursor-pointer appearance-none bg-transparent pr-1 text-[12px] text-ink underline decoration-line-strong underline-offset-2 outline-none"
+        >
+          {(Object.keys(ENGINES) as Engine[]).map((k) => (
+            <option key={k} value={k}>
+              {ENGINES[k].label}
+            </option>
+          ))}
+        </select>
+      </label>
     </form>
   );
 }

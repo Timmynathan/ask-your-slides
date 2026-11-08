@@ -261,31 +261,19 @@ export function ChatPanel({
           )}
 
           {!loadingHistory && messages.length === 0 && (
-            <div className="flex flex-col items-center pt-[6vh] text-center">
-              <div className="pop-in relative max-w-md rounded-[22px] bg-page px-5 py-3.5 text-[16px] leading-relaxed text-ink ring-1 ring-line">
+            <div className="flex flex-col items-center pt-[10vh] text-center">
+              <Mascot partner={partner} size={76} mood="happy" />
+              <h2 className="mt-5 text-[28px] font-normal tracking-tight text-ink">{topic ? topic.title : course.title}</h2>
+              <p className="pop-in mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted">
                 {fill(pick(p.greetings, `${course.id}-${topic?.id ?? ""}`), studentName)}
-                <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-page ring-1 ring-line [clip-path:polygon(100%_0,100%_100%,0_100%)]" />
-              </div>
-              <div className="mt-4">
-                <Mascot partner={partner} size={112} mood="happy" />
-              </div>
-              <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-ink">
-                {topic ? topic.title : course.title}
-              </h2>
-              <p className="mx-auto mt-1.5 max-w-md text-sm text-muted">
-                {topic
-                  ? "Answers come from this topic's slides first, with a citation for every point."
-                  : "Answers come from this course's slides, with a citation for every point."}
               </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-2">
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
                 {starters.map((s) => (
                   <button
                     key={s.label}
-                    onClick={() =>
-                      s.send ? submit(s.send) : inputRef.current?.focus()
-                    }
+                    onClick={() => (s.send ? submit(s.send) : inputRef.current?.focus())}
                     disabled={capped || busy}
-                    className="rounded-full bg-card px-4 py-2 text-sm font-medium text-ink ring-1 ring-line-strong hover:bg-pau-50 hover:ring-pau-400 disabled:opacity-50"
+                    className="rounded-full bg-sunken/70 px-4 py-2 text-sm text-ink transition hover:bg-sunken active:scale-95 disabled:opacity-50"
                   >
                     {s.label}
                   </button>
@@ -298,15 +286,14 @@ export function ChatPanel({
             {messages.map((m) =>
               m.role === "user" ? (
                 <li key={m.id} data-message="user" className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-[20px] rounded-br-md bg-brand px-4 py-2.5 text-[15px] leading-relaxed text-brand-ink">
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-[22px] bg-sunken px-4 py-2.5 text-[15px] leading-relaxed text-ink">
                     {textOf(m)}
                   </div>
                 </li>
               ) : (
                 <li key={m.id} data-message="assistant" className="flex gap-3">
-                  <Mascot partner={partner} size={32} animated={false} className="mt-0.5 hidden sm:block" />
+                  <Mascot partner={partner} size={28} animated={false} className="mt-0.5 hidden sm:block" />
                   <div className="min-w-0 flex-1">
-                  <p className="mb-1 text-xs font-medium text-muted">{p.name}</p>
                   <Answer
                     text={textOf(m)}
                     citations={m.metadata?.citations ?? []}
@@ -325,7 +312,7 @@ export function ChatPanel({
 
           {waitingForWords && (
             <p className="mt-6 flex items-center gap-3 text-sm text-muted" role="status">
-              <Mascot partner={partner} size={36} mood="thinking" />
+              <Mascot partner={partner} size={28} mood="thinking" />
               <span className="flex items-center gap-1.5">
                 {pick(p.thinking, String(messages.length))}
                 <span className="sr-only">Searching your slides…</span>
@@ -348,7 +335,7 @@ export function ChatPanel({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-line bg-card px-4 py-3">
+      <div className="shrink-0 bg-page px-4 pb-4 pt-2">
         <form
           className="mx-auto w-full max-w-3xl lg:px-4"
           onSubmit={(e) => {
@@ -358,7 +345,7 @@ export function ChatPanel({
           }}
         >
           {capped ? (
-            <div className="flex items-center gap-3 rounded-[20px] bg-page px-4 py-3 text-sm text-ink ring-1 ring-line">
+            <div className="flex items-center gap-3 rounded-[28px] bg-sunken/70 px-4 py-3 text-sm text-ink">
               <Mascot partner={partner} size={36} />
               <p>
                 {fill(p.capped, studentName)}
@@ -366,7 +353,7 @@ export function ChatPanel({
               </p>
             </div>
           ) : (
-            <div className="flex items-end gap-2 rounded-[22px] border border-line-strong bg-card py-2 pl-4 pr-2 shadow-sm transition-shadow focus-within:border-brand focus-within:ring-4 focus-within:ring-pau-200">
+            <div className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-5 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
               <textarea
                 ref={inputRef}
                 value={input}
@@ -391,7 +378,7 @@ export function ChatPanel({
                       ? `Ask about ${topic.title}…`
                       : `Ask about ${course.title}…`
                 }
-                className="max-h-48 min-h-[28px] flex-1 resize-none bg-transparent py-1 text-[15px] outline-none [field-sizing:content] placeholder:text-muted/70"
+                className="max-h-48 min-h-[28px] flex-1 resize-none self-center bg-transparent py-1.5 text-[15px] outline-none [field-sizing:content] placeholder:text-muted"
                 aria-label="Your question"
               />
               {dictation.supported && !busy && (
@@ -401,8 +388,8 @@ export function ChatPanel({
                   aria-label={dictation.listening ? "Stop voice typing" : "Speak your question"}
                   aria-pressed={dictation.listening}
                   title={dictation.listening ? "Stop" : "Speak your question"}
-                  className={`relative grid h-8 w-8 shrink-0 place-items-center rounded-full transition active:scale-90 ${
-                    dictation.listening ? "mic-live bg-red-500 text-white" : "text-muted hover:bg-sunken hover:text-ink"
+                  className={`relative grid h-9 w-9 shrink-0 place-items-center rounded-full transition active:scale-90 ${
+                    dictation.listening ? "mic-live bg-red-500 text-white" : "text-ink/70 hover:bg-black/5 hover:text-ink"
                   }`}
                 >
                   {dictation.listening ? (
@@ -419,34 +406,39 @@ export function ChatPanel({
               )}
               {busy ? (
                 sending || status === "submitted" ? (
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-ink opacity-80"
-                    role="status"
-                  >
-                    <Spinner className="h-3.5 w-3.5" />
-                    Sending
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-white" role="status">
+                    <Spinner className="h-4 w-4" />
+                    <span className="sr-only">Sending</span>
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => stop()}
-                    className="rounded-full px-4 py-1.5 text-sm font-medium text-ink/80 hover:bg-sunken"
+                    aria-label="Stop"
+                    title="Stop"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-page transition active:scale-90"
                   >
-                    Stop
+                    <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden>
+                      <rect x="1.5" y="1.5" width="9" height="9" rx="1.5" fill="currentColor" />
+                    </svg>
                   </button>
                 )
               ) : (
                 <button
                   type="submit"
                   disabled={!input.trim()}
-                  className="rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-ink hover:opacity-90 disabled:opacity-40"
+                  aria-label="Send"
+                  title="Send"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:opacity-90 active:scale-90 disabled:bg-black/10 disabled:text-white"
                 >
-                  Send
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 19V5M6 11l6-6 6 6" />
+                  </svg>
                 </button>
               )}
             </div>
           )}
-          <p className="mt-1.5 flex justify-between text-[11px] text-muted">
+          <p className="mt-1.5 flex min-h-[16px] justify-between px-5 text-[11px] text-muted">
             {dictation.error ? (
               <span role="alert" className="text-red-700 dark:text-red-400">{dictation.error}</span>
             ) : dictation.listening ? (

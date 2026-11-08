@@ -89,65 +89,46 @@ export function Workspace(data: WorkspaceData) {
   };
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-tint text-ink">
-      {/* Top bar */}
-      <header className="flex h-16 shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-5">
-        <button
-          className="rounded-full p-2 text-muted hover:bg-sunken lg:hidden"
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Open topics"
-        >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-            <path d="M3 5h14M3 10h14M3 15h14" strokeLinecap="round" />
-          </svg>
-        </button>
-        <Link href="/dashboard" aria-label="All courses" title="All courses" className="hidden h-10 w-10 shrink-0 place-items-center rounded-full bg-card ring-1 ring-line transition hover:bg-sunken active:scale-95 sm:grid">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
+      {/* Top bar: as quiet as My courses. */}
+      <header className="flex h-16 shrink-0 items-center gap-1 px-3 sm:gap-2 sm:px-5">
+        <IconButton label="Open topics" onClick={() => setDrawerOpen(true)} className="lg:hidden">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </IconButton>
+        <Link href="/dashboard" aria-label="All courses" title="All courses" className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-sunken active:scale-95">
           <LogoMark size={22} />
         </Link>
-        <div className="min-w-0 sm:ml-1">
-          <h1 className="truncate text-[18px] leading-tight text-ink sm:text-[22px]">{course.title}</h1>
-          <p className="truncate text-xs text-muted">
-            <Link href="/dashboard" className="hover:text-ink hover:underline">My courses</Link> / {displayCode(course.code)}
-          </p>
-        </div>
+        <h1 className="min-w-0 truncate text-[17px] text-ink sm:ml-1 sm:text-[19px]">
+          {course.title}
+          <span className="ml-2 hidden text-sm text-muted sm:inline">{displayCode(course.code)}</span>
+        </h1>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <button
-            type="button"
-            onClick={invite}
-            aria-label="Invite coursemates on WhatsApp"
-            className="flex items-center gap-2 rounded-full px-2.5 py-2 text-[15px] text-ink transition hover:bg-sunken active:scale-95 sm:px-3.5"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden className="text-[#25D366]">
-              <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3a.5.5 0 0 0 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4 5.2 5.2 0 0 0 3.2.7 2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.3-.2-.5-.3Z" />
-            </svg>
-            <span className="hidden md:inline">Invite coursemates</span>
-          </button>
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
+            <path d="M15 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 4 17.5V19M9.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18.5 8v6M21.5 11h-6" />
+          </IconButton>
           <button
             type="button"
             onClick={() => setPickingPartner(true)}
             aria-label={`Studying with ${p.name}. Change study partner`}
-            className="flex items-center gap-2 rounded-full bg-card py-1 pl-1 pr-1 ring-1 ring-line transition hover:bg-sunken active:scale-95 sm:pr-3.5"
+            title={`Studying with ${p.name} · change`}
+            className="grid h-10 w-10 place-items-center rounded-full transition hover:bg-sunken active:scale-90"
           >
-            <Mascot key={partner} partner={partner} size={30} animated={false} className="pop-in" />
-            <span className="hidden text-left leading-tight sm:block">
-              <span className="block text-[10px] uppercase tracking-wide text-muted">Studying with</span>
-              <span className="block text-sm font-medium text-ink">{p.name}</span>
-            </span>
+            <Mascot key={partner} partner={partner} size={32} animated={false} className="pop-in" />
           </button>
           <AccountMenu user={data.user} />
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-3 lg:px-3 lg:pb-3">
-        {/* Topics: a panel on laptops, a drawer below lg */}
+      <div className="flex min-h-0 flex-1 gap-2 lg:px-3 lg:pb-3">
+        {/* Topics: a soft panel on laptops, a drawer below lg */}
         <div
-          className={`fixed inset-0 z-30 bg-black/30 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          className={`fixed inset-0 z-30 bg-black/20 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
           onClick={() => setDrawerOpen(false)}
           aria-hidden
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[300px] transform bg-card transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[24px] lg:ring-1 lg:ring-line ${
+          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-page transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] lg:bg-sunken/60 ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -162,21 +143,15 @@ export function Workspace(data: WorkspaceData) {
           />
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-card lg:rounded-[24px] lg:ring-1 lg:ring-line">
-          <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-5">
-            <p key={`${courseId}-${topicId ?? "course"}`} className="title-in min-w-0 flex-1 truncate text-sm font-medium text-ink">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-page">
+          <div className="flex h-10 shrink-0 items-center gap-2 px-5">
+            <p key={`${courseId}-${topicId ?? "course"}`} className="title-in min-w-0 flex-1 truncate text-[13px] text-muted">
               {scopeTitle}
             </p>
-            <button
-              onClick={() => setSourcesOpen(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] text-ink ring-1 ring-line transition hover:bg-sunken active:scale-95 xl:hidden"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden>
-                <path d="M4 1.5h5.5L12.5 4.5v10h-8.5z" />
-                <path d="M9.5 1.5v3h3" />
-              </svg>
-              Sources
-            </button>
+            <IconButton label="Sources" onClick={() => setSourcesOpen(true)} className="xl:hidden">
+              <path d="M7 3.5h7l4 4V20.5H7z" />
+              <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
+            </IconButton>
           </div>
 
           <div key={panelKey} className="panel-in flex min-h-0 flex-1 flex-col">
@@ -203,7 +178,6 @@ export function Workspace(data: WorkspaceData) {
             topics={topics}
             materials={data.materials}
             topic={topic}
-            partnerName={p.name}
             open={sourcesOpen}
             onClose={() => setSourcesOpen(false)}
             onOpenSource={(key) => {
@@ -240,5 +214,22 @@ export function Workspace(data: WorkspaceData) {
       )}
 
     </div>
+  );
+}
+
+/** Round, borderless icon button with a line icon (24px grid), as on My courses. */
+function IconButton({ label, onClick, className = "", children }: { label: string; onClick(): void; className?: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition hover:bg-sunken active:scale-90 ${className}`}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        {children}
+      </svg>
+    </button>
   );
 }

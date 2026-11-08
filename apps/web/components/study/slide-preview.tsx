@@ -63,9 +63,9 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
       <aside
         role="dialog"
         aria-label="Slide preview"
-        className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-line bg-card shadow-xl lg:static lg:z-auto lg:h-auto lg:w-[440px] lg:shrink-0 lg:overflow-hidden lg:rounded-[24px] lg:border-0 lg:shadow-none lg:ring-1 lg:ring-line xl:w-[520px]"
+        className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-line bg-card shadow-xl lg:static lg:z-auto lg:h-auto lg:w-[440px] lg:shrink-0 lg:overflow-hidden lg:rounded-[28px] lg:border-0 lg:bg-sunken/60 lg:shadow-none xl:w-[520px]"
       >
-        <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line px-4">
+        <div className="flex h-16 shrink-0 items-center justify-between gap-3 px-5">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{data?.material.title ?? "Loading…"}</p>
             {data && (
@@ -75,7 +75,7 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
               </p>
             )}
           </div>
-          <button onClick={onClose} className="rounded-md p-1.5 text-muted hover:bg-sunken" aria-label="Close preview">
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-black/5" aria-label="Close preview">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
               <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" strokeLinecap="round" />
             </svg>
@@ -93,7 +93,7 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
                 <img
                   src={data.image_url}
                   alt={data.title ? `${unit} ${data.slide_number}: ${data.title}` : `${unit} ${data.slide_number}`}
-                  className="w-full rounded-lg border border-line bg-card"
+                  className="w-full rounded-xl bg-card shadow-[0_1px_3px_rgb(0_0_0/0.08)]"
                 />
               ) : (
                 <p className="text-sm text-muted">No image for this {unit}.</p>
@@ -104,7 +104,7 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
                     onClick={() => onNavigate(slideKey.replace(/-\d+$/, `-${data.slide_number - 1}`))}
                     disabled={data.slide_number <= 1}
                     aria-label={`Previous ${unit}`}
-                    className="grid h-9 w-9 place-items-center rounded-full ring-1 ring-line transition hover:bg-sunken active:scale-90 disabled:opacity-30"
+                    className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5 active:scale-90 disabled:opacity-30"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M10 3 5 8l5 5" />
@@ -117,7 +117,7 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
                     onClick={() => onNavigate(slideKey.replace(/-\d+$/, `-${data.slide_number + 1}`))}
                     disabled={data.slide_number >= data.material.page_count}
                     aria-label={`Next ${unit}`}
-                    className="grid h-9 w-9 place-items-center rounded-full ring-1 ring-line transition hover:bg-sunken active:scale-90 disabled:opacity-30"
+                    className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5 active:scale-90 disabled:opacity-30"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="m6 3 5 5-5 5" />
