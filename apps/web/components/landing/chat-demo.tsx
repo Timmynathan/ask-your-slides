@@ -290,6 +290,7 @@ export function ChatDemo() {
               <button
                 type="button"
                 onClick={() => control.current.play(true)}
+                aria-label={started ? "Watch again" : "Watch the demo"}
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition active:scale-95"
               >
                 <span className="cue-ring grid h-20 w-20 place-items-center rounded-full bg-brand text-white shadow-lg transition group-hover:scale-105 sm:h-24 sm:w-24">
@@ -303,10 +304,13 @@ export function ChatDemo() {
                     </svg>
                   )}
                 </span>
-                <span className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/90 px-5 py-2.5 shadow-sm ring-1 ring-black/5">
-                  <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">{started ? "Watch again" : "Watch the demo"}</span>
-                  <span className="text-sm text-muted">{Math.round(TOTAL / 1000)} seconds · ask, see the slide, get it explained</span>
-                </span>
+                {/* End screen: just the replay button. Poster: the button and what the demo shows. */}
+                {!started && (
+                  <span className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/90 px-5 py-2.5 shadow-sm ring-1 ring-black/5">
+                    <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Watch the demo</span>
+                    <span className="text-sm text-muted">{Math.round(TOTAL / 1000)} seconds · ask, see the slide, get it explained</span>
+                  </span>
+                )}
               </button>
             </div>
           )}
