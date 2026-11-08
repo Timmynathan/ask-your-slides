@@ -295,6 +295,23 @@ async function main() {
     }
 
     const cookies = await signInCookies(email);
+
+    // Create account with an email that already has an account: no code, a clear "Log in" instead.
+    {
+      const ectx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const ep = await ectx.newPage();
+      await ep.goto(`${BASE}/sign-up`);
+      await ep.locator("#email").fill(email);
+      const otp = ep.waitForResponse((r) => r.url().endsWith("/api/auth/otp"));
+      await ep.getByRole("button", { name: "Get my code" }).click();
+      const otpStatus = (await otp).status();
+      await ep.getByText("You already have an account.").waitFor({ timeout: 10000 });
+      check(otpStatus === 409, "Create account with an existing email sends no code", String(otpStatus));
+      await ep.getByRole("status").getByRole("button", { name: "Log in" }).click();
+      check((await ep.getByRole("tab", { name: "Log in" }).getAttribute("aria-selected")) === "true" && (await ep.locator("#email").inputValue()) === email,
+        "'You already have an account' → Log in, with the email filled in");
+      await ectx.close();
+    }
     // Nine earlier questions (in another course), so the first question below is the 10th and
     // "Is this helping you study?" comes due.
     const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();

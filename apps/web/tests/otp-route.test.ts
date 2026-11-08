@@ -4,6 +4,8 @@ const signInWithOtp = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({ auth: { signInWithOtp } }),
 }));
+const confirmedAccountExists = vi.fn();
+vi.mock("@/lib/auth/account", () => ({ confirmedAccountExists: (e: string) => confirmedAccountExists(e) }));
 
 const { POST } = await import("@/app/api/auth/otp/route");
 
@@ -16,7 +18,42 @@ function request(body: unknown) {
 }
 
 describe("POST /api/auth/otp", () => {
-  beforeEach(() => signInWithOtp.mockReset());
+  beforeEach(() => {
+    signInWithOtp.mockReset();
+    confirmedAccountExists.mockReset();
+  });
+
+  it("Create account with an email that already has an account: 409, no code sent", async () => {
+    confirmedAccountExists.mockResolvedValue(true);
+    const res = await POST(request({ email: "Student@pau.edu.ng", intent: "signup" }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("account_exists");
+    expect(confirmedAccountExists).toHaveBeenCalledWith("student@pau.edu.ng");
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("Create account with a new email: sends the code", async () => {
+    confirmedAccountExists.mockResolvedValue(false);
+    signInWithOtp.mockResolvedValue({ error: null });
+    const res = await POST(request({ email: "new@pau.edu.ng", intent: "signup" }));
+    expect(res.status).toBe(200);
+    expect(signInWithOtp).toHaveBeenCalled();
+  });
+
+  it("Forgot password for an email with no account: 404, no code sent", async () => {
+    confirmedAccountExists.mockResolvedValue(false);
+    const res = await POST(request({ email: "nobody@pau.edu.ng", intent: "reset" }));
+    expect(res.status).toBe(404);
+    expect((await res.json()).code).toBe("no_account");
+    expect(signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it("if the account lookup fails, still sends the code (never blocks sign-up)", async () => {
+    confirmedAccountExists.mockRejectedValue(new Error("down"));
+    signInWithOtp.mockResolvedValue({ error: null });
+    const res = await POST(request({ email: "x@pau.edu.ng", intent: "signup" }));
+    expect(res.status).toBe(200);
+  });
 
   it("rejects gmail with 'Use your PAU email.' and never calls Supabase (no email sent)", async () => {
     const res = await POST(request({ email: "someone@gmail.com" }));

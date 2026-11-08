@@ -25,6 +25,9 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
   const [busy, setBusy] = useState(false);
   // Guards repeat presses even before React has re-rendered the disabled button.
   const inFlight = useRef(false);
+  const lastCode = useRef<string | null>(null); // machine-readable error code from the last request
+  // "You already have an account" / "No account yet": a notice with the right next step, not an error.
+  const [notice, setNotice] = useState<{ kind: "exists" | "none"; email: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   // Remember the email on this browser.
   const [savedEmail, setSavedEmail] = useState("");
@@ -48,6 +51,7 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
 
   function go(next: Step) {
     setError(null);
+    setNotice(null);
     setShowPassword(false);
     setStep(next);
   }
@@ -64,6 +68,7 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
     try {
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
+      lastCode.current = res.ok ? null : (data.code ?? null);
       if (!res.ok) setError(data.error ?? "Something went wrong. Try again.");
       return res.ok ? data : null;
     } catch {
@@ -102,8 +107,17 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
 
   async function sendCode(form: FormData) {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
-    const data = await post("/api/auth/otp", { email });
-    if (!data) return;
+    setNotice(null);
+    const data = await post("/api/auth/otp", { email, intent: mode === "reset" ? "reset" : "signup" });
+    if (!data) {
+      if (lastCode.current === "account_exists" || lastCode.current === "no_account") {
+        setError(null);
+        remember(email);
+        setSavedEmail(email);
+        setNotice({ kind: lastCode.current === "account_exists" ? "exists" : "none", email });
+      }
+      return;
+    }
     remember(email);
     setSavedEmail(email);
     go({ kind: "code", email });
@@ -230,6 +244,35 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
             </button>
           </div>
         </form>
+      )}
+
+      {step.kind === "code-email" && notice && (
+        <div role="status" className="mb-5 rounded-2xl bg-pau-50 p-4 ring-1 ring-pau-100">
+          {notice.kind === "exists" ? (
+            <>
+              <p className="font-medium text-ink">You already have an account.</p>
+              <p className="mt-1 text-sm text-muted">
+                <span className="font-medium text-ink">{notice.email}</span> is already signed up. Log in with your password.
+              </p>
+              <button type="button" onClick={() => switchMode("login")} className="mt-4 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-white transition hover:opacity-90 active:scale-[0.98]">
+                Log in
+              </button>
+              <button type="button" onClick={() => switchMode("reset")} className={`${link} mt-3 block w-full text-center`}>
+                Forgot your password?
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-ink">There&apos;s no account for this email yet.</p>
+              <p className="mt-1 text-sm text-muted">
+                Create one with <span className="font-medium text-ink">{notice.email}</span>: it takes a minute.
+              </p>
+              <button type="button" onClick={() => switchMode("signup")} className="mt-4 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-white transition hover:opacity-90 active:scale-[0.98]">
+                Create account
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       {step.kind === "code-email" && (
