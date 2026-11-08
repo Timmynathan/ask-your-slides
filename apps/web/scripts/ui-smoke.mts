@@ -73,6 +73,9 @@ async function waitForServer() {
 async function main() {
   const env = { ...process.env };
   for (const k of Object.keys(env)) if (/SUPABASE|ANTHROPIC|VOYAGE|DATABASE_URL|PRIVACY/.test(k)) delete env[k];
+  // A throwaway admin for the /admin checks (only on the local server: the live site's ADMIN_EMAILS is the owner's).
+  const adminEmail = `ui-admin-${Date.now()}@pau.edu.ng`;
+  env.ADMIN_EMAILS = adminEmail;
   const server = process.env.E2E_BASE_URL ? null : spawn("npx", ["next", "start", "-p", String(PORT)], {
     cwd: path.resolve(import.meta.dirname, ".."), stdio: "ignore", env,
   });
@@ -453,6 +456,35 @@ async function main() {
     check((await otherChip.count()) > 0, "off-topic chips name the other material, slide number never cut", (await otherChip.first().textContent().catch(() => "none")) ?? "");
     await page.locator("main li[data-message]:visible").last().scrollIntoViewIfNeeded();
     await shot(page, "3b-laptop-fallback");
+
+    // Admin dashboard: hidden from students; the owner sees the pilot, including this test's activity.
+    console.log("\nAdmin dashboard");
+    const adminRes = await page.goto(`${BASE}/admin`);
+    check(adminRes?.status() === 404, "a student opening /admin gets 'not found'", String(adminRes?.status()));
+    if (!process.env.E2E_BASE_URL) {
+      try {
+        const actx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+        await actx.addCookies(await signInCookies(adminEmail));
+        const ap = await actx.newPage();
+        ap.on("pageerror", (e) => consoleErrors.push(e.message));
+        const r = await ap.goto(`${BASE}/admin?range=7d`);
+        await ap.getByRole("heading", { name: "Pilot dashboard" }).waitFor();
+        check(r?.status() === 200, "the owner sees the admin dashboard");
+        const questionsTile = await ap.getByText("Questions", { exact: true }).first().locator("..").locator("p").nth(1).textContent();
+        check(Number((questionsTile ?? "0").replace(/,/g, "")) >= 11, "headline numbers include this test's questions", `questions tile: ${questionsTile}`);
+        const feedback = ap.locator("#feedback");
+        check((await feedback.getByText("What does ACID stand for?").count()) >= 1, "the thumbs down from this test is in the feedback feed");
+        check((await ap.locator("#students").getByText(email).count()) === 1, "the test student is in the students table");
+        await feedback.getByText("What does ACID stand for?").first().click();
+        check(await feedback.locator("details[open] pre").first().isVisible(), "a feedback item opens to show the full answer");
+        await shot(ap, "10-admin");
+        await ap.locator("#answers").scrollIntoViewIfNeeded();
+        await shot(ap, "11-admin-answers");
+        await actx.close();
+      } finally {
+        await cleanup(adminEmail);
+      }
+    }
 
     console.log("\nPhone 375×812");
     const phone = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
