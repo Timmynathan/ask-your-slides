@@ -128,11 +128,12 @@ async function main() {
     const thirtyDays = 60 * 60 * 24 * 30;
     check(jar.maxAges.length > 0 && jar.maxAges.every((a) => a === thirtyDays), "session cookie lasts 30 days", `max-age ${jar.maxAges.join(",")}`);
 
-    // 5a. The display-name step renders for a first-time student.
+    // 5a. The name + department step renders for a first-time student.
     res = await fetch(`${BASE}/welcome`, { headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
     const welcome = await res.text();
-    check(res.status === 200 && welcome.includes("What should we call you"), "first-time student sees the display-name step", String(res.status));
+    check(res.status === 200 && welcome.includes("Tell us about you") && welcome.includes("What are you studying?"),
+      "first-time student sees the name + department step", String(res.status));
 
     // 5. Signed in (after the welcome step): the study page shows the student and every course,
     //    read through RLS. (/dashboard forwards here.)
