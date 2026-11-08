@@ -240,6 +240,16 @@ async function main() {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     await ctx.addCookies(cookies);
     const page = await ctx.newPage();
+    // Voice typing: a stand-in for the browser's speech recognition (headless Chrome can't listen).
+    await page.addInitScript(() => {
+      class FakeRecognition {
+        onresult: any = null; onend: any = null; onerror: any = null; lang = ""; continuous = false; interimResults = false;
+        start() { setTimeout(() => this.onresult?.({ resultIndex: 0, results: [Object.assign([{ transcript: "what is a B tree index" }], { isFinal: true })] }), 200); }
+        stop() { setTimeout(() => this.onend?.(), 50); }
+        abort() { this.onend?.(); }
+      }
+      (window as any).SpeechRecognition = FakeRecognition;
+    });
     page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
     page.on("pageerror", (e) => consoleErrors.push(e.message));
 
@@ -274,6 +284,13 @@ async function main() {
     await page.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     check(await page.getByRole("button", { name: "Summarize this topic" }).isVisible(), "topic empty state shows the three starters");
+    await page.getByRole("button", { name: "Speak your question" }).click();
+    await page.getByRole("status").filter({ hasText: "Listening" }).waitFor({ timeout: 3000 });
+    await page.waitForFunction(() => (document.querySelector("textarea[aria-label='Your question']") as HTMLTextAreaElement)?.value.includes("B tree"), null, { timeout: 3000 });
+    await page.getByRole("button", { name: "Stop voice typing" }).click();
+    await page.getByRole("button", { name: "Speak your question" }).waitFor({ timeout: 3000 });
+    check((await page.locator("textarea[aria-label='Your question']:visible").inputValue()) === "what is a B tree index", "voice typing writes the spoken question into the box (student still presses Send)");
+    await page.locator("textarea[aria-label='Your question']:visible").fill("");
     // Sources: the materials behind this topic, on the right; a source opens in the slide viewer.
     const sources = page.getByRole("complementary", { name: "Sources" });
     const { data: topicMats } = await admin.from("materials").select("title, topics!inner(title), courses!inner(code)").eq("courses.code", "CSC420").eq("topics.title", "Transactions and indexing");

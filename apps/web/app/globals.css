@@ -275,3 +275,8 @@ html { scroll-behavior: smooth; }
 .loading-dots > span:nth-child(3) { animation-delay: 0.3s; }
 @keyframes dot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .loading-dots > span { animation: none; opacity: 0.7; } }
+
+/* Voice typing: a soft red ring pulses out from the mic while it listens. */
+@keyframes mic-live { 0% { box-shadow: 0 0 0 0 rgb(239 68 68 / 0.45); } 100% { box-shadow: 0 0 0 10px rgb(239 68 68 / 0); } }
+.mic-live { animation: mic-live 1.3s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .mic-live { animation: none; } }

@@ -9,6 +9,7 @@ import { Mascot } from "@/components/mascot/mascot";
 import { Spinner } from "@/components/ui/spinner";
 import { fill, PARTNERS, pick, type PartnerId } from "@/lib/partners";
 import { Answer } from "./answer";
+import { useDictation } from "@/lib/ui/use-dictation";
 
 type Meta = {
   citations?: CitationInfo[];
@@ -68,6 +69,7 @@ export function ChatPanel({
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [left, setLeft] = useState(remaining);
   const [input, setInput] = useState("");
+  const dictation = useDictation(setInput);
   // Set the moment Send (or a starter) is pressed, before the request starts streaming, so the
   // button reacts at once and a second press can't send the question twice.
   const [sending, setSending] = useState(false);
@@ -351,6 +353,7 @@ export function ChatPanel({
           className="mx-auto w-full max-w-3xl lg:px-4"
           onSubmit={(e) => {
             e.preventDefault();
+            dictation.stop();
             submit(input);
           }}
         >
@@ -375,19 +378,45 @@ export function ChatPanel({
                     !e.nativeEvent.isComposing
                   ) {
                     e.preventDefault();
+                    dictation.stop();
                     submit(input);
                   }
                 }}
                 rows={1}
                 maxLength={4000}
                 placeholder={
-                  topic
-                    ? `Ask about ${topic.title}…`
-                    : `Ask about ${course.title}…`
+                  dictation.listening
+                    ? "Listening… speak your question"
+                    : topic
+                      ? `Ask about ${topic.title}…`
+                      : `Ask about ${course.title}…`
                 }
                 className="max-h-48 min-h-[28px] flex-1 resize-none bg-transparent py-1 text-[15px] outline-none [field-sizing:content] placeholder:text-muted/70"
                 aria-label="Your question"
               />
+              {dictation.supported && !busy && (
+                <button
+                  type="button"
+                  onClick={() => (dictation.listening ? dictation.stop() : dictation.start(input))}
+                  aria-label={dictation.listening ? "Stop voice typing" : "Speak your question"}
+                  aria-pressed={dictation.listening}
+                  title={dictation.listening ? "Stop" : "Speak your question"}
+                  className={`relative grid h-8 w-8 shrink-0 place-items-center rounded-full transition active:scale-90 ${
+                    dictation.listening ? "mic-live bg-red-500 text-white" : "text-muted hover:bg-sunken hover:text-ink"
+                  }`}
+                >
+                  {dictation.listening ? (
+                    <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+                      <rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+                      <rect x="7" y="2.5" width="6" height="10" rx="3" />
+                      <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" />
+                    </svg>
+                  )}
+                </button>
+              )}
               {busy ? (
                 sending || status === "submitted" ? (
                   <span
@@ -418,9 +447,15 @@ export function ChatPanel({
             </div>
           )}
           <p className="mt-1.5 flex justify-between text-[11px] text-muted">
-            <span className="hidden sm:inline">
-              Enter to send · Shift+Enter for a new line
-            </span>
+            {dictation.error ? (
+              <span role="alert" className="text-red-700 dark:text-red-400">{dictation.error}</span>
+            ) : dictation.listening ? (
+              <span role="status" className="text-ink">Listening… tap the red button when you&apos;re done, then Send.</span>
+            ) : (
+              <span className="hidden sm:inline">
+                Enter to send · Shift+Enter for a new line{dictation.supported ? " · 🎤 to speak" : ""}
+              </span>
+            )}
             {!capped && left < 10 && (
               <span>
                 {left} message{left === 1 ? "" : "s"} left today
