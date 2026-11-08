@@ -216,6 +216,9 @@ async function main() {
       check(await op.getByText("Tolu, who do you want to study with?").isVisible(), "partner step greets the student by name");
       check((await op.getByRole("radio").count()) === 4, "four study partners to choose from");
       check((await op.getByText(/^Best for:/).count()) === 4, "each partner says what they're best for");
+      check((await op.getByRole("radio", { name: /Zara/ }).getAttribute("aria-checked")) === "true" && (await op.getByText("Picked for you").isVisible()),
+        "Zara is picked by default and marked 'Picked for you'");
+      check(await op.getByRole("button", { name: "Study with Zara" }).isEnabled(), "the student can continue straight away with Zara");
       await shot(op, "7-onboarding-choose");
       await op.getByRole("radio", { name: /Tobi/ }).click();
       check((await op.getByRole("radio", { name: /Tobi/ }).getAttribute("aria-checked")) === "true", "choosing a partner selects it");

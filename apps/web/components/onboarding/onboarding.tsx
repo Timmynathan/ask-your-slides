@@ -8,6 +8,10 @@ import { BusyLabel } from "@/components/ui/spinner";
 import { fill, PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
 import { DEPARTMENTS } from "@/lib/departments";
 
+const DEFAULT_PARTNER: PartnerId = "zara";
+// The default first, so it is the first card a student sees (also on a phone).
+const ORDER: PartnerId[] = [DEFAULT_PARTNER, ...PARTNER_IDS.filter((id) => id !== DEFAULT_PARTNER)];
+
 type Step = "name" | "partner" | "hello";
 
 // First words from the chosen partner. {department} comes from the courses' data, never hard-coded.
@@ -37,7 +41,8 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
   const [studying, setStudying] = useState(initialDepartment ?? "");
   // The partner names what the student chose; before that, the department from the courses data.
   const department = studying || courseDepartment;
-  const [partner, setPartner] = useState<PartnerId | null>(initialPartner);
+  // Zara (the all-rounder) is pre-selected so a student can just continue: least friction.
+  const [partner, setPartner] = useState<PartnerId | null>(initialPartner ?? DEFAULT_PARTNER);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -146,12 +151,16 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
             <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
-            <p className="mx-auto mt-2 max-w-xl text-muted">Pick the style you enjoy. Every partner answers from your school slides and cites every point.</p>
+            <p className="mx-auto mt-2 max-w-xl text-muted">
+              We&apos;ve picked <span className="font-medium text-ink">Zara</span> for you: a bit of everything. Happy with her? Just
+              continue, or tap someone else.
+            </p>
 
             <div role="radiogroup" aria-label="Study partners" className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {PARTNER_IDS.map((id) => {
+              {ORDER.map((id) => {
                 const p = PARTNERS[id];
                 const selected = partner === id;
+                const isDefault = id === DEFAULT_PARTNER;
                 return (
                   <button
                     key={id}
@@ -170,6 +179,11 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
                         </svg>
                       )}
                     </span>
+                    {isDefault && (
+                      <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white">
+                        ✦ Picked for you
+                      </span>
+                    )}
                     <span className={selected ? "pop-in" : ""} key={selected ? "on" : "off"}>
                       <Mascot partner={id} size={108} mood={selected ? "happy" : "idle"} />
                     </span>
@@ -194,17 +208,17 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
               })}
             </div>
 
-            <p className="mx-auto mt-6 max-w-xl text-sm text-muted">
-              Not sure? Try switching as you go: Ada while learning a topic, Dr. Musa the week before the exam. You can change
-              from the sidebar any time.
-            </p>
-            <button
-              onClick={submitPartner}
-              disabled={!partner || busy}
-              className="mt-10 rounded-full bg-brand px-10 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-40"
-            >
-              <BusyLabel busy={busy} label={chosen ? `Study with ${chosen.name}` : "Pick a partner"} busyLabel="Saving…" />
-            </button>
+            <p className="mx-auto mt-6 max-w-xl text-sm text-muted">You can change your study partner any time.</p>
+            {/* Pinned to the bottom on phones, so continuing is always one tap away. */}
+            <div className="sticky bottom-4 z-10 mt-8 flex justify-center sm:static">
+              <button
+                onClick={submitPartner}
+                disabled={!partner || busy}
+                className="rounded-full bg-brand px-10 py-3.5 text-base font-medium text-brand-ink shadow-lg transition hover:opacity-90 active:scale-95 disabled:opacity-40 sm:shadow-none"
+              >
+                <BusyLabel busy={busy} label={chosen ? `Study with ${chosen.name}` : "Pick a partner"} busyLabel="Saving…" />
+              </button>
+            </div>
           </div>
         )}
 

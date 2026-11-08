@@ -1,12 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isAdminEmail } from "@/lib/admin";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
 const PUBLIC_PATHS = ["/manifest.webmanifest", "/sign-in", "/api/auth/otp", "/api/auth/verify", "/api/auth/password"];
 
 export async function proxy(request: NextRequest) {
-  const { response, userId } = await updateSession(request);
+  const { response, userId, email } = await updateSession(request);
   const { pathname } = request.nextUrl;
+  // /admin doesn't exist for anyone but the owner: a real 404 before any rendering (signed in or
+  // not). The page checks again on the server.
+  if ((pathname === "/admin" || pathname.startsWith("/admin/")) && !isAdminEmail(email)) {
+    return new NextResponse("Not found", { status: 404, headers: { "Content-Type": "text/plain" } });
+  }
   // "/" is the landing page for visitors; signed-in students go straight to their courses.
   const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 

@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabasePublishableKey, supabaseUrl, withSessionLifetime } from "./config";
 
-/** Refreshes the auth session cookie on every request and returns the signed-in user, if any. */
+/** Refreshes the auth session cookie on every request and returns the signed-in user (id, email), if any. */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const supabase = createServerClient(supabaseUrl(), supabasePublishableKey(), {
@@ -20,5 +20,9 @@ export async function updateSession(request: NextRequest) {
   });
   // getClaims() verifies the JWT (signature + expiry) and refreshes it if needed.
   const { data } = await supabase.auth.getClaims();
-  return { response, userId: (data?.claims?.sub as string | undefined) ?? null };
+  return {
+    response,
+    userId: (data?.claims?.sub as string | undefined) ?? null,
+    email: (data?.claims?.email as string | undefined) ?? null,
+  };
 }
