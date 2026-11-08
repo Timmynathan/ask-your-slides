@@ -241,6 +241,46 @@ async function main() {
       await cleanup(newbie);
     }
 
+    // Delete account: everything about the student goes (profile, chats, ratings, answer logs).
+    console.log("\nDelete account");
+    const leaver = `ui-smoke-leaver-${Date.now()}@pau.edu.ng`;
+    try {
+      const dctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      await dctx.addCookies(await signInCookies(leaver));
+      const { data: lv } = await admin.from("profiles").select("id").eq("email", leaver).single();
+      const { data: anyCourse } = await admin.from("courses").select("id").limit(1).single();
+      const { data: lconv } = await admin.from("conversations").insert({ user_id: lv!.id, course_id: anyCourse!.id, title: "To be deleted" }).select("id").single();
+      await admin.from("messages").insert({ conversation_id: lconv!.id, user_id: lv!.id, role: "user", content: "hello" });
+      await admin.from("traces").insert({ user_id: lv!.id, conversation_id: lconv!.id, user_message: "hello", model: "test" });
+      const dp = await dctx.newPage();
+      dp.on("pageerror", (e) => consoleErrors.push(e.message));
+      await dp.goto(`${BASE}/dashboard`);
+      const refused = await dp.evaluate(async () => (await fetch("/api/account", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: "{}" })).status);
+      check(refused === 400, "deleting without typing DELETE is refused by the server", String(refused));
+      await dp.getByRole("button", { name: "Account" }).click();
+      await dp.getByRole("button", { name: "Delete account" }).click();
+      const dialog = dp.getByRole("dialog", { name: "Delete your account" });
+      check(await dialog.getByRole("button", { name: "Delete my account" }).isDisabled(), "the delete button stays off until DELETE is typed");
+      await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+      await dialog.getByRole("button", { name: "Delete my account" }).click();
+      await dp.waitForURL(/\/sign-in\?deleted=1/, { timeout: 20000 });
+      check(await dp.getByText("Your account has been deleted.").isVisible(), "after deleting, sign-in says the account is gone");
+      const [{ data: users }, { count: profs }, { count: convs }, { count: trs }] = await Promise.all([
+        admin.auth.admin.listUsers({ perPage: 1000 }),
+        admin.from("profiles").select("id", { count: "exact", head: true }).eq("id", lv!.id),
+        admin.from("conversations").select("id", { count: "exact", head: true }).eq("user_id", lv!.id),
+        admin.from("traces").select("id", { count: "exact", head: true }).eq("conversation_id", lconv!.id),
+      ]);
+      check(!users?.users.some((u) => u.email === leaver) && profs === 0 && convs === 0 && trs === 0,
+        "account, profile, chats and answer logs are all deleted", JSON.stringify({ profs, convs, trs }));
+      await dp.goto(`${BASE}/dashboard`);
+      await dp.waitForURL(/\/sign-in/);
+      check(true, "the deleted student is signed out");
+      await dctx.close();
+    } finally {
+      await cleanup(leaver);
+    }
+
     const cookies = await signInCookies(email);
     // Nine earlier questions (in another course), so the first question below is the 10th and
     // "Is this helping you study?" comes due.
@@ -430,7 +470,7 @@ async function main() {
     // Wait for the slide-in to finish rather than a fixed delay (slower on a real network).
     await p2.waitForFunction(() => Math.round(document.querySelector("aside")!.getBoundingClientRect().x) === 0, null, { timeout: 3000 }).catch(() => {});
     const opened = await p2.locator("aside").first().boundingBox();
-    check(!!opened && opened.x === 0, "menu button opens the drawer", JSON.stringify(opened));
+    check(!!opened && Math.abs(opened.x) < 1, "menu button opens the drawer", JSON.stringify(opened));
     await shot(p2, "5-phone-drawer");
     await p2.mouse.click(360, 400); // tap the dimmed area
     await p2.waitForTimeout(400);

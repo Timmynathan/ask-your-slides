@@ -3,7 +3,7 @@
 // Under each finished answer (PRD F7): copy, thumbs up, thumbs down. A thumbs down is saved at
 // once, then offers an optional reason ("Wrong", "Not in my slides", "Too long", "Other" + a few
 // words). Pressing the same thumb again takes the rating back. Quiet line icons, as elsewhere.
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export type Rating = { rating: 1 | -1; reason: string | null } | null;
 
@@ -24,6 +24,14 @@ async function save(body: object): Promise<boolean> {
 }
 
 export function AnswerActions({ messageId, text, initial }: { messageId: string; text: string; initial: Rating }) {
+  // Saves go out one after another: a quick "thumbs down → reason" must not let the first request
+  // (no reason) land last and wipe the reason.
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const send = (body: object) => {
+    const next = queue.current.then(() => save(body));
+    queue.current = next.catch(() => {});
+    return next;
+  };
   const [rated, setRated] = useState<Rating>(initial);
   const [asking, setAsking] = useState(false); // reason row open
   const [other, setOther] = useState<string | null>(null); // "Other" text box
@@ -37,7 +45,7 @@ export function AnswerActions({ messageId, text, initial }: { messageId: string;
     setAsking(next?.rating === -1);
     setOther(null);
     setThanks(next?.rating === 1);
-    const ok = await save({ message_id: messageId, rating: next ? rating : 0 });
+    const ok = await send({ message_id: messageId, rating: next ? rating : 0 });
     if (!ok) {
       setRated(prev);
       setAsking(false);
@@ -50,7 +58,7 @@ export function AnswerActions({ messageId, text, initial }: { messageId: string;
     setAsking(false);
     setOther(null);
     setThanks(true);
-    await save({ message_id: messageId, rating: -1, reason, comment: comment ?? null });
+    await send({ message_id: messageId, rating: -1, reason, comment: comment ?? null });
   };
 
   const copy = async () => {

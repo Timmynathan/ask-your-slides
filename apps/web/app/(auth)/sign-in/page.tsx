@@ -8,11 +8,20 @@ import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
 
-type Props = { searchParams: Promise<{ start?: string; next?: string }> };
+type Props = { searchParams: Promise<{ start?: string; next?: string; deleted?: string }> };
 
 async function Form({ searchParams }: Props) {
-  const { start, next } = await searchParams;
-  return <SignInForm startWithCode={start === "1"} next={safeNext(next)} />;
+  const { start, next, deleted } = await searchParams;
+  return (
+    <>
+      {deleted === "1" && (
+        <p role="status" className="mt-6 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
+          Your account has been deleted. You can sign up again any time.
+        </p>
+      )}
+      <SignInForm startWithCode={start === "1"} next={safeNext(next)} />
+    </>
+  );
 }
 
 export default function SignInPage(props: Props) {
