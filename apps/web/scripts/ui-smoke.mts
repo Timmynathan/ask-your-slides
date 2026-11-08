@@ -18,6 +18,8 @@ const ROOT_ENV = path.resolve(import.meta.dirname, "../../../.env");
 if (existsSync(ROOT_ENV)) process.loadEnvFile(ROOT_ENV);
 const PORT = 3900 + Math.floor(Math.random() * 90);
 const BASE = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
+// Temporary pilot mode: Create account is email + password (no code) when AUTH_DIRECT_SIGNUP=1.
+const DIRECT = process.env.AUTH_DIRECT_SIGNUP === "1";
 const SHOTS = process.env.UI_SMOKE_SHOTS ?? path.join(tmpdir(), "pau-ui-smoke");
 mkdirSync(SHOTS, { recursive: true });
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
@@ -110,8 +112,9 @@ async function main() {
     check((await sp.getByRole("tab", { name: "Create account" }).isVisible()) && (await sp.getByRole("tab", { name: "Log in" }).getAttribute("aria-selected")) === "true",
       "sign-in shows Create account / Log in tabs");
     await sp.getByRole("button", { name: "Create a free account" }).click();
-    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("button", { name: "Get my code" }).isVisible(),
-      "'Create a free account' switches to sign-up: just the email and 'Get my code'");
+    const signupButton = DIRECT ? "Create account" : "Get my code";
+    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("button", { name: signupButton, exact: true }).isVisible(),
+      `'Create a free account' switches to sign-up ('${signupButton}')`);
     await anon.close();
 
     console.log("\nLanding page (signed out)");
@@ -173,8 +176,25 @@ async function main() {
     await lp.getByRole("link", { name: "Try for free" }).first().click();
     await lp.waitForURL(/\/sign-up$/);
     const signUp = await lp.getByRole("heading", { name: "Create your free account" }).waitFor({ timeout: 10000 }).then(() => true, () => false);
-    check(signUp && (await lp.getByRole("button", { name: "Get my code" }).isVisible()) && (await lp.locator("#password").count()) === 0,
-      "'Try for free' opens a clear sign-up page: email and 'Get my code', no password box");
+    if (DIRECT) {
+      check(signUp && (await lp.getByRole("button", { name: "Create account", exact: true }).isVisible()) && (await lp.locator("#new-password").count()) === 1,
+        "'Try for free' opens sign-up: email + password, no code (temporary direct sign-up)");
+      // A real direct sign-up: lands on onboarding, account confirmed.
+      const direct = `ui-direct-${Date.now()}@pau.edu.ng`;
+      try {
+        await lp.locator("#email").fill(direct);
+        await lp.locator("#new-password").fill("revise4exams!");
+        await lp.getByRole("button", { name: "Create account", exact: true }).click();
+        await lp.waitForURL(/\/welcome/, { timeout: 20000 });
+        const { data: du } = await admin.auth.admin.listUsers({ perPage: 1000 });
+        check(!!du?.users.find((u) => u.email === direct)?.email_confirmed_at, "direct sign-up creates a confirmed account and opens onboarding");
+      } finally {
+        await cleanup(direct);
+      }
+    } else {
+      check(signUp && (await lp.getByRole("button", { name: "Get my code" }).isVisible()) && (await lp.locator("#password").count()) === 0,
+        "'Try for free' opens a clear sign-up page: email and 'Get my code', no password box");
+    }
     await visitor.close();
 
     console.log("\nShared course link survives sign-in (email + password through the form)");
@@ -302,11 +322,12 @@ async function main() {
       const ep = await ectx.newPage();
       await ep.goto(`${BASE}/sign-up`);
       await ep.locator("#email").fill(email);
-      const otp = ep.waitForResponse((r) => r.url().endsWith("/api/auth/otp"));
-      await ep.getByRole("button", { name: "Get my code" }).click();
+      if (DIRECT) await ep.locator("#new-password").fill("another-password");
+      const otp = ep.waitForResponse((r) => /\/api\/auth\/(otp|signup)$/.test(r.url()));
+      await ep.getByRole("button", { name: DIRECT ? "Create account" : "Get my code", exact: true }).click();
       const otpStatus = (await otp).status();
       await ep.getByText("You already have an account.").waitFor({ timeout: 10000 });
-      check(otpStatus === 409, "Create account with an existing email sends no code", String(otpStatus));
+      check(otpStatus === 409, "Create account with an existing email is refused (no code, no new account)", String(otpStatus));
       await ep.getByRole("status").getByRole("button", { name: "Log in" }).click();
       check((await ep.getByRole("tab", { name: "Log in" }).getAttribute("aria-selected")) === "true" && (await ep.locator("#email").inputValue()) === email,
         "'You already have an account' → Log in, with the email filled in");

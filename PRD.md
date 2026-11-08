@@ -112,6 +112,10 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 - Account menu → "Delete account" → a dialog says what goes (profile, all chats, ratings) and that it can't be undone; the button stays off until the student types DELETE. `DELETE /api/account` re-checks the session with Supabase Auth, deletes the student's answer logs (traces), signs them out and deletes the auth user, which cascades to profile, conversations, messages, feedback, the 1–5 answer and usage. Sign-in then shows "Your account has been deleted."
 
+### F1e. TEMPORARY: direct sign-up (pilot only)
+
+- While `AUTH_DIRECT_SIGNUP=1`, Create account is PAU email + password, no emailed code (`/api/auth/signup` creates a confirmed account and signs it in). Reason: PAU's Microsoft 365 filter holds back the code emails, and "Continue with Microsoft" (built, hidden; test with `?ms=1`) waits on PAU IT's admin approval. Known risk, accepted by the owner for a private pilot of ~10 students: the address isn't proven, so someone who knows a PAU email could sign up as that student. Turn off (unset the variable on Vercel) once Microsoft sign-in is approved or the code emails arrive.
+
 ### F1d. Clear sign-up
 
 - Every "Try for free" opens **/sign-up**: the same page as /sign-in, on the **Create account** tab. Tabs at the top (Create account | Log in) are always visible. Create account shows only the PAU email and a big "Get my code" button, with a 1-2-3 progress line (Email → Code → Password) and step headings ("Check your email", "Create a password"). Log in ("Welcome back") has email + password, a "Forgot password?" link (the same code flow, "Reset your password"), and an outlined "Create a free account" button.

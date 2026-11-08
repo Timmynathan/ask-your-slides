@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Mascot } from "@/components/mascot/mascot";
 import { safeNext } from "@/lib/auth/next";
+import { directSignupEnabled } from "@/lib/auth/signup-mode";
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
@@ -29,7 +30,7 @@ async function Form({ searchParams, signUp = false }: Props) {
           {SIGN_IN_ERRORS[error]}
         </p>
       )}
-      <SignInForm startWithCode={signUp || start === "1"} next={safeNext(next)} microsoft={ms === "1"} />
+      <SignInForm startWithCode={signUp || start === "1"} next={safeNext(next)} microsoft={ms === "1"} directSignup={directSignupEnabled()} />
     </>
   );
 }

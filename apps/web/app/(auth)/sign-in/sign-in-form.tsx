@@ -39,7 +39,18 @@ function MicrosoftButton({ next }: { next: string | null }) {
   );
 }
 
-export function SignInForm({ startWithCode = false, next = null, microsoft = false }: { startWithCode?: boolean; next?: string | null; microsoft?: boolean }) {
+export function SignInForm({
+  startWithCode = false,
+  next = null,
+  microsoft = false,
+  directSignup = false,
+}: {
+  startWithCode?: boolean;
+  next?: string | null;
+  microsoft?: boolean;
+  /** TEMPORARY (AUTH_DIRECT_SIGNUP=1): Create account is email + password, no emailed code. */
+  directSignup?: boolean;
+}) {
   // On for everyone with NEXT_PUBLIC_MICROSOFT_LOGIN=1; before that, ?ms=1 shows it for testing.
   const showMicrosoft = MICROSOFT || microsoft;
   const router = useRouter();
@@ -129,6 +140,25 @@ export function SignInForm({ startWithCode = false, next = null, microsoft = fal
     finish(data.next);
   }
 
+  async function signUpDirect(form: FormData) {
+    const email = String(form.get("email") ?? "").trim().toLowerCase();
+    const password = String(form.get("password") ?? "");
+    setNotice(null);
+    if (password.length < MIN_PASSWORD) return setError(`Use at least ${MIN_PASSWORD} characters for your password.`);
+    const data = await post("/api/auth/signup", { email, password });
+    if (!data) {
+      if (lastCode.current === "account_exists") {
+        setError(null);
+        remember(email);
+        setSavedEmail(email);
+        setNotice({ kind: "exists", email });
+      }
+      return;
+    }
+    remember(email);
+    finish(data.next);
+  }
+
   async function sendCode(form: FormData) {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     setNotice(null);
@@ -197,7 +227,9 @@ export function SignInForm({ startWithCode = false, next = null, microsoft = fal
       : step.kind === "code-email"
         ? mode === "reset"
           ? { title: "Reset your password", sub: "We'll email a code to your PAU address, then you choose a new password." }
-          : { title: "Create your free account", sub: "Just your PAU email. We'll send you a code to confirm it's you." }
+          : directSignup
+            ? { title: "Create your free account", sub: "Your PAU email and a password. That's it." }
+            : { title: "Create your free account", sub: "Just your PAU email. We'll send you a code to confirm it's you." }
         : step.kind === "code"
           ? { title: "Check your email", sub: null }
           : { title: mode === "reset" ? "Choose a new password" : "Create a password", sub: null };
@@ -231,7 +263,7 @@ export function SignInForm({ startWithCode = false, next = null, microsoft = fal
 
       <h1 className="mt-8 font-heading text-3xl font-semibold tracking-tight text-ink">{head.title}</h1>
       {head.sub && <p className="mt-2 text-[15px] text-muted">{head.sub}</p>}
-      {mode === "signup" && (
+      {mode === "signup" && !directSignup && (
         <ol className="mt-4 flex items-center gap-2 text-xs text-muted" aria-label={`Step ${signupStep} of 3`}>
           {["Email", "Code", "Password"].map((l, i) => (
             <li key={l} className="flex items-center gap-2">
@@ -310,7 +342,23 @@ export function SignInForm({ startWithCode = false, next = null, microsoft = fal
         </div>
       )}
 
-      {step.kind === "code-email" && (
+      {step.kind === "code-email" && mode === "signup" && directSignup && (
+        <form onSubmit={(e) => run(e, signUpDirect)} noValidate>
+          {emailField}
+          {passwordField("new-password", "Create a password", "new-password", `At least ${MIN_PASSWORD} characters.`)}
+          <button type="submit" disabled={busy} className={button}>
+            <BusyLabel busy={busy} label="Create account" busyLabel="Creating your account…" />
+          </button>
+          <p className="mt-5 text-center text-sm text-muted">
+            Already have an account?{" "}
+            <button type="button" onClick={() => switchMode("login")} disabled={busy} className={link}>
+              Log in
+            </button>
+          </p>
+        </form>
+      )}
+
+      {step.kind === "code-email" && !(mode === "signup" && directSignup) && (
         <form onSubmit={(e) => run(e, sendCode)} noValidate>
           {emailField}
           <button type="submit" disabled={busy} className={button}>
