@@ -452,9 +452,7 @@ export function ChatPanel({
             ) : dictation.listening ? (
               <span role="status" className="text-ink">Listening… tap the red button when you&apos;re done, then Send.</span>
             ) : (
-              <span className="hidden sm:inline">
-                Enter to send · Shift+Enter for a new line{dictation.supported ? " · 🎤 to speak" : ""}
-              </span>
+              <span />
             )}
             {!capped && left < 10 && (
               <span>
