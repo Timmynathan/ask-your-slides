@@ -462,8 +462,12 @@ async function main() {
 
     // Admin dashboard: hidden from students; the owner sees the pilot, including this test's activity.
     console.log("\nAdmin dashboard");
+    const chatUrl = page.url(); // the phone checks below reopen this chat
     const adminRes = await page.goto(`${BASE}/admin`);
     check(adminRes?.status() === 404, "a student opening /admin gets 'not found'", String(adminRes?.status()));
+    // That 404 is deliberate; the browser logs it as a console error, so don't count it.
+    await page.waitForTimeout(300);
+    for (let i = consoleErrors.length - 1; i >= 0; i--) if (/404 \(Not Found\)/.test(consoleErrors[i])) consoleErrors.splice(i, 1);
     if (!process.env.E2E_BASE_URL) {
       try {
         const actx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -494,7 +498,7 @@ async function main() {
     await phone.addCookies(cookies);
     const p2 = await phone.newPage();
     p2.on("pageerror", (e) => consoleErrors.push(e.message));
-    await p2.goto(page.url());
+    await p2.goto(chatUrl);
     await p2.locator("li button[title^='Open ']:visible").first().waitFor({ timeout: 15000 });
     const overflow = await p2.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     check(overflow <= 0, "no sideways scrolling at 375px", `${overflow}px`);
