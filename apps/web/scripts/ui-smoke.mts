@@ -156,6 +156,9 @@ async function main() {
     await lp.waitForTimeout(1500);
     check(frozen === (await lp.locator("#demo").innerText()), "demo pauses when Pause is pressed");
     check(await lp.getByRole("button", { name: "Play demo" }).isVisible(), "paused demo shows a Play button");
+    await lp.getByRole("button", { name: "Play demo" }).click();
+    const endScreen = await lp.getByRole("button", { name: /Watch again/ }).waitFor({ timeout: 20000 }).then(() => true, () => false);
+    check(endScreen, "when the demo ends it stops on a blurred end screen with a big replay button");
     await lp.goto(`${BASE}/`);
     await lp.getByRole("link", { name: "Try for free" }).first().click();
     await lp.waitForURL(/\/sign-in\?start=1/);

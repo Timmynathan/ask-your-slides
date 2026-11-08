@@ -48,6 +48,8 @@ export function ChatDemo() {
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [started, setStarted] = useState(false);
+  // Reduced motion: Play shows the finished chat at once, so no end screen over it.
+  const [instant, setInstant] = useState(false);
   const [origin, setOrigin] = useState("0px 100%");
   const clock = useRef(0);
   const box = useRef<HTMLElement>(null);
@@ -69,6 +71,7 @@ export function ChatDemo() {
           clock.current = TOTAL;
           setElapsed(TOTAL);
           setStarted(true);
+          setInstant(true);
           return;
         }
         if (restart || clock.current >= TOTAL) {
@@ -76,6 +79,7 @@ export function ChatDemo() {
           setElapsed(0);
         }
         setStarted(true);
+        setInstant(false);
         setPlaying(true);
       },
     };
@@ -266,21 +270,31 @@ export function ChatDemo() {
             </div>
           </div>
 
-          {/* Poster: before it starts, one big play button. */}
-          {!started && (
-            <div className="absolute inset-0 grid place-items-center bg-white/50 backdrop-blur-[2px]">
+          {/* Poster before it starts; end screen (blurred chat, big replay) once it has played. */}
+          {(!started || (ended && !instant)) && (
+            <div
+              className={`absolute inset-0 grid place-items-center ${started ? "fade-in bg-white/35 backdrop-blur-[1.5px]" : "bg-white/50 backdrop-blur-[2px]"}`}
+            >
               <button
                 type="button"
                 onClick={() => control.current.play(true)}
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition active:scale-95"
               >
                 <span className="cue-ring grid h-20 w-20 place-items-center rounded-full bg-brand text-white shadow-lg transition group-hover:scale-105 sm:h-24 sm:w-24">
-                  <svg width="30" height="30" viewBox="0 0 12 12" aria-hidden>
-                    <path d="M3.2 1.6v8.8L10.4 6z" fill="currentColor" />
-                  </svg>
+                  {started ? (
+                    <svg width="34" height="34" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+                      <path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" />
+                    </svg>
+                  ) : (
+                    <svg width="30" height="30" viewBox="0 0 12 12" aria-hidden>
+                      <path d="M3.2 1.6v8.8L10.4 6z" fill="currentColor" />
+                    </svg>
+                  )}
                 </span>
-                <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Watch the demo</span>
-                <span className="text-sm text-muted">{Math.round(TOTAL / 1000)} seconds · ask, see the slide, get it explained</span>
+                <span className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/90 px-5 py-2.5 shadow-sm ring-1 ring-black/5">
+                  <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">{started ? "Watch again" : "Watch the demo"}</span>
+                  <span className="text-sm text-muted">{Math.round(TOTAL / 1000)} seconds · ask, see the slide, get it explained</span>
+                </span>
               </button>
             </div>
           )}
