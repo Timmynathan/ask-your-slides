@@ -4,6 +4,7 @@
 // topic's materials; Whole course shows everything, grouped by topic, then course-level materials
 // (outline, other). A source opens in the slide viewer at its first page. On wide laptops it is a
 // fixed panel; below xl it slides in from the right (Sources button in the chat header).
+import { prefetchSlide } from "@/lib/study/slide-cache";
 import type { MaterialItem, TopicItem } from "@/lib/study/types";
 
 const KIND: Record<string, string> = {
@@ -33,7 +34,8 @@ export function SourcesPanel({ courseCode, topics, materials, topic, open, onClo
         { title: "Course materials", items: materials.filter((m) => m.topic_id === null) },
       ].filter((g) => g.items.length > 0);
   const count = groups.reduce((n, g) => n + g.items.length, 0);
-  const open1 = (m: MaterialItem) => onOpenSource(`${courseCode}-${String(m.material_order).padStart(2, "0")}-1`);
+  const firstPage = (m: MaterialItem) => `${courseCode}-${String(m.material_order).padStart(2, "0")}-1`;
+  const open1 = (m: MaterialItem) => onOpenSource(firstPage(m));
 
   return (
     <>
@@ -69,6 +71,8 @@ export function SourcesPanel({ courseCode, topics, materials, topic, open, onClo
                     <li key={m.id}>
                       <button
                         onClick={() => open1(m)}
+                        onPointerEnter={() => prefetchSlide(firstPage(m))}
+                        onFocus={() => prefetchSlide(firstPage(m))}
                         className="flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-page active:scale-[0.99]"
                         title={`View ${m.title}`}
                       >

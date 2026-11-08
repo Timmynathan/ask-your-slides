@@ -1,17 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loadSlide, pageKey, prefetchSlide, type SlidePreviewData } from "@/lib/study/slide-cache";
 
-interface Preview {
-  slide_key: string;
-  slide_number: number;
-  title: string | null;
-  text: string | null;
-  visual_description: string | null;
-  image_url: string | null;
-  material: { title: string; kind: string; page_count: number };
-  topic: string | null;
-}
+type Preview = SlidePreviewData;
 
 interface Props {
   slideKey: string;
@@ -40,9 +32,15 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
   useEffect(() => {
     // One component per material (keyed in Workspace): a new page replaces the old one once it arrives.
     let cancelled = false;
-    fetch(`/api/slides/${slideKey}`)
-      .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json()).error ?? "Couldn't load this slide."))))
-      .then((d) => !cancelled && setData(d))
+    loadSlide(slideKey)
+      .then((d) => {
+        if (cancelled) return;
+        setData(d);
+        setError(null);
+        // Have the neighbouring pages ready before the student flips.
+        if (d.slide_number < d.material.page_count) prefetchSlide(pageKey(slideKey, d.slide_number + 1));
+        if (d.slide_number > 1) prefetchSlide(pageKey(slideKey, d.slide_number - 1));
+      })
       .catch((e) => !cancelled && setError(e.message));
     return () => {
       cancelled = true;
@@ -101,7 +99,7 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
               {onNavigate && data.material.page_count > 1 && (
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <button
-                    onClick={() => onNavigate(slideKey.replace(/-\d+$/, `-${data.slide_number - 1}`))}
+                    onClick={() => onNavigate(pageKey(slideKey, data.slide_number - 1))}
                     disabled={data.slide_number <= 1}
                     aria-label={`Previous ${unit}`}
                     className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5 active:scale-90 disabled:opacity-30"
@@ -114,7 +112,7 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
                     {unit[0].toUpperCase() + unit.slice(1)} {data.slide_number} of {data.material.page_count}
                   </span>
                   <button
-                    onClick={() => onNavigate(slideKey.replace(/-\d+$/, `-${data.slide_number + 1}`))}
+                    onClick={() => onNavigate(pageKey(slideKey, data.slide_number + 1))}
                     disabled={data.slide_number >= data.material.page_count}
                     aria-label={`Next ${unit}`}
                     className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-black/5 active:scale-90 disabled:opacity-30"

@@ -11,13 +11,14 @@ export const metadata: Metadata = { title: "Welcome · Ask Your Slides" };
 async function Loaded({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeNext((await searchParams).next);
   const { supabase, user } = await requireUser();
-  const [{ data: profile }, { data: courses }] = await Promise.all([
+  const [{ data: profile, error: profileError }, { data: courses }] = await Promise.all([
     supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
     supabase.from("courses").select("department"),
   ]);
   // One department → the partner can name it ("I know Computer Science can be hard"). Several
   // (once more departments are added and students choose theirs) → a neutral "your courses".
   const departments = [...new Set((courses ?? []).map((c) => c.department as string))];
+  if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
   if (profile?.onboarded && isPartnerId(profile.study_partner)) redirect(next ?? "/dashboard");
   return (
     <Onboarding

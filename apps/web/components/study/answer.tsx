@@ -14,6 +14,7 @@ import {
   type CitationInfo,
 } from "@/lib/study/format";
 import { BEYOND_BOX, BeyondSlidesLabel } from "./beyond-slides";
+import { prefetchSlide } from "@/lib/study/slide-cache";
 
 interface Props {
   text: string;
@@ -44,6 +45,8 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
           <button
             type="button"
             onClick={() => onCite(key)}
+            onPointerEnter={() => prefetchSlide(key)}
+            onFocus={() => prefetchSlide(key)}
             title={`Open ${label}`}
             className="mx-0.5 inline-flex max-w-[20rem] translate-y-[-1px] items-center rounded-full bg-sunken px-2 py-px align-middle text-[11.5px] text-ink/70 transition-colors hover:bg-pau-100 hover:text-brand"
           >

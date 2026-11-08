@@ -21,7 +21,7 @@ async function Loaded({ params, searchParams }: Props) {
   const code = rawCode.toUpperCase();
   const { supabase, user } = await requireUser();
 
-  const [{ data: courses }, { data: profile }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }] = await Promise.all([
+  const [{ data: courses }, { data: profile, error: profileError }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }] = await Promise.all([
     supabase.from("courses").select("id, code, title, sort_order").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
@@ -31,6 +31,7 @@ async function Loaded({ params, searchParams }: Props) {
     supabase.from("messages").select("id", { count: "exact", head: true }).eq("role", "user"),
     supabase.from("pulse_responses").select("score").maybeSingle(),
   ]);
+  if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
   const course = (courses as CourseItem[] | null)?.find((c) => c.code === code);
   if (!course) notFound();
