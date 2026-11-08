@@ -3,7 +3,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
-const PUBLIC_PATHS = ["/manifest.webmanifest", "/sign-in", "/api/auth/otp", "/api/auth/verify", "/api/auth/password"];
+const PUBLIC_PATHS = ["/manifest.webmanifest", "/sign-in", "/sign-up", "/api/auth/otp", "/api/auth/verify", "/api/auth/password"];
 
 export async function proxy(request: NextRequest) {
   const { response, userId, email } = await updateSession(request);
@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
     if (pathname !== "/dashboard") target.searchParams.set("next", pathname + request.nextUrl.search);
     return redirectKeepingCookies(target, response);
   }
-  if (userId && (pathname === "/sign-in" || pathname === "/")) {
+  if (userId && (pathname === "/sign-in" || pathname === "/sign-up" || pathname === "/")) {
     return redirectKeepingCookies(new URL("/dashboard", request.url), response);
   }
   return response;

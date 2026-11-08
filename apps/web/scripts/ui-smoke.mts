@@ -96,16 +96,22 @@ async function main() {
       await route.continue();
     });
     await sp.goto(`${BASE}/sign-in`);
-    const signInBtn = sp.getByRole("button", { name: "Sign in" });
+    const signInBtn = sp.getByRole("button", { name: "Log in", exact: true });
     check((await signInBtn.evaluate((el) => getComputedStyle(el).cursor)) === "pointer", "buttons show the hand cursor");
     await sp.locator("#email").fill("someone@pau.edu.ng");
     await sp.locator("#password").fill("not-the-password");
     await signInBtn.dblclick();
-    const busyBtn = sp.getByRole("button", { name: /Signing in/ });
-    check(await busyBtn.isVisible(), "pressed button shows a spinner and 'Signing in…' at once");
+    const busyBtn = sp.getByRole("button", { name: /Logging in/ });
+    check(await busyBtn.isVisible(), "pressed button shows a spinner and 'Logging in…' at once");
     check(await busyBtn.isDisabled(), "button is locked while it works");
     await sp.getByRole("alert").waitFor({ timeout: 10000 });
     check(passwordRequests === 1, "a double click sends one request", `${passwordRequests} requests`);
+    // Two clear doors: tabs at the top, and a big "Create a free account" on the log-in form.
+    check((await sp.getByRole("tab", { name: "Create account" }).isVisible()) && (await sp.getByRole("tab", { name: "Log in" }).getAttribute("aria-selected")) === "true",
+      "sign-in shows Create account / Log in tabs");
+    await sp.getByRole("button", { name: "Create a free account" }).click();
+    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("button", { name: "Get my code" }).isVisible(),
+      "'Create a free account' switches to sign-up: just the email and 'Get my code'");
     await anon.close();
 
     console.log("\nLanding page (signed out)");
@@ -165,9 +171,10 @@ async function main() {
     check(endScreen, "when the demo ends it stops on a blurred end screen with a big replay button");
     await lp.goto(`${BASE}/`);
     await lp.getByRole("link", { name: "Try for free" }).first().click();
-    await lp.waitForURL(/\/sign-in\?start=1/);
-    const codeStep = await lp.getByRole("button", { name: "Send code" }).waitFor({ timeout: 10000 }).then(() => true, () => false);
-    check(codeStep, "'Get started' opens the code step directly");
+    await lp.waitForURL(/\/sign-up$/);
+    const signUp = await lp.getByRole("heading", { name: "Create your free account" }).waitFor({ timeout: 10000 }).then(() => true, () => false);
+    check(signUp && (await lp.getByRole("button", { name: "Get my code" }).isVisible()) && (await lp.locator("#password").count()) === 0,
+      "'Try for free' opens a clear sign-up page: email and 'Get my code', no password box");
     await visitor.close();
 
     console.log("\nShared course link survives sign-in (email + password through the form)");
@@ -183,7 +190,7 @@ async function main() {
       check(new URL(lk.url()).searchParams.get("next") === "/study/CSC419?topic=1", "signed-out visitor keeps the link it came from", lk.url());
       await lk.locator("#email").fill(linkUser);
       await lk.locator("#password").fill("revise4exams!");
-      await lk.getByRole("button", { name: "Sign in" }).click();
+      await lk.getByRole("button", { name: "Log in", exact: true }).click();
       await lk.waitForURL(/\/study\/CSC419/);
       check(new URL(lk.url()).pathname === "/study/CSC419", "after signing in, lands on the shared course", lk.url());
       const [popup] = await Promise.all([linkCtx.waitForEvent("page"), lk.getByRole("button", { name: "Invite coursemates" }).click()]);

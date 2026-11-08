@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { BusyLabel } from "@/components/ui/spinner";
 
-// Sign-in (PRD F1):
-//   usual:          email + password
-//   first time /    email → emailed code (proves the PAU address) → create a password
-//   forgot password
+// Accounts (PRD F1). Two clear doors, as tabs at the top:
+//   Create account:  PAU email → emailed code (proves the address) → create a password   (steps 1–3)
+//   Log in:          email + password; "Forgot password?" runs the same code flow to set a new one
+// "Try for free" opens Create account (/sign-up), so a new student never has to find a small link.
+type Mode = "signup" | "login" | "reset";
 type Step =
   | { kind: "password" }
   | { kind: "code-email" }
@@ -18,6 +19,7 @@ const MIN_PASSWORD = 8;
 
 export function SignInForm({ startWithCode = false, next = null }: { startWithCode?: boolean; next?: string | null }) {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>(startWithCode ? "signup" : "login");
   const [step, setStep] = useState<Step>(startWithCode ? { kind: "code-email" } : { kind: "password" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,6 +50,10 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
     setError(null);
     setShowPassword(false);
     setStep(next);
+  }
+  function switchMode(m: Mode) {
+    setMode(m);
+    go(m === "login" ? { kind: "password" } : { kind: "code-email" });
   }
 
   async function post(url: string, body: object) {
@@ -146,44 +152,105 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
     </>
   );
 
+  const signupStep = step.kind === "code-email" ? 1 : step.kind === "code" ? 2 : 3;
+  const head =
+    step.kind === "password"
+      ? { title: "Welcome back", sub: "Log in with your PAU email and password." }
+      : step.kind === "code-email"
+        ? mode === "reset"
+          ? { title: "Reset your password", sub: "We'll email a code to your PAU address, then you choose a new password." }
+          : { title: "Create your free account", sub: "Just your PAU email. We'll send you a code to confirm it's you." }
+        : step.kind === "code"
+          ? { title: "Check your email", sub: null }
+          : { title: mode === "reset" ? "Choose a new password" : "Create a password", sub: null };
+
   return (
-    <div className="mt-8">
+    <div>
+      {/* The two doors, always visible: no hunting for where to sign up. */}
+      <div className="grid grid-cols-2 rounded-full bg-sunken p-1" role="tablist" aria-label="Account">
+        {(
+          [
+            ["signup", "Create account"],
+            ["login", "Log in"],
+          ] as const
+        ).map(([m, label]) => {
+          const on = m === "signup" ? mode !== "login" : mode === "login";
+          return (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              disabled={busy}
+              onClick={() => !on && switchMode(m)}
+              className={`rounded-full py-2.5 text-[15px] transition active:scale-[0.98] ${on ? "bg-page font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <h1 className="mt-8 font-heading text-3xl font-semibold tracking-tight text-ink">{head.title}</h1>
+      {head.sub && <p className="mt-2 text-[15px] text-muted">{head.sub}</p>}
+      {mode === "signup" && (
+        <ol className="mt-4 flex items-center gap-2 text-xs text-muted" aria-label={`Step ${signupStep} of 3`}>
+          {["Email", "Code", "Password"].map((l, i) => (
+            <li key={l} className="flex items-center gap-2">
+              <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] font-semibold ${i + 1 <= signupStep ? "bg-brand text-white" : "bg-sunken text-muted"}`}>
+                {i + 1}
+              </span>
+              <span className={i + 1 === signupStep ? "font-medium text-ink" : ""}>{l}</span>
+              {i < 2 && <span className="h-px w-5 bg-line-strong" aria-hidden />}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <div className="mt-6">
       {step.kind === "password" && (
         <form onSubmit={(e) => run(e, signIn)} noValidate>
           {emailField}
           {passwordField("password", "Password", "current-password")}
           <button type="submit" disabled={busy} className={button}>
-            <BusyLabel busy={busy} label="Sign in" busyLabel="Signing in…" />
+            <BusyLabel busy={busy} label="Log in" busyLabel="Logging in…" />
           </button>
-          <p className="mt-5 text-center text-sm text-muted">
-            First time here, or forgot your password?{" "}
-            <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={link}>
-              Get a code
+          <button type="button" onClick={() => switchMode("reset")} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
+            Forgot password?
+          </button>
+          <div className="mt-8 border-t border-line pt-6 text-center">
+            <p className="text-sm text-muted">New to Ask Your Slides?</p>
+            <button
+              type="button"
+              onClick={() => switchMode("signup")}
+              disabled={busy}
+              className="mt-3 w-full rounded-full px-4 py-3 text-base font-medium text-brand ring-2 ring-brand transition hover:bg-pau-50 active:scale-[0.98]"
+            >
+              Create a free account
             </button>
-          </p>
+          </div>
         </form>
       )}
 
       {step.kind === "code-email" && (
         <form onSubmit={(e) => run(e, sendCode)} noValidate>
-          <p className="mb-4 text-sm text-muted">
-            We&apos;ll email a code to your PAU address. Then you&apos;ll set a password for next time.
-          </p>
           {emailField}
           <button type="submit" disabled={busy} className={button}>
-            <BusyLabel busy={busy} label="Send code" busyLabel="Sending…" />
+            <BusyLabel busy={busy} label={mode === "reset" ? "Send me a code" : "Get my code"} busyLabel="Sending…" />
           </button>
-          <button type="button" onClick={() => go({ kind: "password" })} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
-            Back to sign in
-          </button>
+          <p className="mt-5 text-center text-sm text-muted">
+            {mode === "reset" ? "Remembered it? " : "Already have an account? "}
+            <button type="button" onClick={() => switchMode("login")} disabled={busy} className={link}>
+              Log in
+            </button>
+          </p>
         </form>
       )}
-
       {step.kind === "code" && (
         <form onSubmit={(e) => run(e, verify)} noValidate>
-          <p className="text-sm text-muted">
-            We sent a code to <span className="font-medium text-ink">{step.email}</span>. It can
-            take a minute; check your spam folder too.
+          <p className="text-[15px] text-muted">
+            We sent a 6-digit code to <span className="font-medium text-ink">{step.email}</span>. It can take a minute; check your
+            spam folder too.
           </p>
           <label htmlFor="code" className="mt-4 block text-sm font-medium">
             Code
@@ -201,8 +268,8 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
 
       {step.kind === "new-password" && (
         <form onSubmit={(e) => run(e, setPassword)} noValidate>
-          <p className="mb-2 text-sm text-muted">
-            Email confirmed. Choose a password so you can sign in with{" "}
+          <p className="mb-2 text-[15px] text-muted">
+            Email confirmed. Choose a password so you can log in with{" "}
             <span className="font-medium text-ink">{step.email}</span> next time, without a code.
           </p>
           {/* Lets password managers save the pair. */}
@@ -213,6 +280,8 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
           </button>
         </form>
       )}
+
+      </div>
 
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-700">

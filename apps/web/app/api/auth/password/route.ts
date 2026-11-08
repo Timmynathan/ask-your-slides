@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     }
     // Same message for unknown email, no password set yet, and wrong password: don't reveal which.
     return NextResponse.json(
-      { error: "Wrong email or password. First time here, or forgot it? Use “Get a code” below." },
+      { error: "Wrong email or password. New here? Choose “Create account” above. Forgot it? Use “Forgot password?”." },
       { status: 401 },
     );
   }

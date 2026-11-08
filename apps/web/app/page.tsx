@@ -27,7 +27,7 @@ export default async function Landing() {
   const catalog = await getCatalog();
   return (
     <div className="flex min-h-dvh flex-col bg-page">
-      <Banner text="Every PAU course slide, ready to chat with." linkText="Start studying" href="/sign-in?start=1" />
+      <Banner text="Every PAU course slide, ready to chat with." linkText="Start studying" href="/sign-up" />
 
       <header className="sticky top-0 z-20 px-3 pt-3 sm:px-5">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-line bg-page/85 pl-5 pr-2 backdrop-blur">
@@ -43,7 +43,7 @@ export default async function Landing() {
             <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
               Log in
             </Link>
-            <Link href="/sign-in?start=1" className="type-menu rounded-full bg-brand px-5 py-2.5 !text-brand-ink hover:opacity-90">
+            <Link href="/sign-up" className="type-menu rounded-full bg-brand px-5 py-2.5 !text-brand-ink hover:opacity-90">
               Try for free
             </Link>
           </div>
@@ -61,7 +61,7 @@ export default async function Landing() {
             from your slides, with the exact slide shown.
           </p>
           <Link
-            href="/sign-in?start=1"
+            href="/sign-up"
             className="mt-10 inline-flex items-center justify-center rounded-full bg-brand px-12 py-5 text-lg font-medium text-brand-ink hover:opacity-90"
           >
             Try for free
@@ -225,7 +225,7 @@ export default async function Landing() {
             <div>
               <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 md:text-4xl">Exams are coming.</h2>
               <p className="mt-3 text-pau-900/80">Pick a partner and ask your first question in under a minute.</p>
-              <Link href="/sign-in?start=1" className={`${pill} mt-6 bg-brand text-brand-ink hover:opacity-90`}>
+              <Link href="/sign-up" className={`${pill} mt-6 bg-brand text-brand-ink hover:opacity-90`}>
                 Get started free
               </Link>
             </div>
@@ -258,7 +258,7 @@ export default async function Landing() {
             <div className="space-y-2">
               <p className="font-medium text-ink">Account</p>
               <Link href="/sign-in" className="block text-muted hover:text-ink">Sign in</Link>
-              <Link href="/sign-in?start=1" className="block text-muted hover:text-ink">Get started</Link>
+              <Link href="/sign-up" className="block text-muted hover:text-ink">Get started</Link>
             </div>
           </div>
         </div>
