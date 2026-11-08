@@ -3,7 +3,7 @@
 // Left panel inside a course: "Topics". Whole course first, then the course's topics in order (from
 // data/manifest.yaml; empty topics are hidden upstream). The selected scope folds open to show its
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
-// badges or counts; the selected scope is a white pill on the soft panel.
+// badges or counts. Navy panel with white text; the selected scope is a white pill.
 import type { ChatItem, TopicItem } from "@/lib/study/types";
 import { WebSearchBox } from "./web-search-box";
 
@@ -30,12 +30,12 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
       </div>
 
       <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-5">
-        <h2 className="text-[13px] text-muted">Topics</h2>
+        <h2 className="text-[13px] text-white/60">Topics</h2>
         <button
           onClick={() => onOpenScope(topicId)}
           aria-label="New chat"
           title="New chat"
-          className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-black/5 active:scale-90"
+          className="grid h-8 w-8 place-items-center rounded-full text-white transition hover:bg-white/10 active:scale-90"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
             <path d="M12 5v14M5 12h14" />
@@ -53,7 +53,7 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                 onClick={() => onOpenScope(s.id)}
                 aria-current={active ? "location" : undefined}
                 className={`w-full rounded-2xl px-3 py-2.5 text-left text-[15px] leading-snug transition-colors ${
-                  active ? "bg-page text-ink shadow-[0_1px_2px_rgb(0_0_0/0.04)]" : "text-ink/80 hover:bg-black/[0.035] hover:text-ink"
+                  active ? "bg-white font-medium text-brand" : "text-white/85 hover:bg-white/10 hover:text-white"
                 }`}
                 title={s.label}
               >
@@ -67,11 +67,11 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                         onClick={() => onOpenChat(ch)}
                         aria-current={ch.id === chatId ? "true" : undefined}
                         className={`w-full truncate rounded-xl px-3 py-1.5 text-left text-[13.5px] ${
-                          ch.id === chatId ? "text-ink" : "text-muted hover:text-ink"
+                          ch.id === chatId ? "text-white" : "text-white/60 hover:text-white"
                         }`}
                         title={ch.title}
                       >
-                        <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${ch.id === chatId ? "bg-brand" : "bg-line-strong"}`} aria-hidden />
+                        <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${ch.id === chatId ? "bg-[#5ea3ed]" : "bg-white/30"}`} aria-hidden />
                         {ch.title}
                       </button>
                     </li>

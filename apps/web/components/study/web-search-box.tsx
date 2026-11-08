@@ -44,11 +44,11 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
         ev.preventDefault();
         go();
       }}
-      className="rounded-2xl bg-page px-3 pb-2 pt-2.5 shadow-[0_1px_2px_rgb(0_0_0/0.04)]"
+      className="rounded-2xl bg-white/10 px-3 pb-2 pt-2.5 ring-1 ring-white/10 focus-within:ring-white/30"
       aria-label="Search the web"
     >
       <div className="flex items-center gap-2">
-        <svg className="shrink-0 text-muted" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
+        <svg className="shrink-0 text-white/60" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
           <circle cx="12" cy="12" r="8" />
           <path d="M4 12h16M12 4c2.2 2.2 3.3 4.9 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-4.9-3.3-8S9.8 6.2 12 4Z" />
         </svg>
@@ -57,14 +57,14 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search the web"
           aria-label="Search the web"
-          className="min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-muted"
+          className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/55"
         />
         <button
           type="submit"
           disabled={!q.trim()}
           aria-label={`Search with ${ENGINES[engine].label}`}
           title={`Search with ${ENGINES[engine].label} (opens a new tab)`}
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-ink transition hover:bg-sunken active:scale-90 disabled:opacity-30"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-white transition hover:bg-white/15 active:scale-90 disabled:opacity-30"
         >
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M3 8h10M9 4l4 4-4 4" />
@@ -72,7 +72,7 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
         </button>
       </div>
       {/* Which chatbot gets the question: a one-tap switch, remembered per browser. */}
-      <div role="radiogroup" aria-label="Search with" className="mt-2 flex rounded-full bg-sunken p-0.5">
+      <div role="radiogroup" aria-label="Search with" className="mt-2 flex rounded-full bg-black/20 p-0.5">
         {(Object.keys(ENGINES) as Engine[]).map((k) => (
           <button
             key={k}
@@ -86,7 +86,7 @@ export function WebSearchBox({ courseLabel, topicTitle }: { courseLabel: string;
               } catch {}
             }}
             className={`flex-1 rounded-full py-1 text-[12px] transition active:scale-95 ${
-              engine === k ? "bg-page font-medium text-ink shadow-[0_1px_2px_rgb(0_0_0/0.08)]" : "text-muted hover:text-ink"
+              engine === k ? "bg-white font-medium text-brand" : "text-white/65 hover:text-white"
             }`}
           >
             {ENGINES[k].label}

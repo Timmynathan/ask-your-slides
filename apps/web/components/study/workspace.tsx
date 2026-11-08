@@ -126,14 +126,14 @@ export function Workspace(data: WorkspaceData) {
       </header>
 
       <div className="flex min-h-0 flex-1 gap-2 lg:px-3 lg:pb-3">
-        {/* Topics: a soft panel on laptops, a drawer below lg */}
+        {/* Topics: a navy panel on laptops, a drawer below lg */}
         <div
           className={`fixed inset-0 z-30 bg-black/20 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
           onClick={() => setDrawerOpen(false)}
           aria-hidden
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-page transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] lg:bg-sunken/60 ${
+          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-brand text-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
