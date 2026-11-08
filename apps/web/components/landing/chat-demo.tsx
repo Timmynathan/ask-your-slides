@@ -356,9 +356,10 @@ function SeeHowNote() {
   return (
     <div aria-hidden className="pointer-events-none absolute bottom-full right-4 z-20 flex items-end gap-1 pb-1 sm:right-10 sm:gap-2">
       <span className="mb-3 font-heading text-[15px] italic text-ink sm:mb-4 sm:text-xl">See how Ask Your Slides works</span>
-      <svg viewBox="0 0 40 56" className="h-[42px] w-[30px] text-ink sm:h-[56px] sm:w-[40px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 40 56" className="h-[42px] w-[30px] overflow-visible text-ink sm:h-[56px] sm:w-[40px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 8C17 3 31 9 33 22c1.5 9-2 18-8 27" />
-        <path d="M17 44l8 6 4-9" />
+        {/* Arrowhead: two equal wings either side of where the line ends, so it reads as a full arrow. */}
+        <path d="M21.5 40.5 25 49l6.8-5.9" />
       </svg>
     </div>
   );
