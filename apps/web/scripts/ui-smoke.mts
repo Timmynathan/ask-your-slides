@@ -158,6 +158,12 @@ async function main() {
     check(halfStarted === 0, "demo stays still while only half of it is on screen");
     await lp.evaluate(() => window.scrollTo(0, 0));
     await lp.waitForTimeout(400);
+    // No autoplay: scrolled fully into view, it waits on its Watch poster.
+    await lp.locator("#demo").scrollIntoViewIfNeeded();
+    await lp.waitForTimeout(2500);
+    check(await lp.getByRole("button", { name: /^Watch the demo, \d+:\d\d$/ }).isVisible(), "scrolling to the demo doesn't play it; the poster shows Watch and its length");
+    await lp.evaluate(() => window.scrollTo(0, 0));
+    await lp.waitForTimeout(400);
     const typedBefore = await lp.locator("#demo").getByText(/^What is a B\+/).count();
     await lp.getByRole("link", { name: "See how it works", exact: true }).click();
     await lp.waitForTimeout(6500); // scroll, unzoomed opening, zoom in, type, send

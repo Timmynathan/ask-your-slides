@@ -7,7 +7,7 @@
 // points back to the slide.
 // Sample content in the style of the PAU decks: no real lecturer slide on the public page (PRD §16).
 //
-// Playback: plays once (no loop) when the whole player is on screen or "See how it works" is pressed;
+// Playback: never starts by itself. Plays once (no loop) when "See how it works", Watch or Play is pressed;
 // pauses when scrolled away; Play / Pause / Replay button and a progress bar. Everything on screen is
 // derived from one clock (elapsed ms), so pausing is just stopping the clock. With reduced motion,
 // Play jumps to the finished conversation, no zoom.
@@ -34,6 +34,8 @@ const TYPE_2 = ZOOM_2 + 900;
 const SEND_2 = TYPE_2 + FOLLOW_UP.length * PER_CHAR + 450;
 const EXPLAINED = SEND_2 + 1100;
 const TOTAL = EXPLAINED + 3000;
+// The demo's length as a video player shows it, e.g. "0:21".
+const LENGTH = `${Math.floor(Math.round(TOTAL / 1000) / 60)}:${String(Math.round(TOTAL / 1000) % 60).padStart(2, "0")}`;
 
 // phase: 0 typing · 1 sent + thinking · 2 slide · 3 highlight · 4 answer · 5 typing follow-up · 6 thinking · 7 explanation
 function phaseAt(e: number): number {
@@ -88,7 +90,7 @@ export function ChatDemo() {
     };
   });
 
-  // Auto-start once, when the whole player is on screen; pause when it is mostly scrolled away.
+  // No autoplay: scrolling to the player leaves it on its Watch poster. Pauses when mostly scrolled away.
   // "See how it works" plays it from the start (or resumes it if it was paused part-way).
   useEffect(() => {
     const el = box.current;
@@ -109,7 +111,7 @@ export function ChatDemo() {
           if (wanted !== null) {
             c.play(wanted);
             wanted = null;
-          } else if (!c.started) c.play(true);
+          }
         }
         if (seen && entry.intersectionRatio < 0.4) c.pause();
       },
@@ -296,30 +298,25 @@ export function ChatDemo() {
             <div
               className={`absolute inset-0 grid place-items-center ${started ? "fade-in bg-white/35 backdrop-blur-[1.5px]" : "bg-white/50 backdrop-blur-[2px]"}`}
             >
+              {/* One pill, like a video player's: play icon, "Watch", and how long the demo runs. */}
               <button
                 type="button"
                 onClick={() => control.current.play(true)}
-                aria-label={started ? "Watch again" : "Watch the demo"}
-                className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition active:scale-95"
+                aria-label={started ? `Watch again, ${LENGTH}` : `Watch the demo, ${LENGTH}`}
+                className="inline-flex items-center gap-3 rounded-full bg-[#0e1664] py-3.5 pl-6 pr-7 text-white shadow-[0_10px_30px_rgb(14_22_100/0.35)] ring-[3px] ring-white transition hover:scale-[1.03] hover:bg-[#0a0f47] active:scale-95 sm:py-4 sm:pl-7 sm:pr-8"
               >
-                <span className="cue-ring grid h-20 w-20 place-items-center rounded-full bg-[#0e1664] text-white shadow-lg transition group-hover:scale-105 sm:h-24 sm:w-24">
-                  {started ? (
-                    <svg width="34" height="34" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-                      <path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" />
-                    </svg>
-                  ) : (
-                    <svg width="30" height="30" viewBox="0 0 12 12" aria-hidden>
-                      <path d="M3.2 1.6v8.8L10.4 6z" fill="currentColor" />
-                    </svg>
-                  )}
-                </span>
-                {/* End screen: just the replay button. Poster: the button and what the demo shows. */}
-                {!started && (
-                  <span className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/90 px-5 py-2.5 shadow-sm ring-1 ring-black/5">
-                    <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Watch the demo</span>
-                    <span className="text-sm text-muted">{Math.round(TOTAL / 1000)} seconds · ask, see the slide, get it explained</span>
-                  </span>
+                {started ? (
+                  <svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                    <path d="M3 8a5 5 0 1 0 1.5-3.6M3 2.5v2.8h2.8" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 12 12" aria-hidden>
+                    <path d="M2.6 1.2v9.6L10.6 6z" fill="currentColor" />
+                  </svg>
                 )}
+                <span className="text-lg font-medium sm:text-xl">
+                  {started ? "Watch again" : "Watch"} <span aria-hidden className="text-white/70">·</span> <span className="tabular-nums">{LENGTH}</span>
+                </span>
               </button>
             </div>
           )}
