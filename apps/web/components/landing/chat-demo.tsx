@@ -184,9 +184,12 @@ export function ChatDemo() {
       id="demo"
       aria-label="Demo video"
       /* overflow-anchor: none, or the browser scrolls the page whenever a message appears inside the demo */
-      className="h-[100dvh] min-h-[600px] w-full scroll-mt-0 bg-page px-3 pb-3 pt-[88px] [overflow-anchor:none] sm:px-5 sm:pb-5 sm:pt-[96px]"
+      className="h-[100dvh] min-h-[640px] w-full scroll-mt-0 bg-page px-4 pb-4 pt-[150px] [overflow-anchor:none] sm:px-10 sm:pb-6 sm:pt-[180px] lg:px-16"
     >
-      <div className="relative flex h-full flex-col overflow-hidden rounded-[28px] bg-[#f5f8fc] text-left shadow-xl ring-2 ring-brand">
+      <div className="relative mx-auto h-full max-w-[1240px]">
+      <PeekingPartner />
+      <SeeHowNote />
+      <div className="relative z-10 flex h-full flex-col overflow-hidden rounded-[28px] bg-[#f5f8fc] text-left shadow-xl ring-2 ring-brand">
         <div className="relative min-h-0 flex-1 overflow-hidden">
           {/* Zoom layer: close-up on the question box while it is typed, back out once it is sent. */}
           <div
@@ -312,7 +315,52 @@ export function ChatDemo() {
           )}
         </div>
       </div>
+      <PeekingHands />
+      </div>
     </section>
+  );
+}
+
+// Ada (who answers in the demo) peeking over the top-left edge of the player: her head sits behind
+// the player, her hands curl over its edge in front of it. Decorative.
+const PEEK_LEFT = "left-6 sm:left-14";
+function PeekingPartner() {
+  return (
+    <div aria-hidden className={`pointer-events-none absolute bottom-full ${PEEK_LEFT} z-0 translate-y-[22px] sm:translate-y-[30px]`}>
+      <span className="block sm:hidden">
+        <Mascot partner="ada" size={72} mood="happy" title="" />
+      </span>
+      <span className="hidden sm:block">
+        <Mascot partner="ada" size={100} mood="happy" title="" />
+      </span>
+    </div>
+  );
+}
+function PeekingHands() {
+  const hand = (
+    <svg viewBox="0 0 30 22" className="h-[20px] w-[27px] sm:h-[25px] sm:w-[34px]">
+      <path d="M2 9C2 4 6 1.5 15 1.5S28 4 28 9v4c0 4.5-3.5 7.5-8 7.5h-10C5.5 20.5 2 17.5 2 13Z" fill="#9a5f3a" stroke="#22140f" strokeWidth="1.6" />
+      <path d="M10.5 12v6M15 12v7M19.5 12v6" stroke="#22140f" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+  return (
+    <div aria-hidden className={`pointer-events-none absolute top-0 ${PEEK_LEFT} z-20 flex w-[72px] -translate-x-1.5 -translate-y-[11px] justify-between sm:w-[100px] sm:-translate-x-2 sm:-translate-y-[13px]`}>
+      {hand}
+      {hand}
+    </div>
+  );
+}
+
+// Handwritten note on the right, with a curly arrow pointing down into the player.
+function SeeHowNote() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute bottom-full right-4 z-20 flex items-end gap-1 pb-1 sm:right-10 sm:gap-2">
+      <span className="mb-3 font-heading text-[15px] italic text-ink sm:mb-4 sm:text-xl">See how Ask Your Slides works</span>
+      <svg viewBox="0 0 40 56" className="h-[42px] w-[30px] text-ink sm:h-[56px] sm:w-[40px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 8C17 3 31 9 33 22c1.5 9-2 18-8 27" />
+        <path d="M17 44l8 6 4-9" />
+      </svg>
+    </div>
   );
 }
 

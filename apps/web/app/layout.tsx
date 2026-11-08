@@ -5,7 +5,7 @@ import { Haptics } from "@/components/ui/haptics";
 
 // Type system (reference: studyfetch.com): Bitter for headings, Inter for text, JetBrains Mono for code.
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const bitter = Bitter({ variable: "--font-bitter", subsets: ["latin"], weight: ["500", "600", "700"] });
+const bitter = Bitter({ variable: "--font-bitter", subsets: ["latin"], weight: ["500", "600", "700"], style: ["normal", "italic"] });
 const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
 
 export const metadata: Metadata = {
