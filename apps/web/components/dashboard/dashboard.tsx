@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { courseIcon } from "@/lib/study/course-icon";
+import { CourseIcon } from "./course-icon";
 import { displayCode } from "@/lib/study/format";
 import { useClickAway } from "@/lib/ui/use-click-away";
 
@@ -215,9 +215,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
       {/* The whole card is the link; the menu sits above it. */}
       <Link href={`/study/${c.code}`} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
       <div className="flex items-start justify-between">
-        <span className="text-[44px] leading-none" aria-hidden>
-          {courseIcon(c.title)}
-        </span>
+        <CourseIcon title={c.title} size={34} className="mt-1" />
         <CardMenu course={c} />
       </div>
       <div className="mt-auto">
@@ -237,9 +235,7 @@ function CourseRow({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="relative flex items-center gap-4 border-b border-line/70 px-5 py-3.5 last:border-0 hover:bg-pau-50">
       <Link href={`/study/${c.code}`} className="absolute inset-0 z-0" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
-      <span className="text-2xl leading-none" aria-hidden>
-        {courseIcon(c.title)}
-      </span>
+      <CourseIcon title={c.title} size={22} />
       <span className="min-w-0 flex-1 truncate text-[16px] text-ink">{c.title}</span>
       <span className="hidden w-24 shrink-0 text-sm text-muted sm:block">{displayCode(c.code)}</span>
       <span className="hidden w-28 shrink-0 text-sm text-muted md:block">
