@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
     NEXT_PUBLIC_PRIVACY_CONTACT: process.env.NEXT_PUBLIC_PRIVACY_CONTACT ?? "",
+    // "1" shows "Continue with Microsoft" (once the Azure provider is configured in Supabase).
+    NEXT_PUBLIC_MICROSOFT_LOGIN: process.env.NEXT_PUBLIC_MICROSOFT_LOGIN ?? "",
   },
   cacheComponents: true,
   partialPrefetching: true,

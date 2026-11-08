@@ -8,15 +8,25 @@ import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
 
-type Props = { searchParams: Promise<{ start?: string; next?: string; deleted?: string }>; signUp?: boolean };
+type Props = { searchParams: Promise<{ start?: string; next?: string; deleted?: string; error?: string }>; signUp?: boolean };
+
+const SIGN_IN_ERRORS: Record<string, string> = {
+  microsoft: "Microsoft sign-in didn't finish. Try again, or use your email below.",
+  not_pau: "That Microsoft account isn't a PAU account. Use your @pau.edu.ng account.",
+};
 
 async function Form({ searchParams, signUp = false }: Props) {
-  const { start, next, deleted } = await searchParams;
+  const { start, next, deleted, error } = await searchParams;
   return (
     <>
       {deleted === "1" && (
         <p role="status" className="mb-6 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
           Your account has been deleted. You can sign up again any time.
+        </p>
+      )}
+      {error && SIGN_IN_ERRORS[error] && (
+        <p role="alert" className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-400/10 dark:text-red-300">
+          {SIGN_IN_ERRORS[error]}
         </p>
       )}
       <SignInForm startWithCode={signUp || start === "1"} next={safeNext(next)} />

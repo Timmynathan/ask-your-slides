@@ -16,8 +16,31 @@ type Step =
   | { kind: "new-password"; email: string };
 
 const MIN_PASSWORD = 8;
+const MICROSOFT = process.env.NEXT_PUBLIC_MICROSOFT_LOGIN === "1";
+
+/** One click with the PAU Microsoft 365 account (Outlook/Teams): no emailed code needed. */
+function MicrosoftButton({ next }: { next: string | null }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <a
+      href={`/auth/microsoft${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+      onClick={() => setBusy(true)}
+      aria-busy={busy}
+      className="flex w-full items-center justify-center gap-3 rounded-full bg-card px-4 py-3 text-base font-medium text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-[0.98]"
+    >
+      <svg width="20" height="20" viewBox="0 0 21 21" aria-hidden>
+        <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+      </svg>
+      {busy ? "Opening Microsoft…" : "Continue with Microsoft"}
+    </a>
+  );
+}
 
 export function SignInForm({ startWithCode = false, next = null }: { startWithCode?: boolean; next?: string | null }) {
+  const showMicrosoft = MICROSOFT;
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(startWithCode ? "signup" : "login");
   const [step, setStep] = useState<Step>(startWithCode ? { kind: "code-email" } : { kind: "password" });
@@ -222,6 +245,17 @@ export function SignInForm({ startWithCode = false, next = null }: { startWithCo
       )}
 
       <div className="mt-6">
+      {showMicrosoft && (step.kind === "password" || (step.kind === "code-email" && mode !== "reset")) && (
+        <div className="mb-6">
+          <MicrosoftButton next={next} />
+          <p className="mt-2 text-center text-xs text-muted">Your PAU Outlook / Teams account. No code needed.</p>
+          <div className="mt-6 flex items-center gap-3 text-xs text-muted" aria-hidden>
+            <span className="h-px flex-1 bg-line" />
+            or use your email
+            <span className="h-px flex-1 bg-line" />
+          </div>
+        </div>
+      )}
       {step.kind === "password" && (
         <form onSubmit={(e) => run(e, signIn)} noValidate>
           {emailField}
