@@ -219,6 +219,9 @@ async function main() {
         "welcome names the department (from the data) and says 'school slides'", hello.slice(0, 120));
       await shot(op, "8-onboarding-hello");
       await op.getByRole("button", { name: "Start studying" }).click();
+      await op.getByRole("heading", { name: "My courses" }).waitFor();
+      check(new URL(op.url()).pathname === "/dashboard", "after onboarding the student lands on their courses");
+      await op.getByRole("list", { name: "Courses" }).getByRole("link").first().click();
       await op.waitForURL(/\/study\//);
       await op.getByText("Studying with").waitFor();
       check(await op.locator("nav").getByText("Tobi", { exact: true }).isVisible(), "Tobi is the partner in the study workspace");
@@ -240,9 +243,23 @@ async function main() {
     page.on("console", (m) => m.type() === "error" && consoleErrors.push(m.text()));
     page.on("pageerror", (e) => consoleErrors.push(e.message));
 
+    // Dashboard: every course as a card, like a notebook library; a card opens the course.
     await page.goto(`${BASE}/dashboard`);
+    await page.getByRole("heading", { name: "My courses" }).waitFor();
+    const cards = page.getByRole("list", { name: "Courses" }).getByRole("listitem");
+    const { data: withMaterial } = await admin.from("courses").select("id, materials(count)");
+    const expected = (withMaterial ?? []).filter((c: any) => (c.materials?.[0]?.count ?? 0) > 0).length;
+    check((await cards.count()) === expected, "dashboard shows a card for every course with material", `${await cards.count()} cards, ${expected} courses`);
+    await shot(page, "1a-dashboard");
+    await page.getByRole("searchbox", { name: "Search courses" }).first().fill("zzzz-nothing");
+    check(await page.getByText(/No courses match/).isVisible(), "dashboard search filters courses");
+    await page.getByRole("searchbox", { name: "Search courses" }).first().fill("");
+    await page.getByRole("button", { name: "List view" }).click();
+    check((await cards.count()) === expected, "list view shows the same courses");
+    await page.getByRole("button", { name: "Grid view" }).click();
+    await cards.first().getByRole("link").first().click();
     await page.waitForURL(/\/study\/[A-Z]{3}\d{3}/);
-    check(true, "dashboard opens the first course", new URL(page.url()).pathname);
+    check(true, "a course card opens that course", new URL(page.url()).pathname);
     // Switching courses happens in the browser: no server round trip, sidebar never disappears.
     const sidebarHandle = await page.locator("aside:visible").first().elementHandle();
     let serverHits = 0;

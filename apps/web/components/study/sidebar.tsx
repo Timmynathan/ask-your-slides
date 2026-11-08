@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Mascot } from "@/components/mascot/mascot";
 import { SignOutButton } from "@/components/ui/sign-out-button";
@@ -28,7 +29,9 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
   return (
     <nav className="flex h-full flex-col" aria-label="Courses and chats">
       <div className="flex h-14 shrink-0 items-center px-4">
-        <Logo size={24} />
+        <Link href="/dashboard" className="rounded-full" aria-label="Ask Your Slides, all courses">
+          <Logo size={24} />
+        </Link>
       </div>
 
       {/* The study partner is always here: who you're studying with, one tap to change. */}
@@ -44,7 +47,12 @@ export function Sidebar({ courses, topics, chats, courseId, topicId, chatId, use
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-        <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">Courses</p>
+        <div className="flex items-center justify-between px-2 pb-1">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted">Courses</p>
+          <Link href="/dashboard" className="rounded-full px-2 py-0.5 text-[12px] text-muted hover:bg-sunken hover:text-ink">
+            All courses
+          </Link>
+        </div>
         <ul className="space-y-0.5">
           {courses.map((c) => {
             const selected = c.id === courseId;
