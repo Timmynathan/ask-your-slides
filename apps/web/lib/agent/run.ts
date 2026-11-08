@@ -9,8 +9,8 @@ import { adminClient, must } from "@/lib/supabase/admin";
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
 export const HISTORY_LIMIT = 12; // PRD §10.6
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
-const MAX_OUTPUT_TOKENS = 1200;
-const MAX_OUTPUT_TOKENS_SUMMARY = 2000; // once the agent has read whole materials
+const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
+const MAX_OUTPUT_TOKENS_SUMMARY = 3000; // once the agent has read whole materials
 // Claude Haiku 5.5, prompts <= 100K tokens (check the provider page before launch).
 const USD_PER_MTOK = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 };
 
@@ -105,8 +105,9 @@ export async function runChatTurn(turn: ChatTurn) {
     // properly, I'll pull all its pages."). Each text block is held back whole (start, text, end)
     // until it is clearly an answer (longer than NARRATION_MAX) or its step ends. If a tool call
     // starts first, the block was narration and is dropped (logged as narration_dropped).
-    // Costs at most the time to generate ~120 characters before the first word.
-    const NARRATION_MAX = 120;
+    // Costs at most the time to generate ~240 characters before the first word (narration like "I need
+    // the main slides for each topic… I'll pull the Deployment, Frontend and Backend slides." runs ~130).
+    const NARRATION_MAX = 240;
     type Held = { start: TextStreamPart<ToolSet>; raw: string; end?: TextStreamPart<ToolSet> };
     const held = new Map<string, Held>();
     type Ctrl = TransformStreamDefaultController<TextStreamPart<ToolSet>>;

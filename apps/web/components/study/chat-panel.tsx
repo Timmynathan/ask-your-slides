@@ -240,7 +240,10 @@ export function ChatPanel({
 
   const starters = topic
     ? [
-        { label: `Ask about ${topic.title}`, send: null },
+        {
+          label: "Explain like I missed class",
+          send: `Explain "${topic.title}" like I missed the class.`,
+        },
         {
           label: "Summarize this topic",
           send: `Summarize the topic "${topic.title}".`,

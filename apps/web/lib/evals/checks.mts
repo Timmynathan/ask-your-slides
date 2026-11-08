@@ -13,8 +13,8 @@ export function outsideGeneral(text: string): string {
 }
 
 /** Sentences outside <general> with no citation (heuristic). A citation belongs to the sentence
- *  before it. Lead-ins ending in ':' , questions, bold sub-headings and the not-covered sentence
- *  don't count. */
+ *  before it. Lead-ins ending in ':' , questions, bold sub-headings and the not-covered /
+ *  thin-slides opening lines don't count. */
 export function uncitedSentences(text: string): string[] {
   return outsideGeneral(text)
     .split(/(?<=[.!?](?:\s*\[\[s:[A-Za-z0-9-]+\]\])*)\s+(?!\[\[s:)|\n+/)
@@ -22,7 +22,7 @@ export function uncitedSentences(text: string): string[] {
     .filter((s) => s.replace(new RegExp(MARKER_SOURCE, "g"), "").replace(/[^A-Za-z]/g, "").length > 25)
     .filter((s) => !new RegExp(MARKER_SOURCE).test(s))
     .filter((s) => !/^\*\*[^*]+\*\*$/.test(s))
-    .filter((s) => !/[:?]$/.test(s) && !/^your slides don't cover this/i.test(s));
+    .filter((s) => !/[:?]$/.test(s) && !/^your slides (don't cover this|only outline this)/i.test(s));
 }
 
 export interface TraceLike {

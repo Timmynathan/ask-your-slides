@@ -178,8 +178,25 @@ async function main() {
     const c5 = await newChat("CSC418");
     a = await ask(c5, "How does proof-of-stake consensus work in Ethereum?");
     standardChecks(a, "CSC418", { expectCitations: false });
-    check(/^\s*your slides don't cover this/i.test(a.text), "starts with \"Your slides don't cover this.\"", a.text.slice(0, 60));
+    check(/^\s*your slides don't cover this, but here's the idea:/i.test(a.text), "starts with \"Your slides don't cover this, but here's the idea:\"", a.text.slice(0, 70));
+    check(outsideGeneral(a.text).replace(/your slides don't cover this, but here's the idea:/i, "").trim().length < 40 && (a.text.match(/<general>([\s\S]*?)<\/general>/)?.[1].length ?? 0) > 400,
+      "then answers properly (not briefly), inside <general>", `${a.text.length} chars`);
     check(/<general>[\s\S]+<\/general>/.test(a.text), "general knowledge is inside <general>");
+
+    console.log("\n5b. Thin slides teach, not refuse (CSC419 › Backend development)");
+    const c5b = await newChat("CSC419", "Backend development");
+    a = await ask(c5b, "Explain authorization.");
+    standardChecks(a, "CSC419");
+    check(/your slides only outline this/i.test(a.text.slice(0, 200)), "opens with \"Your slides only outline this…\"", a.text.slice(0, 80).replace(/\n/g, " "));
+    const taught = [...a.text.matchAll(/<general>([\s\S]*?)<\/general>/g)].map((m) => m[1]).join("").length;
+    check(taught > 500, "explains each point fully in <general>", `${taught} chars of explanation`);
+
+    console.log("\n5c. 'Explain like I missed class' (CSC420 › Transactions and indexing)");
+    const c5c = await newChat("CSC420", "Transactions and indexing");
+    a = await ask(c5c, 'Explain "Transactions and indexing" like I missed the class.');
+    standardChecks(a, "CSC420");
+    const taught2 = [...a.text.matchAll(/<general>([\s\S]*?)<\/general>/g)].map((m) => m[1]).join("").length;
+    check(keys(a).length >= 4 && taught2 > 400, "anchors on the slides and teaches beyond them", `${new Set(keys(a)).size} slides cited, ${taught2} chars of explanation`);
 
     console.log("\n6. Summary of a lecture (INS401 › Managing project risk)");
     const c6 = await newChat("INS401");
@@ -213,8 +230,9 @@ async function main() {
     const outlineKeys = (c419 ?? []).filter((m: any) => m.kind === "outline").map((m: any) => `CSC419-${String(m.material_order).padStart(2, "0")}`);
     const toolText = JSON.stringify(a.trace?.tool_calls ?? []);
     check(outlineKeys.some((o) => keys(a).some((k) => k.startsWith(o + "-")) || toolText.includes(o)), "the overview uses the course outline (F5)", outlineKeys.join(" "));
-    const headings = (a.text.match(/^\s*(#{1,4} |\*\*[^*]+\*\*\s*$|\d+\.\s+\*\*)/gm) ?? []).length;
-    check(headings >= topicCount, "one section per topic", `${headings} section headings for ${topicCount} topics`);
+    // A section starts with a heading, or a bold title at the start of a line ("**1. Deployment.** …").
+    const headings = (a.text.match(/^\s*(#{1,4} |\*\*[^*]+\*\*|\d+\.\s+\*\*)/gm) ?? []).length;
+    check(headings >= topicCount, "one section per topic", `${headings} section headings for ${topicCount} topics` + (headings >= topicCount ? "" : `\n${a.text.slice(0, 900)}`));
 
     console.log("\n7. Quiz (CSC402 › Privacy)");
     const c7 = await newChat("CSC402", "Privacy");
