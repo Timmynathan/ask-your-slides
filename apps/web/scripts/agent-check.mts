@@ -191,6 +191,31 @@ async function main() {
     const spread = nums.length ? (Math.max(...nums) - Math.min(...nums) + 1) / risk!.page_count : 0;
     check(spread >= 0.5, "citations span the deck, not just the first slides", `slides ${Math.min(...nums)}–${Math.max(...nums)} of ${risk!.page_count}`);
 
+    console.log("\n6b. Topic summary across all of the topic's decks (INS401 › Managing project teams)");
+    const c6b = await newChat("INS401", "Managing project teams");
+    a = await ask(c6b, "Summarize this topic.");
+    standardChecks(a, "INS401");
+    const { data: teamMats } = await admin.from("materials").select("material_order, kind, topics!inner(title), courses!inner(code)")
+      .eq("courses.code", "INS401").eq("topics.title", "Managing project teams").in("kind", ["slides", "notes"]);
+    const teamPrefixes = (teamMats ?? []).map((m: any) => `INS401-${String(m.material_order).padStart(2, "0")}-`);
+    check(teamPrefixes.length >= 2 && teamPrefixes.every((p) => keys(a).some((k) => k.startsWith(p))),
+      "a topic summary cites every deck in the topic (F5)", `${teamPrefixes.join(" ")} vs ${[...new Set(keys(a).map((k) => k.split("-").slice(0, 2).join("-")))].join(" ")}`);
+
+    console.log("\n6c. Course overview (CSC419: outline + one section per topic)");
+    const c6c = await newChat("CSC419");
+    a = await ask(c6c, "Give me an overview of the whole course.");
+    standardChecks(a, "CSC419");
+    const { data: c419 } = await admin.from("materials").select("material_order, kind, topic_id, courses!inner(code)").eq("courses.code", "CSC419");
+    const byOrder = new Map((c419 ?? []).map((m: any) => [String(m.material_order).padStart(2, "0"), m]));
+    const citedTopics = new Set(keys(a).map((k) => byOrder.get(k.split("-")[1])?.topic_id).filter(Boolean));
+    const topicCount = new Set((c419 ?? []).map((m: any) => m.topic_id).filter(Boolean)).size;
+    check(citedTopics.size >= topicCount, "the overview covers every topic (F5)", `${citedTopics.size} of ${topicCount} topics cited`);
+    const outlineKeys = (c419 ?? []).filter((m: any) => m.kind === "outline").map((m: any) => `CSC419-${String(m.material_order).padStart(2, "0")}`);
+    const toolText = JSON.stringify(a.trace?.tool_calls ?? []);
+    check(outlineKeys.some((o) => keys(a).some((k) => k.startsWith(o + "-")) || toolText.includes(o)), "the overview uses the course outline (F5)", outlineKeys.join(" "));
+    const headings = (a.text.match(/^\s*(#{1,4} |\*\*[^*]+\*\*\s*$|\d+\.\s+\*\*)/gm) ?? []).length;
+    check(headings >= topicCount, "one section per topic", `${headings} section headings for ${topicCount} topics`);
+
     console.log("\n7. Quiz (CSC402 › Privacy)");
     const c7 = await newChat("CSC402", "Privacy");
     a = await ask(c7, "Quiz me on contextual integrity.");
@@ -198,6 +223,10 @@ async function main() {
     const questions = (outsideGeneral(a.text).match(/\?/g) ?? []).length;
     check(questions >= 1 && questions <= 3, "asks a question (one at a time)", `${questions} question marks`);
     check(!/^\s*\**(the )?(correct )?answer\**\s*(is|:)/im.test(a.text) && !/correct answer is/i.test(a.text), "does not reveal the answer", a.text.slice(0, 160).replace(/\n/g, " "));
+    // The student answers; the partner marks it and cites the slide with the right answer (F6).
+    a = await ask(c7, "I think it means information should only flow in ways that match the norms of the context it was shared in.");
+    standardChecks(a, "CSC402");
+    check(/\b(correct|right|spot on|exactly|well done|good|partly|partially|not quite|incorrect|close)\b/i.test(outsideGeneral(a.text).slice(0, 400)), "marks the student's answer", a.text.slice(0, 120).replace(/\n/g, " "));
 
     console.log("\n8. Reading with a repaired (OCR) text layer (CSC402 Nissenbaum)");
     const c8 = await newChat("CSC402");
@@ -240,7 +269,7 @@ async function main() {
     console.log("\nWarnings (heuristic, for review — not failures):");
     warnings.forEach((w) => console.log(`  - ${w}`));
   }
-  console.log(failures ? `\n${failures} check(s) failed` : "\nPhase 4 agent check: all checks passed.");
+  console.log(failures ? `\n${failures} check(s) failed` : "\nAgent check (phases 4 and 6): all checks passed.");
   process.exit(failures ? 1 : 0);
 }
 

@@ -62,7 +62,7 @@ npm run ingest:verify -- --course CSC420 --sample 30   # checks + random slides 
 
 ## Web app, onboarding and study partners
 
-The landing page is `/` (signed out). After the first sign-in students give a name and choose a study partner (Tobi, Ada or Dr. Musa: `apps/web/lib/partners.ts`), who then appears throughout the app. Design notes: PRD §13.0.
+The landing page is `/` (signed out). After the first sign-in students give a name and choose a study partner (Tobi, Ada, Dr. Musa or Zara: `apps/web/lib/partners.ts`), who then appears throughout the app. Design notes: PRD §13.0.
 
 ## Sign-in
 
@@ -95,8 +95,25 @@ sending any email, checks the auth hook, then deletes the test user.
 | 2 ✅ | Ingestion CLI (manifest-driven) | `npm run test:ingest` (offline) + `npm run ingest:verify -- --course CSC420` |
 | 3 ✅ | `@pau.edu.ng` OTP auth | `npm run test:web` + `npm run test:e2e:auth` + `npm run test:db` |
 | 4 ✅ | `/api/chat` agent, citations, traces, Proofline export | `npm run test:web` + `npm run check:agent` (real model, ~$0.01) |
-| 5 ✅ | Study UI (laptop first): courses, topics, chats, citation chips, general-knowledge boxes, slide preview | `npm run check:ui` (real browser, laptop + phone, ~$0.002) |
-| 6 | Summaries, quiz, feedback, cap | — |
+| 5 ✅ | Study UI (laptop first): My courses, Topics / chat / Sources, citation chips, beyond-your-slides boxes, slide viewer, voice typing, Search the web | `npm run check:ui` (real browser, laptop + phone, ~$0.002) |
+| 6 ✅ | Summaries and quiz (acceptance checks), thumbs up/down with reasons, "Is this helping you study?" after the 10th question, daily cap, pilot metrics views | `npm run check:agent` + `npm run check:ui` + `npm run test:db` |
+
+## Pilot numbers
+
+No admin UI: the numbers are SQL views in the `metrics` schema (closed to students and the public
+API). Read them in the Supabase SQL editor:
+
+```sql
+select * from metrics.pilot;                        -- the whole pilot in one row: students, questions, cost, thumbs-up %, helping score
+select * from metrics.daily order by day desc;      -- per WAT day: active students, questions, answers, cost, speed, thumbs
+select * from metrics.thumbs_down order by created_at desc;  -- each thumbs down with its reason, question and answer
+select * from metrics.courses;                      -- per course: students, questions, thumbs
+select * from metrics.partners;                     -- which study partners students chose
+select * from metrics.helping;                      -- "Is this helping you study?" spread (1–5)
+```
+
+Every answer's full trace (tools, retrieved slides, tokens, cost, latency) is in `public.traces`;
+`npm --prefix apps/web run export:traces` writes them as Proofline JSONL.
 
 ## Notes
 

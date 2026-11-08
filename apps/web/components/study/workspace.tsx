@@ -36,6 +36,11 @@ export function Workspace(data: WorkspaceData) {
   const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
   const [partner, setPartner] = useState<PartnerId>(data.partner);
   const [pickingPartner, setPickingPartner] = useState(false);
+  // "Is this helping you study?" after the 10th question; "Not now" waits until the next visit.
+  const [questions, setQuestions] = useState(data.pulse.questions);
+  const [pulseClosed, setPulseClosed] = useState(data.pulse.answered);
+  const onQuestion = useCallback(() => setQuestions((n) => n + 1), []);
+  const onPulseDone = useCallback(() => setPulseClosed(true), []);
   const studentName = data.user.displayName?.trim().split(/\s+/)[0] ?? null;
 
   const course = useMemo(() => data.courses.find((c) => c.id === courseId)!, [data.courses, courseId]);
@@ -167,6 +172,9 @@ export function Workspace(data: WorkspaceData) {
               onChatActive={onChatActive}
               onCite={setPreview}
               prefill={prefill}
+              pulseDue={!pulseClosed && questions >= 10}
+              onQuestion={onQuestion}
+              onPulseDone={onPulseDone}
             />
           </div>
         </main>

@@ -48,4 +48,6 @@ export interface WorkspaceData {
   user: { email: string; displayName: string | null };
   partner: PartnerId;
   usage: { used: number; cap: number };
+  /** For "Is this helping you study?": questions asked so far, and whether it has been answered. */
+  pulse: { questions: number; answered: boolean };
 }

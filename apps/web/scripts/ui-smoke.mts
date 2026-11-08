@@ -235,6 +235,12 @@ async function main() {
     }
 
     const cookies = await signInCookies(email);
+    // Nine earlier questions (in another course), so the first question below is the 10th and
+    // "Is this helping you study?" comes due.
+    const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();
+    const { data: other } = await admin.from("courses").select("id").eq("code", "CSC409").single();
+    const { data: warm } = await admin.from("conversations").insert({ user_id: me!.id, course_id: other!.id, title: "Warm-up" }).select("id").single();
+    await admin.from("messages").insert(Array.from({ length: 9 }, (_, i) => ({ conversation_id: warm!.id, user_id: me!.id, role: "user", content: `Warm-up question ${i + 1}` })));
 
     console.log("\nLaptop 1440×900");
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -343,6 +349,29 @@ async function main() {
     check(/[?&]chat=/.test(page.url()), "URL now points at the saved chat", page.url());
     const chatLink = page.locator("nav button[aria-current='true']:visible");
     check((await chatLink.count()) === 1, "new chat appears in the sidebar");
+
+    // Feedback (F7): thumbs on the answer, a reason on thumbs down, saved per answer.
+    const answerLi = page.locator("main li[data-message='assistant']:visible").last();
+    await answerLi.getByRole("button", { name: "Good answer" }).click();
+    await page.waitForTimeout(600);
+    let { data: fbRows } = await admin.from("feedback").select("rating, reason").eq("user_id", me!.id);
+    check(fbRows?.length === 1 && fbRows[0].rating === 1, "thumbs up is saved", JSON.stringify(fbRows));
+    await answerLi.getByRole("button", { name: "Bad answer" }).click();
+    await answerLi.getByRole("button", { name: "Not in my slides" }).click();
+    await answerLi.getByText("Thanks, that helps.").waitFor();
+    await page.waitForTimeout(600);
+    ({ data: fbRows } = await admin.from("feedback").select("rating, reason").eq("user_id", me!.id));
+    check(fbRows?.length === 1 && fbRows[0].rating === -1 && fbRows[0].reason === "not_in_slides", "thumbs down replaces it, with the reason", JSON.stringify(fbRows));
+
+    // "Is this helping you study?" after the 10th question, answered once.
+    const pulse = page.getByRole("group", { name: "Is this helping you study?" });
+    check(await pulse.isVisible(), "after the 10th question the partner asks 'Is this helping you study?'");
+    await shot(page, "2a-laptop-feedback-pulse");
+    await pulse.getByRole("button", { name: "4 out of 5" }).click();
+    await pulse.getByText(/Thank you/).waitFor();
+    await page.waitForTimeout(400);
+    const { data: pulseRows } = await admin.from("pulse_responses").select("score").eq("user_id", me!.id);
+    check(pulseRows?.length === 1 && pulseRows[0].score === 4, "the 1–5 answer is saved", JSON.stringify(pulseRows));
     await shot(page, "2-laptop-answer");
 
     await chip.click();
@@ -363,6 +392,8 @@ async function main() {
     await page.locator("li button[title^='Open ']:visible").first().waitFor({ timeout: 15000 });
     const restored = await page.locator("main li[data-message]:visible").count();
     check(restored === 2, "reloading restores the chat (question + answer, with chips)", `${restored} messages`);
+    check(await page.locator("main li[data-message='assistant']:visible").last().getByRole("button", { name: "Bad answer" }).getAttribute("aria-pressed") === "true", "the rating is still shown after a reload");
+    check(!(await page.getByRole("group", { name: "Is this helping you study?" }).isVisible()), "the helping question is not asked again once answered");
 
     // Off-topic question in the topic chat: labelled fallback, chips name the other topic.
     await page.locator("textarea[aria-label='Your question']:visible").fill("What's the difference between a function and a stored procedure?");

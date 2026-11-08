@@ -9,12 +9,15 @@ import { Mascot } from "@/components/mascot/mascot";
 import { Spinner } from "@/components/ui/spinner";
 import { fill, PARTNERS, pick, type PartnerId } from "@/lib/partners";
 import { Answer } from "./answer";
+import { AnswerActions, type Rating } from "./answer-actions";
+import { PulseCard } from "./pulse-card";
 import { useDictation } from "@/lib/ui/use-dictation";
 
 type Meta = {
   citations?: CitationInfo[];
   fallback?: { topic: string; used: boolean } | null;
   remaining?: number;
+  feedback?: Rating;
 };
 type Msg = UIMessage<Meta>;
 
@@ -33,6 +36,10 @@ interface Props {
   onChatActive(id: string): void;
   onCite(slideKey: string): void;
   prefill: { text: string; n: number } | null;
+  /** "Is this helping you study?": due after the 10th question, until answered (or "Not now"). */
+  pulseDue: boolean;
+  onQuestion(): void;
+  onPulseDone(answered: boolean): void;
 }
 
 function textOf(m: Msg | undefined): string {
@@ -62,6 +69,9 @@ export function ChatPanel({
   onChatActive,
   onCite,
   prefill,
+  pulseDue,
+  onQuestion,
+  onPulseDone,
 }: Props) {
   const p = PARTNERS[partner];
   const conversationId = useRef<string | null>(chatId);
@@ -132,11 +142,12 @@ export function ChatPanel({
               role: "user" | "assistant";
               content: string;
               citations: CitationInfo[];
+              feedback: { rating: 1 | -1; reason: string | null }[] | null;
             }) => ({
               id: r.id,
               role: r.role,
               parts: [{ type: "text", text: r.content }],
-              metadata: { citations: r.citations },
+              metadata: { citations: r.citations, feedback: r.feedback?.[0] ?? null },
             }),
           ),
         );
@@ -209,6 +220,7 @@ export function ChatPanel({
         onChatActive(conversationId.current);
       }
       setInput("");
+      onQuestion();
       const pending = sendMessage(
         { text },
         { body: { conversation_id: conversationId.current } },
@@ -304,11 +316,16 @@ export function ChatPanel({
                     onCite={onCite}
                     partnerName={p.name}
                   />
+                  {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} />}
                   </div>
                 </li>
               ),
             )}
           </ol>
+
+          {pulseDue && !busy && messages.length > 0 && (
+            <PulseCard partner={partner} name={studentName} onDone={() => onPulseDone(true)} onLater={() => onPulseDone(false)} />
+          )}
 
           {waitingForWords && (
             <p className="mt-6 flex items-center gap-3 text-sm text-muted" role="status">

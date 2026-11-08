@@ -190,7 +190,8 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 - Thumbs up / thumbs down on every assistant message. Thumbs down opens an optional short reason ("wrong", "not in slides", "too long", "other" + text).
 - A one-question in-app prompt after the 10th message: "Is this helping you study? (1–5)".
-- End-of-pilot survey link (external form) shown as a banner from 3 December.
+- End-of-pilot survey link (external form) shown as a banner from 3 December. **Not shipped for now** (owner's decision, Nov 2026); add it when the survey link exists.
+- Built: copy / thumbs up / thumbs down under each finished answer; a thumbs down offers "Wrong", "Not in my slides", "Too long", "Other" (+ a few words). Pressing the same thumb again takes it back. The 1–5 question is asked by the study partner after the student's 10th question; "Not now" waits until the next visit, an answer is final.
 
 ### F8. Usage cap
 
@@ -200,7 +201,7 @@ The primary signal is **direct student feedback**: students say it helped, and t
 ### F9. Admin and operations (no UI in MVP)
 
 - An ingestion CLI loads and re-loads course slides.
-- SQL views show daily active users, messages, cost, and thumbs-up rate.
+- SQL views show daily active users, messages, cost, and thumbs-up rate: `metrics.pilot`, `metrics.daily`, `metrics.thumbs_down`, `metrics.courses`, `metrics.partners`, `metrics.helping` (schema closed to students and the Data API).
 - All traces export to Proofline format (JSONL).
 
 ---

@@ -21,13 +21,15 @@ async function Loaded({ params, searchParams }: Props) {
   const code = rawCode.toUpperCase();
   const { supabase, user } = await requireUser();
 
-  const [{ data: courses }, { data: profile }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }] = await Promise.all([
+  const [{ data: courses }, { data: profile }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }] = await Promise.all([
     supabase.from("courses").select("id, code, title, sort_order").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
     supabase.from("materials").select("id, course_id, topic_id, kind, material_order, title, page_count, courses!inner(code)").eq("courses.code", code).order("material_order"),
+    supabase.from("messages").select("id", { count: "exact", head: true }).eq("role", "user"),
+    supabase.from("pulse_responses").select("score").maybeSingle(),
   ]);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
   const course = (courses as CourseItem[] | null)?.find((c) => c.code === code);
@@ -55,6 +57,7 @@ async function Loaded({ params, searchParams }: Props) {
       user={{ email: user.email ?? "", displayName: profile?.display_name ?? null }}
       partner={profile.study_partner}
       usage={{ used: (used as number | null) ?? 0, cap }}
+      pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
     />
   );
 }

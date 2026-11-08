@@ -19,9 +19,9 @@ insert into auth.users (id, email, aud, role, created_at, updated_at) values
   ('00000000-0000-0000-0000-00000000000a', 'alice@pau.edu.ng', 'authenticated', 'authenticated', now(), now()),
   ('00000000-0000-0000-0000-00000000000b', 'bob@pau.edu.ng',   'authenticated', 'authenticated', now(), now());
 
-insert into courses (id, code, title, sort_order) values
-  ('10000000-0000-0000-0000-000000000001', 'CSC401', 'Compiler Construction', 1),
-  ('10000000-0000-0000-0000-000000000002', 'CSC403', 'Artificial Intelligence', 2);
+insert into courses (id, code, title, department, sort_order) values
+  ('10000000-0000-0000-0000-000000000001', 'CSC401', 'Compiler Construction', 'Computer Science', 1),
+  ('10000000-0000-0000-0000-000000000002', 'CSC403', 'Artificial Intelligence', 'Computer Science', 2);
 
 insert into topics (id, course_id, topic_order, title) values
   ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 1, 'Introduction'),
