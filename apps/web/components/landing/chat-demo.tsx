@@ -23,7 +23,8 @@ const FOLLOW_UP = "I still don't understand";
 // Timeline (ms). Zoom in, type, send, think, slide, highlight, answer, read; zoom in, type the
 // follow-up, send, think, explanation, hold.
 const PER_CHAR = 70;
-const TYPE_1 = 900;
+const LEAD = 900; // the whole chat, unzoomed, before the camera moves in on the question box
+const TYPE_1 = LEAD + 900;
 const SEND_1 = TYPE_1 + QUESTION.length * PER_CHAR + 450;
 const SLIDE = SEND_1 + 1100;
 const HIGHLIGHT = SLIDE + 900;
@@ -92,14 +93,21 @@ export function ChatDemo() {
     if (!el) return;
     // "Seen" = the player has been fully on screen since it was last started from elsewhere. Pausing on
     // scroll-away applies only then, so "See how it works" isn't paused while the page scrolls to it.
+    // "See how it works" doesn't play straight away: it asks to play once the player has scrolled fully
+    // into view, so the visitor sees the opening (unzoomed chat, then the zoom in) instead of missing it.
     let seen = false;
+    let wanted: null | boolean = null; // pending "play" request: restart?
+    let full = false;
     const io = new IntersectionObserver(
       ([entry]) => {
         const c = control.current;
-        const full = entry.intersectionRatio >= 0.95 || entry.intersectionRect.height >= window.innerHeight * 0.9;
+        full = entry.intersectionRatio >= 0.95 || entry.intersectionRect.height >= window.innerHeight * 0.9;
         if (full) {
           seen = true;
-          if (!c.started) c.play(true);
+          if (wanted !== null) {
+            c.play(wanted);
+            wanted = null;
+          } else if (!c.started) c.play(true);
         }
         if (seen && entry.intersectionRatio < 0.4) c.pause();
       },
@@ -107,8 +115,12 @@ export function ChatDemo() {
     );
     io.observe(el);
     const onPlay = () => {
-      seen = false;
-      control.current.play(!control.current.started || control.current.ended);
+      const restart = !control.current.started || control.current.ended;
+      if (full) control.current.play(restart);
+      else {
+        seen = false;
+        wanted = restart;
+      }
     };
     window.addEventListener(DEMO_PLAY_EVENT, onPlay);
     return () => {
@@ -151,7 +163,7 @@ export function ChatDemo() {
   const typed2 = typedAt(elapsed, TYPE_2, FOLLOW_UP.length);
   const draft = phase === 0 ? QUESTION.slice(0, typed) : FOLLOW_UP.slice(0, typed2);
   const ready = phase === 0 ? typed === QUESTION.length : typed2 === FOLLOW_UP.length;
-  const zoomed = started && typing && !ended;
+  const zoomed = started && !ended && ((phase === 0 && elapsed >= LEAD) || phase === 5);
 
   const button = !started
     ? { label: "Play demo", icon: <PlayIcon />, text: "Play" }

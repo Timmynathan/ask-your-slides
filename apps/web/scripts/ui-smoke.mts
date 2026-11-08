@@ -147,7 +147,7 @@ async function main() {
     await lp.waitForTimeout(400);
     const typedBefore = await lp.locator("#demo").getByText(/^What is a B\+/).count();
     await lp.getByRole("link", { name: "See how it works", exact: true }).click();
-    await lp.waitForTimeout(4800);
+    await lp.waitForTimeout(6500); // scroll, unzoomed opening, zoom in, type, send
     const userBubble = await lp.locator("#demo").locator("div.bg-\\[\\#0e1664\\]").filter({ hasText: "What is a B+ tree index?" }).count();
     check(typedBefore === 0 && userBubble === 1, "'See how it works' scrolls to the demo, which then plays from the start", `before ${typedBefore}, sent ${userBubble}`);
     // It is a video: Pause stops it where it is, and it does not loop by itself.
