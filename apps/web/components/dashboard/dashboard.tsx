@@ -6,9 +6,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/brand/logo";
-import { SignOutButton } from "@/components/ui/sign-out-button";
+import { AccountMenu } from "@/components/ui/account-menu";
 import { courseIcon } from "@/lib/study/course-icon";
 import { displayCode } from "@/lib/study/format";
+import { useClickAway } from "@/lib/ui/use-click-away";
 
 export interface DashboardCourse {
   id: string;
@@ -337,34 +338,6 @@ function SortMenu({ sort, onSort }: { sort: Sort; onSort(s: Sort): void }) {
   );
 }
 
-function AccountMenu({ user }: { user: Props["user"] }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  useClickAway(root, open, () => setOpen(false));
-  const name = user.displayName ?? user.email;
-  return (
-    <div ref={root} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Account"
-        aria-expanded={open}
-        className="grid h-10 w-10 place-items-center rounded-full bg-brand text-[17px] font-medium uppercase text-white transition hover:opacity-90 active:scale-90"
-      >
-        {name.trim().charAt(0) || "?"}
-      </button>
-      {open && (
-        <div className="pop-in absolute right-0 top-12 z-30 w-64 rounded-2xl bg-card p-4 text-sm shadow-lg ring-1 ring-line">
-          {user.displayName && <p className="truncate font-medium text-ink">{user.displayName}</p>}
-          <p className="truncate text-muted">{user.email}</p>
-          <div className="mt-3 border-t border-line pt-3">
-            <SignOutButton className="text-ink hover:underline" />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ViewButton({ active, label, onClick, children }: { active: boolean; label: string; onClick(): void; children: React.ReactNode }) {
   return (
     <button
@@ -397,19 +370,4 @@ function Empty({ tab, query, onAll }: { tab: Tab; query: string; onAll(): void }
       )}
     </div>
   );
-}
-
-/** Close a menu on a click outside it or Escape. */
-function useClickAway(ref: React.RefObject<HTMLElement | null>, active: boolean, close: () => void) {
-  useEffect(() => {
-    if (!active) return;
-    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && close();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [ref, active, close]);
 }

@@ -224,7 +224,7 @@ async function main() {
       await op.getByRole("list", { name: "Courses" }).getByRole("link").first().click();
       await op.waitForURL(/\/study\//);
       await op.getByText("Studying with").waitFor();
-      check(await op.locator("nav").getByText("Tobi", { exact: true }).isVisible(), "Tobi is the partner in the study workspace");
+      check(await op.getByRole("button", { name: /Studying with Tobi/ }).isVisible(), "Tobi is the partner in the study workspace");
       check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
       await shot(op, "9-study-empty-tobi");
       const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name").eq("email", newbie).single();
@@ -260,27 +260,22 @@ async function main() {
     await cards.first().getByRole("link").first().click();
     await page.waitForURL(/\/study\/[A-Z]{3}\d{3}/);
     check(true, "a course card opens that course", new URL(page.url()).pathname);
-    // Switching courses happens in the browser: no server round trip, sidebar never disappears.
-    const sidebarHandle = await page.locator("aside:visible").first().elementHandle();
-    let serverHits = 0;
-    const countHits = (r: { url(): string }) => { if (/\/study\/|_rsc=/.test(r.url())) serverHits++; };
-    page.on("request", countHits);
-    const t0 = Date.now();
-    await page.getByRole("button", { name: /CSC 409/ }).click();
-    await page.getByRole("button", { name: "Foundations of research", exact: true }).waitFor();
-    await page.getByRole("button", { name: /CSC 420/ }).click();
-    await page.getByRole("button", { name: "Transactions and indexing", exact: true }).waitFor();
-    const switchMs = Date.now() - t0;
-    page.off("request", countHits);
-    check(serverHits === 0, "switching courses makes no server request (no loading screen)", `${serverHits} requests`);
-    check(await sidebarHandle!.evaluate((el) => el.isConnected), "sidebar stays on screen while switching");
-    check(/\/study\/CSC420$/.test(new URL(page.url()).pathname), "URL follows the selected course", new URL(page.url()).pathname);
-    check(switchMs < 1500, "two course switches feel instant", `${switchMs} ms incl. animations`);
+    // Inside a course the left panel lists only that course's topics (other courses live on My courses).
+    await page.goto(`${BASE}/study/CSC420`);
+    const topicsPanel = page.getByRole("navigation", { name: "Topics and chats" });
+    await topicsPanel.getByRole("button", { name: "Transactions and indexing", exact: true }).waitFor();
+    check(
+      (await topicsPanel.getByRole("button", { name: "Foundations of research", exact: true }).count()) === 0 &&
+        (await page.getByRole("button", { name: /^CSC 409/ }).count()) === 0,
+      "course page lists only this course's topics, no other courses",
+    );
+    check(await page.getByRole("heading", { level: 1, name: "Data Management II" }).isVisible(), "top bar names the course");
+    check(await page.getByRole("link", { name: "All courses" }).first().isVisible(), "logo goes back to My courses");
     await page.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     check(await page.getByRole("button", { name: "Summarize this topic" }).isVisible(), "topic empty state shows the three starters");
     const sidebarBox = await page.locator("aside:visible").first().boundingBox();
-    check(!!sidebarBox && sidebarBox.x === 0 && sidebarBox.width > 250, "sidebar is a fixed column on laptop", JSON.stringify(sidebarBox));
+    check(!!sidebarBox && sidebarBox.x <= 16 && sidebarBox.width >= 280, "Topics is a fixed panel on laptop", JSON.stringify(sidebarBox));
     await shot(page, "1-laptop-empty-topic");
 
     let chatRequests = 0;
@@ -348,7 +343,7 @@ async function main() {
     const drawer = await p2.locator("aside").first().boundingBox();
     check(!!drawer && drawer.x < 0, "sidebar is hidden off-screen on phone", JSON.stringify(drawer));
     await shot(p2, "4-phone-chat");
-    await p2.getByRole("button", { name: "Open course list" }).click();
+    await p2.getByRole("button", { name: "Open topics" }).click();
     await p2.waitForTimeout(400);
     const opened = await p2.locator("aside").first().boundingBox();
     check(!!opened && opened.x === 0, "menu button opens the drawer", JSON.stringify(opened));
