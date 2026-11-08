@@ -1,7 +1,7 @@
 "use client";
 
-// A small chat input that types a prompt, "sends" it, pauses and repeats. Starts when on screen;
-// with reduced motion it simply shows the full prompt.
+// One clean question box that types a prompt, "sends" it (the arrow lights up and presses), pauses
+// and repeats. Starts when on screen; with reduced motion it simply shows the full prompt.
 import { useEffect, useRef, useState } from "react";
 
 export function TypingBox({ text }: { text: string }) {
@@ -27,32 +27,36 @@ export function TypingBox({ text }: { text: string }) {
       return () => timers.forEach(clearTimeout);
     }
     const run = () => {
-      let t = 300;
+      let t = 400;
       at(0, () => {
         setSent(false);
         setTyped(0);
       });
-      for (let i = 1; i <= text.length; i++) at((t += 65), () => setTyped(i));
-      at((t += 500), () => setSent(true));
-      at((t += 2600), run);
+      for (let i = 1; i <= text.length; i++) at((t += 75), () => setTyped(i));
+      at((t += 600), () => setSent(true));
+      at((t += 2200), run);
     };
     run();
     return () => timers.forEach(clearTimeout);
   }, [inView, text]);
 
+  const done = typed === text.length;
   return (
-    /* Fixed height: the bubble appearing must not change the page height (it would shift everything below). */
-    <div ref={box} className="flex h-[76px] flex-col justify-end gap-2 overflow-hidden" aria-hidden>
-      {sent && (
-        <div className="pop-in ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-[#0e1664] px-3 py-1.5 text-[13px] text-white">{text}</div>
-      )}
-      <div className="flex items-center gap-2 rounded-full bg-card py-1.5 pl-3.5 pr-1.5 ring-1 ring-line">
-        <span className="min-h-[20px] flex-1 text-[13px] text-ink">
-          {sent ? <span className="text-muted/70">Ask anything…</span> : text.slice(0, typed)}
-          {!sent && <span className="ml-px inline-block h-3.5 w-px translate-y-0.5 animate-pulse bg-ink" />}
+    // Fixed height: nothing on the page shifts while it animates.
+    <div ref={box} className="flex h-[76px] items-center" aria-hidden>
+      <div className="flex w-full items-center gap-2 rounded-full bg-card py-1.5 pl-4 pr-1.5 shadow-[0_1px_3px_rgb(0_0_0/0.08)]">
+        <span className="min-w-0 flex-1 truncate text-[15px] text-ink">
+          {text.slice(0, typed)}
+          {!sent && <span className="ml-px inline-block h-4 w-px translate-y-0.5 animate-pulse bg-ink" />}
         </span>
-        <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium text-white ${!sent && typed === text.length ? "bg-[#0e1664]" : "bg-[#0e1664]/40"}`}>
-          Send
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-white transition-all duration-200 ${
+            sent ? "scale-90 bg-brand" : done ? "bg-brand" : "bg-black/10"
+          }`}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 19V5M6 11l6-6 6 6" />
+          </svg>
         </span>
       </div>
     </div>

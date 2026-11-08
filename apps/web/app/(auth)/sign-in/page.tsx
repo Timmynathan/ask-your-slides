@@ -33,7 +33,6 @@ export default function SignInPage(props: Props) {
           <Suspense fallback={<div className="mt-8 h-64" />}>
             <Form {...props} />
           </Suspense>
-          <PrivacyNotice />
         </div>
       </main>
       <aside className="relative hidden overflow-hidden bg-pau-100 lg:flex lg:flex-col lg:items-center lg:justify-center" aria-hidden>
@@ -54,29 +53,5 @@ export default function SignInPage(props: Props) {
         </div>
       </aside>
     </div>
-  );
-}
-
-function PrivacyNotice() {
-  const contact = process.env.NEXT_PUBLIC_PRIVACY_CONTACT;
-  return (
-    <section className="mt-10 rounded-2xl bg-card p-4 text-xs leading-relaxed text-muted ring-1 ring-line">
-      <h2 className="mb-1 font-medium text-ink">What we store</h2>
-      <p>
-        Your PAU email, an optional display name, your study partner and your conversations. Conversations and ratings are
-        used to improve the app. Your data is never sold or used to train AI models.
-      </p>
-      <p className="mt-1">
-        To have your data deleted,{" "}
-        {contact ? (
-          <>
-            email <a className="underline" href={`mailto:${contact}`}>{contact}</a>
-          </>
-        ) : (
-          "contact the app owner"
-        )}
-        .
-      </p>
-    </section>
   );
 }

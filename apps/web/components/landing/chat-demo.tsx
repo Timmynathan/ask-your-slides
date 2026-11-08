@@ -385,9 +385,14 @@ function Slide({ highlight }: { highlight: boolean }) {
         <p>▪ Without an index, the DBMS must scan every row of the table.</p>
         <p>
           ▪{" "}
-          <span className={`demo-highlight rounded-sm ${highlight ? "is-on" : ""}`}>
+          <span className={`demo-highlight ${highlight ? "is-on" : ""}`}>
             A <b>B+ tree index</b> keeps keys <b>sorted</b>, so lookups take O(log n) steps instead of scanning every row.
           </span>
+          {highlight && (
+            <span className="ai-tag pop-in ml-2 inline-flex translate-y-[-2px] items-center gap-1 rounded-full px-2 py-0.5 align-middle font-sans text-[10px] font-semibold uppercase tracking-wider text-white sm:text-[11px]">
+              ✦ Ada found this
+            </span>
+          )}
         </p>
         <p>▪ Leaves are linked, so range queries walk them in order.</p>
         <svg viewBox="0 0 220 60" className="mx-auto w-44 sm:w-60" fill="none" stroke="#0b1b4d" strokeWidth="1.6">

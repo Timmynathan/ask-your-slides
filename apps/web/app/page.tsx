@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
-import { ChoreBin } from "@/components/landing/chore-bin";
 import { ChatDemo } from "@/components/landing/chat-demo";
 import { TypingBox } from "@/components/landing/typing-box";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
-import { getCatalog, joinList, spacedCode } from "@/lib/catalog";
+import { getCatalog, spacedCode } from "@/lib/catalog";
 import { courseDot } from "@/lib/study/format";
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
@@ -26,10 +25,9 @@ const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 tex
 export default async function Landing() {
   // Departments, courses and counts come from the database (cached hourly), not from the copy.
   const catalog = await getCatalog();
-  const departments = joinList(catalog.departments);
   return (
     <div className="flex min-h-dvh flex-col bg-page">
-      <Banner text="New: choose your study partner. Tobi, Ada, Dr. Musa or Zara." linkText="Meet them" href="#partners" />
+      <Banner text="Every PAU course slide, ready to chat with." linkText="Start studying" href="/sign-in?start=1" />
 
       <header className="sticky top-0 z-20 px-3 pt-3 sm:px-5">
         <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-line bg-page/85 pl-5 pr-2 backdrop-blur">
@@ -58,9 +56,9 @@ export default async function Landing() {
           <h1 className="max-w-6xl font-heading text-[2.4rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-6xl lg:text-[4.25rem]">
             Stop uploading slides to ChatGPT.
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
-            All your {departments ? `${departments} ` : ""}course slides are already here, so there&apos;s nothing to upload. Ask a question
-            and get the answer straight from your slides, with the exact slide shown.
+          <p className="mt-6 max-w-4xl text-balance text-lg leading-relaxed text-muted sm:text-xl">
+            All your course slides are already here, so there&apos;s nothing to upload. Ask a question and get the answer straight
+            from your slides, with the exact slide shown.
           </p>
           <Link
             href="/sign-in?start=1"
@@ -104,9 +102,9 @@ export default async function Landing() {
 
         {/* Why not a general chatbot? Kept to the one point that matters. */}
         <section id="why" className="mx-auto max-w-5xl scroll-mt-20 px-5 py-20">
-          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Why not ChatGPT, Claude or Gemini?</h2>
+          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Why not just ChatGPT, Claude or Gemini?</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-lg text-muted">They don&apos;t have your slides. We do.</p>
-          <div className="mt-10 grid items-center gap-6 md:grid-cols-[1fr_auto_1fr]">
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
             <div className="rounded-[25px] bg-tint p-7 ring-1 ring-line">
               {/* Third-party logos are their owners' trademarks, used here only to name the products compared. */}
               <div className="flex items-center gap-3">
@@ -126,7 +124,6 @@ export default async function Landing() {
                 ))}
               </ul>
             </div>
-            <ChoreBin className="mx-auto w-48 text-black dark:text-white" />
             <div className="rounded-[25px] bg-brand p-7 text-white">
               <span className="inline-flex rounded-full bg-white px-3.5 py-1.5">
                 <Logo size={24} />
@@ -151,13 +148,7 @@ export default async function Landing() {
           <div className="mx-auto max-w-6xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Everything in your slides, on demand</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              <Feature title="Answers with receipts" body="Each point ends with a chip like “Transactions and Indexing · Slide 5”. Tap it to see the slide.">
-                <p className="text-sm leading-relaxed text-ink">
-                  ACID stands for Atomicity, Consistency, Isolation and Durability.{" "}
-                  <span className="whitespace-nowrap rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-800 ring-1 ring-teal-200">Transactions · Slide 5</span>
-                </p>
-              </Feature>
+            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               <Feature title="Topic chats" body="Study one topic at a time. If it's covered somewhere else in the course, you'll be told where.">
                 <div className="space-y-1.5 text-sm">
                   {["Whole course", "Transactions and indexing", "Complex types"].map((t, i) => (
@@ -166,7 +157,7 @@ export default async function Landing() {
                 </div>
               </Feature>
               <Feature title="Summaries in order" body="Ask for a lecture, a topic or the whole course. It reads every slide, in order, not just the first few.">
-                <TypingBox text="Summarise this entire course" />
+                <TypingBox text="Summarize CSC 401" />
               </Feature>
               <Feature title="Quiz me" body="One question at a time. Answer, get marked, see the slide with the right answer.">
                 <div className="rounded-xl bg-sunken p-3 text-sm text-ink">
@@ -207,7 +198,7 @@ export default async function Landing() {
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">
             Pick the style you enjoy and switch any time. Every partner answers from your school slides and cites every point.
           </p>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {PARTNER_IDS.map((id) => {
               const p = PARTNERS[id];
               return (

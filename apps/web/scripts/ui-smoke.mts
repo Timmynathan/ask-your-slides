@@ -125,7 +125,7 @@ async function main() {
     const chips = await lp.getByText("Your PAU courses are already here").locator("..").locator("span.rounded-full").filter({ hasText: /^[A-Z]{3} \d{3}$/ }).count();
     check(chips === courseCount, "landing shows every PAU course from the database", `${chips} chips, ${courseCount} courses`);
     check((await lp.getByRole("img", { name: /ChatGPT|Claude|Gemini/ }).count()) === 3, "comparison shows the ChatGPT, Claude and Gemini logos");
-    const banner = lp.getByText("New: choose your study partner", { exact: false }).first();
+    const banner = lp.getByText("Every PAU course slide, ready to chat with.", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
     check(bannerBg === "rgb(14, 22, 100)", "PAU navy #0E1664 banner across the top", bannerBg);
     const ctaBg = await lp.getByRole("link", { name: "Try for free" }).last().evaluate((el) => getComputedStyle(el).backgroundColor);
