@@ -512,7 +512,7 @@ async function main() {
     check(adminRes?.status() === 404, "a student opening /admin gets 'not found'", String(adminRes?.status()));
     // That 404 is deliberate; the browser logs it as a console error, so don't count it.
     await page.waitForTimeout(300);
-    for (let i = consoleErrors.length - 1; i >= 0; i--) if (/404 \(Not Found\)/.test(consoleErrors[i])) consoleErrors.splice(i, 1);
+    for (let i = consoleErrors.length - 1; i >= 0; i--) if (/status of 404/.test(consoleErrors[i])) consoleErrors.splice(i, 1);
     if (!process.env.E2E_BASE_URL) {
       try {
         const actx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
