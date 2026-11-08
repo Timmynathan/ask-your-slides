@@ -427,7 +427,8 @@ async function main() {
     check(!!drawer && drawer.x < 0, "sidebar is hidden off-screen on phone", JSON.stringify(drawer));
     await shot(p2, "4-phone-chat");
     await p2.getByRole("button", { name: "Open topics" }).click();
-    await p2.waitForTimeout(400);
+    // Wait for the slide-in to finish rather than a fixed delay (slower on a real network).
+    await p2.waitForFunction(() => Math.round(document.querySelector("aside")!.getBoundingClientRect().x) === 0, null, { timeout: 3000 }).catch(() => {});
     const opened = await p2.locator("aside").first().boundingBox();
     check(!!opened && opened.x === 0, "menu button opens the drawer", JSON.stringify(opened));
     await shot(p2, "5-phone-drawer");
