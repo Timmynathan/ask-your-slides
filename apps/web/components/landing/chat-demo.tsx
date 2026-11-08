@@ -26,7 +26,7 @@ const PER_CHAR = 70;
 const LEAD = 900; // the whole chat, unzoomed, before the camera moves in on the question box
 const TYPE_1 = LEAD + 900;
 const SEND_1 = TYPE_1 + QUESTION.length * PER_CHAR + 450;
-const SLIDE = SEND_1 + 1100;
+const SLIDE = SEND_1 + 2600; // "Ada is searching your slides…", held in close-up
 const HIGHLIGHT = SLIDE + 900;
 const ANSWERED = HIGHLIGHT + 1300;
 const ZOOM_2 = ANSWERED + 2800;
@@ -51,7 +51,8 @@ export function ChatDemo() {
   const [started, setStarted] = useState(false);
   // Reduced motion: Play shows the finished chat at once, so no end screen over it.
   const [instant, setInstant] = useState(false);
-  const [origin, setOrigin] = useState("0px 100%");
+  // Zoom targets: the question box, and the "searching your slides" line just above it.
+  const [origins, setOrigins] = useState({ input: "0px 100%", search: "0px 85%" });
   const clock = useRef(0);
   const box = useRef<HTMLElement>(null);
   const layer = useRef<HTMLDivElement>(null);
@@ -143,15 +144,19 @@ export function ChatDemo() {
     return () => clearInterval(id);
   }, [playing]);
 
-  // Zoom towards the start of the question box, wherever the centred column sits at this width.
+  // Zoom targets, wherever the centred column sits at this width: the start of the question box, and
+  // the "searching" line (the last row of the chat, just above the input bar). Offsets, not bounding
+  // rects, so a measurement taken while zoomed isn't skewed by the scale.
   useEffect(() => {
     const el = layer.current;
     const field = input.current;
-    if (!el || !field) return;
+    const bar = field?.parentElement?.parentElement;
+    if (!el || !field || !bar) return;
     const ro = new ResizeObserver(() => {
-      const a = el.getBoundingClientRect();
-      const b = field.getBoundingClientRect();
-      setOrigin(`${Math.round(b.left - a.left)}px 100%`);
+      let left = 0;
+      for (let n: HTMLElement | null = field; n && n !== el; n = n.offsetParent as HTMLElement | null) left += n.offsetLeft;
+      const searchY = el.offsetHeight - bar.offsetHeight - 40; // middle of the last chat row
+      setOrigins({ input: `${left}px 100%`, search: `${left}px ${searchY}px` });
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -163,7 +168,10 @@ export function ChatDemo() {
   const typed2 = typedAt(elapsed, TYPE_2, FOLLOW_UP.length);
   const draft = phase === 0 ? QUESTION.slice(0, typed) : FOLLOW_UP.slice(0, typed2);
   const ready = phase === 0 ? typed === QUESTION.length : typed2 === FOLLOW_UP.length;
-  const zoomed = started && !ended && ((phase === 0 && elapsed >= LEAD) || phase === 5);
+  const searching = phase === 1;
+  const zoomed = started && !ended && ((phase === 0 && elapsed >= LEAD) || searching || phase === 5);
+  // From the question box the camera glides up to the searching line (transform-origin is animated).
+  const origin = searching ? origins.search : origins.input;
 
   const button = !started
     ? { label: "Play demo", icon: <PlayIcon />, text: "Play" }
@@ -218,7 +226,7 @@ export function ChatDemo() {
               <div className="mx-auto flex w-full max-w-[920px] flex-col gap-4 px-4 pb-5 sm:gap-5 sm:px-8">
                 {phase >= 1 && <UserBubble text={QUESTION} />}
 
-                {phase === 1 && <Thinking text="Ada is finding the slide…" />}
+                {phase === 1 && <Thinking text="Ada is searching your slides" dots />}
 
                 {phase >= 2 && (
                   <div className="pop-in flex shrink-0 items-start gap-3">
@@ -348,11 +356,20 @@ function UserBubble({ text }: { text: string }) {
   );
 }
 
-function Thinking({ text }: { text: string }) {
+function Thinking({ text, dots = false }: { text: string; dots?: boolean }) {
   return (
     <div className="pop-in flex shrink-0 items-center gap-3 text-[14px] text-[#5f6673] sm:text-[17px]">
       <Mascot partner="ada" size={40} mood="thinking" />
-      {text}
+      <span>
+        {text}
+        {dots && (
+          <span className="loading-dots ml-1 inline-flex gap-[3px] align-middle" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
+        )}
+      </span>
     </div>
   );
 }
