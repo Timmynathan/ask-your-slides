@@ -8,7 +8,7 @@ import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
 
-type Props = { searchParams: Promise<{ start?: string; next?: string; deleted?: string; error?: string }>; signUp?: boolean };
+type Props = { searchParams: Promise<{ start?: string; next?: string; deleted?: string; error?: string; ms?: string }>; signUp?: boolean };
 
 const SIGN_IN_ERRORS: Record<string, string> = {
   microsoft: "Microsoft sign-in didn't finish. Try again, or use your email below.",
@@ -16,7 +16,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
 };
 
 async function Form({ searchParams, signUp = false }: Props) {
-  const { start, next, deleted, error } = await searchParams;
+  const { start, next, deleted, error, ms } = await searchParams;
   return (
     <>
       {deleted === "1" && (
@@ -29,7 +29,7 @@ async function Form({ searchParams, signUp = false }: Props) {
           {SIGN_IN_ERRORS[error]}
         </p>
       )}
-      <SignInForm startWithCode={signUp || start === "1"} next={safeNext(next)} />
+      <SignInForm startWithCode={signUp || start === "1"} next={safeNext(next)} microsoft={ms === "1"} />
     </>
   );
 }

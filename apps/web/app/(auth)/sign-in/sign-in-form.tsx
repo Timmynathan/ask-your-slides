@@ -39,8 +39,9 @@ function MicrosoftButton({ next }: { next: string | null }) {
   );
 }
 
-export function SignInForm({ startWithCode = false, next = null }: { startWithCode?: boolean; next?: string | null }) {
-  const showMicrosoft = MICROSOFT;
+export function SignInForm({ startWithCode = false, next = null, microsoft = false }: { startWithCode?: boolean; next?: string | null; microsoft?: boolean }) {
+  // On for everyone with NEXT_PUBLIC_MICROSOFT_LOGIN=1; before that, ?ms=1 shows it for testing.
+  const showMicrosoft = MICROSOFT || microsoft;
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(startWithCode ? "signup" : "login");
   const [step, setStep] = useState<Step>(startWithCode ? { kind: "code-email" } : { kind: "password" });
