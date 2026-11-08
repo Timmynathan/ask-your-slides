@@ -32,7 +32,7 @@ const PATHS: Record<CourseIconId, React.ReactNode> = {
   book: <path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H19v14H6.5A1.5 1.5 0 0 0 5 19.5v-14ZM5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 8h6" />,
 };
 
-export function CourseIcon({ title, size = 32, className = "" }: { title: string; size?: number; className?: string }) {
+export function CourseIcon({ title, size = 32, className = "", light = false }: { title: string; size?: number; className?: string; light?: boolean }) {
   return (
     <svg
       width={size}
@@ -44,7 +44,7 @@ export function CourseIcon({ title, size = 32, className = "" }: { title: string
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
-      className={`shrink-0 text-black dark:text-[#faf9f5] ${className}`}
+      className={`shrink-0 ${light ? "text-white" : "text-black dark:text-[#faf9f5]"} ${className}`}
     >
       {PATHS[courseIconId(title)]}
     </svg>

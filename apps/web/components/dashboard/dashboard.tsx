@@ -211,18 +211,18 @@ function meta(c: DashboardCourse) {
 
 function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
-    <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-sunken p-7 transition hover:bg-pau-50 hover:shadow-sm has-[a:active]:scale-[0.985]">
+    <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-brand p-7 text-white transition hover:bg-pau-900 hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
-      <Link href={`/study/${c.code}`} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
+      <Link href={`/study/${c.code}`} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
       <div className="flex items-start justify-between">
-        <CourseIcon title={c.title} size={34} className="mt-1" />
-        <CardMenu course={c} />
+        <CourseIcon title={c.title} size={34} className="mt-1" light />
+        <CardMenu course={c} onDark />
       </div>
       <div className="mt-auto">
-        <h2 className="truncate text-[22px] leading-tight text-ink" title={c.title}>
+        <h2 className="truncate text-[22px] leading-tight text-white" title={c.title}>
           {c.title}
         </h2>
-        <p className="mt-1.5 truncate text-[15px] text-muted">
+        <p className="mt-1.5 truncate text-[15px] text-white/70">
           {meta(c)}
           {c.lastStudied && ` · Studied ${c.lastStudied}`}
         </p>
@@ -248,7 +248,7 @@ function CourseRow({ course: c }: { course: DashboardCourse }) {
 }
 
 /** ⋮ menu on a card: open, or copy a link to share with coursemates (links survive sign-in). */
-function CardMenu({ course: c }: { course: DashboardCourse }) {
+function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDark?: boolean }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -273,7 +273,7 @@ function CardMenu({ course: c }: { course: DashboardCourse }) {
         onClick={() => setOpen((o) => !o)}
         aria-label={`More options for ${displayCode(c.code)}`}
         aria-expanded={open}
-        className="grid h-9 w-9 place-items-center rounded-full text-muted transition hover:bg-black/5 hover:text-ink active:scale-90"
+        className={`grid h-9 w-9 place-items-center rounded-full transition active:scale-90 ${onDark ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-muted hover:bg-black/5 hover:text-ink"}`}
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
           <circle cx="10" cy="4.5" r="1.6" />
