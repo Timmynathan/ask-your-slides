@@ -12,6 +12,17 @@ export interface TopicItem {
   title: string;
 }
 
+/** A source document (deck, notes, reading…) as listed in the Sources panel. */
+export interface MaterialItem {
+  id: string;
+  course_id: string;
+  topic_id: string | null; // null: course-level (outline, other)
+  kind: string;
+  material_order: number;
+  title: string;
+  page_count: number;
+}
+
 export interface ChatItem {
   id: string;
   course_id: string;
@@ -29,6 +40,8 @@ export interface WorkspaceData {
   topics: TopicItem[];
   /** The student's chats across all courses, newest first. */
   chats: ChatItem[];
+  /** This course's materials: what the partner reads (Sources panel). */
+  materials: MaterialItem[];
   initialCourseId: string;
   initialTopicId: string | null;
   initialChatId: string | null;

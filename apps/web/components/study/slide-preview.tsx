@@ -18,6 +18,8 @@ interface Props {
   sortOrder: number;
   onClose(): void;
   onAsk(text: string): void;
+  /** Flip to another page of the same material (slide key with a different last number). */
+  onNavigate?(slideKey: string): void;
 }
 
 const KIND_LABEL: Record<string, string> = {
@@ -30,13 +32,13 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 // Side panel on laptops (next to the chat), bottom sheet on phones (PRD §13.1).
-export function SlidePreview({ slideKey, onClose, onAsk }: Props) {
+export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
   const [data, setData] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showText, setShowText] = useState(false);
 
   useEffect(() => {
-    // One component per slide (keyed by slideKey in Workspace), so state starts empty here.
+    // One component per material (keyed in Workspace): a new page replaces the old one once it arrives.
     let cancelled = false;
     fetch(`/api/slides/${slideKey}`)
       .then(async (r) => (r.ok ? r.json() : Promise.reject(new Error((await r.json()).error ?? "Couldn't load this slide."))))
@@ -95,6 +97,33 @@ export function SlidePreview({ slideKey, onClose, onAsk }: Props) {
                 />
               ) : (
                 <p className="text-sm text-muted">No image for this {unit}.</p>
+              )}
+              {onNavigate && data.material.page_count > 1 && (
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <button
+                    onClick={() => onNavigate(slideKey.replace(/-\d+$/, `-${data.slide_number - 1}`))}
+                    disabled={data.slide_number <= 1}
+                    aria-label={`Previous ${unit}`}
+                    className="grid h-9 w-9 place-items-center rounded-full ring-1 ring-line transition hover:bg-sunken active:scale-90 disabled:opacity-30"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M10 3 5 8l5 5" />
+                    </svg>
+                  </button>
+                  <span className="text-xs text-muted">
+                    {unit[0].toUpperCase() + unit.slice(1)} {data.slide_number} of {data.material.page_count}
+                  </span>
+                  <button
+                    onClick={() => onNavigate(slideKey.replace(/-\d+$/, `-${data.slide_number + 1}`))}
+                    disabled={data.slide_number >= data.material.page_count}
+                    aria-label={`Next ${unit}`}
+                    className="grid h-9 w-9 place-items-center rounded-full ring-1 ring-line transition hover:bg-sunken active:scale-90 disabled:opacity-30"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="m6 3 5 5-5 5" />
+                    </svg>
+                  </button>
+                </div>
               )}
               <button
                 onClick={() =>

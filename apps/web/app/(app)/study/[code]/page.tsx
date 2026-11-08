@@ -5,7 +5,7 @@ import { Workspace } from "@/components/study/workspace";
 import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
-import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
+import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 
 export const metadata: Metadata = { title: "Ask Your Slides" };
 
@@ -21,12 +21,13 @@ async function Loaded({ params, searchParams }: Props) {
   const code = rawCode.toUpperCase();
   const { supabase, user } = await requireUser();
 
-  const [{ data: courses }, { data: profile }, { data: used }, { data: topicRows }, { data: chats }] = await Promise.all([
+  const [{ data: courses }, { data: profile }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }] = await Promise.all([
     supabase.from("courses").select("id, code, title, sort_order").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
+    supabase.from("materials").select("id, course_id, topic_id, kind, material_order, title, page_count, courses!inner(code)").eq("courses.code", code).order("material_order"),
   ]);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
   const course = (courses as CourseItem[] | null)?.find((c) => c.code === code);
@@ -47,6 +48,7 @@ async function Loaded({ params, searchParams }: Props) {
       courses={courses as CourseItem[]}
       topics={topics}
       chats={chatList}
+      materials={(materialRows ?? []).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count })) as MaterialItem[]}
       initialCourseId={course.id}
       initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
       initialChatId={initialChat?.id ?? null}

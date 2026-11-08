@@ -12,6 +12,7 @@ import { ChatPanel } from "./chat-panel";
 import { PartnerPicker } from "./partner-picker";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
+import { SourcesPanel } from "./sources-panel";
 
 // Inside one course, laid out like a notebook: a top bar (logo back to My courses, the course name,
 // invite, study partner, account), then three panels on a soft background: Topics | chat | the
@@ -30,6 +31,7 @@ export function Workspace(data: WorkspaceData) {
   const [panelKey, setPanelKey] = useState(() => data.initialChatId ?? `new-${data.initialCourseId}-${data.initialTopicId ?? "course"}`);
   const [preview, setPreview] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false); // below xl; on wide screens Sources is always shown
   const [used, setUsed] = useState(data.usage.used);
   const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
   const [partner, setPartner] = useState<PartnerId>(data.partner);
@@ -149,14 +151,32 @@ export function Workspace(data: WorkspaceData) {
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar topics={topics} chats={courseChats} topicId={topicId} chatId={chatId} onOpenScope={openScope} onOpenChat={openChat} />
+          <Sidebar
+            topics={topics}
+            chats={courseChats}
+            topicId={topicId}
+            chatId={chatId}
+            onOpenScope={openScope}
+            onOpenChat={openChat}
+            courseLabel={`${displayCode(course.code)} ${course.title}`}
+          />
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-card lg:rounded-[24px] lg:ring-1 lg:ring-line">
-          <div className="flex h-12 shrink-0 items-center border-b border-line px-5">
-            <p key={`${courseId}-${topicId ?? "course"}`} className="title-in truncate text-sm font-medium text-ink">
+          <div className="flex h-12 shrink-0 items-center gap-3 border-b border-line px-5">
+            <p key={`${courseId}-${topicId ?? "course"}`} className="title-in min-w-0 flex-1 truncate text-sm font-medium text-ink">
               {scopeTitle}
             </p>
+            <button
+              onClick={() => setSourcesOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] text-ink ring-1 ring-line transition hover:bg-sunken active:scale-95 xl:hidden"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden>
+                <path d="M4 1.5h5.5L12.5 4.5v10h-8.5z" />
+                <path d="M9.5 1.5v3h3" />
+              </svg>
+              Sources
+            </button>
           </div>
 
           <div key={panelKey} className="panel-in flex min-h-0 flex-1 flex-col">
@@ -176,11 +196,29 @@ export function Workspace(data: WorkspaceData) {
           </div>
         </main>
 
+        {/* Right: Sources, or the slide being viewed (which replaces it until closed). */}
+        <div className={preview ? "contents xl:hidden" : "contents"}>
+          <SourcesPanel
+            courseCode={course.code}
+            topics={topics}
+            materials={data.materials}
+            topic={topic}
+            partnerName={p.name}
+            open={sourcesOpen}
+            onClose={() => setSourcesOpen(false)}
+            onOpenSource={(key) => {
+              setSourcesOpen(false);
+              setPreview(key);
+            }}
+          />
+        </div>
         {preview && (
           <SlidePreview
-            key={preview}
+            // One viewer per material: flipping pages keeps it mounted, so the current page stays until the next loads.
+            key={preview.replace(/-\d+$/, "")}
             slideKey={preview}
             sortOrder={course.sort_order}
+            onNavigate={setPreview}
             onClose={() => setPreview(null)}
             onAsk={(text) => {
               setPrefill({ text, n: Date.now() });

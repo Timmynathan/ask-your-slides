@@ -5,6 +5,7 @@
 // chats. Other courses aren't listed here: the logo and "All courses" go back to My courses.
 import Link from "next/link";
 import type { ChatItem, TopicItem } from "@/lib/study/types";
+import { WebSearchBox } from "./web-search-box";
 
 interface Props {
   topics: TopicItem[]; // this course's topics
@@ -13,16 +14,21 @@ interface Props {
   chatId: string | null;
   onOpenScope(topicId: string | null): void; // opens a new chat in that scope
   onOpenChat(chat: ChatItem): void;
+  courseLabel: string; // "CSC 420 Data Management II", for the web search box
 }
 
-export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat }: Props) {
+export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat, courseLabel }: Props) {
   const scopes: { id: string | null; label: string; order: number | null }[] = [
     { id: null, label: "Whole course", order: null },
     ...topics.map((t) => ({ id: t.id, label: t.title, order: t.order })),
   ];
   return (
     <nav className="flex h-full flex-col" aria-label="Topics and chats">
-      <div className="flex h-14 shrink-0 items-center justify-between px-5">
+      {/* Kept apart from the slide chat: anything beyond the course goes to the student's own chatbot. */}
+      <div className="shrink-0 px-3 pt-3">
+        <WebSearchBox courseLabel={courseLabel} topicTitle={topics.find((t) => t.id === topicId)?.title ?? null} />
+      </div>
+      <div className="flex h-12 shrink-0 items-center justify-between px-5 pt-1">
         <h2 className="text-[16px] font-medium text-ink">Topics</h2>
         <span className="text-xs text-muted">{topics.length}</span>
       </div>

@@ -274,6 +274,31 @@ async function main() {
     await page.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     check(await page.getByRole("button", { name: "Summarize this topic" }).isVisible(), "topic empty state shows the three starters");
+    // Sources: the materials behind this topic, on the right; a source opens in the slide viewer.
+    const sources = page.getByRole("complementary", { name: "Sources" });
+    const { data: topicMats } = await admin.from("materials").select("title, topics!inner(title), courses!inner(code)").eq("courses.code", "CSC420").eq("topics.title", "Transactions and indexing");
+    const srcCount = await sources.getByRole("listitem").count();
+    check(srcCount === (topicMats ?? []).length && srcCount > 0, "Sources lists this topic's materials", `${srcCount} shown, ${(topicMats ?? []).length} in the topic`);
+    await topicsPanel.getByRole("button", { name: "Whole course", exact: true }).click();
+    const { count: courseMats } = await admin.from("materials").select("id, courses!inner(code)", { count: "exact", head: true }).eq("courses.code", "CSC420");
+    await page.waitForTimeout(300);
+    check((await sources.getByRole("listitem").count()) === courseMats, "Whole course lists every material in the course", `${await sources.getByRole("listitem").count()} vs ${courseMats}`);
+    await sources.getByRole("button").filter({ hasText: /Slides/ }).first().click();
+    const viewer = page.getByRole("dialog", { name: "Slide preview" });
+    await viewer.locator("img").waitFor({ timeout: 15000 });
+    await viewer.getByRole("button", { name: "Next slide" }).click();
+    await viewer.getByText(/Slide 2 of \d+/).waitFor({ timeout: 15000 });
+    check(true, "a source opens in the viewer and pages can be flipped");
+    await shot(page, "1b-laptop-sources");
+    await viewer.getByRole("button", { name: "Close preview" }).click();
+    // Search the web: a separate box that hands the question to the student's own chatbot.
+    await page.evaluate(() => { (window as any).__opened = null; window.open = ((u: string) => { (window as any).__opened = u; return null; }) as any; });
+    await page.getByRole("textbox", { name: "Search the web" }).fill("latest PostgreSQL version");
+    await page.keyboard.press("Enter");
+    const webUrl = await page.evaluate(() => (window as any).__opened as string | null);
+    check(!!webUrl && /^https:\/\/(chatgpt\.com|claude\.ai|www\.google\.com)\//.test(webUrl) && webUrl.includes("PostgreSQL"), "Search the web opens the student's own chatbot with the question", (webUrl ?? "").slice(0, 80));
+    await topicsPanel.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
+    await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     const sidebarBox = await page.locator("aside:visible").first().boundingBox();
     check(!!sidebarBox && sidebarBox.x <= 16 && sidebarBox.width >= 280, "Topics is a fixed panel on laptop", JSON.stringify(sidebarBox));
     await shot(page, "1-laptop-empty-topic");
