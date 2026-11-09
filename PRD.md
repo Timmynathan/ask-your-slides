@@ -515,7 +515,7 @@ cached in `data/.cache`, so a re-run after a fix costs nothing for the parts tha
 3. **Validate** and write `data/.reports/past_papers-<date>.md`: sub-part marks vs their parent,
    question marks vs the paper total and its "answer N questions" rule, gaps in numbering,
    `[unreadable]` text, low confidence, the code on the paper vs `code_on_paper` and the course's
-   aliases. Problems are listed, never dropped silently. A paper with blocking problems is stored as `needs_review` and hidden from students until it is fixed in its review file (`past_papers/<name>.review.yaml`: overrides, added or dropped questions, accepted problems).
+   aliases. Problems are listed, never dropped silently. A paper with blocking problems is stored as `needs_review` and hidden from students until it is fixed in its review file (`past_papers/<name>.review.yaml`: renumbering, overrides, added or dropped questions, accepted problems). Pilot: 2 of 10 papers needed one (CSC402's numbering repeats across sections; CSC419's CA test PDF has the lecturer's marking guide inside it, so its question texts were rewritten without the answers). The extraction prompt now tells the model to leave marking guides out.
 4. **Retrieve** the top slides per question (the same hybrid search as chat, §10.3) and embed the
    question (Voyage, for `search_past_questions` and repeat detection).
 5. **Analyse** (`PAST_Q_MODEL`, one request per question, with its retrieved slides and the
@@ -523,15 +523,16 @@ cached in `data/.cache`, so a re-run after a fix costs nothing for the parts tha
    not_covered`), and **one model answer** cited with `[[s:...]]` and `<general>` (§10.4), sized to
    the marks (a 6-mark answer ≈ 3 developed points), plus a marking scheme (`[{point, marks}]`). MCQs
    get a one-line explanation. Citations are checked against that question's retrieved slides.
-6. **Repeats**: question pairs from different papers of a course with high embedding similarity are
-   confirmed by the model in the same step and grouped.
+6. **Repeats**: question pairs from different papers of a course with embedding similarity ≥ 0.75 are
+   sent to the model in one request per course, which confirms the ones asking for the same idea or skill;
+   confirmed pairs are grouped (`repeat_group`). Run with `npm run ingest:past -- --analyse`.
 7. **Thin courses** (F10 D): generate PAU-style practice questions from the slides, stored with
    `origin = generated`.
 
 **Models and cost.** Steps 2, 5–7 use the **Message Batches API** (50% off). `PAST_Q_MODEL`
 defaults to `claude-sonnet-5-5`; `PAST_Q_MODEL=claude-haiku-5-5` is supported for a tight budget.
 The command prints an estimated cost (pages, questions, tokens, $) and asks for confirmation before
-submitting. Estimate for all 10 papers: Sonnet 5.5 ≈ $2–4, Haiku 5.5 ≈ $0.10–0.30 (batch prices).
+submitting (`npm run ingest:past:estimate` for the whole pipeline). **Measured** (10 papers, 34 + 3 pages, 148 practised questions, Sonnet 5.5, batch): extraction $0.29, analysis $1.12, repeats $0.001, total ≈ $1.41.
 
 ### 9.5 Size and cost estimate
 

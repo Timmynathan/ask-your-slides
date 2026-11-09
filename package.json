@@ -6,6 +6,7 @@
     "test:db": "bash scripts/test-db.sh",
     "ingest": "uv run --project ingestion python ingestion/ingest.py",
     "ingest:past": "uv run --project ingestion python ingestion/past_papers.py",
+    "ingest:past:estimate": "uv run --project ingestion python ingestion/past_estimate.py",
     "check:past": "uv run --project ingestion python ingestion/past_golden.py",
     "ingest:verify": "uv run --project ingestion python ingestion/verify.py",
     "test:ingest": "cd ingestion && uv run pytest -q",

@@ -170,3 +170,42 @@ def test_golden_compare():
         {"number": "Q1", "marks": 8, "text": "Something else entirely"}, {"number": "Q3", "marks": 5, "text": "x"}]}
     assert compare(golden, bad) == [
         "Q2: missing", "Q3: extra entry", "Q1: marks 8 ≠ 10", "Q1: text similarity 0.00 < 0.90", "paper answer_total: 2 ≠ 3"]
+
+
+def test_check_analysis_drops_bad_citations_and_checks_scheme():
+    from past_analysis import QuestionJob, check_analysis
+
+    topics = [{"id": "t1", "topic_order": 1, "title": "Scope"}, {"id": "t2", "topic_order": 2, "title": "Risk"}]
+    job = QuestionJob(id="q", course_id="c", number="Q2a", text="Describe scope creep.", marks=5, type="explain",
+                      options=None, context=[], paper="2025/2026 exam", slides=[{"slide_key": "INS401-03-4"}])
+    raw = {"topics": [1, 9], "relevance": "covered", "relevance_note": "", "answer_key": "B", "explanation": "x",
+           "model_answer": "Scope creep is uncontrolled growth. [[s:INS401-03-4]] It hurts budgets. [[s:INS401-99-1]]",
+           "marking_scheme": [{"point": "definition", "marks": 2}, {"point": "implications", "marks": 2}]}
+    a = check_analysis(raw, job, topics)
+    assert a.topics == ["t1"]
+    assert "[[s:INS401-03-4]]" in a.model_answer and "INS401-99-1" not in a.model_answer
+    assert a.answer_key is None and a.explanation is None  # not an MCQ
+    assert any("adds up to 4" in p for p in a.problems)
+    assert any("unknown topic" in p for p in a.problems) and any("dropped citation" in p for p in a.problems)
+
+    mcq = QuestionJob(id="m", course_id="c", number="Q1", text="Pick", marks=1, type="mcq",
+                      options=[{"label": "A", "text": "a"}, {"label": "B", "text": "b"}], context=[], paper="p", slides=[])
+    ok = check_analysis({**raw, "topics": [2], "marking_scheme": [{"point": "B", "marks": 1}], "model_answer": "B"}, mcq, topics)
+    assert ok.answer_key == "B" and ok.problems == []
+
+
+def test_review_renumber_restructures_broken_numbering():
+    ex = {"paper": paper(), "questions": [
+        q("Q1", "i. First statement.", None, parent=None), q("Q2", "ii. Second statement.", None, parent=None),
+        q("Q1b", "Essay task", None, parent=None), q("Q2", "Design task", None, parent=None)]}
+    review = {"renumber": ["Q1a", "Q1b", "Q2a", None],
+              "add": [{"number": "Q1", "text": "True or false?", "marks": 3, "type": "explain"},
+                      {"number": "Q2", "text": "", "marks": 10, "type": "essay"}],
+              "questions": {"Q1a": {"marks": 1.5}, "Q1b": {"marks": 1.5}}}
+    fixed, _ = apply_review(ex, review)
+    c = check(fixed, course_code="CSC420")
+    assert codes(c, "blocking") == []
+    assert [(x["number"], x["parent"], x["text"]) for x in c.questions[:3]] == [
+        ("Q1", None, "True or false?"), ("Q1a", "Q1", "First statement."), ("Q1b", "Q1", "Second statement.")]
+    with pytest.raises(ValueError):
+        apply_review(ex, {"renumber": ["Q1a"]})

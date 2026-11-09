@@ -38,7 +38,7 @@ from config import DATA, PAST_Q_MODEL, ROOT
 from manifest import Course, ManifestError, PastPaper, load
 from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check
 
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "2"  # bump only to re-extract every paper (a re-store replaces its questions)
 LONG_EDGE = 1568  # Claude's vision input is downscaled beyond this; render at it so nothing is wasted
 REPORTS = ROOT / "data" / ".reports"
 INSTITUTION_NAMES = {"pau": "Pan-Atlantic University"}
@@ -154,6 +154,7 @@ Paper
 - compulsory: top-level questions that must be answered (e.g. ["Q1"]), else [].
 - sections: each section with its own rubric and choose = how many of its questions to answer (null = all of them). [] when the paper has no sections.
 
+If the document includes a marking guide, sample answers, model solutions or notes for examiners, leave them out of every question's text (students must not see them) and say what was left out in page_notes.
 Ignore cover-page exam regulations, stamps, page numbers and logos. If a student's handwriting or marks are on the page, ignore them and mention it in page_notes. page_notes also lists anything else that affected reading the paper (a cut-off edge, a blurred area)."""
 
 
@@ -335,7 +336,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--estimate", action="store_true", help="print the cost estimate and stop")
     ap.add_argument("--yes", action="store_true", help="don't ask before submitting")
     ap.add_argument("--no-store", action="store_true", help="extract and report only; don't write the database")
-    ap.add_argument("--force", action="store_true", help="re-store papers even if unchanged")
+    ap.add_argument("--force", action="store_true", help="re-store papers even if unchanged (with --analyse: re-answer questions)")
+    ap.add_argument("--analyse", action="store_true", help="step 2: slides, topics, relevance, model answers for stored papers")
     args = ap.parse_args(argv)
 
     try:
@@ -343,6 +345,8 @@ def main(argv: list[str] | None = None) -> int:
     except ManifestError as e:
         print(f"Data problems:\n{e}", file=sys.stderr)
         return 2
+    if args.analyse:
+        return analyse(courses, args)
     picked = select(courses, args.course, args.paper)
     if not picked:
         print("No past papers match.")
@@ -424,6 +428,99 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Stored {stored} paper(s) ({needs_review} need review), {failed} failed. Spent ≈ ${spent:.3f}.")
     if store:
         store.close()
+    return 1 if failed else 0
+
+
+def analyse(courses: list[Course], args) -> int:
+    import past_analysis as pa
+    from store import Store
+
+    store = Store()
+    chosen = [c for c in courses if not args.course or any(c.matches(s) for s in args.course)]
+    work: list[tuple[Course, list[dict], list]] = []
+    for c in chosen:
+        cid = store.course_id(c)
+        if cid is None:
+            continue
+        jobs = pa.load_jobs(store, cid, force=args.force)
+        if not jobs:
+            continue
+        topics = pa.course_topics(store, cid)
+        for j in jobs:
+            pa.retrieve(store, j)
+            j.params = pa.build_params(c, topics, j)
+        work.append((c, topics, jobs))
+    all_jobs = [j for _, _, js in work for j in js]
+    if not all_jobs:
+        print("No new questions to analyse; checking repeats only.")
+    uncached = [j for j in all_jobs if batch.cached(j.params) is None]
+    print(f"{len(all_jobs)} question(s) to analyse, {len(uncached)} need the model ({PAST_Q_MODEL}).")
+    if all_jobs and uncached:
+        tin, tout = pa.estimate_tokens(uncached)
+        print(f"Estimate: {tin:,} in, ~{tout:,} out ≈ ${batch.batch_cost(PAST_Q_MODEL, tin, tout):.2f}")
+        if args.estimate:
+            return 0
+        if not args.yes and input("Submit? [y/N] ").strip().lower() != "y":
+            print("Cancelled.")
+            return 1
+    replies = batch.run({j.custom_id: j.params for j in all_jobs}, label="analyse") if all_jobs else {}
+
+    spent = 0.0
+    lines = [f"# Past questions analysis — {datetime.now():%Y-%m-%d %H:%M}", "", f"Model: {PAST_Q_MODEL} · analysis v{pa.ANALYSE_VERSION}", ""]
+    failed = flagged = 0
+    for c, topics, jobs in work:
+        names = {str(t["id"]): t["title"] for t in topics}
+        lines += [f"## {c.code} {c.title}", "", "| Paper | # | Marks | Relevance | Topics | Cites | Problems |", "|---|---|---|---|---|---|---|"]
+        for j in jobs:
+            r = replies[j.custom_id]
+            if not r.cached:
+                spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
+            if r.error or not r.text:
+                failed += 1
+                lines.append(f"| {j.paper} | {j.number} | | | | | **failed**: {r.error or 'empty'} |")
+                continue
+            a = pa.check_analysis(json.loads(r.text), j, topics)
+            pa.save(store, j, a)
+            flagged += bool(a.problems)
+            cites = len(set(pa.CITE_RE.findall(a.model_answer)))
+            marks = "" if j.marks is None else f"{j.marks:g}"
+            lines.append(f"| {j.paper} | {j.number} | {marks} | {a.relevance} | {'; '.join(names[t] for t in a.topics)} | {cites} | "
+                         f"{'; '.join(a.problems).replace('|', '/')} |")
+        pa.roll_up(store, store.course_id(c))
+        lines.append("")
+    # Repeats: one small request per course with candidate pairs (cheap; cached like everything else).
+    repeat_jobs = {}
+    for c in chosen:
+        cid = store.course_id(c)
+        if cid is None:
+            continue
+        pairs = pa.repeat_candidates(store, cid)
+        if pairs:
+            repeat_jobs[f"rep-{cid}"] = (c, cid, pairs, pa.repeat_params(c, pairs))
+    if repeat_jobs:
+        rep = batch.run({k: v[3] for k, v in repeat_jobs.items()}, label="repeats")
+        lines += ["## Repeats", ""]
+        for k, (c, cid, pairs, _) in repeat_jobs.items():
+            r = rep[k]
+            if not r.cached:
+                spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
+            if r.error or not r.text:
+                lines.append(f"- {c.code}: repeat check failed ({r.error})")
+                continue
+            same = json.loads(r.text)["same"]
+            n = pa.save_repeats(store, cid, pairs, same)
+            lines.append(f"- {c.code}: {len(pairs)} candidate pair(s), {len(same)} confirmed, {n} repeat group(s)")
+            for i in same:
+                if 1 <= i <= len(pairs):
+                    p = pairs[i - 1]
+                    lines.append(f"  - {p['a_session']} {p['a_type']} {p['a_number']} ↔ {p['b_session']} {p['b_type']} {p['b_number']} (similarity {p['similarity']:.2f})")
+        lines.append("")
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    report = REPORTS / f"past_analysis-{datetime.now():%Y-%m-%d-%H%M}.md"
+    lines.insert(3, f"Spent ≈ ${spent:.3f} · {len(all_jobs)} questions · {flagged} with problems · {failed} failed\n")
+    report.write_text("\n".join(lines))
+    print(f"Report: {report}\nAnalysed {len(all_jobs) - failed} question(s), {flagged} with problems, {failed} failed. Spent ≈ ${spent:.3f}.")
+    store.close()
     return 1 if failed else 0
 
 

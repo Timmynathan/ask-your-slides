@@ -83,14 +83,28 @@ def normalize_code(code: str | None) -> str:
 
 
 def apply_review(extraction: dict, review: dict | None) -> tuple[dict, set[str]]:
-    """Apply a paper's review file: `paper:` field overrides, `questions: {Q2b: {marks: 6}}`, `drop: [Q9]`,
-    `add: [{number, ...}]` and `accept: [code or code:Q2]`. Returns (extraction, accepted keys)."""
+    """Apply a paper's review file: `renumber: [Q1a, Q1b, null, …]`, `paper:` field overrides,
+    `questions: {Q2b: {marks: 6}}`, `drop: [Q9]`, `add: [{number, ...}]` and `accept: [code or code:Q2]`.
+    Returns (extraction, accepted keys)."""
     if not review:
         return extraction, set()
     paper = {**extraction.get("paper", {}), **(review.get("paper") or {})}
     overrides = review.get("questions") or {}
     drop = set(review.get("drop") or [])
-    questions = [{**q, **(overrides.get(q.get("number")) or {})} for q in extraction.get("questions", []) if q.get("number") not in drop]
+    questions = [dict(q) for q in extraction.get("questions", [])]
+    renumber = review.get("renumber")
+    if renumber is not None:
+        # One new number per extracted entry, in order (null = drop it). For papers whose own numbering
+        # is broken (repeated numbers, i–x lists): sets the parent and strips a leading "iv." marker.
+        if len(renumber) != len(questions):
+            raise ValueError(f"renumber has {len(renumber)} numbers for {len(questions)} extracted entries")
+        renamed = []
+        for q, new in zip(questions, renumber):
+            if new:
+                text = re.sub(r"^\s*(?:[ivx]+|[a-z]|\d+)[.)]\s+", "", q.get("text") or "")
+                renamed.append({**q, "number": new, "parent": expected_parent(new), "text": text})
+        questions = renamed
+    questions = [{**q, **(overrides.get(q.get("number")) or {})} for q in questions if q.get("number") not in drop]
     known = {q.get("number") for q in questions}
     unknown = [n for n in overrides if n not in known]
     if unknown:
