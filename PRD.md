@@ -143,7 +143,7 @@ The primary signal is **direct student feedback**: students say it helped, and t
 ### F2. Dashboard with course and topic chats
 
 - After sign-in, the student lands on **My courses**: one card per course (see §13), like a notebook library. Opening a course shows the study workspace: its Topics panel lists only that course's topics and chats, with a way back to My courses.
-- Under the selected course: **Whole course**, then the course's **topics** in order (from `data/manifest.yaml`). Each has its own conversations and a "New chat" button.
+- Under the selected course: **Whole course**, then the course's **topics** in order (from the course's session manifest, `data/<institution>/…/<CODE>/<session>/manifest.yaml`). Each has its own conversations and a "New chat" button.
 - A chat is either a **whole-course chat** (`topic_id` null) or a **topic chat**.
 - The main area shows the selected conversation.
 - **Laptop first** (most students study on a laptop): sidebar, chat and slide preview side by side. Still works on a phone: the sidebar becomes a drawer and the preview a bottom sheet.
@@ -304,47 +304,98 @@ flowchart TB
 
 ### 9.1 Input layout
 
-Course files are never committed to git. They live in `data/` (git-ignored).
+Course files are never committed to git. They live in `data/` (git-ignored), one folder per
+institution, laid out for many schools and departments. Folders starting with `_` (e.g. `data/_legacy/`,
+`data/_excluded/`) are ignored.
 
 ```
 data/
-  courses.yaml        # course code, title, department (required), lecturer, LMS id; order = sidebar order
-  manifest.yaml       # SOURCE OF TRUTH for structure: course → topics → materials
-  slides/
-    CSC420/
-      01-PAU-CSC420-Outline.pdf
-      02-PAU-CSC420-Lecture1-Transactions-Indexing.pdf
-      ...
+  pau/
+    catalog.yaml                          # institution → schools → programmes → levels → semesters → course codes; order = sidebar order
+    sst/                                  # school
+      computer-science/                   # programme
+        400-level/
+          CSC420/
+            course.yaml                   # identity: code, title, department, level, semester, aliases, current_session
+            2026-2027/                    # one folder per session
+              manifest.yaml               # SOURCE OF TRUTH for that session: topics → materials
+              slides/
+                01-PAU-CSC420-Outline.pdf
+                02-PAU-CSC420-Lecture1-Transactions-Indexing.pdf
+                ...
+            past_papers.yaml              # optional
+            past_papers/
 ```
 
-`manifest.yaml` (abridged):
+A course is unique per **(institution, programme, code)**, not by code alone: the same code (e.g.
+INS401) can exist in several programmes, each with its own folder and files. Paths inside each YAML
+are relative to that file's own folder.
+
+`catalog.yaml` (abridged):
 
 ```yaml
-courses:
-  CSC420:
-    topics:
-    - order: 1
-      title: Transactions and indexing
-    materials:
-    - lms_order: 1                 # = material order; unique per course
-      lms_cmid: 82084              # LMS id; used to detect new files on re-sync
-      lms_section: General
-      file: slides/CSC420/01-PAU-CSC420-Outline.pdf
-      topic: null                  # null = course-level (whole-course chat only)
-      kind: outline                # slides | notes | reading | practical | outline | other | skipped
-    - lms_order: 4
-      file: null
-      kind: skipped                # never ingested
+institution: {id: pau, name: Pan-Atlantic University}
+schools:
+- id: sst
+  programmes:
+  - id: computer-science
+    department: Computer Science
+    levels:
+      400:
+        semester_1:
+          session: 2026-2027
+          courses: [CSC402, CSC409, CSC420, INS401]
 ```
+
+`course.yaml`:
+
+```yaml
+code: CSC420
+title: Data Management II
+institution: pau
+school: sst
+programme: computer-science
+department: Computer Science     # shown in the app; My courses filters by it
+level: 400
+semester: 1
+aliases: [CSC403, CSC421]        # older codes for the same course (e.g. on past papers)
+lms_course_id: 4954
+current_session: 2026-2027       # whose manifest is ingested
+```
+
+`<session>/manifest.yaml` (abridged):
+
+```yaml
+course: CSC420
+session: 2026-2027
+topics:
+- order: 1
+  title: Transactions and indexing
+materials:
+- lms_order: 1                 # = material order; unique per course
+  lms_cmid: 82084              # LMS id; identifies the material within its course session
+  lms_section: General
+  file: slides/01-PAU-CSC420-Outline.pdf
+  topic: null                  # null = course-level (whole-course chat only)
+  kind: outline                # slides | notes | reading | practical | outline | other | skipped
+- lms_order: 4
+  file: null
+  kind: skipped                # never ingested
+```
+
+`past_papers.yaml`: a list of `{file, session, type (exam|test|quiz|project|assignment|other),
+code_on_paper, scanned, ...}`. Validated and listed by ingestion; not ingested yet.
 
 Rules:
 
+- **Catalog and folders must agree**: every course listed in `catalog.yaml` has a folder with `course.yaml`, every `course.yaml` is listed in the catalog, and `course.yaml`'s institution, school, programme, level, semester and `current_session` match its place in both.
+- **Materials belong to a course session.** Only the `current_session` manifest is ingested; materials from an earlier session are replaced when `current_session` moves on.
 - **Topics** come only from the manifest, in its `order`. A material's `topic` must name one of its course's topics, or be `null`.
 - **Kind** decides how a material is used (F3). `skipped` rows are not ingested and not stored.
 - Rows with a `review:` note are judgment calls; ingestion prints them so they get checked, but does not block on them.
 - **Material order** = `lms_order`, used for sorting only. The material title comes from the filename (minus the order prefix and course code) or the first slide's title.
-- Each slide/page gets a short, stable `slide_key`: `{course}-{material order}-{page}`, e.g. `CSC420-02-12`. Citation markers use it (§10.4).
-- Ingestion fails fast, before any upload, if the manifest names a missing file, an unknown topic, an unknown kind, or a course not in `courses.yaml`.
+- Each slide/page gets a short, stable `slide_key`: `{course code}-{material order}-{page}`, e.g. `CSC420-02-12`. Citation markers use it (§10.4). It is unique **within a course**; wherever a key is used (chat, slide viewer) the course is known too.
+- Ingestion fails fast, before any upload, if any YAML names a missing file or a file outside the course folder, an unknown topic or kind, or a course the catalog and folders disagree on.
 
 ### 9.2 Steps
 
@@ -365,9 +416,9 @@ flowchart LR
     J --> K[Upsert slide row + upload PNG]
 ```
 
-0. **Read the manifest**, validate it (§9.1), drop `kind: skipped`, and upsert courses and topics.
+0. **Read the catalog** and each course's `course.yaml`, session manifest and `past_papers.yaml`, validate them (§9.1), drop `kind: skipped`, and upsert courses (by institution + programme + code), the course session and topics.
 1. **Normalize**: convert PPTX/PPT to PDF with LibreOffice headless. This gives one page per slide and a consistent renderer.
-2. **Render**: each page → PNG (1280 px wide). Upload to Supabase Storage at `slides/{course}/{material order}/{n}.png`.
+2. **Render**: each page → PNG (1280 px wide). Upload to Supabase Storage at `slides/{course id}/{material order}/{n}.png` (the course's database id, because codes repeat across programmes).
 3. **Extract text**: from PPTX use `python-pptx` (titles, body, tables, speaker notes). From PDF use PyMuPDF.
 4. **Describe visually**: send the PNG to the vision model **only if** the slide has an image, chart, table, or equation, or if extracted text is shorter than 40 characters (scanned slide). Prompt: describe the diagram, transcribe any equations and tables, keep it under 150 words.
 5. **Build chunk**: one chunk = one slide or page. Content:
@@ -503,6 +554,8 @@ erDiagram
     COURSES ||--o{ TOPICS : has
     COURSES ||--o{ MATERIALS : has
     TOPICS |o--o{ MATERIALS : groups
+    COURSES ||--o{ COURSE_SESSIONS : runs
+    COURSE_SESSIONS ||--o{ MATERIALS : holds
     MATERIALS ||--o{ SLIDES : has
     PROFILES ||--o{ CONVERSATIONS : owns
     COURSES ||--o{ CONVERSATIONS : scopes
@@ -515,10 +568,25 @@ erDiagram
 
     COURSES {
         uuid id PK
-        text code
+        text institution "e.g. pau"
+        text school "e.g. sst"
+        text programme "e.g. computer-science"
+        text code "unique per institution + programme"
         text title
+        text department
+        int level "e.g. 400"
+        int semester "1 or 2"
+        text session "current, e.g. 2026-2027"
+        text_array aliases "older codes"
+        int lms_course_id
         text lecturer
         int sort_order
+    }
+    COURSE_SESSIONS {
+        uuid id PK
+        uuid course_id FK
+        text session "unique per course"
+        int lms_course_id
     }
     TOPICS {
         uuid id PK
@@ -529,6 +597,7 @@ erDiagram
     MATERIALS {
         uuid id PK
         uuid course_id FK
+        uuid course_session_id FK
         uuid topic_id FK "null = course-level"
         text kind "slides|notes|reading|practical|outline|other"
         int material_order "= manifest lms_order; sort only"
@@ -545,7 +614,7 @@ erDiagram
         uuid material_id FK
         uuid course_id FK
         int slide_number "slide or page"
-        text slide_key "e.g. CSC420-02-12"
+        text slide_key "e.g. CSC420-02-12; unique per course"
         text title
         text body_text
         text visual_description
@@ -674,7 +743,7 @@ erDiagram
 
 1. **Sign in** — email field → OTP field. PAU branding kept neutral (no official logo unless the school approves).
 2. **My courses** (`/dashboard`, where sign-in and onboarding land) — a library of course cards, laid out like a notebook library: top bar with the logo, "All courses" / "Recently studied" tabs, course search, grid/list toggle (remembered per browser) and an account menu (name, email, sign out). "My courses" heading with a sort menu (course order, recently studied, A to Z), the department line from the data, and a "Continue studying" button that reopens the student's latest chat. Each card: a minimal black line icon picked from the course title (`lib/study/course-icon.ts`, drawings in `components/dashboard/course-icon.tsx`), the title, "CSC 420 · 4 materials · Studied 3 Nov", and a ⋮ menu (open, copy a link for coursemates). Courses with no material are hidden. A card opens the course's study workspace.
-3. **Study workspace** (`/study/[code]`), laid out like a notebook and as minimal as My courses (white page, soft grey side panels with no borders, line icons only, neutral citation chips, grey question bubbles, a borderless question box with round mic and send buttons): a top bar (logo back to My courses, the course title with "My courses / CSC 420", Invite coursemates on WhatsApp, the study partner chip "Studying with Ada" that opens the partner picker, account menu), then panels on a soft background. **Topics** (left, a navy panel with white text; the selected scope is a white pill): "New chat", then **Whole course** and the course's topics in order; the selected one folds open to show its chats; "All courses" at the bottom. Only this course's topics, never other courses. **Chat** (middle; the question box has a mic for voice typing via the browser's speech recognition, Nigerian English, shown only where supported; words appear in the box and the student presses Send): the selected scope's name, then the conversation, or the empty state with the partner and three starter buttons. Topic chat: "Explain like I missed class", "Summarize this topic", "Quiz me on this topic". Whole-course chat: "Ask a question", "Course overview", "Quiz me". **Sources** (right): the materials the partner reads for the selected scope (a topic's materials; Whole course lists every material grouped by topic, then course-level ones), each with its kind and page count; clicking one opens it in the slide viewer, which replaces Sources until closed and has previous/next to flip through the whole material. Below xl, Sources opens from a button in the chat header. **Search the web** (top of the left panel): a box kept apart from the slide chat that hands the question to the student's own ChatGPT, Claude or Google in a new tab (a one-tap ChatGPT · Claude · Google switch under the field, remembered per browser). Only the question and the course name leave the app, never slide content. Below lg, Topics is a drawer and the slide a bottom sheet.
+3. **Study workspace** (`/study/[code]`; when several programmes share a code, `?programme=` picks one, otherwise the student's department decides), laid out like a notebook and as minimal as My courses (white page, soft grey side panels with no borders, line icons only, neutral citation chips, grey question bubbles, a borderless question box with round mic and send buttons): a top bar (logo back to My courses, the course title with "My courses / CSC 420", Invite coursemates on WhatsApp, the study partner chip "Studying with Ada" that opens the partner picker, account menu), then panels on a soft background. **Topics** (left, a navy panel with white text; the selected scope is a white pill): "New chat", then **Whole course** and the course's topics in order; the selected one folds open to show its chats; "All courses" at the bottom. Only this course's topics, never other courses. **Chat** (middle; the question box has a mic for voice typing via the browser's speech recognition, Nigerian English, shown only where supported; words appear in the box and the student presses Send): the selected scope's name, then the conversation, or the empty state with the partner and three starter buttons. Topic chat: "Explain like I missed class", "Summarize this topic", "Quiz me on this topic". Whole-course chat: "Ask a question", "Course overview", "Quiz me". **Sources** (right): the materials the partner reads for the selected scope (a topic's materials; Whole course lists every material grouped by topic, then course-level ones), each with its kind and page count; clicking one opens it in the slide viewer, which replaces Sources until closed and has previous/next to flip through the whole material. Below xl, Sources opens from a button in the chat header. **Search the web** (top of the left panel): a box kept apart from the slide chat that hands the question to the student's own ChatGPT, Claude or Google in a new tab (a one-tap ChatGPT · Claude · Google switch under the field, remembered per browser). Only the question and the course name leave the app, never slide content. Below lg, Topics is a drawer and the slide a bottom sheet.
 3. **Chat** — messages with streaming; citation chips; general-knowledge boxes; thumbs on each answer; input box with remaining daily messages shown when < 10.
 4. **Slide preview** — side panel next to the chat (laptop) or bottom sheet at 75% height (phone) with the slide/page image, material title and kind, topic, slide/page number, and a link "Ask about this slide".
 
@@ -789,7 +858,7 @@ gantt
 
 ## 19. Open questions
 
-1. ~~Exact list of final-year CS courses and materials.~~ Resolved: `data/courses.yaml` + `data/manifest.yaml` (7 courses, 41 topics, 62 materials). Rows marked `review:` still need a check.
+1. ~~Exact list of final-year CS courses and materials.~~ Resolved: `data/pau/catalog.yaml` + per-course `course.yaml` and session manifests (7 courses, 41 topics, 62 materials). Rows marked `review:` still need a check.
 2. Is the approval in writing, and does it cover all lecturers' slides?
 3. Do PAU email accounts receive external OTP emails reliably? (Resend is set up; to be tested with real PAU accounts.)
 4. ~~Name and domain for the app.~~ Resolved: `askyourslides.com`; app at `app.askyourslides.com`.
@@ -829,7 +898,7 @@ pau-study-assistant/
     lib/supabase/
   ingestion/                # Python ingestion CLI
     ingest.py
-    manifest.py             # load + validate data/manifest.yaml
+    manifest.py             # load + validate data/<institution>/catalog.yaml and each course's YAML
     pptx_extract.py
     pdf_extract.py
     vision.py
@@ -840,8 +909,11 @@ pau-study-assistant/
     README.md               # Proofline export format, agent check
     golden.jsonl
     exports/                # git-ignored: trace exports (contain student questions)
-  data/                     # git-ignored
-    courses.yaml
-    manifest.yaml           # course → topics → materials (source of truth)
-    slides/
+  data/                     # git-ignored; folders starting with _ are ignored
+    pau/
+      catalog.yaml          # schools → programmes → levels → semesters → courses
+      <school>/<programme>/<level>-level/<CODE>/
+        course.yaml
+        <session>/manifest.yaml   # topics → materials (source of truth) + slides/
+        past_papers.yaml          # + past_papers/
 ```

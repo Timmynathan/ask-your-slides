@@ -5,13 +5,14 @@ import { Workspace } from "@/components/study/workspace";
 import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
+import { resolveCourse } from "@/lib/study/course-link";
 import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 
 export const metadata: Metadata = { title: "Ask Your Slides" };
 
 type Props = {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ topic?: string; chat?: string }>;
+  searchParams: Promise<{ topic?: string; chat?: string; programme?: string }>;
 };
 
 // Loads every course's topics and all of the student's chats in one go. Switching courses then
@@ -22,18 +23,19 @@ async function Loaded({ params, searchParams }: Props) {
   const { supabase, user } = await requireUser();
 
   const [{ data: courses }, { data: profile, error: profileError }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }] = await Promise.all([
-    supabase.from("courses").select("id, code, title, sort_order").order("sort_order"),
-    supabase.from("profiles").select("display_name, onboarded, study_partner").eq("id", user.id).single(),
+    supabase.from("courses").select("id, code, programme, department, title, sort_order").order("sort_order"),
+    supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
+    // Every programme's course with this code; narrowed to the chosen one below.
     supabase.from("materials").select("id, course_id, topic_id, kind, material_order, title, page_count, courses!inner(code)").eq("courses.code", code).order("material_order"),
     supabase.from("messages").select("id", { count: "exact", head: true }).eq("role", "user"),
     supabase.from("pulse_responses").select("score").maybeSingle(),
   ]);
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
-  const course = (courses as CourseItem[] | null)?.find((c) => c.code === code);
+  const course = resolveCourse((courses ?? []) as CourseItem[], code, sp.programme, profile.department);
   if (!course) notFound();
 
   // Topics with no material yet stay in the manifest but aren't shown.
@@ -51,7 +53,7 @@ async function Loaded({ params, searchParams }: Props) {
       courses={courses as CourseItem[]}
       topics={topics}
       chats={chatList}
-      materials={(materialRows ?? []).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count })) as MaterialItem[]}
+      materials={(materialRows ?? []).filter((m) => m.course_id === course.id).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count })) as MaterialItem[]}
       initialCourseId={course.id}
       initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
       initialChatId={initialChat?.id ?? null}

@@ -7,6 +7,7 @@ type Preview = SlidePreviewData;
 
 interface Props {
   slideKey: string;
+  courseId: string;
   sortOrder: number;
   onClose(): void;
   onAsk(text: string): void;
@@ -24,7 +25,7 @@ const KIND_LABEL: Record<string, string> = {
 };
 
 // Side panel on laptops (next to the chat), bottom sheet on phones (PRD §13.1).
-export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
+export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }: Props) {
   const [data, setData] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showText, setShowText] = useState(false);
@@ -32,20 +33,20 @@ export function SlidePreview({ slideKey, onClose, onAsk, onNavigate }: Props) {
   useEffect(() => {
     // One component per material (keyed in Workspace): a new page replaces the old one once it arrives.
     let cancelled = false;
-    loadSlide(slideKey)
+    loadSlide(courseId, slideKey)
       .then((d) => {
         if (cancelled) return;
         setData(d);
         setError(null);
         // Have the neighbouring pages ready before the student flips.
-        if (d.slide_number < d.material.page_count) prefetchSlide(pageKey(slideKey, d.slide_number + 1));
-        if (d.slide_number > 1) prefetchSlide(pageKey(slideKey, d.slide_number - 1));
+        if (d.slide_number < d.material.page_count) prefetchSlide(courseId, pageKey(slideKey, d.slide_number + 1));
+        if (d.slide_number > 1) prefetchSlide(courseId, pageKey(slideKey, d.slide_number - 1));
       })
       .catch((e) => !cancelled && setError(e.message));
     return () => {
       cancelled = true;
     };
-  }, [slideKey]);
+  }, [courseId, slideKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();

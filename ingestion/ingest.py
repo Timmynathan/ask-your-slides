@@ -1,9 +1,13 @@
-"""Ingestion CLI: data/manifest.yaml → Supabase (PRD §9).
+"""Ingestion CLI: data/<institution>/catalog.yaml → Supabase (PRD §9).
 
   uv run ingest.py --course CSC420 --dry-run   # validate + plan, no API calls, no writes
-  uv run ingest.py --course CSC420             # ingest one course
-  uv run ingest.py                             # every course in the manifest
-  uv run ingest.py --remove-course CSC420      # delete a course, its rows and images
+  uv run ingest.py --course CSC420             # ingest one course (every programme with that code)
+  uv run ingest.py --course computer-science/INS401   # one programme's INS401
+  uv run ingest.py                             # every course in the catalog
+  uv run ingest.py --remove-course computer-science/CSC420   # delete a course, its rows and images
+
+Each course loads its course.yaml, the manifest of its current session and past_papers.yaml
+(validated and listed; not ingested yet).
 
 Per material (identity = manifest lms_cmid):
   new / file changed   → convert, render, extract, vision, embed, upload, replace rows
@@ -135,10 +139,27 @@ def enrich(plans: list[PagePlan], where_prefix: str, stats: Stats, workers: int,
     return out
 
 
+def relocate_legacy_images(store: Store, course_id: str) -> int:
+    """Images stored before the catalog live under the course code (CSC420/02/1.png), which repeats
+    across programmes. Move them under the course id once; a no-op afterwards."""
+    rows = store.legacy_images(course_id)
+    moves = [(str(r["id"]), r["image_path"], f"{course_id}/{r['image_path'].split('/', 1)[1]}") for r in rows]
+    if moves:
+        store.move_images(moves)
+    return len(moves)
+
+
 def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
-    print(f"\n{course.code} — {course.title}  ({len(course.topics)} topics, {len(course.materials)} materials, {len(course.skipped)} skipped)")
+    print(f"\n{course.key} — {course.title}, {course.session}  ({len(course.topics)} topics, {len(course.materials)} materials, "
+          f"{len(course.skipped)} skipped, {len(course.past_papers)} past papers)")
     dry = args.dry_run
-    course_id = store.course_id(course.code) if dry else store.upsert_course(course)
+    if dry:
+        course_id, session_id = store.course_id(course), None
+    else:
+        course_id, session_id = store.upsert_course(course)
+        moved = relocate_legacy_images(store, course_id)
+        if moved:
+            print(f"  moved {moved} slide images under the course id")
     topic_ids = {} if dry else store.sync_topics(course_id, course.topics)
     existing = store.existing_materials(course_id)
 
@@ -150,7 +171,7 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
             stats.materials["removed"] += 1
             if not dry:
                 store.delete_material(str(row["id"]))
-                store.delete_images(store.list_images(f"{course.code}/{row['material_order']:02d}/"))
+                store.delete_images(store.list_images(f"{course_id}/{row['material_order']:02d}/"))
 
     for m in course.materials:
         title = m.title_override or title_from_filename(m.file.stem)
@@ -180,10 +201,11 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
                     rechunked.append((str(r["id"]), chunk))
             meta_changed = (
                 str(ex["topic_id"]) if ex["topic_id"] else None) != topic_id or ex["kind"] != m.kind or ex["title"] != title \
-                or ex["source_file"] != m.rel_file or ex["lms_section"] != m.section
+                or ex["source_file"] != m.rel_file or ex["lms_section"] != m.section \
+                or str(ex["course_session_id"]) != session_id
             if rechunked or meta_changed:
                 vectors = embed.embed_documents([c for _, c in rechunked]) if rechunked else []
-                store.update_material_meta(str(ex["id"]), topic_id, m, title,
+                store.update_material_meta(str(ex["id"]), session_id, topic_id, m, title,
                                            [(sid, c, v) for (sid, c), v in zip(rechunked, vectors)])
                 print(f"  ~ metadata {label}  ({len(rechunked)} chunks re-embedded)")
                 stats.materials["metadata"] += 1
@@ -223,18 +245,20 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
             slides.append(SlideRow(
                 number=p.number, slide_key=slide_key(course.code, m.order, p.number), title=p.title,
                 body_text=body or None, visual_description=visual, speaker_notes=p.notes, chunk_text=chunk,
-                embedding=None, image_path=image_path(course.code, m.order, p.number), png=p.png,
+                embedding=None, image_path=image_path(course_id, m.order, p.number), png=p.png,
             ))
         for s, v in zip(slides, embed.embed_documents([s.chunk_text for s in slides])):
             s.embedding = v
         store.upload_images(slides)
         topic_id = topic_ids.get(m.topic) if m.topic else None
-        store.replace_material(course_id, topic_id, m, title, chash, slides)
+        if ex and str(ex["course_session_id"]) != session_id:
+            store.delete_material(str(ex["id"]))  # same LMS id carried into a new session: replace, don't collide
+        store.replace_material(course_id, session_id, topic_id, m, title, chash, slides)
         # Clean up images the new version no longer has (fewer pages, or a changed material order).
         keep = {s.image_path for s in slides}
-        stale = [p for p in store.list_images(f"{course.code}/{m.order:02d}/") if p not in keep]
+        stale = [p for p in store.list_images(f"{course_id}/{m.order:02d}/") if p not in keep]
         if ex and ex["material_order"] != m.order:
-            stale += store.list_images(f"{course.code}/{ex['material_order']:02d}/")
+            stale += store.list_images(f"{course_id}/{ex['material_order']:02d}/")
         if stale:
             store.delete_images(stale)
         print(f"  + {status:8} {label}  [{summary}]  {time.time() - t0:.0f}s")
@@ -242,40 +266,48 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--course", action="append", help="course code (repeatable); default: all")
+    ap.add_argument("--course", action="append", help="CODE, programme/CODE or institution/programme/CODE (repeatable); default: all")
     ap.add_argument("--dry-run", action="store_true", help="validate and plan; no API calls, no writes")
     ap.add_argument("--force", action="store_true", help="re-process materials even if unchanged (vision stays cached)")
     ap.add_argument("--no-vision", action="store_true", help="skip vision calls (text only)")
-    ap.add_argument("--remove-course", metavar="CODE", help="delete a course with all its rows and images")
+    ap.add_argument("--remove-course", metavar="COURSE", help="delete a course (programme/CODE if the code is in several programmes) with all its rows and images")
     ap.add_argument("--workers", type=int, default=8, help="parallel vision calls")
     args = ap.parse_args()
 
     try:
         courses = load(DATA)
     except ManifestError as e:
-        print(f"Manifest problems (nothing was changed):\n{e}", file=sys.stderr)
+        print(f"Data problems (nothing was changed):\n{e}", file=sys.stderr)
         return 1
 
     store = Store()
     try:
         if args.remove_course:
-            code = args.remove_course.upper()
-            images = store.list_course_images(code)
-            existed = store.delete_course(code)
+            rows = store.find_courses(args.remove_course)
+            if len(rows) > 1:
+                names = ", ".join(f"{r['programme']}/{r['code']}" for r in rows)
+                print(f"{args.remove_course} is in several programmes ({names}); name one, e.g. {rows[0]['programme']}/{rows[0]['code']}",
+                      file=sys.stderr)
+                return 1
+            if not rows:
+                print(f"{args.remove_course}: was not in the database")
+                return 0
+            cid = str(rows[0]["id"])
+            images = sorted(set(store.list_course_images(cid)) | set(store.slide_image_paths(cid)))
+            store.delete_course(cid)
             store.delete_images(images)
-            print(f"{code}: {'deleted' if existed else 'was not in the database'}; {len(images)} images removed")
+            print(f"{rows[0]['institution']}/{rows[0]['programme']}/{rows[0]['code']}: deleted; {len(images)} images removed")
             return 0
 
         selected = courses
         if args.course:
-            codes = {c.upper() for c in args.course}
-            unknown = codes - {c.code for c in courses}
+            unknown = [s for s in args.course if not any(c.matches(s) for c in courses)]
             if unknown:
-                print(f"Not in manifest: {', '.join(sorted(unknown))}", file=sys.stderr)
+                print(f"Not in the catalog: {', '.join(unknown)}", file=sys.stderr)
                 return 1
-            selected = [c for c in courses if c.code in codes]
+            selected = [c for c in courses if any(c.matches(s) for s in args.course)]
 
-        reviews = [(c.code, m) for c in selected for m in c.materials if m.review]
+        reviews = [(c.key, m) for c in selected for m in c.materials if m.review]
         if reviews:
             print(f"{len(reviews)} manifest rows are marked review (ingested as written — check them):")
             for code, m in reviews:

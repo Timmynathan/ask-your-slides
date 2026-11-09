@@ -49,16 +49,43 @@ class Store:
         self.http.close()
 
     # ── reads ───────────────────────────────────────────────
-    def course_id(self, code: str) -> str | None:
-        row = self.db.execute("select id from courses where code = %s", (code,)).fetchone()
+    def course_id(self, c: Course) -> str | None:
+        row = self.db.execute(
+            "select id from courses where institution = %s and programme = %s and code = %s",
+            (c.institution, c.programme, c.code),
+        ).fetchone()
         return str(row["id"]) if row else None
+
+    def find_courses(self, selector: str) -> list[dict]:
+        """CODE, programme/CODE or institution/programme/CODE → matching course rows."""
+        parts = selector.strip().strip("/").split("/")
+        cols = ["code", "programme", "institution"][: len(parts)]
+        vals = [parts[-1].upper(), *reversed(parts[:-1])]
+        where = " and ".join(f"{c} = %s" for c in cols)
+        return self.db.execute(
+            f"select id, institution, programme, code from courses where {where} order by sort_order", vals
+        ).fetchall()
+
+    def legacy_images(self, course_id: str) -> list[dict]:
+        """Slides whose image is not yet under <course_id>/ (stored by code before the catalog)."""
+        return self.db.execute(
+            "select id, image_path from slides where course_id = %s and image_path is not null "
+            "and image_path not like %s",
+            (course_id, f"{course_id}/%"),
+        ).fetchall()
+
+    def slide_image_paths(self, course_id: str) -> list[str]:
+        rows = self.db.execute(
+            "select image_path from slides where course_id = %s and image_path is not null", (course_id,)
+        ).fetchall()
+        return [r["image_path"] for r in rows]
 
     def existing_materials(self, course_id: str | None) -> dict[int, dict]:
         if course_id is None:
             return {}
         rows = self.db.execute(
-            "select id, lms_cmid, material_order, content_hash, title, kind, topic_id, lms_section, source_file, page_count "
-            "from materials where course_id = %s",
+            "select id, lms_cmid, material_order, content_hash, title, kind, topic_id, lms_section, source_file, page_count, "
+            "course_session_id from materials where course_id = %s",
             (course_id,),
         ).fetchall()
         return {r["lms_cmid"]: r for r in rows}
@@ -71,15 +98,27 @@ class Store:
         ).fetchall()
 
     # ── writes (each method commits its own transaction) ────
-    def upsert_course(self, c: Course) -> str:
+    def upsert_course(self, c: Course) -> tuple[str, str]:
+        """Returns (course id, course session id)."""
         with self.db.transaction():
             row = self.db.execute(
-                "insert into courses (code, title, department, lecturer, sort_order) values (%s, %s, %s, %s, %s) "
-                "on conflict (code) do update set title = excluded.title, department = excluded.department, "
-                "lecturer = excluded.lecturer, sort_order = excluded.sort_order returning id",
-                (c.code, c.title, c.department, c.lecturer, c.sort_order),
+                "insert into courses (institution, school, programme, code, title, department, level, semester, session, "
+                "aliases, lms_course_id, lecturer, sort_order) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "on conflict (institution, programme, code) do update set school = excluded.school, "
+                "title = excluded.title, department = excluded.department, level = excluded.level, "
+                "semester = excluded.semester, session = excluded.session, aliases = excluded.aliases, "
+                "lms_course_id = excluded.lms_course_id, lecturer = excluded.lecturer, sort_order = excluded.sort_order "
+                "returning id",
+                (c.institution, c.school, c.programme, c.code, c.title, c.department, c.level, c.semester, c.session,
+                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order),
             ).fetchone()
-        return str(row["id"])
+            course_id = str(row["id"])
+            srow = self.db.execute(
+                "insert into course_sessions (course_id, session, lms_course_id) values (%s, %s, %s) "
+                "on conflict (course_id, session) do update set lms_course_id = excluded.lms_course_id returning id",
+                (course_id, c.session, c.lms_course_id),
+            ).fetchone()
+        return course_id, str(srow["id"])
 
     def sync_topics(self, course_id: str, topics: tuple[Topic, ...]) -> dict[str, str]:
         """Upsert by title (keeps ids, so chats stay attached), re-number, delete topics no longer listed."""
@@ -98,17 +137,18 @@ class Store:
         return {r["title"]: str(r["id"]) for r in rows}
 
     def replace_material(
-        self, course_id: str, topic_id: str | None, m: Material, title: str, content_hash: str, slides: list[SlideRow]
+        self, course_id: str, session_id: str, topic_id: str | None, m: Material, title: str, content_hash: str,
+        slides: list[SlideRow],
     ) -> str:
         with self.db.transaction():
             row = self.db.execute(
-                "insert into materials (course_id, topic_id, kind, material_order, title, source_file, content_hash, "
-                "page_count, lms_cmid, lms_section, ingested_at) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now()) "
-                "on conflict (lms_cmid) do update set course_id = excluded.course_id, topic_id = excluded.topic_id, "
+                "insert into materials (course_id, course_session_id, topic_id, kind, material_order, title, source_file, "
+                "content_hash, page_count, lms_cmid, lms_section, ingested_at) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now()) "
+                "on conflict (course_session_id, lms_cmid) do update set topic_id = excluded.topic_id, "
                 "kind = excluded.kind, material_order = excluded.material_order, title = excluded.title, "
                 "source_file = excluded.source_file, content_hash = excluded.content_hash, "
                 "page_count = excluded.page_count, lms_section = excluded.lms_section, ingested_at = now() returning id",
-                (course_id, topic_id, m.kind, m.order, title, m.rel_file, content_hash, len(slides), m.cmid, m.section),
+                (course_id, session_id, topic_id, m.kind, m.order, title, m.rel_file, content_hash, len(slides), m.cmid, m.section),
             ).fetchone()
             material_id = str(row["id"])
             self.db.execute("delete from slides where material_id = %s", (material_id,))
@@ -126,13 +166,15 @@ class Store:
         return material_id
 
     def update_material_meta(
-        self, material_id: str, topic_id: str | None, m: Material, title: str, rechunked: list[tuple[str, str, list[float]]]
+        self, material_id: str, session_id: str, topic_id: str | None, m: Material, title: str,
+        rechunked: list[tuple[str, str, list[float]]],
     ) -> None:
-        """Topic/kind/title changed but the file did not: no re-render, no vision; re-embed changed chunks."""
+        """Topic/kind/title/path changed but the file did not: no re-render, no vision; re-embed changed chunks."""
         with self.db.transaction():
             self.db.execute(
-                "update materials set topic_id = %s, kind = %s, title = %s, source_file = %s, lms_section = %s where id = %s",
-                (topic_id, m.kind, title, m.rel_file, m.section, material_id),
+                "update materials set course_session_id = %s, topic_id = %s, kind = %s, title = %s, source_file = %s, "
+                "lms_section = %s where id = %s",
+                (session_id, topic_id, m.kind, title, m.rel_file, m.section, material_id),
             )
             with self.db.cursor() as cur:
                 cur.executemany(
@@ -144,9 +186,9 @@ class Store:
         with self.db.transaction():
             self.db.execute("delete from materials where id = %s", (material_id,))
 
-    def delete_course(self, code: str) -> bool:
+    def delete_course(self, course_id: str) -> bool:
         with self.db.transaction():
-            row = self.db.execute("delete from courses where code = %s returning id", (code,)).fetchone()
+            row = self.db.execute("delete from courses where id = %s returning id", (course_id,)).fetchone()
         return row is not None
 
     # ── storage ─────────────────────────────────────────────
@@ -180,11 +222,27 @@ class Store:
             r = self.http.request("DELETE", f"/object/{BUCKET}", json={"prefixes": paths[i : i + 500]})
             r.raise_for_status()
 
-    def list_course_images(self, code: str) -> list[str]:
-        r = self.http.post(f"/object/list/{BUCKET}", json={"prefix": f"{code}/", "limit": 1000})
+    def list_course_images(self, course_id: str) -> list[str]:
+        r = self.http.post(f"/object/list/{BUCKET}", json={"prefix": f"{course_id}/", "limit": 1000})
         r.raise_for_status()
         folders = [o["name"] for o in r.json() if not o.get("id")]
-        return [p for f in folders for p in self.list_images(f"{code}/{f}/")]
+        return [p for f in folders for p in self.list_images(f"{course_id}/{f}/")]
+
+    def move_images(self, moves: list[tuple[str, str, str]], workers: int = 8) -> None:
+        """moves: (slide id, from path, to path). Moves each object, then points its slide row at it.
+        A source that is already gone but whose target exists (an earlier run stopped half way) counts as moved."""
+        def mv(item: tuple[str, str, str]) -> None:
+            _, src, dst = item
+            r = self.http.post("/object/move", json={"bucketId": BUCKET, "sourceKey": src, "destinationKey": dst})
+            if r.status_code >= 300:
+                exists = self.http.head(f"/object/{BUCKET}/{dst}")
+                if exists.status_code != 200:
+                    raise RuntimeError(f"move {src} → {dst} failed: {r.status_code} {r.text[:200]}")
+
+        with ThreadPoolExecutor(workers) as pool:
+            list(pool.map(mv, moves))
+        with self.db.transaction(), self.db.cursor() as cur:
+            cur.executemany("update slides set image_path = %s where id = %s", [(dst, sid) for sid, _, dst in moves])
 
     def signed_url(self, path: str, seconds: int = 3600) -> str:
         r = self.http.post(f"/object/sign/{BUCKET}/{path}", json={"expiresIn": seconds})

@@ -1,7 +1,7 @@
 [project]
 name = "pau-ingestion"
 version = "0.1.0"
-description = "Loads course materials from data/manifest.yaml into Supabase"
+description = "Loads course materials from data/<institution>/catalog.yaml into Supabase"
 requires-python = ">=3.12,<3.13"
 dependencies = [
   "anthropic",

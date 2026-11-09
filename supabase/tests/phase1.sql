@@ -19,21 +19,27 @@ insert into auth.users (id, email, aud, role, created_at, updated_at) values
   ('00000000-0000-0000-0000-00000000000a', 'alice@pau.edu.ng', 'authenticated', 'authenticated', now(), now()),
   ('00000000-0000-0000-0000-00000000000b', 'bob@pau.edu.ng',   'authenticated', 'authenticated', now(), now());
 
-insert into courses (id, code, title, department, sort_order) values
-  ('10000000-0000-0000-0000-000000000001', 'CSC401', 'Compiler Construction', 'Computer Science', 1),
-  ('10000000-0000-0000-0000-000000000002', 'CSC403', 'Artificial Intelligence', 'Computer Science', 2);
+insert into courses (id, institution, school, programme, level, semester, session, code, title, department, sort_order) values
+  ('10000000-0000-0000-0000-000000000001', 'pau', 'sst', 'computer-science', 400, 1, '2026-2027', 'CSC401', 'Compiler Construction', 'Computer Science', 1),
+  ('10000000-0000-0000-0000-000000000002', 'pau', 'sst', 'computer-science', 400, 1, '2026-2027', 'CSC403', 'Artificial Intelligence', 'Computer Science', 2);
+
+insert into course_sessions (id, course_id, session) values
+  ('70000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '2026-2027'),
+  ('70000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', '2026-2027');
 
 insert into topics (id, course_id, topic_order, title) values
   ('60000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 1, 'Introduction'),
   ('60000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', 2, 'Parsing'),
   ('60000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000002', 1, 'Search');
 
-insert into materials (id, course_id, topic_id, kind, material_order, title, source_file, content_hash, page_count) values
+insert into materials (id, course_id, course_session_id, topic_id, kind, material_order, title, source_file, content_hash, page_count)
+select id::uuid, course_id::uuid, ('70000000-0000-0000-0000-00000000000' || right(course_id, 1))::uuid, topic_id::uuid, kind, material_order, title, source_file, content_hash, page_count from (values
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', 'slides',  1, 'Introduction',      '01-intro.pptx',   'h1', 2),
   ('20000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', 'slides',  4, 'Parsing',           '04-parsing.pdf',  'h4', 2),
   ('20000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000002', 'reading', 5, 'Parsing reading',   '05-reading.pdf',  'h5', 1),
   ('20000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000001', null,                                   'outline', 6, 'Course outline',    '06-outline.pdf',  'h6', 1),
-  ('20000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000009', 'slides',  1, 'Search',            '01-search.pdf',   'h9', 1);
+  ('20000000-0000-0000-0000-000000000009', '10000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000009', 'slides',  1, 'Search',            '01-search.pdf',   'h9', 1)
+) v(id, course_id, topic_id, kind, material_order, title, source_file, content_hash, page_count);
 
 insert into slides (material_id, course_id, slide_number, slide_key, title, chunk_text, embedding) values
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001', 1, 'CSC401-01-1',
@@ -139,16 +145,48 @@ do $$ begin
     raise exception 'FAIL: conversation accepted a topic from another course';
   exception when foreign_key_violation then null; end;
   begin
-    insert into materials (course_id, topic_id, kind, material_order, title, source_file, content_hash) values
-      ('10000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', 'slides', 7, 'x', 'x.pdf', 'x');
+    insert into materials (course_id, course_session_id, topic_id, kind, material_order, title, source_file, content_hash) values
+      ('10000000-0000-0000-0000-000000000002', '70000000-0000-0000-0000-000000000002', '60000000-0000-0000-0000-000000000001', 'slides', 7, 'x', 'x.pdf', 'x');
     raise exception 'FAIL: material accepted a topic from another course';
   exception when foreign_key_violation then null; end;
   begin
-    insert into materials (course_id, kind, material_order, title, source_file, content_hash) values
-      ('10000000-0000-0000-0000-000000000001', 'skipped', 8, 'x', 'y.pdf', 'x');
+    insert into materials (course_id, course_session_id, kind, material_order, title, source_file, content_hash) values
+      ('10000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001', 'skipped', 8, 'x', 'y.pdf', 'x');
     raise exception 'FAIL: kind skipped was stored';
   exception when check_violation then null; end;
-  raise notice 'PASS topics stay inside their course; skipped is never stored';
+  begin
+    insert into materials (course_id, course_session_id, kind, material_order, title, source_file, content_hash) values
+      ('10000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000002', 'slides', 9, 'x', 'z.pdf', 'x');
+    raise exception 'FAIL: material accepted a session from another course';
+  exception when foreign_key_violation then null; end;
+  raise notice 'PASS topics and sessions stay inside their course; skipped is never stored';
+end $$;
+
+-- ── Same code in two programmes: two courses, each with its own CSC401-01-1 ──
+do $$ begin
+  insert into courses (id, institution, school, programme, level, semester, session, code, title, department, sort_order) values
+    ('10000000-0000-0000-0000-000000000003', 'pau', 'sst', 'software-engineering', 400, 1, '2026-2027', 'CSC401', 'Compiler Construction', 'Software Engineering', 3);
+  insert into course_sessions (id, course_id, session) values
+    ('70000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000003', '2026-2027');
+  insert into materials (id, course_id, course_session_id, kind, material_order, title, source_file, content_hash, page_count, lms_cmid) values
+    ('20000000-0000-0000-0000-000000000031', '10000000-0000-0000-0000-000000000003', '70000000-0000-0000-0000-000000000003', 'slides', 1, 'Intro', 'se.pdf', 'h', 1, 4242);
+  insert into slides (material_id, course_id, slide_number, slide_key, chunk_text) values
+    ('20000000-0000-0000-0000-000000000031', '10000000-0000-0000-0000-000000000003', 1, 'CSC401-01-1', 'x');
+  begin
+    insert into courses (institution, school, programme, level, semester, session, code, title, department) values
+      ('pau', 'sst', 'software-engineering', 400, 1, '2026-2027', 'CSC401', 'Dup', 'Software Engineering');
+    raise exception 'FAIL: the same programme got CSC401 twice';
+  exception when unique_violation then null; end;
+  begin
+    insert into slides (material_id, course_id, slide_number, slide_key, chunk_text) values
+      ('20000000-0000-0000-0000-000000000031', '10000000-0000-0000-0000-000000000003', 2, 'CSC401-01-1', 'x');
+    raise exception 'FAIL: a slide key repeated inside one course';
+  exception when unique_violation then null; end;
+  if (select count(*) from match_slides('10000000-0000-0000-0000-000000000001', pg_temp.vec(1), 'compiler', 8) where slide_key = 'CSC401-01-1') <> 1 then
+    raise exception 'FAIL: the other programme''s CSC401 leaked into search';
+  end if;
+  delete from courses where id = '10000000-0000-0000-0000-000000000003';
+  raise notice 'PASS a code can repeat across programmes; keys stay unique per course';
 end $$;
 
 -- Data the RLS tests need, written as the server (service role) would.

@@ -1,6 +1,9 @@
 export interface CourseItem {
   id: string;
   code: string;
+  /** With institution, makes the course unique: the same code can exist in several programmes. */
+  programme: string;
+  department: string;
   title: string;
   sort_order: number;
 }

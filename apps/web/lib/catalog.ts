@@ -22,7 +22,7 @@ export async function getCatalog(): Promise<Catalog> {
   const rows = (courses ?? []) as { code: string; department: string }[];
   return {
     departments: [...new Set(rows.map((c) => c.department))],
-    courseCodes: rows.map((c) => c.code),
+    courseCodes: [...new Set(rows.map((c) => c.code))], // a code can repeat across programmes
     courseCount: rows.length,
     slideCount: count ?? 0,
   };

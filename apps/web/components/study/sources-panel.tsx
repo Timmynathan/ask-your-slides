@@ -17,6 +17,7 @@ const KIND: Record<string, string> = {
 };
 
 interface Props {
+  courseId: string;
   courseCode: string;
   topics: TopicItem[];
   materials: MaterialItem[];
@@ -26,7 +27,7 @@ interface Props {
   onOpenSource(slideKey: string): void;
 }
 
-export function SourcesPanel({ courseCode, topics, materials, topic, open, onClose, onOpenSource }: Props) {
+export function SourcesPanel({ courseId, courseCode, topics, materials, topic, open, onClose, onOpenSource }: Props) {
   const groups: { title: string | null; items: MaterialItem[] }[] = topic
     ? [{ title: null, items: materials.filter((m) => m.topic_id === topic.id) }]
     : [
@@ -71,8 +72,8 @@ export function SourcesPanel({ courseCode, topics, materials, topic, open, onClo
                     <li key={m.id}>
                       <button
                         onClick={() => open1(m)}
-                        onPointerEnter={() => prefetchSlide(firstPage(m))}
-                        onFocus={() => prefetchSlide(firstPage(m))}
+                        onPointerEnter={() => prefetchSlide(courseId, firstPage(m))}
+                        onFocus={() => prefetchSlide(courseId, firstPage(m))}
                         className="flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-page active:scale-[0.99]"
                         title={`View ${m.title}`}
                       >

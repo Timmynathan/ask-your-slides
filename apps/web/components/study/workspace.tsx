@@ -7,6 +7,7 @@ import { Mascot } from "@/components/mascot/mascot";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
 import { displayCode } from "@/lib/study/format";
+import { courseHref, courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
 import { PartnerPicker } from "./partner-picker";
@@ -49,13 +50,13 @@ export function Workspace(data: WorkspaceData) {
 
   // Keep the URL shareable/reloadable without a navigation.
   useEffect(() => {
-    const params = new URLSearchParams();
+    const params = courseParams(course, data.courses);
     if (topic) params.set("topic", String(topic.order));
     if (chatId) params.set("chat", chatId);
     const qs = params.toString();
     window.history.replaceState(window.history.state, "", `/study/${course.code}${qs ? `?${qs}` : ""}`);
     document.title = `${displayCode(course.code)}${topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
-  }, [course.code, topic, chatId]);
+  }, [course, data.courses, topic, chatId]);
 
   const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {
     setTopicId(next.topicId);
@@ -89,7 +90,7 @@ export function Workspace(data: WorkspaceData) {
 
   // Built on click: the site address is only known in the browser (no server/client mismatch).
   const invite = () => {
-    const text = `I'm revising ${displayCode(course.code)} with Ask Your Slides: answers straight from our lecture slides, with the slide cited. Try it: ${window.location.origin}/study/${course.code}`;
+    const text = `I'm revising ${displayCode(course.code)} with Ask Your Slides: answers straight from our lecture slides, with the slide cited. Try it: ${window.location.origin}${courseHref(course, data.courses)}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -182,6 +183,7 @@ export function Workspace(data: WorkspaceData) {
         {/* Right: Sources, or the slide being viewed (which replaces it until closed). */}
         <div className={preview ? "contents xl:hidden" : "contents"}>
           <SourcesPanel
+            courseId={course.id}
             courseCode={course.code}
             topics={topics}
             materials={data.materials}
@@ -199,6 +201,7 @@ export function Workspace(data: WorkspaceData) {
             // One viewer per material: flipping pages keeps it mounted, so the current page stays until the next loads.
             key={preview.replace(/-\d+$/, "")}
             slideKey={preview}
+            courseId={course.id}
             sortOrder={course.sort_order}
             onNavigate={setPreview}
             onClose={() => setPreview(null)}

@@ -1,7 +1,7 @@
 "use client";
 
 // Left panel inside a course: "Topics". Whole course first, then the course's topics in order (from
-// data/manifest.yaml; empty topics are hidden upstream). The selected scope folds open to show its
+// the course session manifest; empty topics are hidden upstream). The selected scope folds open to show its
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
 // badges or counts. Navy panel with white text; the selected scope is a white pill.
 import type { ChatItem, TopicItem } from "@/lib/study/types";

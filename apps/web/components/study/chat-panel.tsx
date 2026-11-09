@@ -329,6 +329,7 @@ export function ChatPanel({
                     fallback={m.metadata?.fallback ?? null}
                     topicTitle={topic?.title ?? null}
                     courseCode={course.code}
+                    courseId={course.id}
                     sortOrder={course.sort_order}
                     onCite={onCite}
                     partnerName={p.name}

@@ -133,7 +133,8 @@ async function main() {
     check(icon.includes('fill="#000"'), "favicon is the black mark");
     const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json().catch(() => null);
     check(manifest?.display === "standalone" && manifest?.icons?.length >= 2, "installable: web app manifest with icons");
-    const { count: courseCount } = await admin.from("courses").select("*", { count: "exact", head: true });
+    const { data: codeRows } = await admin.from("courses").select("code");
+    const courseCount = new Set((codeRows ?? []).map((c) => c.code)).size; // one chip per code, even if several programmes share it
     const chips = await lp.getByText("Your PAU courses are already here").locator("..").locator("span.rounded-full").filter({ hasText: /^[A-Z]{3} \d{3}$/ }).count();
     check(chips === courseCount, "landing shows every PAU course from the database", `${chips} chips, ${courseCount} courses`);
     check((await lp.getByRole("img", { name: /ChatGPT|Claude|Gemini/ }).count()) === 3, "comparison shows the ChatGPT, Claude and Gemini logos");

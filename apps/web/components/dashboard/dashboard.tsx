@@ -14,6 +14,8 @@ import { useClickAway } from "@/lib/ui/use-click-away";
 export interface DashboardCourse {
   id: string;
   code: string;
+  /** /study/CODE, plus ?programme= when another programme has the same code. */
+  href: string;
   title: string;
   department: string;
   sortOrder: number;
@@ -213,7 +215,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-navy p-7 text-white transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
-      <Link href={`/study/${c.code}`} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
+      <Link href={c.href} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
       <div className="flex items-start justify-between">
         <CourseIcon title={c.title} size={34} className="mt-1" light />
         <CardMenu course={c} onDark />
@@ -234,7 +236,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
 function CourseRow({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="relative flex items-center gap-4 border-b border-line/70 px-5 py-3.5 last:border-0 hover:bg-pau-50">
-      <Link href={`/study/${c.code}`} className="absolute inset-0 z-0" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
+      <Link href={c.href} className="absolute inset-0 z-0" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
       <CourseIcon title={c.title} size={22} />
       <span className="min-w-0 flex-1 truncate text-[16px] text-ink">{c.title}</span>
       <span className="hidden w-24 shrink-0 text-sm text-muted sm:block">{displayCode(c.code)}</span>
@@ -256,7 +258,7 @@ function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDa
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/study/${c.code}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${c.href}`);
       setCopied(true);
       setTimeout(() => {
         setCopied(false);
@@ -283,7 +285,7 @@ function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDa
       </button>
       {open && (
         <div role="menu" className="pop-in absolute right-0 top-10 w-52 overflow-hidden rounded-2xl bg-card py-1.5 text-sm shadow-lg ring-1 ring-line">
-          <Link role="menuitem" href={`/study/${c.code}`} className="block px-4 py-2.5 text-ink hover:bg-sunken">
+          <Link role="menuitem" href={c.href} className="block px-4 py-2.5 text-ink hover:bg-sunken">
             Open course
           </Link>
           <button role="menuitem" onClick={copy} className="block w-full px-4 py-2.5 text-left text-ink hover:bg-sunken">

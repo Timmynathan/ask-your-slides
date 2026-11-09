@@ -10,7 +10,7 @@ apps/web/        Next.js app (phases 3–6)
 ingestion/       Python slide ingestion CLI (phase 2)
 supabase/        migrations (schema, RLS, match_slides) and SQL tests
 evals/           Proofline export format + agent check notes (README), golden set
-data/            courses.yaml, manifest.yaml, slides/ — git-ignored, never committed
+data/            pau/catalog.yaml + one folder per course — git-ignored, never committed
 ```
 
 ## Prerequisites (macOS)
@@ -38,15 +38,28 @@ uv python install 3.12
 
 ## Ingestion
 
-Course files live in `data/` (git-ignored): `courses.yaml`, `manifest.yaml` (course → topics →
-materials, each with a `kind`) and `slides/`. Needs `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`,
+Course files live in `data/` (git-ignored), laid out for many schools and departments (PRD §9.1):
+
+```
+data/pau/catalog.yaml                                  schools → programmes → levels → semesters → course codes
+data/pau/<school>/<programme>/<level>-level/<CODE>/
+    course.yaml                                        code, title, department, level, semester, aliases, current_session
+    <session>/manifest.yaml  + <session>/slides/       topics → materials, each with a kind (source of truth)
+    past_papers.yaml         + past_papers/            optional; validated, not ingested yet
+```
+
+Paths inside each YAML are relative to that file's folder. Folders starting with `_` are ignored
+(`data/_legacy/` keeps the old single-file layout as `manifest_v1.yaml`, `courses_v1.yaml`, `past_papers_v1.yaml`). A
+course is unique per institution + programme + code: the same code (e.g. INS401) can live in two
+programmes with different files. Needs `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`,
 `SUPABASE_SECRET_KEY`, `NEXT_PUBLIC_SUPABASE_URL` and `DATABASE_URL` in `.env`.
 
 ```bash
 npm run ingest -- --course CSC420 --dry-run   # validate + plan; no API calls, no writes
-npm run ingest -- --course CSC420             # ingest one course
-npm run ingest                                # all courses
-npm run ingest -- --remove-course CSC420      # delete a course, its rows and images
+npm run ingest -- --course CSC420             # ingest one course (every programme that has this code)
+npm run ingest -- --course computer-science/INS401   # one programme's course
+npm run ingest                                # all courses in the catalog
+npm run ingest -- --remove-course computer-science/CSC420   # delete a course, its rows and images
 npm run ingest:verify -- --course CSC420 --sample 30   # checks + random slides with image links
 ```
 
@@ -57,7 +70,9 @@ npm run ingest:verify -- --course CSC420 --sample 30   # checks + random slides 
   spaces). Template images (logos, banners on most pages) don't count.
 - **`kind: skipped`** rows are never ingested. Rows with `review:` are ingested as written and
   listed at the start of each run so they get checked.
-- `verify` fails if the database doesn't match the manifest, any slide lacks an embedding or image,
+- **Slide images** are stored under the course's database id (`<course id>/02/12.png`). Images
+  stored before the catalog (under the course code) are moved there by the next ingest run.
+- `verify` fails if the database doesn't match the data, any slide lacks an embedding or image,
   or fewer than 80% of topics are found by searching their own title.
 
 ## Web app, onboarding and study partners
@@ -117,10 +132,15 @@ Every answer's full trace (tools, retrieved slides, tokens, cost, latency) is in
 
 ## Notes
 
-- **Structure** comes from `data/manifest.yaml`: course → topics → materials. Each material has a
-  `kind` (slides, notes, reading, practical, outline, other, skipped). `skipped` is never ingested.
+- **Structure** comes from each course's session manifest
+  (`data/pau/<school>/<programme>/<level>-level/<CODE>/<session>/manifest.yaml`): topics → materials. Each
+  material has a `kind` (slides, notes, reading, practical, outline, other, skipped). `skipped` is never
+  ingested. Materials belong to a course session (`course_sessions`).
+- **Courses** are unique per institution + programme + code. `/study/CSC420` picks the student's
+  department's course when a code is shared; links add `?programme=` only then.
 - **Chats** are whole-course (`topic_id` null) or per topic. Topic chats search the topic first and
   fall back to the whole course with a visible label.
 - **Citations** use short slide keys, `[[s:CSC420-02-12]]` = course CSC420, material 02, page 12.
+  Keys are unique within a course; the slide viewer asks for `/api/slides/<key>?course=<course id>`.
 - **No weeks**: lecturers number files inconsistently, so the unit is the topic, never "Week n".
 - **Daily cap** resets at midnight WAT (Africa/Lagos).

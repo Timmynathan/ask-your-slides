@@ -20,8 +20,9 @@ def slide_key(course_code: str, material_order: int, number: int) -> str:
     return f"{course_code}-{material_order:02d}-{number}"
 
 
-def image_path(course_code: str, material_order: int, number: int) -> str:
-    return f"{course_code}/{material_order:02d}/{number}.png"
+def image_path(course_id: str, material_order: int, number: int) -> str:
+    """Storage path under the course's database id: course codes repeat across programmes."""
+    return f"{course_id}/{material_order:02d}/{number}.png"
 
 
 def unit(kind: str, is_pptx: bool) -> str:

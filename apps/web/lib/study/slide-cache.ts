@@ -25,23 +25,25 @@ function preloadImage(url: string | null) {
   img.src = url;
 }
 
-export function loadSlide(key: string): Promise<SlidePreviewData> {
-  const hit = cache.get(key);
+/** Slide keys (CSC420-02-12) are unique within a course, not across programmes: always pass the course. */
+export function loadSlide(courseId: string, key: string): Promise<SlidePreviewData> {
+  const id = `${courseId}:${key}`;
+  const hit = cache.get(id);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
-  const data = fetch(`/api/slides/${key}`).then(async (r) => {
+  const data = fetch(`/api/slides/${key}?course=${encodeURIComponent(courseId)}`).then(async (r) => {
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? "Couldn't load this slide.");
     const d = (await r.json()) as SlidePreviewData;
     preloadImage(d.image_url);
     return d;
   });
-  cache.set(key, { at: Date.now(), data });
-  data.catch(() => cache.delete(key)); // never cache a failure
+  cache.set(id, { at: Date.now(), data });
+  data.catch(() => cache.delete(id)); // never cache a failure
   return data;
 }
 
 /** Start loading a slide the student is likely to open next (hover, neighbouring page). */
-export function prefetchSlide(key: string) {
-  loadSlide(key).catch(() => {});
+export function prefetchSlide(courseId: string, key: string) {
+  loadSlide(courseId, key).catch(() => {});
 }
 
 /** The key of another page of the same material: CSC420-02-12 → CSC420-02-13. */

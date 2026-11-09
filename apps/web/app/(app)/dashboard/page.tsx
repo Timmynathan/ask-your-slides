@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Dashboard, type DashboardCourse } from "@/components/dashboard/dashboard";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
+import { courseHref } from "@/lib/study/course-link";
 
 export const metadata: Metadata = { title: "My courses · Ask Your Slides" };
 
@@ -13,7 +14,7 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", t
 async function Loaded() {
   const { supabase, user } = await requireUser();
   const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }] = await Promise.all([
-    supabase.from("courses").select("id, code, title, department, sort_order, materials(count)").order("sort_order"),
+    supabase.from("courses").select("id, code, programme, title, department, sort_order, materials(count)").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
     supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
   ]);
@@ -30,6 +31,7 @@ async function Loaded() {
       return {
         id: c.id as string,
         code: c.code as string,
+        href: courseHref(c as { code: string; programme: string }, (allCourses ?? []) as { code: string; programme: string }[]),
         title: c.title as string,
         department: c.department as string,
         sortOrder: c.sort_order as number,
@@ -48,7 +50,7 @@ async function Loaded() {
     <Dashboard
       courses={list}
       user={{ email: user.email ?? "", displayName: profile.display_name ?? null }}
-      resume={last && lastCourse ? { href: `/study/${lastCourse.code}?chat=${last.id}`, label: last.title || lastCourse.title } : null}
+      resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
     />
   );
 }

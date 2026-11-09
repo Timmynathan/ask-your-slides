@@ -22,13 +22,15 @@ interface Props {
   fallback: { topic: string; used: boolean } | null;
   topicTitle: string | null;
   courseCode: string;
+  /** Slide keys are unique within a course; the viewer needs both. */
+  courseId: string;
   sortOrder: number;
   onCite(slideKey: string): void;
   /** Study partner's name, for the "beyond your slides" box. */
   partnerName?: string;
 }
 
-export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, onCite, partnerName = "Your study partner" }: Props) {
+export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, courseId, onCite, partnerName = "Your study partner" }: Props) {
   const byKey = new Map(citations.map((c) => [c.slide_key, c]));
   const segments = splitAnswer(text);
   // The label comes from the server (citations outside the topic), not from the model's wording.
@@ -45,8 +47,8 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
           <button
             type="button"
             onClick={() => onCite(key)}
-            onPointerEnter={() => prefetchSlide(key)}
-            onFocus={() => prefetchSlide(key)}
+            onPointerEnter={() => prefetchSlide(courseId, key)}
+            onFocus={() => prefetchSlide(courseId, key)}
             title={`Open ${label}`}
             className="mx-0.5 inline-flex max-w-[20rem] translate-y-[-1px] items-center rounded-full bg-sunken px-2 py-px align-middle text-[11.5px] text-ink/70 transition-colors hover:bg-pau-100 hover:text-brand"
           >
