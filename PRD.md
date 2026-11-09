@@ -220,6 +220,72 @@ The primary signal is **direct student feedback**: students say it helped, and t
 - SQL views show daily active users, messages, cost, and thumbs-up rate: `metrics.pilot`, `metrics.daily`, `metrics.thumbs_down`, `metrics.courses`, `metrics.partners`, `metrics.helping` (schema closed to students and the Data API).
 - All traces export to Proofline format (JSONL).
 
+### F10. Past questions
+
+Real PAU past papers, turned into practice: which topics the lecturer examines, and a way to answer
+those questions and be marked. Pilot data: **10 papers across 6 courses** (`past_papers.yaml` per
+course, §9.1); 8 are scanned (no text layer), so every page goes through vision OCR (§9.4).
+
+**Where it lives**
+- Study workspace → Topics panel: a **Past questions** entry under *Whole course*. It opens a view
+  with two tabs, **Exam map** and **Practice**.
+- In a topic chat, a chip **"N past questions"** in the chat header opens practice for that topic
+  inside the chat (C). Hidden when the topic has none.
+
+**A. Exam map (per course)**
+- One row per topic, in manifest order: **"Asked in 2 of 3 papers"**, total marks across those
+  papers, and the question types (explain, compare, calculate…). Counts only, **never percentages**.
+- A small mark per paper (session + type) shows which papers asked it.
+- Repeat questions (the same idea asked in more than one paper) carry an **"Asked again"** tag and
+  list where ("2023/24 exam Q2, 2025/26 exam Q3b").
+- Under the map, always: *"Based on past papers, not a prediction."*
+- Courses with fewer than 2 papers show *"Few past papers for this course."* instead of a map.
+- Only exams and tests count as papers in the map. Projects/assignments are practice only.
+- Generated practice questions (D) never appear in the map.
+
+**B. Practice mode**
+- Pick a topic or a whole paper. One question at a time, showing its number, marks and source:
+  *"2023/24 exam · then CSC 403 · Q2b · 6 marks"* (the original code is shown whenever it differs
+  from today's course code, via `course.yaml` `aliases`). Paper rules (e.g. "Answer Question ONE and
+  any other three") are shown with whole-paper practice.
+- Written questions: the student types an answer → the chat model (Haiku, `CHAT_MODEL`) marks it
+  against the question's marks and the saved marking scheme and model answer: an estimated score
+  (**"≈ 6/10"**), what was good, what is missing, then the model answer with slide citations.
+- MCQs: instant right/wrong plus a short explanation (no model call).
+- The model answer and the MCQ key are **never sent to the browser before the student answers**,
+  unless they tap **"Show answer"** (that counts as an attempt with no score).
+- Every attempt is saved (`practice_attempts`). A marking counts towards the daily message cap (F8).
+- Questions whose relevance is `not_covered` stay available, are labelled **"Not in this year's
+  slides"**, and come last; `partial` ones are labelled "Partly in this year's slides".
+
+**C. Topic chip.** See *Where it lives*. Practice inside the chat uses the same card as B.
+
+**D. Practice questions for thin courses.** Courses with 0–1 past papers (now CSC418, CSC409,
+CSC412, CSC402) also get **PAU-style practice questions**, generated offline from the slides in the
+format and mark scheme of PAU papers (sections, "Q1a", marks, the question types PAU uses). Each is
+**always** labelled *"Practice question — not from a past paper"*, cited to its slides, and never
+counted in the exam map.
+
+**E. Chat tool.** The agent gets `search_past_questions(topic?, query?)` (§10.2) so an answer can
+say *"This came up in the 2025/26 exam (Q2b, 6 marks)."* It returns question text, source and marks,
+never model answers.
+
+**Rules**
+- Past questions are visible only to signed-in `@pau.edu.ng` users (as slides, §16). Paper files
+  and page images are not served to students in the pilot; the transcribed text is.
+- The integrity rule stands (§10.5 rule 9): no help during a live exam. Practice and marking are
+  revision.
+- Wording is honest: "estimated score", "based on past papers, not a prediction".
+
+**Acceptance**
+- Every paper is either fully extracted or listed in the review report with why (never dropped
+  silently): marks that don't add up to the total, missing question numbers, unreadable text, low
+  confidence.
+- On the golden transcriptions (§15), question numbers, marks and text match.
+- The same answer marked twice scores within ±1 mark.
+- A signed-out request, or a student's request for another student's attempts, returns nothing.
+- The model answer is not in any response before an attempt or "Show answer".
+
 ---
 
 ## 7. User flow
@@ -383,8 +449,8 @@ materials:
   kind: skipped                # never ingested
 ```
 
-`past_papers.yaml`: a list of `{file, session, type (exam|test|quiz|project|assignment|other),
-code_on_paper, scanned, ...}`. Validated and listed by ingestion; not ingested yet.
+`past_papers.yaml`: a list of `{file, session (e.g. 2025/2026), type (exam|test|quiz|project|assignment|other),
+code_on_paper, pages, scanned, instructions, duration, note}`. Ingested by `npm run ingest:past` (§9.4).
 
 Rules:
 
@@ -435,7 +501,39 @@ flowchart LR
 6. **Embed** the chunk text with Voyage `voyage-4` (`input_type: "document"`, 1024 dims). Store the vector; Postgres generates the `tsvector` for full-text search from the chunk text.
 7. **Idempotency**: each material has a content hash (file bytes + its manifest row). Re-running ingestion skips unchanged materials and replaces changed ones. Moving a file to another topic or kind in the manifest updates it without re-running vision. Materials removed from the manifest (or switched to `skipped`) are deleted.
 
-### 9.3 Size and cost estimate
+### 9.4 Past papers (F10)
+
+A separate command, `ingestion/past_papers.py` (`npm run ingest:past`), run after slide ingestion.
+One-time per paper, **idempotent by file hash**: an unchanged paper is skipped; every model reply is
+cached in `data/.cache`, so a re-run after a fix costs nothing for the parts that didn't change.
+
+1. **Render** each page to PNG with the slides pipeline (higher resolution for scanned pages, for OCR).
+2. **Extract** (model `PAST_Q_MODEL`, all pages of a paper in one request) → JSON: paper rules,
+   total marks, duration, and per question: `number` (Q1, Q1a, Q1a(ii)), parent, section (A/B/C),
+   text (tables, code and diagrams written out in Markdown), marks, type (`define | explain | compare
+   | calculate | code | case_study | mcq | essay`), MCQ options and key, confidence.
+3. **Validate** and write `data/.reports/past_papers-<date>.md`: sub-part marks vs their parent,
+   question marks vs the paper total and its "answer N questions" rule, gaps in numbering,
+   `[unreadable]` text, low confidence, the code on the paper vs `code_on_paper` and the course's
+   aliases. Problems are listed, never dropped silently. A paper with blocking problems is stored as `needs_review` and hidden from students until it is fixed in its review file (`past_papers/<name>.review.yaml`: overrides, added or dropped questions, accepted problems).
+4. **Retrieve** the top slides per question (the same hybrid search as chat, §10.3) and embed the
+   question (Voyage, for `search_past_questions` and repeat detection).
+5. **Analyse** (`PAST_Q_MODEL`, one request per question, with its retrieved slides and the
+   course's topic list): 1+ topics, relevance to this year's slides (`covered | partial |
+   not_covered`), and **one model answer** cited with `[[s:...]]` and `<general>` (§10.4), sized to
+   the marks (a 6-mark answer ≈ 3 developed points), plus a marking scheme (`[{point, marks}]`). MCQs
+   get a one-line explanation. Citations are checked against that question's retrieved slides.
+6. **Repeats**: question pairs from different papers of a course with high embedding similarity are
+   confirmed by the model in the same step and grouped.
+7. **Thin courses** (F10 D): generate PAU-style practice questions from the slides, stored with
+   `origin = generated`.
+
+**Models and cost.** Steps 2, 5–7 use the **Message Batches API** (50% off). `PAST_Q_MODEL`
+defaults to `claude-sonnet-5-5`; `PAST_Q_MODEL=claude-haiku-5-5` is supported for a tight budget.
+The command prints an estimated cost (pages, questions, tokens, $) and asks for confirmation before
+submitting. Estimate for all 10 papers: Sonnet 5.5 ≈ $2–4, Haiku 5.5 ≈ $0.10–0.30 (batch prices).
+
+### 9.5 Size and cost estimate
 
 - Pilot data (manifest of 7 Nov 2026): **7 courses, 41 topics, 62 materials** (38 PDF, 24 PPTX; 6 more listed as skipped). Page count to be measured on first ingest; readings can be long, so expect ~2,000–4,000 pages.
 - Vision calls on ~50% of slides. Total ingestion cost: about **$1–3**. Embeddings: ~1–2M tokens with Voyage, well under $1 (check current Voyage pricing and free allowance).
@@ -480,6 +578,7 @@ different?", a quiz answer like "c").
 | `search_slides` | `query: string`, `k?: number (default 8)`, `scope?: "topic" \| "course"`, `include?: ("outline" \| "other")[]` | `{scope_used, fell_back, results: [{slide_key, material_title, material_kind, topic_title, outside_topic, slide_number, title, content, prev_title, next_title}]}` | Q&A, quizzes |
 | `list_topics` | — | Topics in order, each with its materials `{material, title, kind, pages, lms_section}`, plus course-level materials (outlines, other). `material` is a short key, e.g. `CSC420-02` | Summaries, overviews, "what's in this course?", "week 3" |
 | `get_material_pages` | `material` (key from `list_topics`), `from?`, `to?` | Pages in order (max 40 per call, content capped at 1,500 characters per page) | Topic summaries, course overview from the outline |
+| `search_past_questions` | `topic?: string`, `query?: string` | Past questions of this course: `{number, text, marks, type, session, paper_type, code_on_paper, topics, relevance, origin}` (max 6). Never the model answer. | "Has this come up in exams?", exam-focused answers (F10) |
 
 `course_id` and `topic_id` are **not** tool parameters. The server injects them from the conversation. The model cannot search other courses.
 
@@ -691,6 +790,21 @@ erDiagram
     }
 ```
 
+**Past questions (F10)**, in a separate migration:
+
+- `past_papers`: `id, course_id, session ('2025/2026'), type, code_on_paper, instructions, rules
+  (as extracted), duration, total_marks, pages, scanned, source_file, file_hash (unique per course),
+  status ('ok' | 'needs_review'), created_at`.
+- `past_questions`: `id, course_id, paper_id (null when generated), origin ('past_paper' |
+  'generated'), number, parent_id, section, text, marks, type, options jsonb, relevance,
+  extraction_confidence, repeat_group, embedding vector(1024), sort_order`; answer columns
+  `model_answer, marking_scheme jsonb, answer_key` are **not** selectable by students (served by the
+  API after an attempt).
+- `question_topics (question_id, topic_id)`, `question_slides (question_id, slide_id, rank)`.
+- `practice_attempts (id, user_id, question_id, answer, score, max_score, feedback jsonb,
+  revealed_only bool, created_at)`.
+- `traces` gains `kind` (`chat` | `marking`) so marking calls are logged and exported like chat.
+
 ### 11.1 Row-level security
 
 - `courses`, `topics`, `materials`, `slides`: readable by any authenticated user. Writable only by the service role (ingestion).
@@ -701,6 +815,10 @@ erDiagram
 - `profiles`: a user can read their own row and change only `display_name` / `onboarded`.
 - `traces`, `usage_daily`: service role only. The UI gets today's count from `my_usage_today()`.
 - Slide images: private Storage bucket, served only as expiring signed URLs.
+- `past_papers`, `past_questions`, `question_topics`, `question_slides`: readable by signed-in users,
+  except the answer columns (`model_answer`, `marking_scheme`, `answer_key`), which only the server
+  reads. Writable only by the service role. `practice_attempts`: a user reads only their own rows; only
+  the server writes them (scores can't be forged).
 
 ---
 
@@ -715,6 +833,8 @@ erDiagram
 | GET | `/api/conversations/:id/messages` | Load history. |
 | POST | `/api/feedback` | Save thumbs up/down + reason. |
 | GET | `/api/slides/:id` | Slide preview: signed image URL + text. |
+| GET | `/api/past/:courseId` | Exam map + question list (no answers). `?topic=` filters. |
+| POST | `/api/past/attempt` | `{question_id, answer}` or `{question_id, reveal: true}` → score, feedback, model answer. |
 
 ---
 
@@ -797,6 +917,13 @@ Each assistant turn writes one `traces` row:
 | Cited slide supports the claim | LLM judge |
 | "Not covered" questions get the "Your slides don't cover this" response | Deterministic + judge |
 
+**Past questions (F10)**: marking calls write a `traces` row with `kind = marking` (question,
+student answer, score, tokens, cost, latency). Golden cases (~10, `npm run check:past`): extraction
+accuracy on 3 papers against the owner's manual transcriptions (question numbers, marks, text
+similarity), topic tagging against expected topics, and marking consistency (the same answer marked
+twice → same score ±1). Transcriptions contain paper text, so they live with the data
+(`data/pau/_evals/past_questions/`, git-ignored and skipped by ingestion).
+
 **Golden set**: before launch, write 40 questions (5 per course for 8 courses) with expected slide IDs. Mix: direct facts, diagrams-only facts, cross-slide questions, out-of-scope questions, summary requests. Every thumbs-down in the pilot becomes a candidate golden case.
 
 ---
@@ -871,7 +998,7 @@ gantt
 
 | Version | Feature |
 |---|---|
-| v1.1 | Past questions: ingest past papers, link questions to slides, "practice past questions" mode. |
+| v1.1 | Past questions: built as F10. Later: timed mock exams, photo upload of handwritten answers. |
 | v1.2 | Structured quiz UI (multiple choice cards, score). |
 | v1.3 | Voice: ask questions by speech, listen to answers. |
 | v2.0 | MCP server: students connect the course slides to Claude, ChatGPT, or other tools. |

@@ -68,6 +68,10 @@ class PastPaper:
     type: str
     code_on_paper: str | None
     scanned: bool
+    pages: int | None = None
+    instructions: str | None = None
+    duration: str | None = None
+    note: str | None = None
 
 
 @dataclass(frozen=True)
@@ -332,9 +336,16 @@ def _load_past_papers(data_root: Path, course_dir: Path, problems: list[str], wh
         papers.append(PastPaper(
             file=file, rel_file=_rel(data_root, file), session=session, type=kind,
             code_on_paper=row.get("code_on_paper"), scanned=bool(row.get("scanned")),
+            pages=int(row["pages"]) if str(row.get("pages") or "").isdigit() else None,
+            instructions=_opt_str(row.get("instructions")), duration=_opt_str(row.get("duration")),
+            note=_opt_str(row.get("note")),
         ))
     _check_unique(problems, pwhere, "file", [p.rel_file for p in papers])
     return tuple(papers)
+
+
+def _opt_str(v) -> str | None:
+    return str(v).strip() or None if v is not None else None
 
 
 def title_from_filename(stem: str) -> str:

@@ -5,6 +5,8 @@
     "db:push": "bash -c 'set -a; source .env; set +a; supabase db push --remote=\"$DATABASE_URL\" \"$@\"' db-push",
     "test:db": "bash scripts/test-db.sh",
     "ingest": "uv run --project ingestion python ingestion/ingest.py",
+    "ingest:past": "uv run --project ingestion python ingestion/past_papers.py",
+    "check:past": "uv run --project ingestion python ingestion/past_golden.py",
     "ingest:verify": "uv run --project ingestion python ingestion/verify.py",
     "test:ingest": "cd ingestion && uv run pytest -q",
     "dev": "npm --prefix apps/web run dev",
