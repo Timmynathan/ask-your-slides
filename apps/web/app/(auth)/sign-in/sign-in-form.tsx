@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { BusyLabel } from "@/components/ui/spinner";
 import { safeNext } from "@/lib/auth/next";
 
@@ -73,9 +73,8 @@ export function SignInForm({
   const [showPassword, setShowPassword] = useState(false);
   // Remember the email on this browser.
   const [savedEmail, setSavedEmail] = useState("");
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    /* eslint-disable react-hooks/set-state-in-effect -- reading the URL after mount */
+  // Rendered in its own Suspense boundary (see QueryReader), so the rest of the form stays prebuilt.
+  function applyQuery(q: URLSearchParams) {
     setNext(safeNext(q.get("next")));
     setMicrosoft(q.get("ms") === "1");
     if (q.get("start") === "1" && !startWithCode) {
@@ -85,8 +84,8 @@ export function SignInForm({
     const err = q.get("error");
     if (q.get("deleted") === "1") setBanner({ kind: "deleted", text: "Your account has been deleted. You can sign up again any time." });
     else if (err && SIGN_IN_ERRORS[err]) setBanner({ kind: "error", text: SIGN_IN_ERRORS[err] });
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [startWithCode]);
+    else setBanner(null);
+  }
   useEffect(() => {
     try {
       const v = localStorage.getItem("pau.email");
@@ -257,6 +256,9 @@ export function SignInForm({
 
   return (
     <div>
+      <Suspense fallback={null}>
+        <QueryReader onQuery={applyQuery} />
+      </Suspense>
       {banner?.kind === "deleted" && (
         <p role="status" className="mb-6 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
           {banner.text}
@@ -447,4 +449,19 @@ export function SignInForm({
       )}
     </div>
   );
+}
+
+/** Hands the query string (?next=, ?ms=1, ?deleted=1, ?error=) to the form. useSearchParams is right
+ *  after client-side navigations too (unlike window.location during the first effects). */
+function QueryReader({ onQuery }: { onQuery(q: URLSearchParams): void }) {
+  const params = useSearchParams();
+  const query = params.toString();
+  const latest = useRef(onQuery);
+  useEffect(() => {
+    latest.current = onQuery;
+  });
+  useEffect(() => {
+    latest.current(new URLSearchParams(query));
+  }, [query]);
+  return null;
 }

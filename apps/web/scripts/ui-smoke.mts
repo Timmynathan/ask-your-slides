@@ -309,7 +309,9 @@ async function main() {
       await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
       await dialog.getByRole("button", { name: "Delete my account" }).click();
       await dp.waitForURL(/\/sign-in\?deleted=1/, { timeout: 20000 });
-      check(await dp.getByText("Your account has been deleted.").isVisible(), "after deleting, sign-in says the account is gone");
+      // The notice comes from the query string, read in the browser once the page is up.
+      const gone = await dp.getByText("Your account has been deleted.").waitFor({ timeout: 5000 }).then(() => true, () => false);
+      check(gone, "after deleting, sign-in says the account is gone", gone ? "" : (await dp.locator("main").innerText()).slice(0, 160).replace(/\n/g, " | "));
       const [{ data: users }, { count: profs }, { count: convs }, { count: trs }] = await Promise.all([
         admin.auth.admin.listUsers({ perPage: 1000 }),
         admin.from("profiles").select("id", { count: "exact", head: true }).eq("id", lv!.id),
