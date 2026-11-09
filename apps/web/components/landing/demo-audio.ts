@@ -16,6 +16,7 @@ const CHORDS = [
 ];
 const ARP = [1, 2, 3, 4, 3, 2, 4, 3]; // index into the chord, an octave up
 const MUTE_KEY = "ays-demo-muted";
+const MUSIC_LEVEL = 0.2;
 
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 
@@ -71,7 +72,7 @@ export class DemoAudio {
     warm.frequency.value = 2600;
     bus.connect(warm).connect(this.master);
     bus.gain.setValueAtTime(0.0001, ctx.currentTime);
-    bus.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 1.6);
+    bus.gain.exponentialRampToValueAtTime(MUSIC_LEVEL, ctx.currentTime + 1.6);
     this.musicBus = bus;
     this.next = ctx.currentTime + 0.06;
     this.step = 0;
@@ -93,8 +94,9 @@ export class DemoAudio {
     this.chime();
     const bus = this.musicBus;
     if (bus) {
+      // Fade from the music level itself: gain.value isn't reliable in every browser (Safari, offline).
       bus.gain.cancelScheduledValues(ctx.currentTime);
-      bus.gain.setValueAtTime(bus.gain.value, ctx.currentTime);
+      bus.gain.setValueAtTime(MUSIC_LEVEL, ctx.currentTime);
       bus.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 2.2);
       setTimeout(() => this.musicBus === bus && this.stopMusic(), 2400);
     }
