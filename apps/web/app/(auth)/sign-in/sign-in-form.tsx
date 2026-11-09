@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { BusyLabel } from "@/components/ui/spinner";
+import { safeNext } from "@/lib/auth/next";
 
 // Accounts (PRD F1). Two clear doors, as tabs at the top:
 //   Create account:  PAU email → emailed code (proves the address) → create a password   (steps 1–3)
@@ -39,18 +40,24 @@ function MicrosoftButton({ next }: { next: string | null }) {
   );
 }
 
+const SIGN_IN_ERRORS: Record<string, string> = {
+  microsoft: "Microsoft sign-in didn't finish. Try again, or use your email below.",
+  not_pau: "That Microsoft account isn't a PAU account. Use your @pau.edu.ng account.",
+};
+
 export function SignInForm({
   startWithCode = false,
-  next = null,
-  microsoft = false,
   directSignup = false,
 }: {
   startWithCode?: boolean;
-  next?: string | null;
-  microsoft?: boolean;
   /** TEMPORARY (AUTH_DIRECT_SIGNUP=1): Create account is email + password, no emailed code. */
   directSignup?: boolean;
 }) {
+  // The query string (?next=, ?ms=1, ?deleted=1, ?error=) is read in the browser after the first
+  // paint, so the page itself can be prebuilt and appears the instant a link is clicked.
+  const [next, setNext] = useState<string | null>(null);
+  const [microsoft, setMicrosoft] = useState(false);
+  const [banner, setBanner] = useState<{ kind: "deleted" | "error"; text: string } | null>(null);
   // On for everyone with NEXT_PUBLIC_MICROSOFT_LOGIN=1; before that, ?ms=1 shows it for testing.
   const showMicrosoft = MICROSOFT || microsoft;
   const router = useRouter();
@@ -66,6 +73,20 @@ export function SignInForm({
   const [showPassword, setShowPassword] = useState(false);
   // Remember the email on this browser.
   const [savedEmail, setSavedEmail] = useState("");
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    /* eslint-disable react-hooks/set-state-in-effect -- reading the URL after mount */
+    setNext(safeNext(q.get("next")));
+    setMicrosoft(q.get("ms") === "1");
+    if (q.get("start") === "1" && !startWithCode) {
+      setMode("signup");
+      setStep({ kind: "code-email" });
+    }
+    const err = q.get("error");
+    if (q.get("deleted") === "1") setBanner({ kind: "deleted", text: "Your account has been deleted. You can sign up again any time." });
+    else if (err && SIGN_IN_ERRORS[err]) setBanner({ kind: "error", text: SIGN_IN_ERRORS[err] });
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [startWithCode]);
   useEffect(() => {
     try {
       const v = localStorage.getItem("pau.email");
@@ -236,6 +257,16 @@ export function SignInForm({
 
   return (
     <div>
+      {banner?.kind === "deleted" && (
+        <p role="status" className="mb-6 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
+          {banner.text}
+        </p>
+      )}
+      {banner?.kind === "error" && (
+        <p role="alert" className="mb-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-400/10 dark:text-red-300">
+          {banner.text}
+        </p>
+      )}
       {/* The two doors, always visible: no hunting for where to sign up. */}
       <div className="grid grid-cols-2 rounded-full bg-sunken p-1" role="tablist" aria-label="Account">
         {(
