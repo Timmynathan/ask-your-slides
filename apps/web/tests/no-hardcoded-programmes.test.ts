@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { groupChoices, programmeLabel } from "@/lib/programmes";
+import { groupChoices, programmeFullName, programmeLabel } from "@/lib/programmes";
 
 // PRD F11: programme names, departments and course lists come from the data (catalog.yaml →
 // database), so adding a programme needs no code change. Comments may give examples.
@@ -38,6 +38,9 @@ describe("programme choices", () => {
       { programme: "a", name: "BSc A", shortName: null, department: "A", levels: [300, 400] },
       { programme: "b", name: "BSc B", shortName: "BB", department: "B", levels: [400] },
     ]);
-    expect(programmeLabel({ name: "BSc B", shortName: "BB" })).toBe("BSc B (BB)");
+    expect(programmeLabel({ name: "BSc Bee Studies", shortName: "BB" })).toBe("BSc BB"); // short enough for a phone
+    expect(programmeFullName({ name: "BSc Bee Studies", shortName: "BB" })).toBe("Bee Studies"); // shown under the picker
+    expect(programmeLabel({ name: "BSc A", shortName: null })).toBe("BSc A");
+    expect(programmeFullName({ name: "BSc A", shortName: null })).toBeNull();
   });
 });

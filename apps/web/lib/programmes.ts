@@ -29,7 +29,16 @@ export function groupChoices(rows: { programme: string; name: string; short_name
   return out;
 }
 
-/** "BSc Information Science and Media Studies (ISMS)". */
+/** What the picker shows: short enough for a phone. "BSc ISMS" when the catalog gives a short name
+ *  (the degree prefix kept: "BSc Information Science and Media Studies" → "BSc ISMS"), else the name. */
 export function programmeLabel(p: Pick<ProgrammeChoice, "name" | "shortName">): string {
-  return p.shortName ? `${p.name} (${p.shortName})` : p.name;
+  if (!p.shortName) return p.name;
+  const degree = p.name.match(/^(BSc|BA|BEng|BTech|MSc|MA|MBA|PhD)\b/)?.[1];
+  return degree ? `${degree} ${p.shortName}` : p.shortName;
+}
+
+/** The full name, shown under the picker when the label is a short name ("Information Science and
+ *  Media Studies"); null when the label already is the full name. */
+export function programmeFullName(p: Pick<ProgrammeChoice, "name" | "shortName">): string | null {
+  return p.shortName ? p.name.replace(/^(BSc|BA|BEng|BTech|MSc|MA|MBA|PhD)\s+/, "") : null;
 }

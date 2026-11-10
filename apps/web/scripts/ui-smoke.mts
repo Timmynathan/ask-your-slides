@@ -256,11 +256,14 @@ async function main() {
       // PRD F11: "What do you study?" offers the catalog's programmes; this student picks ISMS.
       const studying = op.getByRole("combobox", { name: "What do you study?" });
       check(await op.getByRole("button", { name: "Continue" }).isDisabled(), "Continue waits until a programme is chosen");
-      const { data: progs } = await admin.from("programmes").select("id, name");
+      const { data: progs } = await admin.from("programmes").select("id, name, short_name");
       const offered = (await studying.locator("option:not([disabled])").allTextContents()).join(" | ");
-      check((progs ?? []).every((p) => offered.includes(p.name)), "every programme in the catalog is offered", offered);
+      const values = await studying.locator("option:not([disabled])").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
+      check((progs ?? []).every((p) => values.includes(p.id)) && (await studying.locator("option").allTextContents()).every((t) => t.length <= 24),
+        "every programme in the catalog is offered, with short labels (e.g. 'BSc ISMS')", offered);
       const isms = (progs ?? []).find((p) => p.id !== "computer-science")!;
       await studying.selectOption(isms.id);
+      check(await op.getByText((isms.name as string).replace(/^BSc\s+/, ""), { exact: true }).isVisible(), "the full programme name shows under a short label");
       check((await op.getByRole("combobox", { name: "Level" }).inputValue()) === "400", "a programme with one level picks it for the student");
       await op.getByRole("button", { name: "Continue" }).click();
       await op.getByRole("radiogroup", { name: "Study partners" }).waitFor();

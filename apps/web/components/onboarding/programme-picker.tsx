@@ -3,7 +3,7 @@
 // "What do you study?" (PRD F11): programme + level, only those in the catalog. Used at onboarding
 // and in the account menu's "Change programme". With one level for the chosen programme, the level
 // is picked for the student (still shown, so they can check it).
-import { programmeLabel, type ProgrammeChoice } from "@/lib/programmes";
+import { programmeFullName, programmeLabel, type ProgrammeChoice } from "@/lib/programmes";
 
 export interface ProgrammeValue {
   programme: string;
@@ -27,6 +27,7 @@ export function ProgrammePicker({ choices, value, onChange }: { choices: Program
         placeholder="What do you study?"
         options={choices.map((c) => ({ value: c.programme, label: programmeLabel(c) }))}
       />
+      {chosen && programmeFullName(chosen) && <p className="-mt-1 text-center text-[13px] text-muted">{programmeFullName(chosen)}</p>}
       {chosen && (
         <Select
           label="Level"
