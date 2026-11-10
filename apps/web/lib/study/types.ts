@@ -53,4 +53,8 @@ export interface WorkspaceData {
   usage: { used: number; cap: number };
   /** For "Is this helping you study?": questions asked so far, and whether it has been answered. */
   pulse: { questions: number; answered: boolean };
+  /** Past questions (PRD F10) of this course a student can practise: in total and per topic. */
+  past: { total: number; byTopic: Record<string, number> };
+  /** Opened with ?past=1: the Past questions view instead of a chat. */
+  initialPast: boolean;
 }

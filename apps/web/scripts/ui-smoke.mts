@@ -545,6 +545,78 @@ async function main() {
     await page.locator("main li[data-message]:visible").first().waitFor({ timeout: 15000 });
     check(await page.locator("main li[data-message='user']:visible").last().innerText().then((t) => t.includes("What does the D in ACID mean?")), "the edit survives a reload");
 
+    // Past questions (PRD F10): Exam map, practice, marking, the topic chip.
+    console.log("\nPast questions");
+    {
+      const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();
+      const userId = me!.id as string;
+      const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await pq.context().addCookies(await page.context().cookies());
+      pq.on("pageerror", (e) => consoleErrors.push(e.message));
+      await pq.goto(`${BASE}/study/INS401`);
+      const nav = pq.getByRole("navigation", { name: "Topics and chats" });
+      await nav.getByRole("button", { name: "Past questions" }).click();
+      await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
+      check(new URL(pq.url()).searchParams.get("past") === "1", "Past questions opens from the Topics panel (URL ?past=1)");
+      check(await pq.getByText(/Asked in \d+ of 2/).first().isVisible(), "the Exam map says 'Asked in N of 2 papers', no percentages", "");
+      check(!(await pq.locator("main").innerText()).includes("%"), "the Exam map shows no percentages");
+      await shot(pq, "past-1-map");
+
+      await pq.getByRole("tab", { name: "Practice" }).click();
+      await pq.getByRole("button", { name: /2025\/26 exam/ }).click();
+      await pq.getByText("Describe the following forms of project development life cycle", { exact: false }).waitFor();
+      check(!(await pq.getByText("Model answer").count()), "the model answer is not on the page before an attempt");
+      check(await pq.getByText(/2025\/26 exam · Q1a · 9 marks|· Q1a/).first().isVisible(), "a question shows its paper, number and marks");
+      await pq.getByRole("button", { name: "Show answer" }).click();
+      await pq.getByText("Model answer").waitFor({ timeout: 15000 });
+      check((await pq.locator("article button[title^='Open']").count()) > 0, "'Show answer' reveals the model answer with slide chips");
+      await shot(pq, "past-2-revealed");
+
+      await pq.getByRole("button", { name: "Next question →" }).click();
+      await pq.getByPlaceholder(/Write your answer/).fill("Conflict sources: scarce resources, schedules, priorities, personalities, and technical opinions.");
+      await pq.getByRole("button", { name: "Mark my answer" }).click();
+      await pq.getByText("estimated score").waitFor({ timeout: 45000 });
+      const scoreText = await pq.getByText(/≈ [\d.]+\/5/).first().innerText().catch(() => "");
+      check(/≈ [\d.]+\/5/.test(scoreText), "a written answer is marked: '≈ n/5' with feedback, then the model answer", scoreText);
+      await shot(pq, "past-3-marked");
+      const { data: attempts } = await admin.from("practice_attempts").select("score, max_score, revealed_only").eq("user_id", userId);
+      const { data: mtraces } = await admin.from("traces").select("kind, model").eq("user_id", userId).eq("kind", "marking");
+      check(attempts?.length === 2 && attempts.some((a) => a.revealed_only) && attempts.some((a) => Number(a.max_score) === 5), "attempts are saved (one reveal, one marked)", JSON.stringify(attempts));
+      check(mtraces?.length === 1, "the marking call is logged as a trace (kind = marking)");
+
+      // Multiple choice: instant right/wrong.
+      await pq.getByRole("button", { name: "← All" }).click();
+      await pq.getByRole("button", { name: /2025\/26 test/ }).click();
+      await pq.locator("article button:has-text('A.')").first().click();
+      await pq.getByText(/^(Correct\.|Not quite: the answer is [A-Da-d]\.)$/).waitFor({ timeout: 15000 });
+      check(true, "a multiple-choice question is checked instantly");
+
+      // Topic chip in a topic chat → practice for that topic, then back to the chat.
+      const chip = pq.getByRole("button", { name: /^\d+ past questions?$/ });
+      await pq.goto(`${BASE}/study/INS401?topic=1`);
+      await chip.or(pq.getByText("Whole course")).first().waitFor();
+      if (!(await chip.count())) await pq.goto(`${BASE}/study/INS401?topic=2`);
+      await chip.waitFor({ timeout: 10000 });
+      await chip.click();
+      await pq.getByRole("button", { name: "← Back to chat" }).waitFor();
+      const counter = await pq.locator("main span.tabular-nums").filter({ hasText: /^\d+ of \d+$/ }).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+      check(counter, "a topic chat's 'N past questions' chip opens practice for that topic");
+      await shot(pq, "past-4-topic-chip");
+      await pq.getByRole("button", { name: "← Back to chat" }).click();
+      check(!(await pq.getByRole("button", { name: "← Back to chat" }).count()), "'Back to chat' returns to the chat");
+
+      // A course with one paper: no map.
+      await pq.goto(`${BASE}/study/CSC402?past=1`);
+      await pq.getByText("Few past papers for this course.").waitFor({ timeout: 15000 });
+      check(true, "a course with fewer than 2 papers says 'Few past papers for this course.'");
+
+      // Signed out: nothing.
+      const anon = await fetch(`${BASE}/api/past?course=00000000-0000-0000-0000-000000000000`);
+      const anonAttempt = await fetch(`${BASE}/api/past/attempt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question_id: "00000000-0000-0000-0000-000000000000", reveal: true }) });
+      check(anon.status === 401 && anonAttempt.status === 401, "signed-out requests to past questions get 401", `${anon.status}/${anonAttempt.status}`);
+      await pq.close();
+    }
+
     // Admin dashboard: hidden from students; the owner sees the pilot, including this test's activity.
     console.log("\nAdmin dashboard");
     const chatUrl = page.url(); // the phone checks below reopen this chat

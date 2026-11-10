@@ -11,6 +11,7 @@ import { courseHref, courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
 import { PartnerPicker } from "./partner-picker";
+import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 import { SourcesPanel } from "./sources-panel";
@@ -37,6 +38,9 @@ export function Workspace(data: WorkspaceData) {
   const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
   const [partner, setPartner] = useState<PartnerId>(data.partner);
   const [pickingPartner, setPickingPartner] = useState(false);
+  // Past questions (PRD F10): "list" = opened from the Topics panel; "topic" = from a topic chat's
+  // chip (practice for that topic, with a way back to the chat).
+  const [past, setPast] = useState<null | "list" | "topic">(data.initialPast ? "list" : null);
   // "Is this helping you study?" after the 10th question; "Not now" waits until the next visit.
   const [questions, setQuestions] = useState(data.pulse.questions);
   const [pulseClosed, setPulseClosed] = useState(data.pulse.answered);
@@ -53,10 +57,11 @@ export function Workspace(data: WorkspaceData) {
     const params = courseParams(course, data.courses);
     if (topic) params.set("topic", String(topic.order));
     if (chatId) params.set("chat", chatId);
+    if (past === "list") params.set("past", "1");
     const qs = params.toString();
     window.history.replaceState(window.history.state, "", `/study/${course.code}${qs ? `?${qs}` : ""}`);
-    document.title = `${displayCode(course.code)}${topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
-  }, [course, data.courses, topic, chatId]);
+    document.title = `${displayCode(course.code)}${past === "list" ? " · Past questions" : topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
+  }, [course, data.courses, topic, chatId, past]);
 
   const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {
     setTopicId(next.topicId);
@@ -64,6 +69,7 @@ export function Workspace(data: WorkspaceData) {
     setPanelKey(next.chatId ?? `new-${next.courseId}-${next.topicId ?? "course"}-${Date.now()}`);
     setPreview(null);
     setDrawerOpen(false);
+    setPast(null);
   }, []);
 
   const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
@@ -84,7 +90,13 @@ export function Workspace(data: WorkspaceData) {
 
   const remaining = Math.max(0, data.usage.cap - used);
   const onRemaining = useCallback((r: number) => setUsed(data.usage.cap - r), [data.usage.cap]);
-  const scopeTitle = topic ? topic.title : "Whole course";
+  const scopeTitle = past === "list" ? "Past questions" : topic ? topic.title : "Whole course";
+  const topicPast = topic ? data.past.byTopic[topic.id] ?? 0 : 0;
+  const openPast = useCallback(() => {
+    setPast("list");
+    setPreview(null);
+    setDrawerOpen(false);
+  }, []);
   const courseChats = useMemo(() => chats.filter((c) => c.course_id === courseId), [chats, courseId]);
   const p = PARTNERS[partner];
 
@@ -145,22 +157,49 @@ export function Workspace(data: WorkspaceData) {
             chatId={chatId}
             onOpenScope={openScope}
             onOpenChat={openChat}
+            pastCount={data.past.total}
+            pastActive={past === "list"}
+            onOpenPast={openPast}
             courseLabel={`${displayCode(course.code)} ${course.title}`}
           />
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-page">
           <div className="flex h-10 shrink-0 items-center gap-2 px-5">
-            <p key={`${courseId}-${topicId ?? "course"}`} className="title-in min-w-0 flex-1 truncate text-[13px] text-muted">
+            <p key={`${courseId}-${topicId ?? "course"}-${past ?? "chat"}`} className="title-in min-w-0 flex-1 truncate text-[13px] text-muted">
               {scopeTitle}
             </p>
+            {!past && topicPast > 0 && (
+              <button
+                type="button"
+                onClick={() => setPast("topic")}
+                className="shrink-0 rounded-full bg-pau-100 px-3 py-1 text-[12.5px] text-brand transition hover:opacity-80 active:scale-95"
+                title={`Practise past exam questions on ${topic!.title}`}
+              >
+                {topicPast} past question{topicPast === 1 ? "" : "s"}
+              </button>
+            )}
             <IconButton label="Sources" onClick={() => setSourcesOpen(true)} className="xl:hidden">
               <path d="M7 3.5h7l4 4V20.5H7z" />
               <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
             </IconButton>
           </div>
 
-          <div key={panelKey} className="panel-in flex min-h-0 flex-1 flex-col">
+          {past && (
+            <div key={`past-${past}-${topicId ?? "course"}`} className="panel-in flex min-h-0 flex-1 flex-col">
+              <PastPanel
+                course={course}
+                topics={topics}
+                topicId={past === "topic" ? topicId : null}
+                onBack={past === "topic" ? () => setPast(null) : null}
+                onCite={setPreview}
+                onRemaining={onRemaining}
+                partnerName={p.name}
+              />
+            </div>
+          )}
+          {/* The chat stays mounted under Past questions, so going back keeps the conversation. */}
+          <div key={panelKey} className={past ? "hidden" : "panel-in flex min-h-0 flex-1 flex-col"}>
             <ChatPanel
               course={course}
               topic={topic}

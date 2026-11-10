@@ -254,7 +254,8 @@ course, §9.1); 8 are scanned (no text layer), so every page goes through vision
 - MCQs: instant right/wrong plus a short explanation (no model call).
 - The model answer and the MCQ key are **never sent to the browser before the student answers**,
   unless they tap **"Show answer"** (that counts as an attempt with no score).
-- Every attempt is saved (`practice_attempts`). A marking counts towards the daily message cap (F8).
+- Every attempt is saved (`practice_attempts`). A written-answer marking counts towards the daily message cap (F8); MCQs and "Show answer" make no model call and don't.
+- Marking: the model judges each marking-scheme point as full, half or none; the server adds the marks up (clamped, rounded to 0.5), so a score can't exceed the question's marks. Measured: the same answer marked twice scored 2.5/5 and 2/5 (within ±1).
 - Questions whose relevance is `not_covered` stay available, are labelled **"Not in this year's
   slides"**, and come last; `partial` ones are labelled "Partly in this year's slides".
 
