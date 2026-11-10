@@ -752,6 +752,34 @@ async function main() {
         const r = await ap.goto(`${BASE}/admin?range=7d`);
         await ap.getByRole("heading", { name: "Pilot dashboard" }).waitFor();
         check(r?.status() === 200, "the owner sees the admin dashboard");
+        // Password resets: "Escalate to admin" (student) → the owner sets a temporary password here.
+        const resetFor = `ui-reset-${Date.now()}@pau.edu.ng`;
+        try {
+          await signInCookies(resetFor, { fresh: true });
+          const sp = await browser.newPage();
+          await sp.goto(`${BASE}/sign-in`);
+          await sp.locator("#email").fill(resetFor);
+          await sp.locator("#password").fill("not-the-password-1");
+          await sp.getByRole("button", { name: "Log in", exact: true }).click();
+          const esc = sp.getByRole("link", { name: "Escalate to admin" });
+          await esc.waitFor({ timeout: 10000 });
+          const href = (await esc.getAttribute("href")) ?? "";
+          check(href.startsWith("mailto:hello@askyourslides.com?") && decodeURIComponent(href).includes(resetFor) && /forgot my password/i.test(decodeURIComponent(href)),
+            "a wrong password on a real account offers 'Escalate to admin': a prefilled email to the owner", decodeURIComponent(href).slice(0, 90));
+          await sp.locator("#email").fill(`nobody-${Date.now()}@pau.edu.ng`);
+          await sp.getByRole("button", { name: "Log in", exact: true }).click();
+          await sp.getByText(/no account with this email/i).waitFor({ timeout: 10000 });
+          check(!(await esc.count()), "an email with no account gets no escalate button");
+          await sp.close();
+          await ap.locator("#support input[name=email]").fill(resetFor);
+          await ap.locator("#support input[minlength]").fill("temp-pass-4321");
+          await ap.getByRole("button", { name: "Set password" }).click();
+          await ap.getByText(/Done\. Reply to/).waitFor({ timeout: 10000 });
+          const login = await fetch(`${BASE}/api/auth/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: resetFor, password: "temp-pass-4321" }) });
+          check(login.ok, "the owner's 'Reset a student's password' sets a password the student can log in with", String(login.status));
+        } finally {
+          await cleanup(resetFor);
+        }
         const questionsTile = await ap.getByText("Questions", { exact: true }).first().locator("..").locator("p").nth(1).textContent();
         check(Number((questionsTile ?? "0").replace(/,/g, "")) >= 11, "headline numbers include this test's questions", `questions tile: ${questionsTile}`);
         const feedback = ap.locator("#feedback");

@@ -183,12 +183,12 @@ async function main() {
     res = await fetch(`${BASE}/study/CSC420`, { headers: { cookie: p.jar.header() }, redirect: "manual" });
     check(res.status === 200, "password session opens the study page", String(res.status));
     p = await passwordSignIn("wrong-password");
-    check(p.status === 401 && /Wrong email or password/.test(p.body.error), "wrong password refused with a neutral message", p.body.error);
+    check(p.status === 401 && p.body.code === "wrong_password", "wrong password refused, marked so the page offers 'Escalate to admin'", p.body.error);
     p = await (async () => {
       const r = await fetch(`${BASE}/api/auth/password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: `nobody-${Date.now()}@pau.edu.ng`, password: "revise4exams!" }) });
       return { status: r.status, body: await r.json(), jar: new Jar() };
     })();
-    check(p.status === 401 && /Wrong email or password/.test(p.body.error), "unknown account gets the same message (no account probing)", p.body.error);
+    check(p.status === 401 && p.body.code === "no_account", "unknown account: 'no account with this email yet'", p.body.error);
 
     // 9. Forgot password: code again → new password; the old one stops working.
     const { data: link3 } = await admin.auth.admin.generateLink({ type: "magiclink", email: testEmail });

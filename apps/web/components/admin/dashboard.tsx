@@ -11,6 +11,7 @@ import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { RANGES, type Overview, type Range } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
+import { ResetPassword } from "./reset-password";
 
 const tz = "Africa/Lagos";
 const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: tz });
@@ -203,6 +204,13 @@ export function AdminDashboard({ data, range, email }: { data: Overview; range: 
               head={["When", "Course", "Question", "Cost", "Tokens in", "Tokens out"]}
               rows={data.costliest.map((s) => [when(s.created_at), s.course ?? "—", <Clip key="q" text={s.question} />, usd(s.cost_usd), n(s.input_tokens), n(s.output_tokens)])}
             />
+          </Card>
+        </section>
+
+        <section id="support" className="scroll-mt-24 space-y-4">
+          <SectionTitle title="Password resets" note="When a student presses “Escalate to admin”, you get an email at hello@. Set a temporary password here and reply with it." />
+          <Card title="Reset a student's password">
+            <ResetPassword />
           </Card>
         </section>
       </main>

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { BusyLabel } from "@/components/ui/spinner";
 import { safeNext } from "@/lib/auth/next";
+import { passwordHelpMailto, SUPPORT_EMAIL } from "@/lib/auth/support";
 
 // Accounts (PRD F1). Two clear doors, as tabs at the top:
 //   Create account:  PAU email → emailed code (proves the address) → create a password   (steps 1–3)
@@ -74,6 +75,9 @@ export function SignInForm({
   // "You already have an account" / "No account yet": a notice with the right next step, not an error.
   const [notice, setNotice] = useState<{ kind: "exists" | "none"; email: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // Wrong password on an account that exists: offer "Escalate to admin" (a prefilled email to the
+  // owner), since reset codes sent by email don't reach PAU inboxes.
+  const [helpEmail, setHelpEmail] = useState<string | null>(null);
   // Remember the email on this browser.
   const [savedEmail, setSavedEmail] = useState("");
   // Rendered in its own Suspense boundary (see QueryReader), so the rest of the form stays prebuilt.
@@ -110,6 +114,7 @@ export function SignInForm({
 
   function go(next: Step) {
     setError(null);
+    setHelpEmail(null);
     setNotice(null);
     setShowPassword(false);
     setStep(next);
@@ -159,6 +164,7 @@ export function SignInForm({
   async function signIn(form: FormData) {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     const data = await post("/api/auth/password", { email, password: String(form.get("password") ?? "") });
+    setHelpEmail(!data && lastCode.current === "wrong_password" ? email : null);
     if (!data) return;
     remember(email);
     finish(data.next);
@@ -450,6 +456,18 @@ export function SignInForm({
         <p role="alert" className="mt-3 text-sm text-red-700">
           {error}
         </p>
+      )}
+      {helpEmail && step.kind === "password" && (
+        <div className="pop-in mt-4 rounded-2xl bg-sunken/70 p-4 text-left">
+          <p className="text-sm font-medium text-ink">Forgot your password?</p>
+          <p className="mt-1 text-[13.5px] text-muted">Ask us to reset it. This opens an email to the Ask Your Slides team, already written; we&apos;ll reply with a new password.</p>
+          <a href={passwordHelpMailto(helpEmail)} className="mt-3 inline-block rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-ink hover:opacity-90">
+            Escalate to admin
+          </a>
+          <p className="mt-2 text-[12px] text-muted">
+            No email app? Write to <span className="font-medium text-ink">{SUPPORT_EMAIL}</span> from your PAU email.
+          </p>
+        </div>
       )}
     </div>
   );
