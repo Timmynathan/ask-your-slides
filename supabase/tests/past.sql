@@ -14,6 +14,9 @@ insert into courses (id, institution, school, programme, level, semester, sessio
   ('a0000000-0000-0000-0000-000000000001', 'pau', 'sst', 'computer-science', 400, 1, '2026-2027', 'TST901', 'Test Course', 'Computer Science', 901),
   ('a0000000-0000-0000-0000-000000000002', 'pau', 'sst', 'computer-science', 400, 1, '2026-2027', 'TST902', 'Other Course', 'Computer Science', 902);
 
+-- Fixture students study the fixture courses' programme and level (PRD F11: they see only those).
+update profiles set programme = 'computer-science', level = 400 where id in ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d1');
+
 insert into topics (id, course_id, topic_order, title) values
   ('a1000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 1, 'Topic one');
 

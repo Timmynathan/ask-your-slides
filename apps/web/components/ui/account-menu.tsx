@@ -5,11 +5,13 @@
 import { useRef, useState } from "react";
 import { useClickAway } from "@/lib/ui/use-click-away";
 import { DeleteAccountDialog } from "./delete-account-dialog";
+import { ProgrammeDialog } from "./programme-dialog";
 import { SignOutButton } from "./sign-out-button";
 
 export function AccountMenu({ user }: { user: { email: string; displayName: string | null } }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [changing, setChanging] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useClickAway(root, open, () => setOpen(false));
   const name = user.displayName ?? user.email;
@@ -28,6 +30,16 @@ export function AccountMenu({ user }: { user: { email: string; displayName: stri
           {user.displayName && <p className="truncate font-medium text-ink">{user.displayName}</p>}
           <p className="truncate text-muted">{user.email}</p>
           <div className="mt-3 border-t border-line pt-3">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setChanging(true);
+              }}
+              className="mb-2 block px-1 text-left text-ink hover:underline"
+            >
+              Change programme
+            </button>
             <SignOutButton className="text-ink hover:underline" />
             <button
               type="button"
@@ -43,6 +55,7 @@ export function AccountMenu({ user }: { user: { email: string; displayName: stri
         </div>
       )}
       {deleting && <DeleteAccountDialog onClose={() => setDeleting(false)} />}
+      {changing && <ProgrammeDialog onClose={() => setChanging(false)} />}
     </div>
   );
 }

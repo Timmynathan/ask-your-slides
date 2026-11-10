@@ -141,3 +141,13 @@ def test_mislabelled_file_loads_by_content(tmp_path: Path):
     d = make_course(tmp_path, "CSC401", [{"lms_order": 1, "lms_cmid": 1, "file": "slides/02-b.pptx", "topic": "Intro", "kind": "slides"}])
     make_pdf(d / "2026-2027" / "slides" / "02-b.pptx", ["a PDF named .pptx"])
     assert load(tmp_path)[0].materials[0].file_type == "pdf"
+
+
+def test_programmes_from_the_catalog(tmp_path: Path):
+    from manifest import programmes
+    from tests.test_ingestion import make_catalog
+
+    make_catalog(tmp_path, {"computer-science": ["CSC401"], "software-engineering": ["SEN401"]})
+    ps = programmes(tmp_path)
+    assert [(p.id, p.department, p.school, p.sort_order) for p in ps] == [
+        ("computer-science", "Computer Science", "sst", 1), ("software-engineering", "Software Engineering", "sst", 2)]

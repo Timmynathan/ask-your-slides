@@ -14,15 +14,15 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", t
 async function Loaded() {
   const { supabase, user } = await requireUser();
   const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }] = await Promise.all([
-    supabase.from("courses").select("id, code, programme, title, department, sort_order, materials(count)").order("sort_order"),
-    supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
+    supabase.from("courses").select("id, code, programme, title, department, sort_order, elective, materials(count)").order("sort_order"),
+    supabase.from("profiles").select("display_name, onboarded, study_partner, programme").eq("id", user.id).single(),
     supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
   ]);
   // A failed read is an error, not "new student": never bounce an onboarded student back to Welcome.
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
-  if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
-  // The student's department's courses; everything when they haven't chosen one (older accounts).
-  const courses = (allCourses ?? []).filter((c) => !profile.department || c.department === profile.department);
+  if (!profile?.onboarded || !isPartnerId(profile.study_partner) || !profile.programme) redirect("/welcome");
+  // RLS returns only the student's programme + level's courses (PRD F11): no filtering here.
+  const courses = allCourses ?? [];
 
   const chatRows = (chats ?? []) as { id: string; course_id: string; title: string; updated_at: string }[];
   const list: DashboardCourse[] = (courses ?? [])
@@ -34,6 +34,7 @@ async function Loaded() {
         href: courseHref(c as { code: string; programme: string }, (allCourses ?? []) as { code: string; programme: string }[]),
         title: c.title as string,
         department: c.department as string,
+        elective: !!c.elective,
         sortOrder: c.sort_order as number,
         materials: (c.materials as unknown as { count: number }[])[0]?.count ?? 0,
         chats: mine.length,

@@ -18,6 +18,8 @@ export interface DashboardCourse {
   href: string;
   title: string;
   department: string;
+  /** Shown with an "Elective" tag (course.yaml elective: true). */
+  elective: boolean;
   sortOrder: number;
   materials: number;
   chats: number;
@@ -207,6 +209,18 @@ export function Dashboard({ courses, user, resume }: Props) {
   );
 }
 
+function ElectiveTag({ onDark = false }: { onDark?: boolean }) {
+  return (
+    <span
+      className={`inline-block rounded-full px-2.5 py-0.5 align-middle text-[12px] font-medium ${
+        onDark ? "mb-2 bg-white/15 text-white" : "ml-2 bg-pau-100 text-brand"
+      }`}
+    >
+      Elective
+    </span>
+  );
+}
+
 function meta(c: DashboardCourse) {
   return `${displayCode(c.code)} · ${c.materials} ${c.materials === 1 ? "material" : "materials"}`;
 }
@@ -221,6 +235,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
         <CardMenu course={c} onDark />
       </div>
       <div className="mt-auto">
+        {c.elective && <ElectiveTag onDark />}
         <h2 className="truncate text-[22px] leading-tight text-white" title={c.title}>
           {c.title}
         </h2>
@@ -238,7 +253,10 @@ function CourseRow({ course: c }: { course: DashboardCourse }) {
     <li className="relative flex items-center gap-4 border-b border-line/70 px-5 py-3.5 last:border-0 hover:bg-pau-50">
       <Link href={c.href} className="absolute inset-0 z-0" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
       <CourseIcon title={c.title} size={22} />
-      <span className="min-w-0 flex-1 truncate text-[16px] text-ink">{c.title}</span>
+      <span className="min-w-0 flex-1 truncate text-[16px] text-ink">
+        {c.title}
+        {c.elective && <ElectiveTag />}
+      </span>
       <span className="hidden w-24 shrink-0 text-sm text-muted sm:block">{displayCode(c.code)}</span>
       <span className="hidden w-28 shrink-0 text-sm text-muted md:block">
         {c.materials} {c.materials === 1 ? "material" : "materials"}

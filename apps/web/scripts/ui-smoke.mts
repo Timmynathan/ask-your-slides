@@ -47,7 +47,7 @@ async function signInCookies(email: string, opts: { fresh?: boolean } = {}) {
   if (!res.ok) throw new Error(`sign-in failed: ${res.status}`);
   if (!opts.fresh) {
     const { data: u } = await admin.from("profiles").select("id").eq("email", email).single();
-    await admin.from("profiles").update({ onboarded: true, display_name: "Test Student", study_partner: "ada" }).eq("id", u!.id);
+    await admin.from("profiles").update({ onboarded: true, display_name: "Test Student", study_partner: "ada", programme: "computer-science", level: 400 }).eq("id", u!.id);
   }
   return res.headers.getSetCookie().map((c) => {
     const [pair] = c.split(";");
@@ -214,7 +214,7 @@ async function main() {
     try {
       await admin.auth.admin.createUser({ email: linkUser, password: "revise4exams!", email_confirm: true });
       const { data: lu } = await admin.from("profiles").select("id").eq("email", linkUser).single();
-      await admin.from("profiles").update({ onboarded: true, study_partner: "zara" }).eq("id", lu!.id);
+      await admin.from("profiles").update({ onboarded: true, study_partner: "zara", programme: "computer-science", level: 400 }).eq("id", lu!.id);
       const linkCtx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
       const lk = await linkCtx.newPage();
       await lk.goto(`${BASE}/study/CSC419?topic=1`);
@@ -244,12 +244,15 @@ async function main() {
       await op.waitForURL(/\/welcome/);
       check(true, "new student is sent to onboarding");
       await op.getByLabel("Your name").fill("Tolu");
-      const studying = op.getByRole("combobox", { name: "What are you studying?" });
-      check(await op.getByRole("button", { name: "Continue" }).isDisabled(), "Continue waits until a department is chosen");
-      const disabledDepts = await studying.locator("option[disabled]").allTextContents();
-      check(["Engineering", "Economics", "Business Administration"].every((d) => disabledDepts.some((t) => t.startsWith(d))),
-        "only Computer Science can be chosen; the others say coming soon", disabledDepts.join(" | "));
-      await studying.selectOption("Computer Science");
+      // PRD F11: "What do you study?" offers the catalog's programmes; this student picks ISMS.
+      const studying = op.getByRole("combobox", { name: "What do you study?" });
+      check(await op.getByRole("button", { name: "Continue" }).isDisabled(), "Continue waits until a programme is chosen");
+      const { data: progs } = await admin.from("programmes").select("id, name");
+      const offered = (await studying.locator("option:not([disabled])").allTextContents()).join(" | ");
+      check((progs ?? []).every((p) => offered.includes(p.name)), "every programme in the catalog is offered", offered);
+      const isms = (progs ?? []).find((p) => p.id !== "computer-science")!;
+      await studying.selectOption(isms.id);
+      check((await op.getByRole("combobox", { name: "Level" }).inputValue()) === "400", "a programme with one level picks it for the student");
       await op.getByRole("button", { name: "Continue" }).click();
       await op.getByRole("radiogroup", { name: "Study partners" }).waitFor();
       check(await op.getByText("Tolu, who do you want to study with?").isVisible(), "partner step greets the student by name");
@@ -265,22 +268,47 @@ async function main() {
       await op.getByRole("button", { name: "Start studying" }).waitFor();
       check(await op.getByText("I'm Tobi").isVisible(), "chosen partner introduces themselves");
       const hello = (await op.getByText("I'm Tobi").textContent()) ?? "";
-      const { data: depts } = await admin.from("courses").select("department");
-      const dept = [...new Set((depts ?? []).map((d) => d.department))];
-      check(dept.length !== 1 || (hello.includes(`I know ${dept[0]}`) && hello.includes("school slides")),
-        "welcome names the department (from the data) and says 'school slides'", hello.slice(0, 120));
+      const { data: chosen } = await admin.from("programmes").select("department").eq("id", isms.id).single();
+      check(hello.includes(`I know ${chosen!.department}`) && hello.includes("school slides"),
+        "the partner names the chosen programme's department (from the data) and says 'school slides'", hello.slice(0, 120));
       await shot(op, "8-onboarding-hello");
       await op.getByRole("button", { name: "Start studying" }).click();
       await op.getByRole("heading", { name: "My courses" }).waitFor();
       check(new URL(op.url()).pathname === "/dashboard", "after onboarding the student lands on their courses");
+      // Isolation in the browser: only the programme's courses; another programme's course is not found.
+      const { data: theirs } = await admin.from("courses").select("code, materials(count)").eq("programme", isms.id);
+      const expectCodes = (theirs ?? []).filter((c: any) => (c.materials?.[0]?.count ?? 0) > 0).map((c) => c.code).sort();
+      const shownText = await op.getByRole("list", { name: "Courses" }).innerText();
+      check(expectCodes.every((c) => shownText.includes(c.replace(/^([A-Z]+)/, "$1 "))) && !/CSC \d{3}|INS 401/.test(shownText),
+        "My courses lists only the chosen programme's courses", expectCodes.join(","));
+      // The page streams, so the status can already be 200; what matters is that nothing of the course shows.
+      await op.goto(`${BASE}/study/CSC420`);
+      await op.getByRole("heading", { name: "Page not found" }).waitFor({ timeout: 15000 });
+      check(!(await op.getByText("Data Management II").count()), "another programme's course page shows 'Page not found' and none of its content");
+      await op.waitForTimeout(300);
+      for (let i = consoleErrors.length - 1; i >= 0; i--) if (/status of 404/.test(consoleErrors[i])) consoleErrors.splice(i, 1);
+      await op.goto(`${BASE}/dashboard`);
+      await op.getByRole("heading", { name: "My courses" }).waitFor();
       await op.getByRole("list", { name: "Courses" }).getByRole("link").first().click();
       await op.waitForURL(/\/study\//);
       await op.getByRole("button", { name: /Studying with/ }).waitFor();
       check(await op.getByRole("button", { name: /Studying with Tobi/ }).isVisible(), "Tobi is the partner in the study workspace");
       check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
       await shot(op, "9-study-empty-tobi");
-      const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name, department").eq("email", newbie).single();
-      check(prof?.study_partner === "tobi" && prof?.onboarded === true && prof?.display_name === "Tolu" && prof?.department === "Computer Science", "choices saved to the profile", JSON.stringify(prof));
+      const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name, programme, level, department").eq("email", newbie).single();
+      check(prof?.study_partner === "tobi" && prof?.onboarded === true && prof?.display_name === "Tolu" && prof?.programme === isms.id && prof?.level === 400 &&
+        prof?.department === chosen!.department, "choices saved to the profile (programme, level, department)", JSON.stringify(prof));
+      // Change programme (account menu) → back to CS: the course list follows.
+      await op.goto(`${BASE}/dashboard`);
+      await op.getByRole("button", { name: "Account" }).click();
+      await op.getByRole("button", { name: "Change programme" }).click();
+      const dialog = op.getByRole("dialog", { name: "Change programme" });
+      await dialog.getByRole("combobox", { name: "What do you study?" }).selectOption("computer-science");
+      await dialog.getByRole("button", { name: "Save" }).click();
+      await op.getByText(/CSC \d{3}/).first().waitFor({ timeout: 15000 });
+      const afterText = await op.getByRole("list", { name: "Courses" }).innerText();
+      check(!expectCodes.some((c) => afterText.includes(c.replace(/^([A-Z]+)/, "$1 "))), "after 'Change programme' My courses shows the new programme only");
+      await shot(op, "9b-changed-programme");
       await fresh.close();
     } finally {
       await cleanup(newbie);
@@ -375,7 +403,7 @@ async function main() {
     await page.goto(`${BASE}/dashboard`);
     await page.getByRole("heading", { name: "My courses" }).waitFor();
     const cards = page.getByRole("list", { name: "Courses" }).getByRole("listitem");
-    const { data: withMaterial } = await admin.from("courses").select("id, materials(count)");
+    const { data: withMaterial } = await admin.from("courses").select("id, materials(count)").eq("programme", "computer-science").eq("level", 400);
     const expected = (withMaterial ?? []).filter((c: any) => (c.materials?.[0]?.count ?? 0) > 0).length;
     check((await cards.count()) === expected, "dashboard shows a card for every course with material", `${await cards.count()} cards, ${expected} courses`);
     await shot(page, "1a-dashboard");
@@ -620,7 +648,10 @@ async function main() {
       // Not launched yet (lib/past/feature.ts): every course shows "Past questions · Soon" → "Coming soon".
       const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await pq.context().addCookies(await page.context().cookies());
-      for (const code of ["INS401", "ISM413"]) {
+      const { data: meP } = await admin.from("profiles").select("id").eq("email", email).single();
+      const asProgramme = (programme: string) => admin.from("profiles").update({ programme, level: 400 }).eq("id", meP!.id);
+      for (const [code, programme] of [["INS401", "computer-science"], ["ISM413", "information-science-and-media-studies"]]) {
+        await asProgramme(programme); // ISM413 is only visible to an ISMS student (PRD F11)
         await pq.goto(`${BASE}/study/${code}`);
         const entry = pq.getByRole("navigation", { name: "Topics and chats" }).getByRole("button", { name: /Past questions/ });
         await entry.waitFor({ timeout: 15000 });
@@ -630,6 +661,7 @@ async function main() {
         check(!(await pq.getByText(/Exam map|Mark my answer|Asked in/).count()), `${code}: clicking it shows only 'Coming soon'`);
         await shot(pq, `past-soon-${code}`);
       }
+      await asProgramme("computer-science");
       await pq.goto(`${BASE}/study/INS401?topic=2`);
       await pq.getByRole("navigation", { name: "Topics and chats" }).waitFor();
       check(!(await pq.getByRole("button", { name: /past questions?$/ }).count()), "topic chats show no past-question chips before launch");
@@ -641,6 +673,8 @@ async function main() {
     // Word notes (PRD F11): an ISM413 answer cites a Word section, and the viewer shows that page.
     console.log("\nWord notes (ISM413)");
     {
+      const { data: meW } = await admin.from("profiles").select("id").eq("email", email).single();
+      await admin.from("profiles").update({ programme: "information-science-and-media-studies", level: 400 }).eq("id", meW!.id);
       const wp = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await wp.context().addCookies(await page.context().cookies());
       await wp.goto(`${BASE}/study/ISM413`);
@@ -659,6 +693,7 @@ async function main() {
       check(await wp.locator("aside[role='dialog']").getByText(/Lecture notes ·/).isVisible(), "the viewer's header names the section");
       await shot(wp, "word-notes-viewer");
       await wp.close();
+      await admin.from("profiles").update({ programme: "computer-science", level: 400 }).eq("id", meW!.id);
     }
 
     // Admin dashboard: hidden from students; the owner sees the pilot, including this test's activity.

@@ -120,6 +120,7 @@ export function Workspace(data: WorkspaceData) {
         <h1 className="min-w-0 truncate text-[17px] text-ink sm:ml-1 sm:text-[19px]">
           {course.title}
           <span className="ml-2 hidden text-sm text-muted sm:inline">{displayCode(course.code)}</span>
+          {course.elective && <span className="ml-2 rounded-full bg-pau-100 px-2.5 py-0.5 align-middle text-[12px] font-medium text-brand">Elective</span>}
         </h1>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">

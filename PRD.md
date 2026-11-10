@@ -120,9 +120,12 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 - Every "Try for free" opens **/sign-up**: the same page as /sign-in, on the **Create account** tab. Tabs at the top (Create account | Log in) are always visible. Create account shows only the PAU email and a big "Get my code" button, with a 1-2-3 progress line (Email → Code → Password) and step headings ("Check your email", "Create a password"). Log in ("Welcome back") has email + password, a "Forgot password?" link (the same code flow, "Reset your password"), and an outlined "Create a free account" button.
 
-### F1a. Department at onboarding
+### F1a. Programme at onboarding
 
-- The first onboarding step asks for a name (optional) and **"What are you studying?"** (required): a dropdown of Computer Science, Engineering, Economics and Business Administration. Only departments whose slides are in the app can be chosen (now: Computer Science); the others show "(coming soon)" (`apps/web/lib/departments.ts`). Saved on `profiles.department`; My courses shows that department's courses (all courses for students who onboarded before this existed), and the partner's hello names it.
+- Replaced by F11: the first onboarding screen asks **"What do you study?"** (programme + level, from
+  the catalog), saved on `profiles.programme` / `level` (and `department`, for the partner's copy).
+  Changeable from the account menu ("Change programme"). The database shows a student only their
+  programme + level's courses.
 
 ### F1b. Onboarding and study partners
 

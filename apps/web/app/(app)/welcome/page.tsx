@@ -5,30 +5,28 @@ import { Onboarding } from "@/components/onboarding/onboarding";
 import { requireUser } from "@/lib/auth/session";
 import { safeNext } from "@/lib/auth/next";
 import { isPartnerId } from "@/lib/partners";
+import { programmeChoices } from "@/lib/programmes";
 
 export const metadata: Metadata = { title: "Welcome · Ask Your Slides" };
 
 async function Loaded({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeNext((await searchParams).next);
   const { supabase, user } = await requireUser();
-  const [{ data: profile, error: profileError }, { data: courses }] = await Promise.all([
-    supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
-    supabase.from("courses").select("department"),
+  const [{ data: profile, error: profileError }, choices] = await Promise.all([
+    supabase.from("profiles").select("display_name, onboarded, study_partner, programme, level").eq("id", user.id).single(),
+    programmeChoices(supabase),
   ]);
-  // One department → the partner can name it ("I know Computer Science can be hard"). Several
-  // (once more departments are added and students choose theirs) → a neutral "your courses".
-  const departments = [...new Set((courses ?? []).map((c) => c.department as string))];
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
-  if (profile?.onboarded && isPartnerId(profile.study_partner)) redirect(next ?? "/dashboard");
+  if (profile?.onboarded && isPartnerId(profile.study_partner) && profile.programme) redirect(next ?? "/dashboard");
   return (
     <Onboarding
-      department={departments.length === 1 ? departments[0] : null}
+      choices={choices}
       next={next}
       initialName={profile?.display_name ?? ""}
-      initialDepartment={profile?.department ?? null}
+      initialProgramme={profile?.programme && profile.level ? { programme: profile.programme, level: profile.level } : null}
       initialPartner={isPartnerId(profile?.study_partner) ? profile.study_partner : null}
       // Students who signed up before partners existed only need to choose one.
-      startAtPartner={!!profile?.onboarded}
+      startAtPartner={!!profile?.onboarded && !!profile.programme}
     />
   );
 }

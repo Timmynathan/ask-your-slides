@@ -36,7 +36,7 @@ import pptx_extract
 import vision
 from chunks import build_chunk, image_path, looks_garbled, sanitize, slide_key, unit
 from config import DATA, PIPELINE_VERSION, VISION_MODEL, VISION_USD_PER_MTOK
-from manifest import Course, ManifestError, Material, load, title_from_filename
+from manifest import Course, ManifestError, Material, load, programmes, title_from_filename
 from store import SlideRow, Store
 
 MIN_TEXT_CHARS = 40  # PRD §9.2: shorter than this is probably a scanned slide
@@ -402,6 +402,8 @@ def main() -> int:
             for code, m in reviews:
                 print(f"  {code} {m.order:02d} {m.file.name}: {m.review}")
 
+        if not args.dry_run:
+            store.upsert_programmes(programmes(DATA))
         stats = Stats()
         t0 = time.time()
         for course in selected:

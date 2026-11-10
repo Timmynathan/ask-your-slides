@@ -123,6 +123,18 @@ class Store:
             ).fetchone()
         return course_id, str(srow["id"])
 
+    def upsert_programmes(self, programmes: list) -> None:
+        """Programme names, departments and schools from catalog.yaml (onboarding lists them)."""
+        with self.db.transaction():
+            for p in programmes:
+                self.db.execute(
+                    "insert into programmes (institution, id, name, short_name, department, school, school_name, sort_order) "
+                    "values (%s,%s,%s,%s,%s,%s,%s,%s) on conflict (institution, id) do update set name = excluded.name, "
+                    "short_name = excluded.short_name, department = excluded.department, school = excluded.school, "
+                    "school_name = excluded.school_name, sort_order = excluded.sort_order",
+                    (p.institution, p.id, p.name, p.short_name, p.department, p.school, p.school_name, p.sort_order),
+                )
+
     def sync_topics(self, course_id: str, topics: tuple[Topic, ...]) -> dict[str, str]:
         """Upsert by title (keeps ids, so chats stay attached), re-number, delete topics no longer listed."""
         titles = [t.title for t in topics]

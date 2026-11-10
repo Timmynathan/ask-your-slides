@@ -110,6 +110,39 @@ class Course:
         return self.key.split("/")[-len(parts):] == parts
 
 
+@dataclass(frozen=True)
+class Programme:
+    institution: str
+    id: str
+    name: str
+    short_name: str | None
+    department: str
+    school: str
+    school_name: str | None
+    sort_order: int
+
+
+def programmes(data_dir: Path) -> list[Programme]:
+    """Every programme in every catalog (names for onboarding: "What do you study?"). Assumes load()
+    has validated the catalogs."""
+    data_root = Path(os.path.abspath(data_dir))
+    out: list[Programme] = []
+    for inst_dir in sorted(p for p in data_root.iterdir() if p.is_dir() and not _ignored(p.name)):
+        path = inst_dir / "catalog.yaml"
+        if not path.is_file():
+            continue
+        catalog = yaml.safe_load(path.read_text()) or {}
+        inst = str((catalog.get("institution") or {}).get("id") or inst_dir.name)
+        for school in catalog.get("schools") or []:
+            for prog in school.get("programmes") or []:
+                out.append(Programme(
+                    institution=inst, id=str(prog["id"]), name=str(prog.get("name") or prog["id"]),
+                    short_name=prog.get("short_name"), department=str(prog.get("department") or prog.get("name") or prog["id"]),
+                    school=str(school["id"]), school_name=school.get("name"), sort_order=len(out) + 1,
+                ))
+    return out
+
+
 def load(data_dir: Path) -> list[Course]:
     """Every course in every data/<institution>/catalog.yaml, in catalog order."""
     data_root = Path(os.path.abspath(data_dir))

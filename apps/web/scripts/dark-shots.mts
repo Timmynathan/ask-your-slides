@@ -21,7 +21,7 @@ async function cookiesFor(addr: string, onboarded: boolean) {
   const res = await fetch(`${BASE}/api/auth/verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: addr, code: data.properties!.email_otp }) });
   if (onboarded) {
     const { data: u } = await admin.from("profiles").select("id").eq("email", addr).single();
-    await admin.from("profiles").update({ onboarded: true, display_name: "Dami", study_partner: "zara", department: "Computer Science" }).eq("id", u!.id);
+    await admin.from("profiles").update({ onboarded: true, display_name: "Dami", study_partner: "zara", department: "Computer Science", programme: "computer-science", level: 400 }).eq("id", u!.id);
   }
   const url = new URL(BASE);
   return res.headers.getSetCookie().map((c) => {
@@ -53,7 +53,7 @@ try {
     const op = await octx.newPage();
     await op.goto(`${BASE}/welcome`); await op.waitForTimeout(500); await shot(op, "lap-onboard-name");
     await op.getByLabel("Your name").fill("Dami");
-    await op.getByRole("combobox", { name: "What are you studying?" }).selectOption("Computer Science");
+    await op.getByRole("combobox", { name: "What do you study?" }).selectOption("computer-science");
     await op.getByRole("button", { name: "Continue" }).click();
     await op.getByRole("radiogroup", { name: "Study partners" }).waitFor(); await op.waitForTimeout(500); await shot(op, "lap-onboard-partner");
     await octx.close();

@@ -6,6 +6,7 @@ export interface CourseItem {
   department: string;
   title: string;
   sort_order: number;
+  elective?: boolean;
 }
 
 export interface TopicItem {

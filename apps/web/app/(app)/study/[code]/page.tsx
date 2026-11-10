@@ -24,8 +24,8 @@ async function Loaded({ params, searchParams }: Props) {
   const { supabase, user } = await requireUser();
 
   const [{ data: courses }, { data: profile, error: profileError }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }] = await Promise.all([
-    supabase.from("courses").select("id, code, programme, department, title, sort_order").order("sort_order"),
-    supabase.from("profiles").select("display_name, onboarded, study_partner, department").eq("id", user.id).single(),
+    supabase.from("courses").select("id, code, programme, department, title, sort_order, elective").order("sort_order"),
+    supabase.from("profiles").select("display_name, onboarded, study_partner, department, programme").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
@@ -39,7 +39,9 @@ async function Loaded({ params, searchParams }: Props) {
     supabase.from("question_topics").select("question_id, topic_id"),
   ]);
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
-  if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");
+  if (!profile?.onboarded || !isPartnerId(profile.study_partner) || !profile.programme) redirect("/welcome");
+  // RLS returns only the student's programme + level's courses (PRD F11): another programme's
+  // course is simply not found.
   const course = resolveCourse((courses ?? []) as CourseItem[], code, sp.programme, profile.department);
   if (!course) notFound();
 

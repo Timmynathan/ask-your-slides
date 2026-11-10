@@ -6,7 +6,8 @@ import { Logo } from "@/components/brand/logo";
 import { Mascot } from "@/components/mascot/mascot";
 import { BusyLabel } from "@/components/ui/spinner";
 import { fill, PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
-import { DEPARTMENTS } from "@/lib/departments";
+import type { ProgrammeChoice } from "@/lib/programmes";
+import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 
 const DEFAULT_PARTNER: PartnerId = "zara";
 // The default first, so it is the first card a student sees (also on a phone).
@@ -24,23 +25,24 @@ const HELLO: Record<PartnerId, string> = {
 const STEPS: Step[] = ["name", "partner", "hello"];
 
 interface Props {
-  /** The student's department, from the courses data; null when it can't be told (several). */
-  department: string | null;
+  /** Programmes + levels in the catalog ("What do you study?"). */
+  choices: ProgrammeChoice[];
   /** Where to go after onboarding (e.g. a course link shared in a class group). */
   next: string | null;
   initialName: string;
-  initialDepartment: string | null;
+  initialProgramme: { programme: string; level: number } | null;
   initialPartner: PartnerId | null;
   startAtPartner: boolean;
 }
 
-export function Onboarding({ department: courseDepartment, next, initialName, initialDepartment, initialPartner, startAtPartner }: Props) {
+export function Onboarding({ choices, next, initialName, initialProgramme, initialPartner, startAtPartner }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startAtPartner ? "partner" : "name");
   const [name, setName] = useState(initialName);
-  const [studying, setStudying] = useState(initialDepartment ?? "");
-  // The partner names what the student chose; before that, the department from the courses data.
-  const department = studying || courseDepartment;
+  const [studying, setStudying] = useState<ProgrammeValue>(initialProgramme ?? { programme: "", level: null });
+  // The partner names the chosen programme's department (from the data, never hard-coded).
+  const department = choices.find((c) => c.programme === studying.programme)?.department ?? null;
+  const ready = !!studying.programme && !!studying.level;
   // Zara (the all-rounder) is pre-selected so a student can just continue: least friction.
   const [partner, setPartner] = useState<PartnerId | null>(initialPartner ?? DEFAULT_PARTNER);
   const [busy, setBusy] = useState(false);
@@ -67,8 +69,8 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
 
   async function submitName(e: FormEvent) {
     e.preventDefault();
-    if (!studying) return;
-    if (await save({ display_name: name.trim() || null, department: studying })) setStep("partner");
+    if (!ready) return;
+    if (await save({ display_name: name.trim() || null, programme: studying.programme, level: studying.level })) setStep("partner");
   }
 
   async function submitPartner() {
@@ -116,30 +118,11 @@ export function Onboarding({ department: courseDepartment, next, initialName, in
               aria-label="Your name"
               className="mt-8 w-full rounded-full border border-line-strong bg-card px-6 py-3.5 text-center text-lg text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-pau-200"
             />
-            <label className="relative mt-3 block">
-              <span className="sr-only">What are you studying?</span>
-              <select
-                value={studying}
-                onChange={(e) => setStudying(e.target.value)}
-                required
-                aria-label="What are you studying?"
-                className={`w-full appearance-none rounded-full border border-line-strong bg-card px-6 py-3.5 text-center text-lg outline-none focus:border-brand focus:ring-4 focus:ring-pau-200 ${studying ? "text-ink" : "text-muted/60"}`}
-              >
-                <option value="" disabled>
-                  What are you studying?
-                </option>
-                {DEPARTMENTS.map((d) => (
-                  <option key={d.name} value={d.name} disabled={!d.available}>
-                    {d.available ? d.name : `${d.name} (coming soon)`}
-                  </option>
-                ))}
-              </select>
-              <svg className="pointer-events-none absolute right-6 top-1/2 -translate-y-1/2 text-muted" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-                <path d="m3 5 4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </label>
-            <p className="mt-2 text-xs text-muted">More departments are coming soon.</p>
-            <button type="submit" disabled={busy || !studying} className="mt-5 w-full rounded-full bg-brand px-4 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60">
+            <div className="mt-3">
+              <ProgrammePicker choices={choices} value={studying} onChange={setStudying} />
+            </div>
+            <p className="mt-2 text-xs text-muted">You can change this later from your account menu.</p>
+            <button type="submit" disabled={busy || !ready} className="mt-5 w-full rounded-full bg-brand px-4 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60">
               <BusyLabel busy={busy} label="Continue" busyLabel="Saving…" />
             </button>
           </form>

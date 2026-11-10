@@ -132,13 +132,13 @@ async function main() {
     res = await fetch(`${BASE}/welcome`, { headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
     const welcome = await res.text();
-    check(res.status === 200 && welcome.includes("Tell us about you") && welcome.includes("What are you studying?"),
-      "first-time student sees the name + department step", String(res.status));
+    check(res.status === 200 && welcome.includes("Tell us about you") && welcome.includes("What do you study?"),
+      "first-time student sees the name + programme step", String(res.status));
 
     // 5. Signed in (after the welcome step): the study page shows the student and every course,
     //    read through RLS. (/dashboard forwards here.)
     const { data: prof } = await admin.from("profiles").select("id").eq("email", testEmail).single();
-    await admin.from("profiles").update({ onboarded: true, study_partner: "ada" }).eq("id", prof!.id);
+    await admin.from("profiles").update({ onboarded: true, study_partner: "ada", programme: "computer-science", level: 400 }).eq("id", prof!.id);
     res = await fetch(`${BASE}/study/CSC420`, { headers: { cookie: jar.header() }, redirect: "manual" });
     jar.take(res);
     const html = await res.text();
