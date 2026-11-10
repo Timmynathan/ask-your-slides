@@ -32,6 +32,8 @@ interface Case {
   topic?: string;
   question: string;
   cite_any?: string[];
+  /** Every one of these materials must be cited (e.g. each script of a topic). */
+  cite_all?: string[];
   cite_type?: "docx" | "notebook" | "code" | "image_only";
   student_work?: boolean;
   no_student_work?: boolean;
@@ -146,6 +148,10 @@ async function runCases(file: string) {
           check(!!chip?.label, "its chip names the section/cells/lines, not a page", JSON.stringify(chip?.label ?? null));
         }
       }
+    }
+    if (c.cite_all) {
+      const missing = c.cite_all.filter((p) => !keys.some((k) => k.startsWith(`${p}-`)));
+      check(!missing.length, `cites every one of ${c.cite_all.length} files`, missing.length ? `missing ${missing.join(" ")}` : shown);
     }
     if (c.student_work) {
       check(keys.some((k) => info.get(k)?.source === "student"), "uses the student presentation");

@@ -120,6 +120,21 @@
       "cite_type": "code",
       "no_confusion": true,
       "why": "'Ask about this part' from the viewer: three files are titled PlayerMovement.cs; the answer must be about the one being viewed"
+    },
+    {
+      "id": "codes-in-topic",
+      "course": "ISM410",
+      "topic": "Player movement and physics",
+      "question": "Explain the codes in this topic",
+      "cite_all": [
+        "ISM410-07",
+        "ISM410-09",
+        "ISM410-11",
+        "ISM410-18",
+        "ISM410-19",
+        "ISM410-22"
+      ],
+      "why": "a request about all the code of a topic covers every script, not just the best search matches"
     }
   ]
 }

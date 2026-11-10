@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Mascot } from "@/components/mascot/mascot";
 import { Spinner } from "@/components/ui/spinner";
 import { PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
@@ -35,7 +36,9 @@ export function PartnerPicker({ current, onClose, onChanged }: { current: Partne
     }
   }
 
-  return (
+  // On <body>: opened from the partner button in the top bar, whose blur would otherwise trap this
+  // overlay inside the bar (only the bar turned grey). Now the whole page dims slightly.
+  return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onClick={onClose}>
       <div
         role="dialog"
@@ -74,6 +77,7 @@ export function PartnerPicker({ current, onClose, onChanged }: { current: Partne
           Close
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

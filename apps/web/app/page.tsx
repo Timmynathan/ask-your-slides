@@ -8,6 +8,7 @@ import { TypingBox } from "@/components/landing/typing-box";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
+import { directSignupEnabled } from "@/lib/auth/signup-mode";
 import { getCatalog } from "@/lib/catalog";
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
@@ -168,7 +169,9 @@ export default async function Landing() {
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">No downloading decks, no uploading files, no starting over in a new chat.</p>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
-              ["1", "Sign in with your PAU email", "One code to confirm it's you, then a password for next time."],
+              directSignupEnabled()
+                ? ["1", "Sign up with your PAU email", "Your PAU email and a password. That's it: it takes seconds."]
+                : ["1", "Sign in with your PAU email", "One code to confirm it's you, then a password for next time."],
               ["2", "Choose your study partner", "Tobi, Ada, Dr. Musa or Zara: same slides, four ways of explaining."],
               ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
             ].map(([n, title, body]) => (

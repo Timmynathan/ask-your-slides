@@ -346,6 +346,10 @@ async function main() {
       await op.getByRole("button", { name: "Change study partner", exact: true }).click();
       await op.getByRole("dialog").getByText(/Ada/).first().waitFor({ timeout: 5000 });
       check(true, "the account menu has 'Change study partner'");
+      const veil = await op.getByRole("dialog").locator("xpath=..").boundingBox();
+      const vp = op.viewportSize()!;
+      check(!!veil && veil.width >= vp.width - 1 && veil.height >= vp.height - 1,
+        "the partner picker dims the whole page, not just the top bar", JSON.stringify(veil));
       await op.keyboard.press("Escape");
       check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
       await shot(op, "9-study-empty-tobi");

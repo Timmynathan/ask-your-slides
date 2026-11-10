@@ -3,7 +3,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
 import { CORE_INSTRUCTIONS, chatContext, partnerContext } from "./prompt";
-import { buildTools, getMaterialPages, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
+import { buildTools, getMaterialPages, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
 
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
@@ -52,6 +52,33 @@ export function historyText(content: string): string {
 
 /** The server's first search: the question, plus the previous question for short follow-ups
  *  ("how is that different from a hash index?", "c", "next one"). */
+/** "Explain the code(s) / scripts / notebooks / practicals (in this topic / course)". */
+export function asksForCodeOverview(message: string): boolean {
+  const m = message.toLowerCase();
+  return /\b(codes?|scripts?|notebooks?|practicals?|programs?)\b/.test(m) &&
+    /\b(this topic|the topic|this course|the course|this week|all( the)?|each|every|in here)\b/.test(m) &&
+    !/\b(line|lines|cell|cells)\s+\d/.test(m); // a specific line/cell is a normal question
+}
+
+const MAX_CODE_PAGES = 30; // across all files read for a code overview (scripts are 1 part each; notebooks more)
+
+/** The practical (scripts, notebooks) materials of a topic, or of the course in a whole-course chat,
+ *  in teaching order, within a page budget. */
+async function practicalMaterials(db: ReturnType<typeof adminClient>, courseId: string, topicId: string | null) {
+  let q = db.from("materials").select("material_order, page_count").eq("course_id", courseId).eq("kind", "practical").order("material_order");
+  if (topicId) q = q.eq("topic_id", topicId);
+  const rows = must(await q) as { material_order: number; page_count: number }[];
+  const out: { material_order: number; pages: number }[] = [];
+  let budget = MAX_CODE_PAGES;
+  for (const r of rows) {
+    if (budget <= 0) break;
+    const pages = Math.min(r.page_count, budget);
+    out.push({ material_order: r.material_order, pages });
+    budget -= pages;
+  }
+  return out;
+}
+
 /** The student names a presentation, a group's work, a brief or a template (PRD F11). */
 export function asksForOtherMaterial(message: string): boolean {
   return /\b(presentations?|group\s*\d+|groups?['’]s?\s+(work|slides)|briefs?|templates?|handouts?)\b/i.test(message);
@@ -190,13 +217,24 @@ export async function runChatTurn(turn: ChatTurn) {
   // searched only when the student asks for it (PRD F3, F11); the prompt decides how it's used.
   // A question asked from the viewer is about one exact item: the server reads that item first
   // (titles can repeat, so a search could pick another one). Otherwise it searches.
+  // "Explain the code in this topic": every practical file (scripts, notebooks) of the topic or
+  // course is read first, so the answer covers each file, not just the best search matches.
   const focus = turn.focusSlide?.match(/^([A-Z]{3}\d{3}-\d{2,3})-(\d{1,3})$/);
-  const preTool = focus ? getMaterialPages : searchSlides;
-  const preSearchInput = focus
-    ? { material: focus[1], from: Number(focus[2]), to: Number(focus[2]) }
-    : { query: preSearchQuery(turn), ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) };
-  const preSearchOutput = await preTool.run(ctx, preSearchInput as never);
-  const preSearchId = `presearch_${turn.assistantMessageId}`;
+  const preCalls: { tool: typeof searchSlides | typeof getMaterialPages; input: Record<string, unknown> }[] = [];
+  if (focus) {
+    preCalls.push({ tool: getMaterialPages, input: { material: focus[1], from: Number(focus[2]), to: Number(focus[2]) } });
+  } else if (asksForCodeOverview(turn.userMessage)) {
+    for (const m of await practicalMaterials(db, turn.courseId, turn.topicId)) {
+      preCalls.push({ tool: getMaterialPages, input: { material: materialKey(turn.courseCode, m.material_order), from: 1, to: m.pages } });
+    }
+  }
+  if (!preCalls.length) {
+    preCalls.push({ tool: searchSlides, input: { query: preSearchQuery(turn), ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
+  }
+  const pre = [];
+  for (const [i, c] of preCalls.entries()) {
+    pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
+  }
 
   const result = streamText({
     model: anthropic(CHAT_MODEL),
@@ -210,8 +248,8 @@ export async function runChatTurn(turn: ChatTurn) {
       ...turn.history,
       // Cache breakpoint: every later step of this turn resends everything up to here.
       { role: "user", content: turn.userMessage, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "assistant", content: [{ type: "tool-call", toolCallId: preSearchId, toolName: preTool.name, input: preSearchInput }] },
-      { role: "tool", content: [{ type: "tool-result", toolCallId: preSearchId, toolName: preTool.name, output: { type: "json", value: preSearchOutput as never } }] },
+      { role: "assistant", content: pre.map((c) => ({ type: "tool-call" as const, toolCallId: c.id, toolName: c.name, input: c.input })) },
+      { role: "tool", content: pre.map((c) => ({ type: "tool-result" as const, toolCallId: c.id, toolName: c.name, output: { type: "json" as const, value: c.output as never } })) },
     ],
     tools: buildTools(ctx),
     stopWhen: isStepCount(MAX_STEPS),

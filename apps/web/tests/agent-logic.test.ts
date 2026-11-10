@@ -50,3 +50,14 @@ describe("asksForOtherMaterial (PRD F11: student work only when asked)", () => {
     expect(asksForOtherMaterial("Explain the presentational layer")).toBe(false);
   });
 });
+
+describe("asksForCodeOverview (read every practical file first)", () => {
+  it("spots requests about all the code of a topic or course, not one specific line", async () => {
+    const { asksForCodeOverview } = await import("@/lib/agent/run");
+    expect(asksForCodeOverview("Explain the codes in this topic")).toBe(true);
+    expect(asksForCodeOverview("Walk me through all the scripts")).toBe(true);
+    expect(asksForCodeOverview("Explain each notebook in this course")).toBe(true);
+    expect(asksForCodeOverview("What does a Rigidbody do?")).toBe(false);
+    expect(asksForCodeOverview("Explain lines 1–61 of the code in this topic")).toBe(false);
+  });
+});
