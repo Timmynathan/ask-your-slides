@@ -67,7 +67,7 @@ def check_course(store: Store, course, failures: list[str]) -> tuple[int, int]:
         failures.append(f"{course.key}: topics differ from manifest: {sorted(topics_db ^ {t.title for t in course.topics})}")
 
     slides = db.execute(
-        "select s.material_id, s.slide_number, s.slide_key, s.image_path, s.embedding is not null as has_vec, "
+        "select s.material_id, s.slide_number, s.slide_key, s.image_path, s.view is not null as has_view, s.embedding is not null as has_vec, "
         "length(s.chunk_text) as chunk_len from slides s where s.course_id = %s", (cid,)).fetchall()
     per_material: dict = {}
     for s in slides:
@@ -78,6 +78,9 @@ def check_course(store: Store, course, failures: list[str]) -> tuple[int, int]:
             failures.append(f"{s['slide_key']}: empty chunk")
         if not KEY_RE.match(s["slide_key"]):
             failures.append(f"{s['slide_key']}: malformed slide_key")
+        # Notebook cells and code have no page image: the viewer shows their `view` (PRD F11).
+        if not s["image_path"] and not s["has_view"]:
+            failures.append(f"{s['slide_key']}: neither a page image nor a view to show")
     images = set(store.list_course_images(cid))
     for row in mats.values():
         rows = per_material.get(row["id"], [])
@@ -88,7 +91,7 @@ def check_course(store: Store, course, failures: list[str]) -> tuple[int, int]:
     misplaced = [s["image_path"] for s in slides if s["image_path"] and not s["image_path"].startswith(f"{cid}/")]
     if misplaced:
         failures.append(f"{course.key}: {len(misplaced)} images not under the course id yet (run ingest), e.g. {misplaced[:2]}")
-    missing = [s["image_path"] for s in slides if s["image_path"] not in images]
+    missing = [s["image_path"] for s in slides if s["image_path"] and s["image_path"] not in images]
     if missing:
         failures.append(f"{course.key}: {len(missing)} slide images missing in Storage, e.g. {missing[:3]}")
     orphans = images - {s["image_path"] for s in slides}
