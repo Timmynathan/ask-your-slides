@@ -597,6 +597,29 @@ async function main() {
     await page.locator("textarea[aria-label='Your question']:visible").fill("What's the difference between a function and a stored procedure?");
     await page.keyboard.press("Enter");
     await page.getByText("Searching your slides…").waitFor({ timeout: 5000, state: "attached" }).catch(() => {});
+    // Scrolling up while the answer streams: the chat stays put (it used to snap back down).
+    {
+      const box = page.locator("main div.overflow-y-auto:visible").first();
+      await page.waitForFunction(() => [...document.querySelectorAll("main li[data-message='assistant']")].at(-1)?.textContent?.length! > 200, null, { timeout: 30000 }).catch(() => null);
+      const streaming = await page.getByRole("button", { name: "Send" }).count() === 0;
+      if (streaming) {
+        await box.hover();
+        await page.mouse.wheel(0, -1500);
+        await page.waitForTimeout(1500);
+        const away = await box.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight);
+        check(away > 200, "scrolling up while an answer streams keeps you where you scrolled", `${Math.round(away)}px from the bottom`);
+        const jump = page.getByRole("button", { name: "Jump to latest ↓" });
+        if (await page.getByRole("button", { name: "Send" }).count() === 0) {
+          check(await jump.isVisible(), "'Jump to latest' appears while you read further up");
+          await jump.click();
+          await page.waitForTimeout(800);
+          const after = await box.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight);
+          check(after < 80, "'Jump to latest' goes back to the answer and follows it", `${Math.round(after)}px from the bottom`);
+        }
+      } else {
+        console.log("  note the answer finished before the scroll check could run");
+      }
+    }
     await page.getByRole("button", { name: "Send" }).waitFor({ timeout: 40000 });
     const label = page.locator("main p:visible", { hasText: "Not in Transactions and indexing" });
     check((await label.count()) === 1, "fallback label shown above the off-topic answer", (await label.first().textContent().catch(() => "")) ?? "");

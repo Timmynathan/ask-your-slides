@@ -191,12 +191,36 @@ export function ChatPanel({
     });
   }, [prefill]);
 
-  // Follow the answer while it streams, unless the student has scrolled up to read.
-  useEffect(() => {
+  // Follow the answer while it streams, until the student scrolls up to read: then leave them be
+  // (before, any position within 160px of the bottom snapped back on every new chunk). Following
+  // resumes when they scroll back to the bottom, press "Jump to latest", or send a question.
+  const following = useRef(true);
+  const lastTop = useRef(0);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
+  const distanceFromBottom = (el: HTMLDivElement) => el.scrollHeight - el.scrollTop - el.clientHeight;
+  function onScroll() {
     const el = scrollRef.current;
     if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 160)
-      el.scrollTop = el.scrollHeight;
+    if (distanceFromBottom(el) < 24) following.current = true;
+    else if (el.scrollTop < lastTop.current - 2) following.current = false; // moved up: reading
+    lastTop.current = el.scrollTop;
+    setAwayFromBottom(!following.current && distanceFromBottom(el) > 24);
+  }
+  const stopFollowing = (e: { deltaY?: number }) => {
+    if ((e.deltaY ?? -1) < 0) following.current = false; // wheel/trackpad up, before the page moves
+  };
+  function jumpToLatest() {
+    const el = scrollRef.current;
+    if (!el) return;
+    following.current = true;
+    setAwayFromBottom(false);
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !following.current) return;
+    el.scrollTop = el.scrollHeight;
+    lastTop.current = el.scrollTop;
   }, [messages, status]);
 
   const busy = sending || status === "submitted" || status === "streaming";
@@ -233,6 +257,8 @@ export function ChatPanel({
       }
       setInput("");
       onQuestion();
+      following.current = true; // a new question: follow its answer
+      setAwayFromBottom(false);
       // Still the question that opened from the viewer (its opening kept): say which item it's about.
       const focusSlide = focus && text.startsWith(focus.text.slice(0, -1)) ? focus.key : undefined;
       setFocus(null);
@@ -288,7 +314,8 @@ export function ChatPanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div ref={scrollRef} onScroll={onScroll} onWheel={stopFollowing} onTouchMove={() => { following.current = false; }} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl px-4 py-6 lg:px-8">
           {loadingHistory && (
             <p className="text-sm text-muted">Loading chat…</p>
@@ -376,6 +403,16 @@ export function ChatPanel({
             </p>
           )}
         </div>
+      </div>
+      {awayFromBottom && (status === "streaming" || status === "submitted") && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="pop-in absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-card px-4 py-2 text-[13px] text-ink shadow-lg ring-1 ring-line transition hover:bg-sunken"
+        >
+          Jump to latest ↓
+        </button>
+      )}
       </div>
 
       <div className="shrink-0 bg-page px-4 pb-4 pt-2">
