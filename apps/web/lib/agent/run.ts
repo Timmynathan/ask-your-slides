@@ -3,7 +3,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
 import { CORE_INSTRUCTIONS, chatContext, partnerContext } from "./prompt";
-import { buildTools, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
+import { buildTools, getMaterialPages, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
 
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
@@ -34,6 +34,8 @@ export interface ChatTurn {
   userMessageId?: string;
   startedAt: number;
   abortSignal?: AbortSignal;
+  /** "Ask about this…" from the viewer: this exact slide/section/code part (a key of this course). */
+  focusSlide?: string;
 }
 
 export interface TurnSummary {
@@ -186,8 +188,14 @@ export async function runChatTurn(turn: ChatTurn) {
   // The model can still search again, list topics or read whole materials.
   // Material that isn't lecture content ("other": student presentations, briefs, templates) is
   // searched only when the student asks for it (PRD F3, F11); the prompt decides how it's used.
-  const preSearchInput = { query: preSearchQuery(turn), ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) };
-  const preSearchOutput = await searchSlides.run(ctx, preSearchInput);
+  // A question asked from the viewer is about one exact item: the server reads that item first
+  // (titles can repeat, so a search could pick another one). Otherwise it searches.
+  const focus = turn.focusSlide?.match(/^([A-Z]{3}\d{3}-\d{2,3})-(\d{1,3})$/);
+  const preTool = focus ? getMaterialPages : searchSlides;
+  const preSearchInput = focus
+    ? { material: focus[1], from: Number(focus[2]), to: Number(focus[2]) }
+    : { query: preSearchQuery(turn), ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) };
+  const preSearchOutput = await preTool.run(ctx, preSearchInput as never);
   const preSearchId = `presearch_${turn.assistantMessageId}`;
 
   const result = streamText({
@@ -202,8 +210,8 @@ export async function runChatTurn(turn: ChatTurn) {
       ...turn.history,
       // Cache breakpoint: every later step of this turn resends everything up to here.
       { role: "user", content: turn.userMessage, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "assistant", content: [{ type: "tool-call", toolCallId: preSearchId, toolName: searchSlides.name, input: preSearchInput }] },
-      { role: "tool", content: [{ type: "tool-result", toolCallId: preSearchId, toolName: searchSlides.name, output: { type: "json", value: preSearchOutput as never } }] },
+      { role: "assistant", content: [{ type: "tool-call", toolCallId: preSearchId, toolName: preTool.name, input: preSearchInput }] },
+      { role: "tool", content: [{ type: "tool-result", toolCallId: preSearchId, toolName: preTool.name, output: { type: "json", value: preSearchOutput as never } }] },
     ],
     tools: buildTools(ctx),
     stopWhen: isStepCount(MAX_STEPS),

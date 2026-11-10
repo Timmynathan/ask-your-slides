@@ -36,6 +36,10 @@ interface Case {
   student_work?: boolean;
   no_student_work?: boolean;
   not_covered?: boolean;
+  /** Asked from the viewer ("Ask about this…"): the exact item, sent with the question. */
+  focus_slide?: string;
+  /** The answer must not open by doubting what the student meant ("your slides don't show…"). */
+  no_confusion?: boolean;
   why?: string;
 }
 
@@ -80,8 +84,8 @@ async function courseIds(code: string, programme: string, topic?: string) {
   return { courseId: c!.id as string, topicId: t!.id as string };
 }
 
-async function ask(s: Student, conversationId: string, message: string) {
-  const res = await call(s, "/api/chat", { method: "POST", body: JSON.stringify({ conversation_id: conversationId, message }) });
+async function ask(s: Student, conversationId: string, message: string, focusSlide?: string) {
+  const res = await call(s, "/api/chat", { method: "POST", body: JSON.stringify({ conversation_id: conversationId, message, ...(focusSlide ? { focus_slide: focusSlide } : {}) }) });
   if (!res.ok) return { status: res.status, text: "", citations: [] as any[], error: (await res.json()).error as string };
   let text = "";
   let meta: Record<string, any> = {};
@@ -127,7 +131,7 @@ async function runCases(file: string) {
       check(false, "chat created", `${conv.status} ${JSON.stringify(body)}`);
       continue;
     }
-    const a = await ask(s, body.conversation.id, c.question);
+    const a = await ask(s, body.conversation.id, c.question, c.focus_slide);
     check(a.status === 200 && !a.error && a.text.length > 40, "answered", a.error ?? `${a.text.length} chars`);
     const keys = [...new Set(citedKeys(a.text))];
     const info = await kinds(courseId, keys);
@@ -150,6 +154,10 @@ async function runCases(file: string) {
     }
     if (c.no_student_work) {
       check(!keys.some((k) => info.get(k)?.source === "student"), "does not use student work", shown || "no citations");
+    }
+    if (c.no_confusion) {
+      check(!/(don't|do not|doesn't) (show|have|contain|include)|closest match|not sure which/i.test(a.text.slice(0, 300)),
+        "answers about the item asked about, without doubting which one", a.text.slice(0, 120).replace(/\n/g, " "));
     }
     if (c.not_covered) {
       check(NOT_COVERED.test(a.text), "opens with \"Your slides don't cover this\"", a.text.slice(0, 80).replace(/\n/g, " "));

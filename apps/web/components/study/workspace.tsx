@@ -35,7 +35,7 @@ export function Workspace(data: WorkspaceData) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false); // below xl; on wide screens Sources is always shown
   const [used, setUsed] = useState(data.usage.used);
-  const [prefill, setPrefill] = useState<{ text: string; n: number } | null>(null);
+  const [prefill, setPrefill] = useState<{ text: string; n: number; slideKey?: string } | null>(null);
   const [partner, setPartner] = useState<PartnerId>(data.partner);
   const [pickingPartner, setPickingPartner] = useState(false);
   // Past questions (PRD F10): "list" = opened from the Topics panel; "topic" = from a topic chat's
@@ -234,8 +234,8 @@ export function Workspace(data: WorkspaceData) {
             sortOrder={course.sort_order}
             onNavigate={setPreview}
             onClose={() => setPreview(null)}
-            onAsk={(text) => {
-              setPrefill({ text, n: Date.now() });
+            onAsk={(text, slideKey) => {
+              setPrefill({ text, n: Date.now(), slideKey });
               setPreview(null);
             }}
           />

@@ -36,7 +36,7 @@ interface Props {
   onChatCreated(chat: ChatItem): void;
   onChatActive(id: string): void;
   onCite(slideKey: string): void;
-  prefill: { text: string; n: number } | null;
+  prefill: { text: string; n: number; slideKey?: string } | null;
   /** "Is this helping you study?": due after the 10th question, until answered (or "Not now"). */
   pulseDue: boolean;
   onQuestion(): void;
@@ -101,6 +101,7 @@ export function ChatPanel({
             message: textOf(messages.at(-1)),
             message_id: messages.at(-1)?.id,
             edit: messageId != null,
+            ...(body?.focus_slide ? { focus_slide: body.focus_slide } : {}),
           },
         }),
       }),
@@ -171,9 +172,13 @@ export function ChatPanel({
   // "Ask about this slide" from the preview: put the text in the box (during render, the React way
   // to adjust state when a prop changes), then focus it.
   const [seenPrefill, setSeenPrefill] = useState(prefill?.n);
+  // The item an "Ask about this…" question is about: sent with it so the answer starts from that
+  // exact slide/section/code part (several materials can share a title, e.g. three PlayerMovement.cs).
+  const [focus, setFocus] = useState<{ key: string; text: string } | null>(null);
   if (prefill && prefill.n !== seenPrefill) {
     setSeenPrefill(prefill.n);
     setInput(prefill.text);
+    setFocus(prefill.slideKey ? { key: prefill.slideKey, text: prefill.text.trim() } : null);
   }
   useEffect(() => {
     if (!prefill) return;
@@ -228,9 +233,12 @@ export function ChatPanel({
       }
       setInput("");
       onQuestion();
+      // Still the question that opened from the viewer (its opening kept): say which item it's about.
+      const focusSlide = focus && text.startsWith(focus.text.slice(0, -1)) ? focus.key : undefined;
+      setFocus(null);
       const pending = sendMessage(
         { text },
-        { body: { conversation_id: conversationId.current } },
+        { body: { conversation_id: conversationId.current, ...(focusSlide ? { focus_slide: focusSlide } : {}) } },
       );
       setSending(false); // from here the chat status (submitted/streaming) shows progress
       await pending;

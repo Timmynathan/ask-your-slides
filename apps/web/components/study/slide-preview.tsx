@@ -13,7 +13,8 @@ interface Props {
   courseId: string;
   sortOrder: number;
   onClose(): void;
-  onAsk(text: string): void;
+  /** "Ask about this…": the question's opening, and the exact item it is about. */
+  onAsk(text: string, slideKey: string): void;
   /** Flip to another page of the same material (slide key with a different last number). */
   onNavigate?(slideKey: string): void;
 }
@@ -147,6 +148,7 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
                     data.label
                       ? `Explain ${data.label} of "${data.material.title}": `
                       : `Explain ${unit} ${data.slide_number} of "${data.material.title}"${data.title ? ` (${data.title})` : ""}: `,
+                    data.slide_key,
                   )
                 }
                 className="mt-4 w-full rounded-full bg-brand px-4 py-2.5 text-sm font-medium text-brand-ink hover:opacity-90"

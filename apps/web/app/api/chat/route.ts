@@ -24,6 +24,8 @@ const Body = z.object({
   // True when the student edited an earlier question: that question and everything after it is
   // replaced by this one.
   edit: z.boolean().optional(),
+  // "Ask about this…" from the viewer: the exact slide/section/code part the question is about.
+  focus_slide: z.string().regex(/^[A-Z]{3}\d{3}-\d{2,3}-\d{1,3}$/).optional(),
 });
 
 const EDIT_GONE_MESSAGE = "That question can't be edited any more. Refresh the page and try again.";
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Bad request." }, { status: 400 });
   }
-  const { conversation_id: conversationId, message, message_id: messageId, edit } = parsed.data;
+  const { conversation_id: conversationId, message, message_id: messageId, edit, focus_slide: focusSlide } = parsed.data;
   if (edit && !messageId) return NextResponse.json({ error: EDIT_GONE_MESSAGE }, { status: 400 });
 
   // Read as the student: RLS returns the conversation only if it is theirs. Course and topic come
@@ -137,6 +139,8 @@ export async function POST(request: Request) {
     assistantMessageId,
     userMessageId,
     startedAt,
+    // Only a key of this chat's course (the conversation row decides the course, never the body).
+    focusSlide: focusSlide?.startsWith(`${course.code}-`) ? focusSlide : undefined,
   });
 
   // Finish (and save) the answer even if the student closes the tab mid-stream.
