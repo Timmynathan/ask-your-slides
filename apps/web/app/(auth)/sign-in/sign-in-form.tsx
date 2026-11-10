@@ -47,7 +47,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
 
 export function SignInForm({
   startWithCode = false,
-  directSignup = false,
+  directSignup: directSignupSetting = false,
 }: {
   startWithCode?: boolean;
   /** TEMPORARY (AUTH_DIRECT_SIGNUP=1): Create account is email + password, no emailed code. */
@@ -57,6 +57,9 @@ export function SignInForm({
   // paint, so the page itself can be prebuilt and appears the instant a link is clicked.
   const [next, setNext] = useState<string | null>(null);
   const [microsoft, setMicrosoft] = useState(false);
+  // ?code=1: the emailed-code sign-up even while direct sign-up is on (owner testing email delivery).
+  const [forceCode, setForceCode] = useState(false);
+  const directSignup = directSignupSetting && !forceCode;
   const [banner, setBanner] = useState<{ kind: "deleted" | "error"; text: string } | null>(null);
   // On for everyone with NEXT_PUBLIC_MICROSOFT_LOGIN=1; before that, ?ms=1 shows it for testing.
   const showMicrosoft = MICROSOFT || microsoft;
@@ -77,6 +80,7 @@ export function SignInForm({
   function applyQuery(q: URLSearchParams) {
     setNext(safeNext(q.get("next")));
     setMicrosoft(q.get("ms") === "1");
+    setForceCode(q.get("code") === "1");
     if (q.get("start") === "1" && !startWithCode) {
       setMode("signup");
       setStep({ kind: "code-email" });

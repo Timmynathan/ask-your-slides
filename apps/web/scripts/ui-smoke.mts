@@ -200,6 +200,13 @@ async function main() {
     if (DIRECT) {
       check(signUp && (await lp.getByRole("button", { name: "Create account", exact: true }).isVisible()) && (await lp.locator("#new-password").count()) === 1,
         "'Try for free' opens sign-up: email + password, no code (temporary direct sign-up)");
+      // ?code=1: the owner can test the emailed-code sign-up without changing it for students.
+      const cp = await browser.newPage();
+      await cp.goto(`${BASE}/sign-up?code=1`);
+      await cp.getByRole("button", { name: "Get my code", exact: true }).waitFor({ timeout: 10000 }).catch(() => null);
+      check((await cp.getByRole("button", { name: "Get my code", exact: true }).isVisible()) && (await cp.locator("#new-password").count()) === 0,
+        "/sign-up?code=1 shows the emailed-code sign-up even while direct sign-up is on");
+      await cp.close();
       // A real direct sign-up: lands on onboarding, account confirmed.
       const direct = `ui-direct-${Date.now()}@pau.edu.ng`;
       try {

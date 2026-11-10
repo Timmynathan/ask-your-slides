@@ -97,7 +97,7 @@ One-time Supabase dashboard settings (can't be set from a migration):
 2. **Authentication → Email Templates**: both **Confirm signup** and **Magic Link** must show the
    code, e.g. `Your Ask Your Slides code is {{ .Token }}`. (New students get the first, returning
    students the second.)
-3. **Authentication → SMTP**: Resend, sender `noreply@mail.askyourslides.com` (done).
+3. **Authentication → SMTP**: Resend, sender `hello@askyourslides.com`, name "Ask Your Slides" (done). `askyourslides.com` is verified in Resend for **sending only** (DKIM + `send.` records); receiving stays off so Namecheap's email forwarding (root MX) keeps forwarding `hello@` to the owner. Test the emailed-code sign-up with `/sign-up?code=1` while `AUTH_DIRECT_SIGNUP=1`.
 
 `npm run test:e2e:auth` signs a temporary test student in and out against the real project without
 sending any email, checks the auth hook, then deletes the test user.

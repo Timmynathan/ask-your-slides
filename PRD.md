@@ -6,7 +6,7 @@
 | Status | v1.2 — in build |
 | Date | 7 November 2026 (v1.1: embeddings, auth email, domain, citation keys. v1.2: manifest-driven topics and materials, topic chats) |
 | Product name | **Ask Your Slides** (askyourslides.com). An independent study tool for PAU students, not an official PAU product: no PAU branding or logo in the app. |
-| App URL | `app.askyourslides.com` (Vercel). Auth email from `noreply@mail.askyourslides.com`. |
+| App URL | `app.askyourslides.com` (Vercel). Auth email from `hello@askyourslides.com` (replies forward to the owner). |
 | Pilot users | Final-year Computer Science students, Pan-Atlantic University (PAU) |
 | Hard deadline | Exams start **5 December 2026**. Pilot must be live by **21 November 2026**. |
 
@@ -97,7 +97,7 @@ The primary signal is **direct student feedback**: students say it helped, and t
 - **First time**: the student enters their PAU email and receives a 6-digit code (OTP) once. The code proves they own the address. They then create a password (at least 8 characters).
 - **After that**: email + password. No code.
 - **Forgot password**: the same code step, then a new password. The old password stops working.
-- The email template shows the code (`{{ .Token }}`), not a magic link. Emails go through Resend (custom SMTP in Supabase) from `noreply@mail.askyourslides.com` on a verified domain.
+- The email template shows the code (`{{ .Token }}`), not a magic link. Emails go through Resend (custom SMTP in Supabase) from `hello@askyourslides.com` (sender name "Ask Your Slides"; a real address students can reply to, forwarded by Namecheap to the owner's inbox, replacing the earlier `noreply@mail.askyourslides.com`) on a verified domain.
 - Only `@pau.edu.ng` addresses are accepted. The server rejects all other domains before it sends a code or checks a password. A Supabase auth hook enforces the same rule, so calling Supabase directly with the public key cannot bypass it.
 - A failed password sign-in gives one neutral message ("Wrong email or password…"), whether the account exists or not, so accounts can't be probed. Supabase rate-limits attempts.
 - Sessions last 30 days from last use, per browser. Signing out ends only that browser's session.
@@ -114,7 +114,8 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F1e. TEMPORARY: direct sign-up (pilot only)
 
-- While `AUTH_DIRECT_SIGNUP=1`, Create account is PAU email + password, no emailed code (`/api/auth/signup` creates a confirmed account and signs it in). Reason: PAU's Microsoft 365 filter holds back the code emails, and "Continue with Microsoft" (built, hidden; test with `?ms=1`) waits on PAU IT's admin approval. Known risk, accepted by the owner for a private pilot of ~10 students: the address isn't proven, so someone who knows a PAU email could sign up as that student. Turn off (unset the variable on Vercel) once Microsoft sign-in is approved or the code emails arrive.
+- While `AUTH_DIRECT_SIGNUP=1`, Create account is PAU email + password, no emailed code (`/api/auth/signup` creates a confirmed account and signs it in). Reason: PAU's Microsoft 365 filter holds back the code emails, and "Continue with Microsoft" (built, hidden; test with `?ms=1`) waits on PAU IT's admin approval. Known risk, accepted by the owner for a private pilot of ~10 students: the address isn't proven, so someone who knows a PAU email could sign up as that student. Turn off (unset the variable on Vercel) once Microsoft sign-in is approved or the code emails arrive. To test the emailed-code sign-up meanwhile without changing it for students, open `/sign-up?code=1` (that browser gets the code flow; everyone else keeps direct sign-up).
+- **What we know about the code emails (10 Nov 2026):** Resend reports every email as *Delivered*, so PAU's Microsoft 365 (MX `pau-edu-ng.mail.protection.outlook.com`) accepts them and then files them as junk or quarantine after delivery, which only PAU IT can see (message trace) or change (release, Tenant Allow/Block List, or a mail-flow rule). Sender authentication (DKIM, SPF on the return path, DMARC `p=none`) passes. "Forgot password" is the only flow that sends a code while direct sign-up is on.
 
 ### F1d. Clear sign-up
 
@@ -410,7 +411,7 @@ flowchart TB
 | Web app | Next.js (App Router) + TypeScript + Tailwind + shadcn/ui | Fast to build, good streaming support. |
 | Hosting | Vercel (free tier for pilot), `app.askyourslides.com` (domain on Namecheap) | Zero-ops deploys. |
 | Auth | Supabase Auth, 6-digit email OTP | Built-in, domain check in the API route **and** a "before user created" auth hook. |
-| Auth email | Resend as Supabase custom SMTP, sender `noreply@mail.askyourslides.com` (verified domain) | Supabase's built-in email only reaches project team members; a verified domain also reduces spam-folder risk. |
+| Auth email | Resend as Supabase custom SMTP, sender `hello@askyourslides.com` (root domain verified in Resend for sending only; receiving stays with Namecheap email forwarding, whose MX records are unchanged) | Supabase's built-in email only reaches project team members; a verified domain also reduces spam-folder risk. |
 | Database | Supabase Postgres + `pgvector` + Postgres full-text search | One store for app data, vectors, and keyword search. |
 | File storage | Supabase Storage | Slide PNGs for citation previews. |
 | Chat model | Claude Haiku 5.5 (`claude-haiku-5-5`) | Low cost, fast, good tool use. Swap is one config value. |
