@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
 
 // GET /api/past?course=<uuid> → one course's past papers and questions, without answers (PRD F10).
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!PAST_QUESTIONS_LIVE) return NextResponse.json({ error: "Past questions are coming soon." }, { status: 404 });
   const parsed = Query.safeParse(Object.fromEntries(new URL(request.url).searchParams));
   if (!parsed.success) return NextResponse.json({ error: "Which course?" }, { status: 400 });
   const course = parsed.data.course;

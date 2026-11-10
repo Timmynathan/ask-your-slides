@@ -148,7 +148,7 @@ def test_manifest_reads_paper_fields(tmp_path: Path):
     make_catalog(tmp_path, {"computer-science": ["CSC401"]})
     d = make_course(tmp_path, "CSC401", [{"lms_order": 1, "lms_cmid": 1, "file": "slides/01-a.pdf", "topic": "Intro", "kind": "slides"}])
     (d / "past_papers").mkdir()
-    (d / "past_papers" / "e.pdf").write_bytes(b"x")
+    (d / "past_papers" / "e.pdf").write_bytes(b"%PDF-1.4\n")
     (d / "past_papers.yaml").write_text(yaml.safe_dump([{"file": "past_papers/e.pdf", "session": "2025/2026", "type": "exam",
                                                           "pages": 3, "instructions": "Answer all", "duration": "2h", "note": "n"}]))
     p = load(tmp_path)[0].past_papers[0]
@@ -209,3 +209,20 @@ def test_review_renumber_restructures_broken_numbering():
         ("Q1", None, "True or false?"), ("Q1a", "Q1", "First statement."), ("Q1b", "Q1", "Second statement.")]
     with pytest.raises(ValueError):
         apply_review(ex, {"renumber": ["Q1a"]})
+
+
+def test_paper_title_must_match_the_course_code_reuse():
+    from past_validate import title_similarity
+
+    pairs = [  # printed title on our real papers vs the course title: all the same course
+        ("Ethical and Legal Issues in Computing (2 Units)", "Ethics and Legal Issues for CSC and Software Engineering"),
+        ("Database Management II (2 Units)", "Data Management II"),
+        ("Advances in Web, Mobile and AI Engineering", "Advances in Web, Mobile and Blockchain Development"),
+        ("PROJECT MANAGEMENT", "Project Management"),
+    ]
+    assert all(title_similarity(a, b) >= 0.6 for a, b in pairs)
+    assert title_similarity("Entertainment Media", "Media Law and Policy") < 0.6
+    ex = {"paper": {**paper(), "title_on_paper": "ISM 413: Entertainment Media"}, "questions": [q("Q1", marks=5)]}
+    c = check(ex, course_code="ISM413", course_title="Media Law and Policy")
+    assert codes(c, "blocking") == ["title_mismatch"]
+    assert check(ex, course_code="ISM413", course_title="Media Law and Policy", accepted={"title_mismatch"}).status == "ok"

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
 import httpx
 import psycopg
-from psycopg.rows import dict_row
-
 from config import BUCKET, env
 from manifest import Course, Material, Topic
+from psycopg.rows import dict_row
 
 
 @dataclass
@@ -23,8 +23,10 @@ class SlideRow:
     speaker_notes: str | None
     chunk_text: str
     embedding: list[float] | None
-    image_path: str
+    image_path: str | None
     png: bytes | None = None
+    label: str | None = None  # Word section path, "Cells 4–6", "lines 12–48"; None for pages/slides
+    view: dict | None = None  # notebook cells / code lines for the viewer (no page image)
 
 
 def vector_literal(v: list[float]) -> str:
@@ -85,14 +87,14 @@ class Store:
             return {}
         rows = self.db.execute(
             "select id, lms_cmid, material_order, content_hash, title, kind, topic_id, lms_section, source_file, page_count, "
-            "course_session_id from materials where course_id = %s",
+            "course_session_id, source from materials where course_id = %s",
             (course_id,),
         ).fetchall()
         return {r["lms_cmid"]: r for r in rows}
 
     def slides_for(self, material_id: str) -> list[dict]:
         return self.db.execute(
-            "select id, slide_number, title, body_text, visual_description, speaker_notes, chunk_text "
+            "select id, slide_number, title, body_text, visual_description, speaker_notes, chunk_text, label "
             "from slides where material_id = %s order by slide_number",
             (material_id,),
         ).fetchall()
@@ -103,14 +105,15 @@ class Store:
         with self.db.transaction():
             row = self.db.execute(
                 "insert into courses (institution, school, programme, code, title, department, level, semester, session, "
-                "aliases, lms_course_id, lecturer, sort_order) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "aliases, lms_course_id, lecturer, sort_order, elective) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
                 "on conflict (institution, programme, code) do update set school = excluded.school, "
                 "title = excluded.title, department = excluded.department, level = excluded.level, "
                 "semester = excluded.semester, session = excluded.session, aliases = excluded.aliases, "
-                "lms_course_id = excluded.lms_course_id, lecturer = excluded.lecturer, sort_order = excluded.sort_order "
+                "lms_course_id = excluded.lms_course_id, lecturer = excluded.lecturer, sort_order = excluded.sort_order, "
+                "elective = excluded.elective "
                 "returning id",
                 (c.institution, c.school, c.programme, c.code, c.title, c.department, c.level, c.semester, c.session,
-                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order),
+                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order, c.elective),
             ).fetchone()
             course_id = str(row["id"])
             srow = self.db.execute(
@@ -143,23 +146,26 @@ class Store:
         with self.db.transaction():
             row = self.db.execute(
                 "insert into materials (course_id, course_session_id, topic_id, kind, material_order, title, source_file, "
-                "content_hash, page_count, lms_cmid, lms_section, ingested_at) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now()) "
+                "content_hash, page_count, lms_cmid, lms_section, source, ingested_at) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, now()) "
                 "on conflict (course_session_id, lms_cmid) do update set topic_id = excluded.topic_id, "
                 "kind = excluded.kind, material_order = excluded.material_order, title = excluded.title, "
                 "source_file = excluded.source_file, content_hash = excluded.content_hash, "
-                "page_count = excluded.page_count, lms_section = excluded.lms_section, ingested_at = now() returning id",
-                (course_id, session_id, topic_id, m.kind, m.order, title, m.rel_file, content_hash, len(slides), m.cmid, m.section),
+                "page_count = excluded.page_count, lms_section = excluded.lms_section, source = excluded.source, "
+                "ingested_at = now() returning id",
+                (course_id, session_id, topic_id, m.kind, m.order, title, m.rel_file, content_hash, len(slides), m.cmid, m.section,
+                 m.source),
             ).fetchone()
             material_id = str(row["id"])
             self.db.execute("delete from slides where material_id = %s", (material_id,))
             with self.db.cursor() as cur:
                 cur.executemany(
                     "insert into slides (material_id, course_id, slide_number, slide_key, title, body_text, "
-                    "visual_description, speaker_notes, chunk_text, embedding, image_path) "
-                    "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::extensions.vector,%s)",
+                    "visual_description, speaker_notes, chunk_text, embedding, image_path, label, view) "
+                    "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::extensions.vector,%s,%s,%s)",
                     [
                         (material_id, course_id, s.number, s.slide_key, s.title, s.body_text, s.visual_description,
-                         s.speaker_notes, s.chunk_text, vector_literal(s.embedding), s.image_path)
+                         s.speaker_notes, s.chunk_text, vector_literal(s.embedding), s.image_path, s.label,
+                         json.dumps(s.view) if s.view is not None else None)
                         for s in slides
                     ],
                 )
@@ -173,8 +179,8 @@ class Store:
         with self.db.transaction():
             self.db.execute(
                 "update materials set course_session_id = %s, topic_id = %s, kind = %s, title = %s, source_file = %s, "
-                "lms_section = %s where id = %s",
-                (session_id, topic_id, m.kind, title, m.rel_file, m.section, material_id),
+                "lms_section = %s, source = %s where id = %s",
+                (session_id, topic_id, m.kind, title, m.rel_file, m.section, m.source, material_id),
             )
             with self.db.cursor() as cur:
                 cur.executemany(
@@ -203,7 +209,7 @@ class Store:
                 raise RuntimeError(f"upload {s.image_path} failed: {r.status_code} {r.text[:200]}")
 
         with ThreadPoolExecutor(workers) as pool:
-            list(pool.map(put, slides))
+            list(pool.map(put, [s for s in slides if s.png is not None and s.image_path]))
 
     def list_images(self, prefix: str) -> list[str]:
         names: list[str] = []

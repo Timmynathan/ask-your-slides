@@ -7,6 +7,9 @@ export interface CitationInfo {
   slide_number?: number;
   topic_title?: string | null;
   outside_topic?: boolean;
+  /** Word section path, "Cells 4–6", "lines 12–48" (PRD F11): shown instead of "Slide n". */
+  label?: string | null;
+  student_work?: boolean;
 }
 
 export type Segment = { kind: "slides" | "general"; text: string };
@@ -70,9 +73,15 @@ const normal = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
  *  title already says the same thing. The unit is kept separate so it is never truncated. */
 export function chipParts(c: CitationInfo, opts: { showTopic?: boolean } = {}): { title: string; unit: string } {
   const n = c.slide_number ?? slideNumberFromKey(c.slide_key);
-  if (!c.material_title) return { title: "", unit: `Slide ${n}` };
-  const unit = c.material_kind === "slides" ? `Slide ${n}` : `p. ${n}`;
-  let title = c.material_kind === "reading" ? `Reading: ${c.material_title}` : c.material_title;
+  if (!c.material_title) return { title: "", unit: c.label ?? `Slide ${n}` };
+  let unit = c.material_kind === "slides" ? `Slide ${n}` : `p. ${n}`;
+  if (c.label) {
+    // A Word section path usually starts with the document's own heading: don't say it twice.
+    const [first, ...rest] = c.label.split(" › ");
+    unit = rest.length && normal(first) === normal(c.material_title) ? rest.join(" › ") : c.label;
+    if (unit.length > 40) unit = `${unit.slice(0, 39).trimEnd()}…`;
+  }
+  let title = c.material_kind === "reading" ? `Reading: ${c.material_title}` : c.student_work ? `Student presentation: ${c.material_title}` : c.material_title;
   if (opts.showTopic && c.outside_topic && c.topic_title && normal(c.topic_title) !== normal(c.material_title)) {
     title = `${c.topic_title} › ${title}`;
   }

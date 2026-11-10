@@ -7,6 +7,7 @@ import { effectiveMarks, paperLabel, stems, type PastQuestion } from "@/lib/past
 import { MARKING_INSTRUCTIONS, MarkingOutput, markingPrompt, normaliseScheme, scoreFrom, type SchemePoint } from "@/lib/past/marking";
 import type { CitationInfo } from "@/lib/study/format";
 import { adminClient, must } from "@/lib/supabase/admin";
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/past/attempt (PRD F10 B)
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!PAST_QUESTIONS_LIVE) return NextResponse.json({ error: "Past questions are coming soon." }, { status: 404 });
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Bad request." }, { status: 400 });
   const body = parsed.data;

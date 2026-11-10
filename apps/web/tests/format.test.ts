@@ -47,3 +47,25 @@ describe("chipLabel", () => {
       .toBe("Functions, Procedures and Triggers · Slide 22");
   });
 });
+
+describe("chips for Word sections, notebooks and code (PRD F11)", () => {
+  it("shows the label instead of a slide number, without repeating the document's own heading", () => {
+    expect(chipLabel({ slide_key: "ISM413-08-3", material_title: "LAW OF PRIVACY", material_kind: "notes", label: "Law of Privacy › Exceptions" })).toBe(
+      "LAW OF PRIVACY · Exceptions",
+    );
+    expect(chipLabel({ slide_key: "ISM415-09-2", material_title: "Basics of Numpy", material_kind: "practical", label: "Cells 8–25" })).toBe(
+      "Basics of Numpy · Cells 8–25",
+    );
+    expect(chipLabel({ slide_key: "ISM410-07-1", material_title: "PlayerMovement.cs", material_kind: "practical", label: "lines 1–20" })).toBe(
+      "PlayerMovement.cs · lines 1–20",
+    );
+  });
+  it("marks student work and shortens long labels", () => {
+    expect(chipLabel({ slide_key: "ISM411-05-2", material_title: "Mergers case study", material_kind: "other", slide_number: 2, student_work: true })).toBe(
+      "Student presentation: Mergers case study · p. 2",
+    );
+    const long = chipLabel({ slide_key: "X-01-1", material_title: "Notes", material_kind: "notes", label: "Between Government and the Press › 2. Licensing and Operational Restrictions" });
+    expect(long.endsWith("…")).toBe(true);
+    expect(long.length).toBeLessThan(60);
+  });
+});

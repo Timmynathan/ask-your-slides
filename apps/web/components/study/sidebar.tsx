@@ -5,6 +5,7 @@
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
 // badges or counts. Navy panel with white text; the selected scope is a white pill.
 import type { ChatItem, TopicItem } from "@/lib/study/types";
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { WebSearchBox } from "./web-search-box";
 
 interface Props {
@@ -82,7 +83,7 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                   ))}
                 </ul>
               )}
-              {s.id === null && pastCount > 0 && (
+              {s.id === null && (pastCount > 0 || !PAST_QUESTIONS_LIVE) && (
                 <button
                   onClick={onOpenPast}
                   aria-current={pastActive ? "location" : undefined}
@@ -95,6 +96,11 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                     <path d="M14 3.5v4h4M10 12.5l1.5 1.5 3-3M10 17h5" />
                   </svg>
                   Past questions
+                  {!PAST_QUESTIONS_LIVE && (
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${pastActive ? "bg-[#0e1664]/10 text-[#0e1664]" : "bg-white/15 text-white"}`}>
+                      Soon
+                    </span>
+                  )}
                 </button>
               )}
             </li>

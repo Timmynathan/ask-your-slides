@@ -67,7 +67,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
               <ul className="space-y-0.5">
                 {g.items.map((m) => {
                   const kind = KIND[m.kind] ?? KIND.other;
-                  const unit = m.kind === "slides" ? (m.page_count === 1 ? "slide" : "slides") : m.page_count === 1 ? "page" : "pages";
+                  const unit = materialUnit(m);
                   return (
                     <li key={m.id}>
                       <button
@@ -99,4 +99,15 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
       </aside>
     </>
   );
+}
+
+/** "16 slides", "14 sections" (Word), "4 cell groups" (notebook), "1 part" (code): PRD F11. */
+function materialUnit(m: { kind: string; page_count: number; source_file?: string }): string {
+  const ext = m.source_file?.split(".").pop()?.toLowerCase();
+  const one = m.page_count === 1;
+  if (ext === "docx") return one ? "section" : "sections";
+  if (ext === "ipynb") return one ? "cell group" : "cell groups";
+  if (ext === "cs") return one ? "part" : "parts";
+  if (m.kind === "slides") return one ? "slide" : "slides";
+  return one ? "page" : "pages";
 }

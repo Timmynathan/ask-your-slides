@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
   const [{ data: slide }, { data: signed }] = await Promise.all([
     supabase
       .from("slides")
-      .select("slide_key, slide_number, title, body_text, visual_description, image_path, materials(title, kind, page_count, topics(title)), courses(code, title)")
+      .select("slide_key, slide_number, title, body_text, visual_description, image_path, label, view, materials(title, kind, page_count, source, topics(title)), courses(code, title)")
       .eq("course_id", courseId)
       .eq("slide_key", key)
       .maybeSingle(),
@@ -41,7 +41,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
     imageUrl = slide.image_path === expected ? signed?.signedUrl ?? null : (await storage.createSignedUrl(slide.image_path, URL_TTL_SECONDS)).data?.signedUrl ?? null;
   }
 
-  const material = slide.materials as unknown as { title: string; kind: string; page_count: number; topics: { title: string } | null };
+  const material = slide.materials as unknown as { title: string; kind: string; page_count: number; source: string; topics: { title: string } | null };
   const course = slide.courses as unknown as { code: string; title: string };
   return NextResponse.json(
     {
@@ -51,8 +51,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ key:
       text: slide.body_text,
       visual_description: slide.visual_description,
       image_url: imageUrl,
-      material: { title: material.title, kind: material.kind, page_count: material.page_count },
+      material: { title: material.title, kind: material.kind, page_count: material.page_count, source: material.source },
       topic: material.topics?.title ?? null,
+      label: slide.label,
+      view: slide.view,
       course,
     },
     { headers: { "Cache-Control": "private, max-age=600" } },

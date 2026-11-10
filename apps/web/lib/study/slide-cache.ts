@@ -11,9 +11,17 @@ export interface SlidePreviewData {
   text: string | null;
   visual_description: string | null;
   image_url: string | null;
-  material: { title: string; kind: string; page_count: number };
+  material: { title: string; kind: string; page_count: number; source: "lecturer" | "student" };
   topic: string | null;
+  /** Word section / notebook cells / code lines (PRD F11); null for a slide or page. */
+  label: string | null;
+  /** What to show when there is no page image: notebook cells or code lines. */
+  view: SlideView | null;
 }
+
+export type SlideView =
+  | { type: "notebook"; cells: { n: number; type: "markdown" | "code"; source: string; output: string | null }[] }
+  | { type: "code"; language: string; start: number; lines: string[] };
 
 const TTL_MS = 45 * 60 * 1000;
 const cache = new Map<string, { at: number; data: Promise<SlidePreviewData> }>();

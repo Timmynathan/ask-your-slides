@@ -18,6 +18,9 @@ export interface Citation {
   slide_number: number;
   topic_title: string | null;
   outside_topic: boolean;
+  /** Word section / notebook cells / code lines; the chip shows it instead of "Slide n". */
+  label?: string | null;
+  student_work?: boolean;
 }
 
 export interface ToolLogEntry {
@@ -122,8 +125,14 @@ function defineTool<S extends z.ZodObject>(def: ToolDefinition<S>) {
   };
 }
 
-function remember(ctx: AgentContext, h: Pick<SlideHit, "slide_key" | "slide_id" | "material_title" | "material_kind" | "slide_number" | "topic_title" | "topic_id">) {
+function remember(
+  ctx: AgentContext,
+  h: Pick<SlideHit, "slide_key" | "slide_id" | "material_title" | "material_kind" | "slide_number" | "topic_title" | "topic_id"> &
+    Partial<Pick<SlideHit, "label" | "material_source">>,
+) {
   ctx.retrieved.set(h.slide_key, {
+    ...(h.label ? { label: h.label } : {}),
+    ...(h.material_source === "student" ? { student_work: true } : {}),
     slide_key: h.slide_key,
     slide_id: h.slide_id,
     material_title: h.material_title,
@@ -185,7 +194,8 @@ export const searchSlides = defineTool({
       kind: h.material_kind,
       topic: h.topic_title ?? "course-level",
       ...(ctx.topicId ? { outside_topic: h.topic_id !== ctx.topicId } : {}),
-      slide: `${h.slide_number} of ${h.page_count}`,
+      ...(h.label ? { location: h.label } : { slide: `${h.slide_number} of ${h.page_count}` }),
+      ...(h.material_source === "student" ? { student_work: true } : {}),
       title: h.title,
       content: chunkBody(h.chunk_text),
       neighbours: { previous: h.prev_title, next: h.next_title },
@@ -215,6 +225,7 @@ interface MaterialRow {
   page_count: number;
   lms_section: string | null;
   topic_id: string | null;
+  source?: "lecturer" | "student";
 }
 
 export function materialKey(courseCode: string, order: number) {
@@ -234,7 +245,7 @@ export const listTopics = defineTool({
       ctx.db.from("topics").select("id, topic_order, title").eq("course_id", ctx.courseId).order("topic_order"),
       ctx.db
         .from("materials")
-        .select("id, material_order, title, kind, page_count, lms_section, topic_id")
+        .select("id, material_order, title, kind, page_count, lms_section, topic_id, source")
         .eq("course_id", ctx.courseId)
         .order("material_order"),
     ]);
@@ -245,6 +256,7 @@ export const listTopics = defineTool({
       kind: m.kind,
       pages: m.page_count,
       lms_section: m.lms_section,
+      ...(m.source === "student" ? { student_work: true } : {}),
     });
     return {
       status: "ok",
@@ -287,7 +299,7 @@ export const getMaterialPages = defineTool({
     const mat = must(
       await ctx.db
         .from("materials")
-        .select("id, title, kind, page_count, topic_id, topics(title)")
+        .select("id, title, kind, page_count, topic_id, source, topics(title)")
         .eq("course_id", ctx.courseId)
         .eq("material_order", Number(order))
         .maybeSingle(),
@@ -298,18 +310,19 @@ export const getMaterialPages = defineTool({
     const rows = must(
       await ctx.db
         .from("slides")
-        .select("id, slide_key, slide_number, title, chunk_text")
+        .select("id, slide_key, slide_number, title, chunk_text, label")
         .eq("material_id", mat.id)
         .gte("slide_number", from)
         .lte("slide_number", last)
         .order("slide_number"),
-    ) as { id: string; slide_key: string; slide_number: number; title: string | null; chunk_text: string }[];
+    ) as { id: string; slide_key: string; slide_number: number; title: string | null; chunk_text: string; label: string | null }[];
 
     ctx.readMaterial = true;
     rows.forEach((r) =>
       remember(ctx, {
         slide_key: r.slide_key, slide_id: r.id, material_title: mat.title, material_kind: mat.kind,
         slide_number: r.slide_number, topic_title: mat.topics?.title ?? null, topic_id: mat.topic_id,
+        label: r.label, material_source: mat.source,
       }),
     );
     return {
@@ -321,13 +334,14 @@ export const getMaterialPages = defineTool({
         title: mat.title,
         kind: mat.kind,
         topic: mat.topics?.title ?? "course-level",
+        ...(mat.source === "student" ? { student_work: true } : {}),
         pages: `${from}–${last} of ${mat.page_count}`,
         ...(last < mat.page_count ? { more: `Call again with from: ${last + 1} for the rest.` } : {}),
         slides: rows.map((r) => {
           const body = chunkBody(r.chunk_text);
           return {
             slide_key: r.slide_key,
-            slide: r.slide_number,
+            ...(r.label ? { location: r.label } : { slide: r.slide_number }),
             title: r.title,
             content: body.length > MAX_CHARS_PER_PAGE ? `${body.slice(0, MAX_CHARS_PER_PAGE)}…` : body,
           };

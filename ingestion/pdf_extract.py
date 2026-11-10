@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pymupdf
 
+import filetype
 from config import CACHE, RENDER_WIDTH
 
 SOFFICE = shutil.which("soffice") or "/Applications/LibreOffice.app/Contents/MacOS/soffice"
@@ -36,8 +37,8 @@ class PdfPage:
 
 def to_pdf(src: Path) -> Path:
     """PPTX/PPT → PDF with LibreOffice headless (one page per visible slide). Cached by file hash."""
-    if src.suffix.lower() == ".pdf":
-        return src
+    if filetype.detect(src) == "pdf":
+        return src  # by content: a PDF named .pptx is still a PDF
     digest = hashlib.sha256(src.read_bytes()).hexdigest()[:24]
     out_dir = CACHE / "pdf" / digest
     out = out_dir / (src.stem + ".pdf")

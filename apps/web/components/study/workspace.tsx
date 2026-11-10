@@ -11,6 +11,7 @@ import { courseHref, courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
 import { PartnerPicker } from "./partner-picker";
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
@@ -91,7 +92,7 @@ export function Workspace(data: WorkspaceData) {
   const remaining = Math.max(0, data.usage.cap - used);
   const onRemaining = useCallback((r: number) => setUsed(data.usage.cap - r), [data.usage.cap]);
   const scopeTitle = past === "list" ? "Past questions" : topic ? topic.title : "Whole course";
-  const topicPast = topic ? data.past.byTopic[topic.id] ?? 0 : 0;
+  const topicPast = PAST_QUESTIONS_LIVE && topic ? data.past.byTopic[topic.id] ?? 0 : 0;
   const openPast = useCallback(() => {
     setPast("list");
     setPreview(null);
@@ -187,6 +188,9 @@ export function Workspace(data: WorkspaceData) {
 
           {past && (
             <div key={`past-${past}-${topicId ?? "course"}`} className="panel-in flex min-h-0 flex-1 flex-col">
+              {!PAST_QUESTIONS_LIVE ? (
+                <PastComingSoon />
+              ) : (
               <PastPanel
                 course={course}
                 topics={topics}
@@ -196,6 +200,7 @@ export function Workspace(data: WorkspaceData) {
                 onRemaining={onRemaining}
                 partnerName={p.name}
               />
+              )}
             </div>
           )}
           {/* The chat stays mounted under Past questions, so going back keeps the conversation. */}
@@ -281,5 +286,17 @@ function IconButton({ label, onClick, className = "", children }: { label: strin
         {children}
       </svg>
     </button>
+  );
+}
+
+/** Past questions before launch (lib/past/feature.ts): one big, calm "Coming soon". */
+function PastComingSoon() {
+  return (
+    <div className="grid flex-1 place-items-center px-6 pb-16 text-center">
+      <div>
+        <p className="font-heading text-[40px] font-semibold tracking-tight text-ink sm:text-[56px]">Coming soon</p>
+        <p className="mx-auto mt-3 max-w-sm text-[15px] text-muted">Past exam questions to practise, marked against the real paper. Ready before your exams.</p>
+      </div>
+    </div>
   );
 }

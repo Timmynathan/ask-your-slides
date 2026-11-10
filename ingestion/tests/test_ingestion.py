@@ -4,13 +4,27 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from chunks import build_chunk, image_path, looks_garbled, slide_key
 from config import ROOT
 from manifest import KINDS, ManifestError, load, title_from_filename
 
-
 SESSION = "2026-2027"
+
+
+def write_fake(path: Path) -> None:
+    """Smallest file that is really of its type (ingestion detects types by content)."""
+    import zipfile
+    ext = path.suffix.lower()
+    if ext in (".pptx", ".docx"):
+        inner = "ppt/presentation.xml" if ext == ".pptx" else "word/document.xml"
+        with zipfile.ZipFile(path, "w") as z:
+            z.writestr(inner, "<x/>")
+    elif ext == ".ipynb":
+        path.write_text('{"cells": [], "nbformat": 4}')
+    elif ext == ".cs":
+        path.write_text("class A {}\n")
+    else:
+        path.write_bytes(b"%PDF-1.4\n%fake\n")
 
 
 def make_catalog(root: Path, programmes: dict[str, list[str]], school="sst") -> None:
@@ -32,7 +46,7 @@ def make_course(root: Path, code: str, materials: list[dict], *, programme="comp
     course_dir = root / "pau" / "sst" / programme / "400-level" / code
     (course_dir / SESSION / "slides").mkdir(parents=True)
     for f in files:
-        (course_dir / SESSION / "slides" / f).write_bytes(b"x")
+        write_fake(course_dir / SESSION / "slides" / f)
     course = {"code": code, "title": "Compilers", "institution": "pau", "school": "sst", "programme": programme,
               "department": "Computer Science", "level": 400, "semester": 1, "aliases": ["CSC301"],
               "current_session": SESSION, **(info or {})}
@@ -42,7 +56,7 @@ def make_course(root: Path, code: str, materials: list[dict], *, programme="comp
     (course_dir / SESSION / "manifest.yaml").write_text(yaml.safe_dump(manifest))
     if papers is not None:
         (course_dir / "past_papers").mkdir()
-        (course_dir / "past_papers" / "2025-2026_exam.pdf").write_bytes(b"x")
+        write_fake(course_dir / "past_papers" / "2025-2026_exam.pdf")
         (course_dir / "past_papers.yaml").write_text(yaml.safe_dump(papers))
     return course_dir
 

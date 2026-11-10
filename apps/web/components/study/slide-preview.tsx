@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { loadSlide, pageKey, prefetchSlide, type SlidePreviewData } from "@/lib/study/slide-cache";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { highlightLine, TOKEN_CLASS } from "@/lib/study/highlight";
+import { loadSlide, pageKey, prefetchSlide, type SlidePreviewData, type SlideView } from "@/lib/study/slide-cache";
 
 type Preview = SlidePreviewData;
 
@@ -54,7 +57,19 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const unit = data ? (data.material.kind === "slides" ? "slide" : "page") : "slide";
+  // Word sections, notebook cell groups and code parts are numbered like pages (PRD F11).
+  const unit = !data
+    ? "slide"
+    : data.view?.type === "notebook"
+      ? "cell group"
+      : data.view?.type === "code"
+        ? "part"
+        : data.label
+          ? "section"
+          : data.material.kind === "slides"
+            ? "slide"
+            : "page";
+  const kindLabel = data ? (data.material.source === "student" ? "Student presentation" : KIND_LABEL[data.material.kind] ?? data.material.kind) : "";
 
   return (
     <>
@@ -69,7 +84,7 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
             <p className="truncate text-sm font-semibold">{data?.material.title ?? "Loading…"}</p>
             {data && (
               <p className="truncate text-xs text-muted">
-                {KIND_LABEL[data.material.kind] ?? data.material.kind} · {unit} {data.slide_number} of {data.material.page_count}
+                {kindLabel} · {data.label ?? `${unit} ${data.slide_number} of ${data.material.page_count}`}
                 {data.topic ? ` · ${data.topic}` : ""}
               </p>
             )}
@@ -86,7 +101,9 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
           {!data && !error && <div className="aspect-[4/3] w-full animate-pulse rounded-lg bg-sunken" />}
           {data && (
             <>
-              {data.image_url ? (
+              {data.view ? (
+                <SourceView view={data.view} />
+              ) : data.image_url ? (
                 // Signed, expiring Supabase URL (PRD §16); next/image would need a remote pattern per project.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -126,13 +143,17 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
               )}
               <button
                 onClick={() =>
-                  onAsk(`Explain ${unit} ${data.slide_number} of "${data.material.title}"${data.title ? ` (${data.title})` : ""}: `)
+                  onAsk(
+                    data.label
+                      ? `Explain ${data.label} of "${data.material.title}": `
+                      : `Explain ${unit} ${data.slide_number} of "${data.material.title}"${data.title ? ` (${data.title})` : ""}: `,
+                  )
                 }
                 className="mt-4 w-full rounded-full bg-brand px-4 py-2.5 text-sm font-medium text-brand-ink hover:opacity-90"
               >
                 Ask about this {unit}
               </button>
-              {(data.text || data.visual_description) && (
+              {!data.view && (data.text || data.visual_description) && (
                 <div className="mt-4">
                   <button onClick={() => setShowText((v) => !v)} className="text-xs font-medium text-muted underline-offset-2 hover:underline">
                     {showText ? "Hide" : "Show"} the {unit}&apos;s text
@@ -156,5 +177,64 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
         </div>
       </aside>
     </>
+  );
+}
+
+/** A notebook's cells (like Jupyter) or a code file's lines, with line numbers and highlighting. */
+function SourceView({ view }: { view: SlideView }) {
+  if (view.type === "code") {
+    const width = String(view.start + view.lines.length - 1).length;
+    return (
+      <pre className="overflow-x-auto rounded-xl bg-card p-3 font-mono text-[12.5px] leading-[1.55] shadow-[0_1px_3px_rgb(0_0_0/0.08)]">
+        {view.lines.map((line, i) => (
+          <div key={i} className="flex">
+            <span className="mr-3 shrink-0 select-none text-right text-muted/70" style={{ width: `${width}ch` }}>
+              {view.start + i}
+            </span>
+            <Code line={line} language={view.language} />
+          </div>
+        ))}
+      </pre>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {view.cells.map((c) => (
+        <div key={c.n} className="flex gap-2">
+          <span className="w-12 shrink-0 pt-2 text-right font-mono text-[11px] text-muted/80">{c.type === "code" ? `[${c.n}]` : c.n}</span>
+          <div className="min-w-0 flex-1">
+            {c.type === "code" ? (
+              <>
+                <pre className="overflow-x-auto rounded-lg bg-card p-2.5 font-mono text-[12.5px] leading-[1.5] ring-1 ring-line">
+                  {c.source.split("\n").map((line, i) => (
+                    <div key={i}>
+                      <Code line={line} language="python" />
+                    </div>
+                  ))}
+                </pre>
+                {c.output && <pre className="mt-1 overflow-x-auto whitespace-pre-wrap px-2.5 font-mono text-[12px] text-ink/70">{c.output}</pre>}
+              </>
+            ) : (
+              <div className="text-[13.5px] leading-relaxed text-ink [&_h1]:text-base [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-1.5 [&_ul]:list-disc">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{c.source}</ReactMarkdown>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Code({ line, language }: { line: string; language: string }) {
+  if (!line) return <span>{"\u00a0"}</span>;
+  return (
+    <span className="whitespace-pre">
+      {highlightLine(line, language).map((t, i) => (
+        <span key={i} className={TOKEN_CLASS[t.kind]}>
+          {t.text}
+        </span>
+      ))}
+    </span>
   );
 }

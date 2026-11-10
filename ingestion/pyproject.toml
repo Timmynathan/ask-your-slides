@@ -8,6 +8,7 @@ dependencies = [
   "httpx",
   "psycopg[binary]",
   "pymupdf",
+  "python-docx>=1.2.0",
   "python-dotenv",
   "python-pptx",
   "pyyaml",

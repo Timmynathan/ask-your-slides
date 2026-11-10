@@ -22,11 +22,11 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+import filetype
 import yaml
 
 KINDS = ("slides", "notes", "reading", "practical", "outline", "other")
 SKIPPED = "skipped"
-SUPPORTED_SUFFIXES = {".pdf", ".pptx", ".ppt"}
 CODE_RE = re.compile(r"^[A-Z]{3}[0-9]{3}$")
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SESSION_RE = re.compile(r"^(\d{4})-(\d{4})$")
@@ -58,6 +58,8 @@ class Material:
     kind: str
     review: str | None
     title_override: str | None
+    file_type: str = "pdf"  # from the file's content (filetype.detect), not its extension
+    source: str = "lecturer"  # 'student' for student work (review note "Student group presentation…")
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,7 @@ class Course:
     materials: tuple[Material, ...]  # kind: skipped already removed
     skipped: tuple[dict, ...]
     past_papers: tuple[PastPaper, ...]
+    elective: bool = False
 
     @property
     def key(self) -> str:
@@ -273,8 +276,9 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         path = _inside(course_dir, session_dir, str(rel), problems, rwhere)
         if path is None:
             continue
-        if path.suffix.lower() not in SUPPORTED_SUFFIXES:
-            problems.append(f"{rwhere}: unsupported file type {path.suffix} ({rel})")
+        file_type = filetype.detect(path)
+        if file_type is None:
+            problems.append(f"{rwhere}: can't tell what kind of file {rel} is (supported: {', '.join(filetype.SUPPORTED.values())})")
             continue
         topic = row.get("topic")
         if topic is not None and topic not in topic_titles:
@@ -283,7 +287,7 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         materials.append(Material(
             course=expect["code"], order=order, cmid=cmid, section=row.get("lms_section"), file=path,
             rel_file=_rel(data_root, path), topic=topic, kind=kind, review=row.get("review"),
-            title_override=row.get("title"),
+            title_override=row.get("title"), file_type=file_type, source=material_source(row.get("review")),
         ))
     _check_unique(problems, mwhere, "lms_order", [m.order for m in materials])
 
@@ -295,7 +299,7 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         institution=expect["institution"], school=expect["school"], programme=expect["programme"], code=expect["code"],
         title=str(info["title"]).strip(), department=department, level=expect["level"], semester=expect["semester"],
         session=session, aliases=tuple(aliases), lecturer=info.get("lecturer") or None, lms_course_id=lms_id,
-        sort_order=sort_order, dir=course_dir,
+        sort_order=sort_order, dir=course_dir, elective=info.get("elective") is True,
         topics=tuple(sorted(topics, key=lambda t: t.order)),
         materials=tuple(sorted(materials, key=lambda m: m.order)),
         skipped=tuple(skipped), past_papers=past_papers,
@@ -322,8 +326,8 @@ def _load_past_papers(data_root: Path, course_dir: Path, problems: list[str], wh
         file = _inside(course_dir, course_dir, str(row["file"]), problems, rwhere)
         if file is None:
             continue
-        if file.suffix.lower() not in SUPPORTED_SUFFIXES:
-            problems.append(f"{rwhere}: unsupported file type {file.suffix}")
+        if filetype.detect(file) != "pdf":
+            problems.append(f"{rwhere}: past papers must be PDFs ({file.name} isn't one)")
             continue
         kind = row.get("type")
         if kind not in PAPER_TYPES:
@@ -342,6 +346,14 @@ def _load_past_papers(data_root: Path, course_dir: Path, problems: list[str], wh
         ))
     _check_unique(problems, pwhere, "file", [p.rel_file for p in papers])
     return tuple(papers)
+
+
+STUDENT_WORK = re.compile(r"^\s*student (group )?(presentation|work)", re.IGNORECASE)
+
+
+def material_source(review: str | None) -> str:
+    """'student' when the manifest's review note marks the file as student work (PRD F11), else 'lecturer'."""
+    return "student" if review and STUDENT_WORK.match(review) else "lecturer"
 
 
 def _opt_str(v) -> str | None:

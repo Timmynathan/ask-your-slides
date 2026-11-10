@@ -30,6 +30,10 @@ export interface SlideHit {
   next_title: string | null;
   similarity: number | null;
   score: number;
+  /** Word section path, "Cells 4–6", "lines 12–48"; null for a slide or page. */
+  label: string | null;
+  /** 'student' for student work (PRD F11). */
+  material_source: "lecturer" | "student";
 }
 
 export async function matchSlides(

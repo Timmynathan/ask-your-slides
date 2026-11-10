@@ -24,6 +24,8 @@ export interface MaterialItem {
   material_order: number;
   title: string;
   page_count: number;
+  /** Path of the course file (its extension says how the material is counted: sections, cells…). */
+  source_file?: string;
 }
 
 export interface ChatItem {

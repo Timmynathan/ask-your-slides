@@ -547,7 +547,7 @@ async function main() {
 
     // Past questions (PRD F10): Exam map, practice, marking, the topic chip.
     console.log("\nPast questions");
-    {
+    if (process.env.NEXT_PUBLIC_PAST_QUESTIONS === "1") {
       const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();
       const userId = me!.id as string;
       const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -615,6 +615,50 @@ async function main() {
       const anonAttempt = await fetch(`${BASE}/api/past/attempt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question_id: "00000000-0000-0000-0000-000000000000", reveal: true }) });
       check(anon.status === 401 && anonAttempt.status === 401, "signed-out requests to past questions get 401", `${anon.status}/${anonAttempt.status}`);
       await pq.close();
+    }
+    else {
+      // Not launched yet (lib/past/feature.ts): every course shows "Past questions · Soon" → "Coming soon".
+      const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await pq.context().addCookies(await page.context().cookies());
+      for (const code of ["INS401", "ISM413"]) {
+        await pq.goto(`${BASE}/study/${code}`);
+        const entry = pq.getByRole("navigation", { name: "Topics and chats" }).getByRole("button", { name: /Past questions/ });
+        await entry.waitFor({ timeout: 15000 });
+        check((await entry.innerText()).includes("Soon"), `${code}: the Topics panel shows 'Past questions · Soon'`);
+        await entry.click();
+        await pq.getByText("Coming soon", { exact: true }).waitFor({ timeout: 10000 });
+        check(!(await pq.getByText(/Exam map|Mark my answer|Asked in/).count()), `${code}: clicking it shows only 'Coming soon'`);
+        await shot(pq, `past-soon-${code}`);
+      }
+      await pq.goto(`${BASE}/study/INS401?topic=2`);
+      await pq.getByRole("navigation", { name: "Topics and chats" }).waitFor();
+      check(!(await pq.getByRole("button", { name: /past questions?$/ }).count()), "topic chats show no past-question chips before launch");
+      const api = await pq.request.get(`${BASE}/api/past?course=00000000-0000-0000-0000-000000000000`);
+      check(api.status() === 404, "the past-questions data route is closed before launch", String(api.status()));
+      await pq.close();
+    }
+
+    // Word notes (PRD F11): an ISM413 answer cites a Word section, and the viewer shows that page.
+    console.log("\nWord notes (ISM413)");
+    {
+      const wp = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+      await wp.context().addCookies(await page.context().cookies());
+      await wp.goto(`${BASE}/study/ISM413`);
+      const box = wp.getByRole("textbox").last();
+      await box.waitFor();
+      await box.fill("What are the four privacy torts in Nigerian law?");
+      await box.press("Enter");
+      const chip = wp.locator("main button[title^='Open LAW OF PRIVACY']").first();
+      await chip.waitFor({ timeout: 60000 });
+      const chipText = await chip.innerText();
+      check(!/Slide \d|p\. \d/.test(chipText), "a Word-notes citation names the section, not a page number", chipText.replace(/\s+/g, " "));
+      await chip.click();
+      const img = wp.locator("aside[role='dialog'] img").first();
+      await img.waitFor({ timeout: 15000 });
+      check((await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 500)) === true, "the viewer shows the real page of the Word document");
+      check(await wp.locator("aside[role='dialog']").getByText(/Lecture notes ·/).isVisible(), "the viewer's header names the section");
+      await shot(wp, "word-notes-viewer");
+      await wp.close();
     }
 
     // Admin dashboard: hidden from students; the owner sees the pilot, including this test's activity.

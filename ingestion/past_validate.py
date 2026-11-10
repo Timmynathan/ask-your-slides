@@ -113,8 +113,22 @@ def apply_review(extraction: dict, review: dict | None) -> tuple[dict, set[str]]
     return {**extraction, "paper": paper, "questions": questions}, {str(a) for a in review.get("accept") or []}
 
 
+TITLE_MATCH = 0.6
+_TITLE_NOISE = {"and", "of", "the", "in", "for", "to", "a", "an", "units", "unit", "pau"}
+
+
+def title_similarity(a: str, b: str) -> float:
+    """Overlap of word stems (first 5 letters), ignoring small words, codes and "(2 Units)":
+    'Ethical and Legal Issues in Computing' vs 'Ethics and Legal Issues for CSC…' → 0.75."""
+    def stems(t: str) -> set[str]:
+        words = re.findall(r"[a-z]+", re.sub(r"\b[A-Z]{3}\s?\d{3}\b", " ", t).lower())
+        return {w[:5] for w in words if w not in _TITLE_NOISE and not w.isdigit()}
+    x, y = stems(a), stems(b)
+    return len(x & y) / min(len(x), len(y)) if x and y else 1.0
+
+
 def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), listed_code: str | None = None,
-          accepted: set[str] | None = None) -> Checked:
+          accepted: set[str] | None = None, course_title: str | None = None) -> Checked:
     accepted = accepted or set()
     problems: list[Problem] = []
     add = lambda code, sev, detail, q=None: problems.append(Problem(code, sev, detail, q))
@@ -211,6 +225,11 @@ def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), 
     known = {normalize_code(c) for c in (course_code, *aliases, listed_code) if c}
     if seen and seen not in known:
         add("code_mismatch", "warning", f"paper says {paper.get('code_on_paper')!r}; expected one of {sorted(known)}")
+    # PAU reuses codes for different courses (ISM413 was Entertainment Media): code AND title must match.
+    printed = paper.get("title_on_paper")
+    if course_title and printed and title_similarity(printed, course_title) < TITLE_MATCH:
+        add("title_mismatch", "blocking",
+            f"the paper's title {printed!r} doesn't match the course {course_title!r}: it may be another course that used this code")
     for note in extraction.get("page_notes") or []:
         add("page_note", "info", str(note))
 

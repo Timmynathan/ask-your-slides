@@ -407,7 +407,8 @@ def main(argv: list[str] | None = None) -> int:
             failed += 1
             sections.append(report_section(j, None, None, f"unusable reply: {e}"))
             continue
-        checked = check(extraction, course_code=j.course.code, aliases=j.course.aliases, listed_code=j.paper.code_on_paper, accepted=accepted)
+        checked = check(extraction, course_code=j.course.code, aliases=j.course.aliases, listed_code=j.paper.code_on_paper,
+                        accepted=accepted, course_title=j.course.title)
         dump = REPORTS / "past_papers" / f"{j.course.code}-{Path(j.paper.rel_file).stem}.json"
         dump.parent.mkdir(parents=True, exist_ok=True)
         dump.write_text(json.dumps({"model": PAST_Q_MODEL, "raw": raw, "checked": checked.questions,

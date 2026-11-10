@@ -222,6 +222,8 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F10. Past questions
 
+**Not launched yet** (owner, 10 Nov 2026): exams are in December, so past questions open for every department at once in a couple of weeks. Until then every course, in every programme, shows **Past questions · Soon** in the Topics panel and a big **"Coming soon"** page; topic chips are hidden and the past-question API routes return 404. Launch = set `NEXT_PUBLIC_PAST_QUESTIONS=1` on Vercel and redeploy (`apps/web/lib/past/feature.ts`).
+
 Real PAU past papers, turned into practice: which topics the lecturer examines, and a way to answer
 those questions and be marked. Pilot data: **10 papers across 6 courses** (`past_papers.yaml` per
 course, §9.1); 8 are scanned (no text layer), so every page goes through vision OCR (§9.4).
@@ -286,6 +288,49 @@ never model answers.
 - The same answer marked twice scores within ±1 mark.
 - A signed-out request, or a student's request for another student's attempts, returns nothing.
 - The model answer is not in any response before an attempt or "Show answer".
+
+### F11. Several programmes
+
+The catalog now has two programmes: **BSc Computer Science** (School of Science and Technology) and
+**BSc Information Science and Media Studies, ISMS** (School of Media and Communication), both 400
+level, first semester, 2026/2027. More will follow, so nothing names a programme in code: names,
+departments and course lists come from `catalog.yaml` and `course.yaml` (via the database).
+
+**Programme selection**
+- The `@pau.edu.ng` address doesn't say what a student studies. Onboarding's first screen asks
+  **"What do you study?"**: programme + level, only those in the catalog (replaces the department
+  dropdown, F1a). Saved on the profile; changeable from the account menu.
+- Existing accounts (all Computer Science) are set to computer-science / 400 without asking.
+- **Isolation**: a student sees only their programme's courses, everywhere (My courses, course
+  pages, chat, slides, past questions), enforced in the database (RLS), not just hidden in the UI.
+- Electives (`elective: true` in `course.yaml`) are listed with an **Elective** tag.
+- Partner copy and the landing page use the programme's department name from the data.
+
+**New material types** (ingestion detects the type from the file's content, not its extension, so
+a PDF named `.pptx` still works)
+- `.docx` (Word notes, e.g. ISM413): text by heading; one chunk per section (~500 tokens, long
+  sections split at paragraphs); cited by heading path, e.g. `Law of Privacy › Exceptions`.
+- `.ipynb` (Jupyter, ISM415): markdown and code cells in order, `kind: practical`; a chunk never
+  splits a code cell; cited by cell, e.g. `Cells 4–6`.
+- `.cs` (C# Unity scripts, ISM410): code, `kind: practical`; chunks end at method boundaries;
+  cited by file and lines, e.g. `PlayerMovement.cs · lines 12–48`.
+- These have no page image: the viewer shows their text (code in a code block).
+- Image-only PDFs (CMS411) go through the vision step like any image-heavy slide.
+
+**Material trust**
+- Manifest rows whose review note starts with "Student group presentation" (ISM411) are **student
+  work**: stored with `source = student`, used only when the student asks for them directly, and
+  every answer that uses one says so ("This comes from a student group presentation, not the
+  lecturer's slides"); its chips say "Student presentation".
+- A current assignment brief filed as `kind: other` (ISM410 "CA2 Test 2") is course material, never
+  a past paper (past papers come only from `past_papers.yaml`).
+
+**Course codes are reused.** PAU sometimes gives an old code to a different course (ISM413, ISM414).
+Past papers are matched on code **and** title: past-paper extraction compares the title printed on
+the paper with the course's title and holds a paper back for review when they don't match.
+
+**Zero past papers** (all ISMS courses for now): no Past questions entry, no Exam map, no chips;
+nothing is shown rather than an error.
 
 ---
 

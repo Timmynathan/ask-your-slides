@@ -25,7 +25,14 @@ def image_path(course_id: str, material_order: int, number: int) -> str:
     return f"{course_id}/{material_order:02d}/{number}.png"
 
 
-def unit(kind: str, is_pptx: bool) -> str:
+def unit(kind: str, is_pptx: bool, file_type: str = "pdf") -> str:
+    """What one chunk of this material is called: slide, page, section (Word), cells, part (code)."""
+    if file_type == "docx":
+        return "section"
+    if file_type == "ipynb":
+        return "cell group"
+    if file_type == "code":
+        return "part"
     return "slide" if is_pptx or kind == "slides" else "page"
 
 
@@ -43,12 +50,17 @@ def build_chunk(
     body: str | None,
     visual: str | None,
     notes: str | None,
+    label: str | None = None,
+    student_work: bool = False,
 ) -> str:
+    who = ", student work: a student group presentation, not the lecturer's" if student_work else ""
     lines = [
         f"Course: {course_code} {course_title}",
         f"Topic: {topic or 'Course-level material'}",
-        f"Material ({kind}): {material_title} — {unit_name} {number} of {total}",
+        f"Material ({kind}{who}): {material_title} — {unit_name} {number} of {total}",
     ]
+    if label:
+        lines.append(f"Location: {label}")
     if title:
         lines.append(f"Title: {title}")
     if body:

@@ -5,6 +5,7 @@ import { Workspace } from "@/components/study/workspace";
 import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { resolveCourse } from "@/lib/study/course-link";
 import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 
@@ -29,7 +30,7 @@ async function Loaded({ params, searchParams }: Props) {
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
     // Every programme's course with this code; narrowed to the chosen one below.
-    supabase.from("materials").select("id, course_id, topic_id, kind, material_order, title, page_count, courses!inner(code)").eq("courses.code", code).order("material_order"),
+    supabase.from("materials").select("id, course_id, topic_id, kind, material_order, title, page_count, source_file, courses!inner(code)").eq("courses.code", code).order("material_order"),
     supabase.from("messages").select("id", { count: "exact", head: true }).eq("role", "user"),
     supabase.from("pulse_responses").select("score").maybeSingle(),
     // Past questions (PRD F10): ids only, for the Topics entry and the topic chips; the questions
@@ -58,7 +59,7 @@ async function Loaded({ params, searchParams }: Props) {
       courses={courses as CourseItem[]}
       topics={topics}
       chats={chatList}
-      materials={(materialRows ?? []).filter((m) => m.course_id === course.id).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count })) as MaterialItem[]}
+      materials={(materialRows ?? []).filter((m) => m.course_id === course.id).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count, source_file: m.source_file })) as MaterialItem[]}
       initialCourseId={course.id}
       initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
       initialChatId={initialChat?.id ?? null}
@@ -67,7 +68,7 @@ async function Loaded({ params, searchParams }: Props) {
       usage={{ used: (used as number | null) ?? 0, cap }}
       pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
       past={past}
-      initialPast={sp.past === "1" && past.total > 0 && !initialChat}
+      initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}
     />
   );
 }
