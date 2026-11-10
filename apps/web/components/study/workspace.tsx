@@ -92,11 +92,6 @@ export function Workspace(data: WorkspaceData) {
   const onRemaining = useCallback((r: number) => setUsed(data.usage.cap - r), [data.usage.cap]);
   const scopeTitle = past === "list" ? "Past questions" : topic ? topic.title : "Whole course";
   const topicPast = PAST_QUESTIONS_LIVE && topic ? data.past.byTopic[topic.id] ?? 0 : 0;
-  const openPast = useCallback(() => {
-    setPast("list");
-    setPreview(null);
-    setDrawerOpen(false);
-  }, []);
   const courseChats = useMemo(() => chats.filter((c) => c.course_id === courseId), [chats, courseId]);
   const p = PARTNERS[partner];
 
@@ -126,7 +121,7 @@ export function Workspace(data: WorkspaceData) {
           <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
             <path d="M15 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 4 17.5V19M9.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18.5 8v6M21.5 11h-6" />
           </IconButton>
-          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} />
+          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} />
           <AccountMenu user={data.user} onChangePartner={() => setPickingPartner(true)} />
         </div>
       </header>
@@ -150,9 +145,7 @@ export function Workspace(data: WorkspaceData) {
             chatId={chatId}
             onOpenScope={openScope}
             onOpenChat={openChat}
-            pastCount={data.past.total}
             pastActive={past === "list"}
-            onOpenPast={openPast}
             courseLabel={`${displayCode(course.code)} ${course.title}`}
           />
         </aside>

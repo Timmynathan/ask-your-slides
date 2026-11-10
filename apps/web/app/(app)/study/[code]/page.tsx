@@ -65,7 +65,7 @@ async function Loaded({ params, searchParams }: Props) {
       initialCourseId={course.id}
       initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
       initialChatId={initialChat?.id ?? null}
-      user={{ email: user.email ?? "", displayName: profile?.display_name ?? null }}
+      user={{ id: user.id, email: user.email ?? "", displayName: profile?.display_name ?? null }}
       partner={profile.study_partner}
       usage={{ used: (used as number | null) ?? 0, cap }}
       pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}

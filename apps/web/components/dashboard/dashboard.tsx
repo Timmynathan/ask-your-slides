@@ -41,7 +41,7 @@ const VIEW_KEY = "ays:dashboard-view";
 
 interface Props {
   courses: DashboardCourse[];
-  user: { email: string; displayName: string | null };
+  user: { id: string; email: string; displayName: string | null };
   resume: { href: string; label: string } | null;
   partner: PartnerId;
 }
@@ -136,7 +136,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
               <path d="M3 5h14M3 10h14M3 15h14" />
             </ViewButton>
           </div>
-          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} />
+          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={user.id} />
           <AccountMenu user={user} onChangePartner={() => setPickingPartner(true)} />
         </div>
       </header>

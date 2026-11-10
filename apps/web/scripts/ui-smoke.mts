@@ -323,6 +323,25 @@ async function main() {
       await op.reload();
       await pill.waitFor();
       check(!(await tip.count()), "the hint doesn't come back after a reload");
+      // Same browser, a different (new) account: the hint is per account, so it shows again.
+      const second = `ui-second-${Date.now()}@pau.edu.ng`;
+      const newbieCookies = await op.context().cookies();
+      const backTo = op.url();
+      try {
+        await op.context().clearCookies();
+        await op.context().addCookies(await signInCookies(second, { fresh: true }));
+        const { data: sp2 } = await admin.from("profiles").select("id").eq("email", second).single();
+        await admin.from("profiles").update({ onboarded: true, study_partner: "zara", programme: "computer-science", level: 400 }).eq("id", sp2!.id);
+        await op.goto(`${BASE}/dashboard`);
+        await op.getByRole("heading", { name: "My courses" }).waitFor();
+        check(await tip.isVisible(), "a new account on the same browser sees the partner hint too");
+      } finally {
+        await cleanup(second);
+        await op.context().clearCookies();
+        await op.context().addCookies(newbieCookies);
+        await op.goto(backTo);
+        await op.getByRole("button", { name: /Studying with/ }).waitFor();
+      }
       await op.getByRole("button", { name: "Account" }).click();
       await op.getByRole("button", { name: "Change study partner", exact: true }).click();
       await op.getByRole("dialog").getByText(/Ada/).first().waitFor({ timeout: 5000 });
@@ -616,9 +635,7 @@ async function main() {
       const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await pq.context().addCookies(await page.context().cookies());
       pq.on("pageerror", (e) => consoleErrors.push(e.message));
-      await pq.goto(`${BASE}/study/INS401`);
-      const nav = pq.getByRole("navigation", { name: "Topics and chats" });
-      await nav.getByRole("button", { name: "Past questions" }).click();
+      await pq.goto(`${BASE}/study/INS401?past=1`);
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
       check(new URL(pq.url()).searchParams.get("past") === "1", "Past questions opens from the Topics panel (URL ?past=1)");
       check(await pq.getByText(/Asked in \d+ of 2/).first().isVisible(), "the Exam map says 'Asked in N of 2 papers', no percentages", "");
@@ -688,12 +705,12 @@ async function main() {
       for (const [code, programme] of [["INS401", "computer-science"], ["ISM413", "information-science-and-media-studies"]]) {
         await asProgramme(programme); // ISM413 is only visible to an ISMS student (PRD F11)
         await pq.goto(`${BASE}/study/${code}`);
-        const entry = pq.getByRole("navigation", { name: "Topics and chats" }).getByRole("button", { name: /Past questions/ });
-        await entry.waitFor({ timeout: 15000 });
-        check((await entry.innerText()).includes("Soon"), `${code}: the Topics panel shows 'Past questions · Soon'`);
-        await entry.click();
+        const nav = pq.getByRole("navigation", { name: "Topics and chats" });
+        await nav.getByRole("button", { name: "Whole course" }).waitFor({ timeout: 15000 });
+        check(!(await nav.getByRole("button", { name: /Past questions/ }).count()), `${code}: no Past questions entry in the sidebar (owner: it took too much room)`);
+        await pq.goto(`${BASE}/study/${code}?past=1`);
         await pq.getByText("Coming soon", { exact: true }).waitFor({ timeout: 10000 });
-        check(!(await pq.getByText(/Exam map|Mark my answer|Asked in/).count()), `${code}: clicking it shows only 'Coming soon'`);
+        check(!(await pq.getByText(/Exam map|Mark my answer|Asked in/).count()), `${code}: the Past questions page still only says 'Coming soon'`);
         await shot(pq, `past-soon-${code}`);
       }
       await asProgramme("computer-science");

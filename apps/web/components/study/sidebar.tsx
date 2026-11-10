@@ -5,7 +5,6 @@
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
 // badges or counts. Navy panel with white text; the selected scope is a white pill.
 import type { ChatItem, TopicItem } from "@/lib/study/types";
-import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { WebSearchBox } from "./web-search-box";
 
 interface Props {
@@ -16,13 +15,11 @@ interface Props {
   onOpenScope(topicId: string | null): void; // opens a new chat in that scope
   onOpenChat(chat: ChatItem): void;
   courseLabel: string; // "CSC 420 Data Management II", for the web search box
-  /** Past questions (PRD F10) to practise in this course; the entry is hidden when 0. */
-  pastCount: number;
+  /** The Past questions view is open (reached from a topic chat's chip once launched, PRD F10). */
   pastActive: boolean;
-  onOpenPast(): void;
 }
 
-export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat, courseLabel, pastCount, pastActive, onOpenPast }: Props) {
+export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat, courseLabel, pastActive }: Props) {
   const scopes: { id: string | null; label: string }[] = [
     { id: null, label: "Whole course" },
     ...topics.map((t) => ({ id: t.id, label: t.title })),
@@ -82,26 +79,6 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                     </li>
                   ))}
                 </ul>
-              )}
-              {s.id === null && (pastCount > 0 || !PAST_QUESTIONS_LIVE) && (
-                <button
-                  onClick={onOpenPast}
-                  aria-current={pastActive ? "location" : undefined}
-                  className={`mt-0.5 flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-[15px] leading-snug transition-colors ${
-                    pastActive ? "bg-white font-medium text-[#0e1664]" : "text-white/85 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M7 3.5h7l4 4V20.5H7z" />
-                    <path d="M14 3.5v4h4M10 12.5l1.5 1.5 3-3M10 17h5" />
-                  </svg>
-                  Past questions
-                  {!PAST_QUESTIONS_LIVE && (
-                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${pastActive ? "bg-[#0e1664]/10 text-[#0e1664]" : "bg-white/15 text-white"}`}>
-                      Soon
-                    </span>
-                  )}
-                </button>
               )}
             </li>
           );

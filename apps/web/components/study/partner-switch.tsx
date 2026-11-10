@@ -20,22 +20,27 @@ function subscribe(onChange: () => void) {
     window.removeEventListener("storage", onChange);
   };
 }
-function readSeen(): boolean {
+// Remembered per account (its id) on this browser, so a new account still gets the hint once:
+// a second student on a shared laptop, or the same email deleted and signed up again.
+const keyFor = (account: string) => `${HINT_KEY}:${account.toLowerCase()}`;
+function readSeen(account: string): boolean {
   try {
-    return !!localStorage.getItem(HINT_KEY);
+    return !!localStorage.getItem(keyFor(account));
   } catch {
     return true; // storage blocked: no hint; the labelled pill still says what it is
   }
 }
-function markSeen() {
+function markSeen(account: string) {
   try {
-    localStorage.setItem(HINT_KEY, "1");
+    localStorage.setItem(keyFor(account), "1");
   } catch {}
   window.dispatchEvent(new Event(HINT_EVENT));
 }
 
-export function PartnerSwitch({ partner, onChanged, open, onOpenChange }: {
+export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account }: {
   partner: PartnerId;
+  /** The signed-in account's id: the hint is shown once per account. */
+  account: string;
   onChanged(id: PartnerId): void;
   /** Controlled from outside too (account menu → "Change study partner"). */
   open: boolean;
@@ -43,9 +48,9 @@ export function PartnerSwitch({ partner, onChanged, open, onOpenChange }: {
 }) {
   const p = PARTNERS[partner];
   // Seen before? Read from this browser; the server (no storage) renders no hint.
-  const seen = useSyncExternalStore(subscribe, readSeen, () => true);
+  const seen = useSyncExternalStore(subscribe, () => readSeen(account), () => true);
   const hint = !seen;
-  const dismissHint = markSeen;
+  const dismissHint = () => markSeen(account);
 
   return (
     <div className="relative">

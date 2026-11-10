@@ -51,7 +51,7 @@ export interface WorkspaceData {
   initialCourseId: string;
   initialTopicId: string | null;
   initialChatId: string | null;
-  user: { email: string; displayName: string | null };
+  user: { id: string; email: string; displayName: string | null };
   partner: PartnerId;
   usage: { used: number; cap: number };
   /** For "Is this helping you study?": questions asked so far, and whether it has been answered. */
