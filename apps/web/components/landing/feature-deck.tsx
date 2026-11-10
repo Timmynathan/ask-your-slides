@@ -328,10 +328,7 @@ export function FeatureDeck() {
               );
             })}
         </div>
-        <p className="mt-10 text-center text-[13px] text-muted">
-          Drag a card to see the next one, or pick a tab.
-        </p>
-        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-line-strong" aria-hidden />
+        <div className="mx-auto mt-10 h-1 w-10 rounded-full bg-line-strong" aria-hidden />
       </div>
     </div>
   );
