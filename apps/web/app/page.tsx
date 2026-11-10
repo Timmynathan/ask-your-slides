@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
 import { ChatDemo } from "@/components/landing/chat-demo";
+import { FeatureDeck } from "@/components/landing/feature-deck";
 import { CoursePills } from "@/components/landing/course-pills";
-import { TypingBox } from "@/components/landing/typing-box";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
@@ -133,32 +133,13 @@ export default async function Landing() {
         {/* The demo, framed as a full-screen video player. "See how it works" brings it here and plays it. */}
         <ChatDemo />
 
-        {/* Features: heading and the four cards, below the demo and separate from it. */}
-        <section id="features" className="scroll-mt-20 bg-tint py-20">
+        {/* Features: a deck of cards with tabs (drag a card, or pick a tab), below the demo. */}
+        <section id="features" className="scroll-mt-20 overflow-hidden bg-tint py-20">
           <div className="mx-auto max-w-6xl px-5">
             <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Everything in your slides, on demand</h2>
             <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
-            <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              <Feature title="Topic chats" body="Study one topic at a time. If it's covered somewhere else in the course, you'll be told where.">
-                <div className="space-y-1.5 text-sm">
-                  {["Whole course", "Transactions and indexing", "Complex types"].map((t, i) => (
-                    <p key={t} className={`rounded-lg px-2.5 py-1.5 ${i === 1 ? "bg-sunken font-medium text-ink" : "text-muted"}`}>{t}</p>
-                  ))}
-                </div>
-              </Feature>
-              <Feature title="Summaries in order" body="Ask for a lecture, a topic or the whole course. It reads every slide, in order, not just the first few.">
-                <TypingBox text="Summarize CSC 402" />
-              </Feature>
-              <Feature title="Quiz me" body="One question at a time. Answer, get marked, see the slide with the right answer.">
-                <div className="rounded-xl bg-sunken p-3 text-sm text-ink">
-                  What does privacy mean under contextual integrity?
-                  <div className="mt-2 flex gap-1.5 text-xs">
-                    {["A", "B", "C"].map((o) => (
-                      <span key={o} className="rounded-full bg-card px-2.5 py-1 ring-1 ring-line">{o}</span>
-                    ))}
-                  </div>
-                </div>
-              </Feature>
+            <div className="mt-10">
+              <FeatureDeck />
             </div>
           </div>
         </section>
@@ -261,12 +242,3 @@ export default async function Landing() {
 }
 
 
-function Feature({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col rounded-[25px] bg-card p-6 ring-1 ring-line">
-      <div className="min-h-[104px] rounded-2xl bg-page p-4">{children}</div>
-      <h3 className="mt-5 font-heading text-lg font-semibold text-ink">{title}</h3>
-      <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{body}</p>
-    </div>
-  );
-}

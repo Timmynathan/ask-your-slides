@@ -150,6 +150,25 @@ async function main() {
       check(card === "rgb(255, 255, 255)", "sign-in is light in dark mode too", card);
       await dctx.close();
     }
+    // Features deck: tabs bring a card forward; dragging the front card shows the next tab's card.
+    {
+      await lp.evaluate(() => document.getElementById("features")!.scrollIntoView({ block: "start" }));
+      await lp.getByRole("tab", { name: "Quiz me" }).click();
+      const panel = lp.getByRole("tabpanel");
+      await lp.waitForTimeout(500);
+      check((await panel.locator("h3").innerText()) === "Practice that marks you", "a deck tab brings its card to the front");
+      await panel.scrollIntoViewIfNeeded();
+      const bb = (await panel.boundingBox())!;
+      await lp.mouse.move(bb.x + 60, bb.y + 40);
+      await lp.mouse.down();
+      await lp.mouse.move(bb.x + 320, bb.y + 50, { steps: 8 });
+      await lp.mouse.up();
+      await lp.waitForTimeout(700);
+      check((await lp.getByRole("tabpanel").locator("h3").innerText()) === "Explained again, in plain words" &&
+        (await lp.locator("[role=tab][aria-selected=true]").innerText()) === "Explain again",
+        "dragging the front card away shows the next one, and the tabs follow");
+      await lp.evaluate(() => window.scrollTo(0, 0));
+    }
     // Six pills that take turns through every course (CSC, INS, ISM… mixed from the start).
     const band = lp.locator("[data-course-count]");
     const pills = band.locator(":scope > span");
