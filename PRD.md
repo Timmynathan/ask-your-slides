@@ -1059,6 +1059,7 @@ gantt
 |---|---|
 | v1.1 | Past questions: built as F10. Later: timed mock exams, photo upload of handwritten answers. |
 | v1.2 | Structured quiz UI (multiple choice cards, score). |
+| v2 (images) | **Truly multimodal answers.** Today images reach the chat only as text: Claude Haiku describes diagrams, charts, tables and image-only slides at ingestion (≈150 words each; 17% of CS and 40% of ISMS chunks have one), and the chat reads those descriptions, never the image. Gaps: fine details beyond the description, images inside Word notes (ISM413: 0 of 214 sections described), notebook chart outputs ("[image output]"), and figures on text-heavy slides that skip vision. Plan, in order of value: (1) "Ask about this slide/section" sends the slide image itself to the model with the question (the item is already known, `focus_slide`; ≈$0.001 per question); (2) describe images in .docx notes and notebook outputs at ingestion; (3) longer descriptions for diagram-heavy slides. |
 | v1.3 | Voice: ask questions by speech, listen to answers. |
 | v2.0 | MCP server: students connect the course slides to Claude, ChatGPT, or other tools. |
 | v2.1 | Other levels and departments; per-student course selection. |
