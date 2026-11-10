@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
-/* Palette: white page, PAU navy #0E1664 as the brand colour (with #5EA3ED from pau.edu.ng as a light
+/* Light only (owner, Nov 2026): the same light site on every device, whatever its system theme.
+   Tailwind's dark: utilities would follow the system setting; they now apply only under a .dark
+   class, which the app never sets. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Palette (light only): white page, PAU navy #0E1664 as the brand colour (with #5EA3ED from pau.edu.ng as a light
    accent), near-black ink. Layout and type follow the studyfetch.com reference. */
 :root {
+  color-scheme: light; /* native controls, scrollbars and autofill stay light too */
   --page: #ffffff;
   --card: #ffffff;
   --tint: #f5f8fc; /* alternate sections, sidebar */
@@ -13,32 +19,13 @@
   --muted: #5f6673;
   --brand: #0e1664; /* PAU navy: banner, buttons, links, selected states */
   --brand-ink: #ffffff; /* text on --brand */
-  /* Navy surfaces with white text (Topics panel, course cards, banner): deep navy in both modes. */
+  /* Navy surfaces with white text (Topics panel, course cards, banner). */
   --navy: #0e1664;
   --navy-hover: #0a0f47;
-  /* Highlight tints: pale navy on light, dark navy on dark (text on them is always --ink). */
+  /* Highlight tints: pale navy (text on them is always --ink). */
   --pau-50: #f3f5fc;
   --pau-100: #e6e9f7;
   --pau-200: #c8cdec;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --page: #12151f;
-    --card: #181c28;
-    --tint: #151926;
-    --sunken: #222839;
-    --line: #2a3144;
-    --line-strong: #3a4359;
-    --ink: #f5f6f8;
-    --muted: #a3abba;
-    --brand: #5ea3ed; /* the lighter PAU blue reads better on dark */
-    --brand-ink: #0d1424;
-    --navy: #1b2670;
-    --navy-hover: #233190;
-    --pau-50: #1a2042;
-    --pau-100: #232c56;
-    --pau-200: #34417c;
-  }
 }
 
 @theme inline {
@@ -205,11 +192,6 @@ body {
   line-height: 24px;
   font-style: normal;
   color: #000000;
-}
-@media (prefers-color-scheme: dark) {
-  .type-menu {
-    color: var(--ink);
-  }
 }
 
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bitter, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Haptics } from "@/components/ui/haptics";
@@ -7,6 +7,9 @@ import { Haptics } from "@/components/ui/haptics";
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const bitter = Bitter({ variable: "--font-bitter", subsets: ["latin"], weight: ["500", "600", "700"], style: ["normal", "italic"] });
 const mono = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"] });
+
+// Light only: browsers don't switch the page, form fields or the address bar to dark.
+export const viewport: Viewport = { colorScheme: "light", themeColor: "#ffffff" };
 
 export const metadata: Metadata = {
   title: "Ask Your Slides",

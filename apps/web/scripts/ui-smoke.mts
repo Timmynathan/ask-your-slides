@@ -135,6 +135,21 @@ async function main() {
     check(manifest?.display === "standalone" && manifest?.icons?.length >= 2, "installable: web app manifest with icons");
     const { data: codeRows } = await admin.from("courses").select("code");
     const courseCount = new Set((codeRows ?? []).map((c) => c.code)).size; // one chip per code, even if several programmes share it
+    // Light only: a device in dark mode still gets the light site.
+    {
+      const dctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
+      const dp = await dctx.newPage();
+      await dp.goto(`${BASE}/`);
+      const bg = await dp.evaluate(() => getComputedStyle(document.body).backgroundColor);
+      const ink = await dp.evaluate(() => getComputedStyle(document.querySelector("h1")!).color);
+      const scheme = await dp.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+      check(bg === "rgb(255, 255, 255)" && ink === "rgb(25, 25, 25)" && scheme === "light",
+        "a device in dark mode gets the same light site (white page, dark text)", `${bg} / ${ink} / ${scheme}`);
+      await dp.goto(`${BASE}/sign-in`);
+      const card = await dp.evaluate(() => getComputedStyle(document.body).backgroundColor);
+      check(card === "rgb(255, 255, 255)", "sign-in is light in dark mode too", card);
+      await dctx.close();
+    }
     // Six pills that take turns through every course (CSC, INS, ISM… mixed from the start).
     const band = lp.locator("[data-course-count]");
     const pills = band.locator(":scope > span");

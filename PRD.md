@@ -903,7 +903,7 @@ erDiagram
 
 - Reference: studyfetch.com, used for structure and feel, not copied (no text, artwork, logo or mascot reused).
 - Fonts: **Bitter** (headings), **Inter** (text), **JetBrains Mono** (code), all free via Google Fonts.
-- Colours: white page and cards, near-black ink `#191919`, cool greys; **PAU navy `#0E1664`** as the brand colour (banner with white text, buttons, links, the student's chat bubbles, selected states), with tints of it for highlights and `#5EA3ED` (from pau.edu.ng's theme) as the bright accent. Logo and line drawings stay black. Dark mode uses matching dark tokens with `#5EA3ED` as the accent.
+- Colours: white page and cards, near-black ink `#191919`, cool greys; **PAU navy `#0E1664`** as the brand colour (banner with white text, buttons, links, the student's chat bubbles, selected states), with tints of it for highlights and `#5EA3ED` (from pau.edu.ng's theme) as the bright accent. Logo and line drawings stay black. **Light only** (owner, Nov 2026): every device gets the same light site, whatever its system theme (`color-scheme: light`; Tailwind `dark:` utilities never apply).
 - Shapes: pill buttons, 25 px card corners, soft rings instead of heavy borders.
 - Logo and favicon: one black AI sparkle (a large four-point star and a small one), `apps/web/app/icon.svg`; the PNG app icons are the same drawing on white. Brand name and menus (landing nav, sidebar items): Inter 400, 16 px / 24 px, black (`.type-menu`).
 - Landing hero: **"Stop uploading slides to ChatGPT."**, one sentence ("All your {department} course slides are already here, so there's nothing to upload…"), one big navy "Try for free" button, black line drawings in the bottom corners.
