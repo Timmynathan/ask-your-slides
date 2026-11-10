@@ -16,6 +16,7 @@
     "test:e2e:auth": "npm --prefix apps/web run build && npm --prefix apps/web run test:e2e:auth",
     "export:traces": "npm --prefix apps/web run -s export:traces --",
     "check:agent": "npm --prefix apps/web run build && npm --prefix apps/web run check:agent",
+    "check:golden": "npm --prefix apps/web run build && npm --prefix apps/web run check:golden",
     "check:ui": "npm --prefix apps/web run build && npm --prefix apps/web run check:ui"
   }
 }

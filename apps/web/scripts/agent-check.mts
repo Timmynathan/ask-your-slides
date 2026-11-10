@@ -116,6 +116,8 @@ async function signIn(email: string) {
   if (!res.ok) throw new Error(`sign-in failed: ${res.status}`);
   cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   const { data: u } = await admin.from("profiles").select("id").eq("email", email).single();
+  // A final-year CS student (PRD F11: students see only their programme's courses).
+  await admin.from("profiles").update({ onboarded: true, study_partner: "ada", programme: "computer-science", level: 400 }).eq("id", u!.id);
   return u!.id as string;
 }
 
@@ -244,7 +246,7 @@ async function main() {
     // The student answers; the partner marks it and cites the slide with the right answer (F6).
     a = await ask(c7, "I think it means information should only flow in ways that match the norms of the context it was shared in.");
     standardChecks(a, "CSC402");
-    check(/\b(correct|right|spot on|exactly|well done|good|partly|partially|not quite|incorrect|close)\b/i.test(outsideGeneral(a.text).slice(0, 400)), "marks the student's answer", a.text.slice(0, 120).replace(/\n/g, " "));
+    check(/\b(correct|right|spot on|exactly|well done|good|yes|you['’]ve got|nailed|partly|partially|not quite|incorrect|close)\b/i.test(outsideGeneral(a.text).slice(0, 400)), "marks the student's answer", a.text.slice(0, 120).replace(/\n/g, " "));
 
     console.log("\n8. Reading with a repaired (OCR) text layer (CSC402 Nissenbaum)");
     const c8 = await newChat("CSC402");

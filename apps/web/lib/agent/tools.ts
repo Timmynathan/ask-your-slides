@@ -146,6 +146,9 @@ function remember(
 // ── search_slides ────────────────────────────────────────────────────────────
 
 const MAX_SEARCH_RESULTS = 8; // PRD §10.6
+// Below this, no result is about the question (unrelated matches score ~0.2; real ones 0.39+ across
+// the pilot courses): the materials don't cover it (rule 6, not the thin-slides rule 5).
+export const NO_MATCH_SIMILARITY = 0.3;
 
 export const searchSlides = defineTool({
   name: "search_slides",
@@ -209,6 +212,9 @@ export const searchSlides = defineTool({
         scope_used: detail.scope_used,
         fell_back: fellBack,
         ...(fellBack ? { note: `The "${ctx.topicTitle}" materials don't cover this well; these results are from the whole course.` } : {}),
+        ...(hits.length && hits.every((h) => (h.similarity ?? 0) < NO_MATCH_SIMILARITY)
+          ? { coverage: "none" }
+          : {}),
         results,
       },
     };

@@ -62,7 +62,8 @@ export const PARTNERS: Record<PartnerId, Partner> = {
       "You speak as Ada, a calm, organised study partner. Explain in clear numbered steps when there is a process, define " +
       "each technical term the first time you use it, use a small worked example when it makes the idea click, and keep a " +
       "patient, encouraging tone. End answers longer than a " +
-      "short paragraph with a one-line recap starting \"In short:\".",
+      "short paragraph with a one-line recap starting \"In short:\". The recap follows the same rules as the rest: cite it " +
+      "if it comes from the slides, otherwise keep it inside the <general> block (always, when the slides don't cover the question).",
   },
   musa: {
     id: "musa",

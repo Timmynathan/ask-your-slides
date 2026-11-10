@@ -39,3 +39,14 @@ describe("preSearchQuery", async () => {
       .toBe("What is a B+ tree?\nHow is that different from a hash index?");
   });
 });
+
+describe("asksForOtherMaterial (PRD F11: student work only when asked)", () => {
+  it("spots requests for a presentation, a group's work, a brief or a template", async () => {
+    const { asksForOtherMaterial } = await import("@/lib/agent/run");
+    expect(asksForOtherMaterial("What did the student group presentation on media policy conclude?")).toBe(true);
+    expect(asksForOtherMaterial("Summarise Group 3's slides")).toBe(true);
+    expect(asksForOtherMaterial("What does the CA brief ask for?")).toBe(true);
+    expect(asksForOtherMaterial("What is a horizontal merger?")).toBe(false);
+    expect(asksForOtherMaterial("Explain the presentational layer")).toBe(false);
+  });
+});

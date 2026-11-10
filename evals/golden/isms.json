@@ -1,0 +1,28 @@
+{
+  "about": "ISMS golden cases (PRD F11, §15). Run: npm run check:golden. Each case asks the real /api/chat as an ISMS student and checks what was cited. Questions and expectations only (no course content).",
+  "programme": "information-science-and-media-studies",
+  "cases": [
+    { "id": "docx-defamation", "course": "ISM413", "question": "What defences can a journalist raise against a defamation claim in Nigeria?",
+      "cite_any": ["ISM413-07"], "cite_type": "docx", "why": "Word-only notes, cited by section" },
+    { "id": "docx-privacy", "course": "ISM413", "topic": "Law of privacy", "question": "What are the four privacy torts?",
+      "cite_any": ["ISM413-08"], "cite_type": "docx", "why": "Word-only topic" },
+    { "id": "notebook-log", "course": "ISM415", "topic": "NumPy", "question": "How do you take the natural log of every element in a NumPy array, and what happens when an element is 0?",
+      "cite_any": ["ISM415-13"], "cite_type": "notebook", "why": "answer is in a notebook code cell and its output" },
+    { "id": "notebook-clustering", "course": "ISM415", "question": "In the clustering notebook on the wholesale customers data, which columns are dropped before clustering?",
+      "cite_any": ["ISM415-18"], "cite_type": "notebook", "why": "notebook-only detail" },
+    { "id": "code-crash", "course": "ISM410", "question": "In the PlayerCrash script, how does the game know the player has hit a wall?",
+      "cite_any": ["ISM410-19"], "cite_type": "code", "why": "C# script, cited by lines" },
+    { "id": "code-animator", "course": "ISM410", "question": "How does the PlayerMovement script use the Animator component?",
+      "cite_any": ["ISM410-22"], "cite_type": "code", "why": "C# script" },
+    { "id": "image-only", "course": "CMS411", "question": "What is cultural homogenisation, and what are its pros and cons?",
+      "cite_any": ["CMS411-04", "CMS411-05", "CMS411-06"], "cite_type": "image_only", "why": "slides with no text layer: only the vision description has the content" },
+    { "id": "student-work-asked", "course": "ISM411", "question": "What did the student group presentation on media policy in Nigeria conclude?",
+      "cite_any": ["ISM411-09"], "student_work": true, "why": "student work, asked for directly: used and labelled" },
+    { "id": "student-work-not-asked", "course": "ISM411", "question": "What is a horizontal merger?",
+      "no_student_work": true, "why": "ordinary question: student presentations must not be used" },
+    { "id": "not-covered", "course": "ISM412", "question": "How does proof-of-stake consensus work in blockchains?",
+      "not_covered": true, "why": "outside the course" },
+    { "id": "slides-codec", "course": "ISM403", "question": "What is a codec and why does internet broadcasting need one?",
+      "cite_any": ["ISM403-08"], "why": "ordinary lecturer slides" }
+  ]
+}

@@ -50,6 +50,11 @@ export function historyText(content: string): string {
 
 /** The server's first search: the question, plus the previous question for short follow-ups
  *  ("how is that different from a hash index?", "c", "next one"). */
+/** The student names a presentation, a group's work, a brief or a template (PRD F11). */
+export function asksForOtherMaterial(message: string): boolean {
+  return /\b(presentations?|group\s*\d+|groups?['’]s?\s+(work|slides)|briefs?|templates?|handouts?)\b/i.test(message);
+}
+
 export function preSearchQuery(turn: Pick<ChatTurn, "userMessage" | "history">): string {
   const lastUser = [...turn.history].reverse().find((m) => m.role === "user");
   const previous = typeof lastUser?.content === "string" ? lastUser.content : "";
@@ -179,7 +184,9 @@ export async function runChatTurn(turn: ChatTurn) {
   // guarantees grounding (prompting alone didn't: the model sometimes answered from memory) and
   // saves a whole model round trip before the first word (PRD: p95 time to first token <= 3 s).
   // The model can still search again, list topics or read whole materials.
-  const preSearchInput = { query: preSearchQuery(turn) };
+  // Material that isn't lecture content ("other": student presentations, briefs, templates) is
+  // searched only when the student asks for it (PRD F3, F11); the prompt decides how it's used.
+  const preSearchInput = { query: preSearchQuery(turn), ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) };
   const preSearchOutput = await searchSlides.run(ctx, preSearchInput);
   const preSearchId = `presearch_${turn.assistantMessageId}`;
 

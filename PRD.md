@@ -332,6 +332,13 @@ a PDF named `.pptx` still works)
 Past papers are matched on code **and** title: past-paper extraction compares the title printed on
 the paper with the course's title and holds a paper back for review when they don't match.
 
+**Evaluation**: `npm run check:golden` runs 11 ISMS golden cases (`evals/golden/isms.json`: Word
+notes, notebook cells, C# lines, image-only slides, student work asked and not asked, not covered,
+ordinary slides) and checks programme isolation through the app; `supabase/tests/programmes.sql`
+checks it in the database. A search whose results all score below 0.30 similarity tells the model
+`coverage: "none"` (rule 6); a question that names a presentation, group, brief or template also
+searches `other` materials (student work is then labelled).
+
 **Zero past papers** (all ISMS courses for now): no Past questions entry, no Exam map, no chips;
 nothing is shown rather than an error.
 

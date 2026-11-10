@@ -35,3 +35,21 @@ npm --prefix apps/web run build && npm --prefix apps/web run check:agent
 Nine scenarios against `/api/chat`: whole-course question, follow-up, topic chat in-topic and
 off-topic (labelled fallback), not covered, lecture summary, quiz, OCR'd reading, guards
 (daily cap, other student's chat, signed out). About $0.01 per run.
+
+## Golden cases + programme isolation (real model, real slides)
+
+```bash
+npm run check:golden                         # every evals/golden/*.json, then the isolation checks
+GOLDEN=evals/golden/isms.json npm --prefix apps/web run check:golden
+```
+
+`evals/golden/<programme>.json` holds questions and what each answer must cite, by type (PRD F11):
+`cite_any` (material prefixes such as `ISM413-07`), `cite_type` (`docx` section, `notebook` cells,
+`code` lines, `image_only` slide), `student_work` (used and labelled when asked), `no_student_work`
+(never used for ordinary questions), `not_covered` (the "Your slides don't cover this" opening).
+`isms.json`: 11 cases. Then a CS student and an ISMS student each try the other programme's course
+page, slide preview and chat creation (all refused). Temporary students, chats and traces are
+deleted afterwards. About $0.01 per run.
+
+Measured (10 Nov 2026): every case passes; across repeated runs one answer in about nine omitted its
+citation markers (model variance), so a single failed run is re-run before it is treated as a bug.
