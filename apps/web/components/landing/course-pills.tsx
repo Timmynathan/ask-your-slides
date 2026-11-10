@@ -1,12 +1,13 @@
 "use client";
 
-// "Your PAU courses are already here": six fixed pills whose codes take turns, one pill every ~2.2 s
-// (lib/landing-pills.ts). With reduced motion, or six codes or fewer, they simply stay put.
-import { useEffect, useMemo, useState } from "react";
+// "Your PAU courses are already here": six fixed pills whose codes take turns (lib/landing-pills.ts).
+// They start the moment the visitor scrolls or the band comes into view: one swap at once, then one
+// every SWAP_MS. With reduced motion, or six codes or fewer, they simply stay put.
+import { useEffect, useMemo, useRef, useState } from "react";
 import { nextCode, pillQueue, VISIBLE_PILLS } from "@/lib/landing-pills";
 import { courseDot, displayCode } from "@/lib/study/format";
 
-const SWAP_MS = 2200;
+const SWAP_MS = 900;
 
 export function CoursePills({ codes }: { codes: string[] }) {
   const queue = useMemo(() => pillQueue(codes), [codes]);
@@ -16,9 +17,10 @@ export function CoursePills({ codes }: { codes: string[] }) {
     cursor: Math.min(VISIBLE_PILLS, queue.length) - 1, // the queue position shown last
   }));
 
+  const band = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (queue.length <= VISIBLE_PILLS || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = setInterval(() => {
+    const swap = () =>
       setSt((s) => {
         const slot = (s.slot + 1) % s.showing.length;
         const next = nextCode(queue, s.showing, s.cursor);
@@ -27,12 +29,26 @@ export function CoursePills({ codes }: { codes: string[] }) {
         showing[slot] = next.code;
         return { showing, slot, cursor: next.cursor };
       });
-    }, SWAP_MS);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (id) return;
+      swap(); // at once: the visitor sees it move as soon as they scroll
+      id = setInterval(swap, SWAP_MS);
+      window.removeEventListener("scroll", start);
+      observer.disconnect();
+    };
+    const observer = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && start(), { threshold: 0.2 });
+    if (band.current) observer.observe(band.current);
+    window.addEventListener("scroll", start, { passive: true, once: true });
+    return () => {
+      if (id) clearInterval(id);
+      window.removeEventListener("scroll", start);
+      observer.disconnect();
+    };
   }, [queue]);
 
   return (
-    <div className="mt-7 flex flex-wrap justify-center gap-3" data-course-count={queue.length}>
+    <div ref={band} className="mt-7 flex flex-wrap justify-center gap-3" data-course-count={queue.length}>
       {st.showing.map((code, i) => (
         <span
           key={i}

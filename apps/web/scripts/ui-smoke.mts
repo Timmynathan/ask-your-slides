@@ -142,9 +142,10 @@ async function main() {
     check((await pills.count()) === 6 && Number(await band.getAttribute("data-course-count")) === courseCount,
       "landing shows 6 course pills drawn from every PAU course in the database", `${before} of ${courseCount}`);
     check(/CSC \d{3}/.test(before) && /ISM \d{3}/.test(before), "the first pills mix programmes (CSC and ISM)", before);
-    await lp.waitForFunction((b) => [...document.querySelectorAll("[data-course-count] > span")].map((e) => (e as HTMLElement).innerText).join(",") !== b, before, { timeout: 6000 }).catch(() => null);
+    await lp.mouse.wheel(0, 120); // the pills start as soon as the visitor scrolls
+    await lp.waitForFunction((b) => [...document.querySelectorAll("[data-course-count] > span")].map((e) => (e as HTMLElement).innerText).join(",") !== b, before, { timeout: 3000 }).catch(() => null);
     const after = (await pills.allInnerTexts()).join(",");
-    check(after !== before && new Set(after.split(",")).size === 6, "a pill switches to another course within a few seconds, no repeats", after);
+    check(after !== before && new Set(after.split(",")).size === 6, "a pill switches to another course within a second or two, no repeats", after);
     check((await lp.getByRole("img", { name: /ChatGPT|Claude|Gemini/ }).count()) === 3, "comparison shows the ChatGPT, Claude and Gemini logos");
     const banner = lp.getByText("Every PAU course slide, ready to chat with.", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
