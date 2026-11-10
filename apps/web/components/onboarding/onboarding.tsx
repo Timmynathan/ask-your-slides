@@ -226,6 +226,9 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
             <button onClick={() => setStep("partner")} className="mt-3 text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
               Choose someone else
             </button>
+            <p className="mt-6 max-w-sm text-[13px] text-muted">
+              You can switch study partner any time: tap {chosen.name} at the top of My courses or any course.
+            </p>
           </div>
         )}
 

@@ -187,8 +187,14 @@ body {
   50% { transform: translateY(-6px); }
 }
 .float-y { animation: float-y 5s ease-in-out infinite; }
+/* Landing course pills: a code slides up and out, the next slides in (components/landing/course-pills.tsx). */
+@keyframes pill-swap {
+  0% { opacity: 0; transform: translateY(70%); filter: blur(2px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+.pill-swap { animation: pill-swap 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y { animation: none; }
+  .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y, .pill-swap { animation: none; }
 }
 
 /* Brand name and menus (brand spec): Inter 400, 16px / 24px, black. */
@@ -234,12 +240,14 @@ body {
   from { background-position: 120% 0, 0 0; }
   to { background-position: -20% 0, 0 0; }
 }
-.ai-tag {
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);
+/* "Ada found this": a quiet outlined label that fades in (minimal, no gradient or glow). */
+@keyframes ai-tag-in {
+  0% { opacity: 0; transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(-2px); }
 }
+.ai-tag { animation: ai-tag-in 400ms ease-out both; }
 @media (prefers-reduced-motion: reduce) {
-  .demo-highlight, .demo-highlight.is-on { transition: none; animation: none; }
+  .demo-highlight, .demo-highlight.is-on, .ai-tag { transition: none; animation: none; }
 }
 
 /* Hero "more below" cue */

@@ -3,12 +3,12 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
 import { ChatDemo } from "@/components/landing/chat-demo";
+import { CoursePills } from "@/components/landing/course-pills";
 import { TypingBox } from "@/components/landing/typing-box";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
-import { getCatalog, spacedCode } from "@/lib/catalog";
-import { courseDot } from "@/lib/study/format";
+import { getCatalog } from "@/lib/catalog";
 import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
 export const metadata: Metadata = {
@@ -85,18 +85,7 @@ export default async function Landing() {
           <div className="relative mx-auto max-w-6xl px-5 py-12 text-center">
             <p className="font-heading text-2xl font-semibold sm:text-3xl">Your PAU courses are already here</p>
             <p className="mt-2 text-white/75">Same slides as on the e-learning portal. No downloading.</p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
-              {catalog.courseCodes.map((code, i) => (
-                <span
-                  key={code}
-                  className="pop-in inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[15px] font-semibold text-[#0e1664] shadow-lg shadow-black/20 transition-transform hover:-translate-y-0.5"
-                  style={{ animationDelay: `${i * 70}ms` }}
-                >
-                  <span className={`h-2.5 w-2.5 rounded-full ${courseDot(i + 1)}`} aria-hidden />
-                  {spacedCode(code)}
-                </span>
-              ))}
-            </div>
+            <CoursePills codes={catalog.courseCodes} />
           </div>
         </section>
 

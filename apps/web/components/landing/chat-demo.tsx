@@ -596,8 +596,9 @@ function Slide({ highlight }: { highlight: boolean }) {
             A <b>B+ tree index</b> keeps keys <b>sorted</b>, so lookups take O(log n) steps instead of scanning every row.
           </span>
           {highlight && (
-            <span className="ai-tag pop-in ml-2 inline-flex translate-y-[-2px] items-center gap-1 rounded-full px-2 py-0.5 align-middle font-sans text-[10px] font-semibold uppercase tracking-wider text-white sm:text-[11px]">
-              ✦ Ada found this
+            <span className="ai-tag ml-2 inline-flex translate-y-[-2px] items-center gap-1 rounded-full border border-[#0e1664]/20 bg-white px-2 py-px align-middle font-sans text-[10.5px] font-medium text-[#0e1664]/80 sm:text-[12px]">
+              <span className="text-[9px] text-[#5ea3ed] sm:text-[10px]" aria-hidden>✦</span>
+              Ada found this
             </span>
           )}
         </p>

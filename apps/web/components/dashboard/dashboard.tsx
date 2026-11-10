@@ -6,7 +6,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/brand/logo";
+import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
+import type { PartnerId } from "@/lib/partners";
 import { CourseIcon } from "./course-icon";
 import { displayCode } from "@/lib/study/format";
 import { useClickAway } from "@/lib/ui/use-click-away";
@@ -41,9 +43,12 @@ interface Props {
   courses: DashboardCourse[];
   user: { email: string; displayName: string | null };
   resume: { href: string; label: string } | null;
+  partner: PartnerId;
 }
 
-export function Dashboard({ courses, user, resume }: Props) {
+export function Dashboard({ courses, user, resume, partner: initialPartner }: Props) {
+  const [partner, setPartner] = useState<PartnerId>(initialPartner);
+  const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("course");
@@ -131,7 +136,8 @@ export function Dashboard({ courses, user, resume }: Props) {
               <path d="M3 5h14M3 10h14M3 15h14" />
             </ViewButton>
           </div>
-          <AccountMenu user={user} />
+          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} />
+          <AccountMenu user={user} onChangePartner={() => setPickingPartner(true)} />
         </div>
       </header>
 

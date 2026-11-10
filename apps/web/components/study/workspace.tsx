@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LogoMark } from "@/components/brand/logo";
-import { Mascot } from "@/components/mascot/mascot";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
 import { displayCode } from "@/lib/study/format";
 import { courseHref, courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
-import { PartnerPicker } from "./partner-picker";
+import { PartnerSwitch } from "./partner-switch";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
@@ -127,16 +126,8 @@ export function Workspace(data: WorkspaceData) {
           <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
             <path d="M15 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 4 17.5V19M9.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18.5 8v6M21.5 11h-6" />
           </IconButton>
-          <button
-            type="button"
-            onClick={() => setPickingPartner(true)}
-            aria-label={`Studying with ${p.name}. Change study partner`}
-            title={`Studying with ${p.name} · change`}
-            className="grid h-10 w-10 place-items-center rounded-full transition hover:bg-sunken active:scale-90"
-          >
-            <Mascot key={partner} partner={partner} size={32} animated={false} className="pop-in" />
-          </button>
-          <AccountMenu user={data.user} />
+          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} />
+          <AccountMenu user={data.user} onChangePartner={() => setPickingPartner(true)} />
         </div>
       </header>
 
@@ -258,16 +249,6 @@ export function Workspace(data: WorkspaceData) {
         )}
       </div>
 
-      {pickingPartner && (
-        <PartnerPicker
-          current={partner}
-          onClose={() => setPickingPartner(false)}
-          onChanged={(id) => {
-            setPartner(id);
-            setPickingPartner(false);
-          }}
-        />
-      )}
 
     </div>
   );

@@ -135,8 +135,16 @@ async function main() {
     check(manifest?.display === "standalone" && manifest?.icons?.length >= 2, "installable: web app manifest with icons");
     const { data: codeRows } = await admin.from("courses").select("code");
     const courseCount = new Set((codeRows ?? []).map((c) => c.code)).size; // one chip per code, even if several programmes share it
-    const chips = await lp.getByText("Your PAU courses are already here").locator("..").locator("span.rounded-full").filter({ hasText: /^[A-Z]{3} \d{3}$/ }).count();
-    check(chips === courseCount, "landing shows every PAU course from the database", `${chips} chips, ${courseCount} courses`);
+    // Six pills that take turns through every course (CSC, INS, ISM… mixed from the start).
+    const band = lp.locator("[data-course-count]");
+    const pills = band.locator(":scope > span");
+    const before = (await pills.allInnerTexts()).join(",");
+    check((await pills.count()) === 6 && Number(await band.getAttribute("data-course-count")) === courseCount,
+      "landing shows 6 course pills drawn from every PAU course in the database", `${before} of ${courseCount}`);
+    check(/CSC \d{3}/.test(before) && /ISM \d{3}/.test(before), "the first pills mix programmes (CSC and ISM)", before);
+    await lp.waitForFunction((b) => [...document.querySelectorAll("[data-course-count] > span")].map((e) => (e as HTMLElement).innerText).join(",") !== b, before, { timeout: 6000 }).catch(() => null);
+    const after = (await pills.allInnerTexts()).join(",");
+    check(after !== before && new Set(after.split(",")).size === 6, "a pill switches to another course within a few seconds, no repeats", after);
     check((await lp.getByRole("img", { name: /ChatGPT|Claude|Gemini/ }).count()) === 3, "comparison shows the ChatGPT, Claude and Gemini logos");
     const banner = lp.getByText("Every PAU course slide, ready to chat with.", { exact: false }).first();
     const bannerBg = await banner.evaluate((el) => getComputedStyle(el.parentElement!).backgroundColor);
@@ -293,6 +301,22 @@ async function main() {
       await op.waitForURL(/\/study\//);
       await op.getByRole("button", { name: /Studying with/ }).waitFor();
       check(await op.getByRole("button", { name: /Studying with Tobi/ }).isVisible(), "Tobi is the partner in the study workspace");
+      // Switching partner is easy to find: a labelled pill, a first-visit hint, and the account menu.
+      const pill = op.getByRole("button", { name: /Studying with Tobi/ });
+      check((await pill.innerText()).includes("Tobi"), "the partner button names the partner (not just a face)", await pill.innerText());
+      // Only what's on screen: Next keeps the previous page (My courses) mounted, hidden.
+      const tip = op.locator("div[role=status]:visible", { hasText: "Tap here to switch study partners any time" });
+      check(await tip.isVisible(), "a first-visit hint says the partner can be switched");
+      await op.locator("button:visible", { hasText: "Got it" }).click();
+      check(!(await tip.count()), "'Got it' dismisses the hint");
+      await op.reload();
+      await pill.waitFor();
+      check(!(await tip.count()), "the hint doesn't come back after a reload");
+      await op.getByRole("button", { name: "Account" }).click();
+      await op.getByRole("button", { name: "Change study partner", exact: true }).click();
+      await op.getByRole("dialog").getByText(/Ada/).first().waitFor({ timeout: 5000 });
+      check(true, "the account menu has 'Change study partner'");
+      await op.keyboard.press("Escape");
       check(await op.getByText(/Tolu/).first().isVisible(), "partner greets the student by name in an empty chat");
       await shot(op, "9-study-empty-tobi");
       const { data: prof } = await admin.from("profiles").select("study_partner, onboarded, display_name, programme, level, department").eq("email", newbie).single();
@@ -689,7 +713,11 @@ async function main() {
       await chip.click();
       const img = wp.locator("aside[role='dialog'] img").first();
       await img.waitFor({ timeout: 15000 });
-      check((await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 500)) === true, "the viewer shows the real page of the Word document");
+      const loaded = await img.evaluate((el: HTMLImageElement) => new Promise<boolean>((resolve) => {
+        const ok = () => resolve(el.complete && el.naturalWidth > 500);
+        if (el.complete) ok(); else { el.addEventListener("load", ok, { once: true }); el.addEventListener("error", () => resolve(false), { once: true }); setTimeout(ok, 20000); }
+      }));
+      check(loaded, "the viewer shows the real page of the Word document");
       check(await wp.locator("aside[role='dialog']").getByText(/Lecture notes ·/).isVisible(), "the viewer's header names the section");
       await shot(wp, "word-notes-viewer");
       await wp.close();

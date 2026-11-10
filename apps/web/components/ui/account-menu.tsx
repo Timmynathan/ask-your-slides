@@ -8,7 +8,7 @@ import { DeleteAccountDialog } from "./delete-account-dialog";
 import { ProgrammeDialog } from "./programme-dialog";
 import { SignOutButton } from "./sign-out-button";
 
-export function AccountMenu({ user }: { user: { email: string; displayName: string | null } }) {
+export function AccountMenu({ user, onChangePartner }: { user: { email: string; displayName: string | null }; onChangePartner?: () => void }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [changing, setChanging] = useState(false);
@@ -30,6 +30,18 @@ export function AccountMenu({ user }: { user: { email: string; displayName: stri
           {user.displayName && <p className="truncate font-medium text-ink">{user.displayName}</p>}
           <p className="truncate text-muted">{user.email}</p>
           <div className="mt-3 border-t border-line pt-3">
+            {onChangePartner && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  onChangePartner();
+                }}
+                className="mb-2 block px-1 text-left text-ink hover:underline"
+              >
+                Change study partner
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {

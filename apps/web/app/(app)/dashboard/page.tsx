@@ -50,6 +50,7 @@ async function Loaded() {
   return (
     <Dashboard
       courses={list}
+      partner={profile.study_partner}
       user={{ email: user.email ?? "", displayName: profile.display_name ?? null }}
       resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
     />
