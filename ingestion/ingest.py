@@ -446,7 +446,7 @@ def main() -> int:
     ap.add_argument("--force", action="store_true", help="re-process materials even if unchanged (vision stays cached)")
     ap.add_argument("--no-vision", action="store_true", help="skip vision calls (text only)")
     ap.add_argument("--remove-course", metavar="COURSE", help="delete a course (programme/CODE if the code is in several programmes) with all its rows and images")
-    ap.add_argument("--workers", type=int, default=8, help="parallel vision calls")
+    ap.add_argument("--workers", type=int, default=4, help="parallel vision calls (4 stays under 500K input tokens/min)")
     args = ap.parse_args()
 
     try:

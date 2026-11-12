@@ -13,6 +13,7 @@ import base64
 import hashlib
 import json
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -134,6 +135,20 @@ def _save(path: Path, data: dict) -> None:
         path.write_text(json.dumps(data))
 
 
+def _create_waiting_out_rate_limits(**kw):
+    """A 429 (tokens-per-minute limit) is waited out, not fatal: a big course sends hundreds of pages,
+    and the SDK's own retries give up after ~1 minute. Waits the server's retry-after, else 30 s."""
+    for attempt in range(20):
+        try:
+            return _get_client().messages.create(**kw)
+        except anthropic.RateLimitError as e:
+            if attempt == 19:
+                raise
+            wait = float(e.response.headers.get("retry-after") or 30)
+            time.sleep(min(max(wait, 5), 90))
+    raise AssertionError("unreachable")
+
+
 def _call(png: bytes, prompt: str, max_tokens: int, model: str = VISION_MODEL, math: bool = False) -> VisionResult:
     path = _prompt_path(png, prompt, model, math)
     if path.is_file():
@@ -141,7 +156,7 @@ def _call(png: bytes, prompt: str, max_tokens: int, model: str = VISION_MODEL, m
         return VisionResult(text=data["text"], cached=True, refused=data.get("refused", False), note=data.get("note", ""))
 
     try:
-        response = _get_client().messages.create(
+        response = _create_waiting_out_rate_limits(
             model=model,
             max_tokens=max_tokens,
             # A description is a perception task; thinking adds cost and latency, not accuracy.
