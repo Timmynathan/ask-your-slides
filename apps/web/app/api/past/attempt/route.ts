@@ -9,6 +9,7 @@ import type { CitationInfo } from "@/lib/study/format";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
+import { admitChatTurn } from "@/lib/plans/gate";
 
 // POST /api/past/attempt (PRD F10 B)
 //   {question_id, answer}         written: marked by CHAT_MODEL against the scheme (counts towards the daily cap)
@@ -18,18 +19,12 @@ import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
-const DAILY_LIMIT_MESSAGE = "Daily limit reached. Resets at midnight (WAT).";
 const USD_PER_MTOK = { input: 0.1, output: 0.5 }; // Claude Haiku 5.5, as in lib/agent/run.ts
 
 const Body = z.union([
   z.object({ question_id: z.string().uuid(), reveal: z.literal(true) }),
   z.object({ question_id: z.string().uuid(), answer: z.string().trim().min(1, "Write an answer first.").max(8000, "That answer is too long.") }),
 ]);
-
-function dailyCap() {
-  const n = Number(process.env.DAILY_MESSAGE_CAP);
-  return Number.isFinite(n) && n > 0 ? n : 50;
-}
 
 type Full = PastQuestion & {
   course_id: string;
@@ -90,10 +85,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ mode: "mcq", correct, score, ...reveal });
   }
 
-  // Written: one model call, counted like a chat message.
-  const cap = dailyCap();
-  const [usage] = must(await db.rpc("consume_message", { p_user_id: auth.user.id, p_cap: cap })) as { allowed: boolean; used: number }[];
-  if (!usage.allowed) return NextResponse.json({ error: DAILY_LIMIT_MESSAGE, remaining: 0 }, { status: 429 });
+  // Written: one model call, counted like a chat message (daily and premium-course caps, PRD F12).
+  const { data: courseRow } = await db.from("courses").select("premium").eq("id", q.course_id).single();
+  const gate = await admitChatTurn(db, { userId: auth.user.id, courseId: q.course_id, premium: !!courseRow?.premium, message: "", kind: "marking" });
+  if (!gate.ok) return NextResponse.json(gate.refusal.body, { status: gate.refusal.status });
 
   const scheme = normaliseScheme(q.marking_scheme, max);
   const [{ data: course }, { data: paper }] = await Promise.all([
@@ -123,7 +118,7 @@ export async function POST(request: Request) {
       providerOptions: { anthropic: { thinking: { type: "disabled" } } },
     });
   } catch (e) {
-    await db.rpc("refund_message", { p_user_id: auth.user.id });
+    await gate.turn.refund();
     console.error("marking failed", e);
     return NextResponse.json({ error: "Couldn't mark that just now. Try again." }, { status: 502 });
   }
@@ -153,7 +148,7 @@ export async function POST(request: Request) {
       .then(must),
   ]);
 
-  return NextResponse.json({ mode: "marked", score, feedback, remaining: Math.max(0, cap - usage.used), ...reveal });
+  return NextResponse.json({ mode: "marked", score, feedback, remaining: gate.turn.remaining, ...reveal });
 }
 
 /** Chip details for the slides a model answer cites (same chips as chat). */

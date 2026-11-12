@@ -9,6 +9,8 @@ export interface CourseItem {
   elective?: boolean;
   /** false: a placeholder code (IOH-ETHICS); only the title is shown. */
   code_confirmed?: boolean;
+  /** PRD F12: Free students get a few questions a day on it (per programme). */
+  premium?: boolean;
 }
 
 export interface TopicItem {

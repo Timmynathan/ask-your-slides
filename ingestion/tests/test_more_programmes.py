@@ -102,3 +102,20 @@ def test_calculation_heavy_must_be_boolean(tmp_path: Path):
     make_course(tmp_path, "ACC404", [row(1, "slides/01-a.pdf")], programme="accounting", info={"calculation_heavy": "yes", "aliases": []})
     with pytest.raises(ManifestError, match="calculation_heavy must be true or false"):
         load(tmp_path)
+
+
+def test_premium_flag_is_per_programme(tmp_path: Path):
+    # PRD F12: CSC409 is premium in Software Engineering, not in Computer Science.
+    make_catalog(tmp_path, {"computer-science": ["CSC409"], "software-engineering": ["CSC409"]})
+    make_course(tmp_path, "CSC409", [row(1, "slides/01-a.pdf")], programme="computer-science")
+    make_course(tmp_path, "CSC409", [row(1, "slides/01-a.pdf")], programme="software-engineering", info={"premium": True})
+    by_programme = {c.programme: c for c in load(tmp_path)}
+    assert by_programme["software-engineering"].premium is True
+    assert by_programme["computer-science"].premium is False  # default
+
+
+def test_premium_must_be_boolean(tmp_path: Path):
+    make_catalog(tmp_path, {"computer-science": ["CSC402"]})
+    make_course(tmp_path, "CSC402", [row(1, "slides/01-a.pdf")], info={"premium": "yes"})
+    with pytest.raises(ManifestError, match="premium must be true or false"):
+        load(tmp_path)

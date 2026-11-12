@@ -7,6 +7,8 @@ import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { resolveCourse } from "@/lib/study/course-link";
+import { planState, usageNow } from "@/lib/plans/entitlement";
+import { adminClient } from "@/lib/supabase/admin";
 import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 
 export const metadata: Metadata = { title: "Ask Your Slides" };
@@ -23,10 +25,9 @@ async function Loaded({ params, searchParams }: Props) {
   const code = rawCode.toUpperCase();
   const { supabase, user } = await requireUser();
 
-  const [{ data: courses }, { data: profile, error: profileError }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }] = await Promise.all([
-    supabase.from("courses").select("id, code, code_confirmed, programme, department, title, sort_order, elective").order("sort_order"),
+  const [{ data: courses }, { data: profile, error: profileError }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }] = await Promise.all([
+    supabase.from("courses").select("id, code, code_confirmed, programme, department, title, sort_order, elective, premium").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, department, programme").eq("id", user.id).single(),
-    supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
     // Every programme's course with this code; narrowed to the chosen one below.
@@ -54,7 +55,16 @@ async function Loaded({ params, searchParams }: Props) {
   const initialChat = sp.chat ? chatList.find((c) => c.id === sp.chat && c.course_id === course.id) ?? null : null;
   const topicFromUrl = sp.topic ? topics.find((t) => t.course_id === course.id && String(t.order) === sp.topic) ?? null : null;
   const past = pastCounts(course.id, (pastRows ?? []) as { id: string; parent_id: string | null; course_id: string }[], pastTopics ?? []);
-  const cap = Number(process.env.DAILY_MESSAGE_CAP) > 0 ? Number(process.env.DAILY_MESSAGE_CAP) : 50;
+  // Plan limits (PRD F12): what this student can still send in this course today.
+  const db = adminClient();
+  const now = new Date();
+  const plan = await usageNow(db, await planState(db, user.id, now), {
+    userId: user.id,
+    courseId: course.id,
+    premium: !!course.premium,
+    now,
+  });
+  const cap = plan.used + plan.left;
 
   return (
     <Workspace
@@ -67,7 +77,7 @@ async function Loaded({ params, searchParams }: Props) {
       initialChatId={initialChat?.id ?? null}
       user={{ id: user.id, email: user.email ?? "", displayName: profile?.display_name ?? null }}
       partner={profile.study_partner}
-      usage={{ used: (used as number | null) ?? 0, cap }}
+      usage={{ used: plan.used, cap }}
       pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
       past={past}
       initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}

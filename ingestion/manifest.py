@@ -105,6 +105,7 @@ class Course:
     elective: bool = False
     code_confirmed: bool = True  # False: a placeholder code; the app shows only the title
     calculation_heavy: bool = False  # worked calculations: calculator tools in chat, maths prompt for formula pages
+    premium: bool = False  # PRD F12: Free students get a few questions a day on it (per programme)
 
     @property
     def key(self) -> str:
@@ -270,6 +271,8 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         problems.append(f"{where}: {expect['code']} is a placeholder code; add code_confirmed: false to course.yaml")
     if not isinstance(info.get("calculation_heavy", False), bool):
         problems.append(f"{where}: calculation_heavy must be true or false")
+    if not isinstance(info.get("premium", False), bool):
+        problems.append(f"{where}: premium must be true or false")
     lms_id = info.get("lms_course_id")
     if lms_id is not None and not isinstance(lms_id, int):
         problems.append(f"{where}: lms_course_id must be a number")
@@ -353,6 +356,7 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         sort_order=sort_order, dir=course_dir, elective=info.get("elective") is True,
         code_confirmed=info.get("code_confirmed", True) is not False,
         calculation_heavy=info.get("calculation_heavy") is True,
+        premium=info.get("premium") is True,
         topics=tuple(sorted(topics, key=lambda t: t.order)),
         materials=tuple(sorted(materials, key=lambda m: m.order)),
         skipped=tuple(skipped), past_papers=past_papers,

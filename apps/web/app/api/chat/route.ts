@@ -6,10 +6,11 @@ import { isPartnerId, PARTNERS } from "@/lib/partners";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { SLIDE_KEY_RE } from "@/lib/study/course-code";
+import { admitChatTurn, LIMIT_MESSAGES } from "@/lib/plans/gate";
 
 export const maxDuration = 60;
 
-export const DAILY_LIMIT_MESSAGE = "Daily limit reached. Resets at midnight (WAT).";
+export const DAILY_LIMIT_MESSAGE = LIMIT_MESSAGES.daily_cap;
 
 const Body = z.object({
   conversation_id: z.string().uuid(),
@@ -31,11 +32,6 @@ const Body = z.object({
 
 const EDIT_GONE_MESSAGE = "That question can't be edited any more. Refresh the page and try again.";
 
-function dailyCap() {
-  const n = Number(process.env.DAILY_MESSAGE_CAP);
-  return Number.isFinite(n) && n > 0 ? n : 50;
-}
-
 export async function POST(request: Request) {
   const startedAt = Date.now();
   const supabase = await createClient();
@@ -53,11 +49,11 @@ export async function POST(request: Request) {
   // from this row, never from the request body.
   const { data: convo } = await supabase
     .from("conversations")
-    .select("id, title, course_id, topic_id, courses(code, code_confirmed, calculation_heavy, title, department), topics(title)")
+    .select("id, title, course_id, topic_id, courses(code, code_confirmed, calculation_heavy, premium, title, department), topics(title)")
     .eq("id", conversationId)
     .maybeSingle();
   if (!convo) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
-  const course = convo.courses as unknown as { code: string; code_confirmed: boolean; calculation_heavy: boolean; title: string; department: string };
+  const course = convo.courses as unknown as { code: string; code_confirmed: boolean; calculation_heavy: boolean; premium: boolean; title: string; department: string };
   const topic = convo.topics as unknown as { title: string } | null;
 
   // Editing: the question must be one of the student's own, in this chat (RLS + the filters).
@@ -78,11 +74,10 @@ export async function POST(request: Request) {
   const partner = isPartnerId(profile?.study_partner) ? PARTNERS[profile.study_partner] : null;
 
   const db = adminClient();
-  const cap = dailyCap();
-  const [usage] = must(await db.rpc("consume_message", { p_user_id: auth.user.id, p_cap: cap })) as { allowed: boolean; used: number }[];
-  if (!usage.allowed) {
-    return NextResponse.json({ error: DAILY_LIMIT_MESSAGE, remaining: 0 }, { status: 429 });
-  }
+  // Plan limits (PRD F12), on the server: quiz/summary locks, daily and premium-course caps.
+  const gate = await admitChatTurn(db, { userId: auth.user.id, courseId: convo.course_id, premium: course.premium, message });
+  if (!gate.ok) return NextResponse.json(gate.refusal.body, { status: gate.refusal.status });
+  const admitted = gate.turn;
 
   let editsFirstQuestion = false;
   if (editFrom) {
@@ -144,6 +139,8 @@ export async function POST(request: Request) {
     startedAt,
     // Only a key of this chat's course (the conversation row decides the course, never the body).
     focusSlide: focusSlide?.startsWith(`${course.code}-`) ? focusSlide : undefined,
+    planNote: admitted.planNote,
+    refund: admitted.refund,
   });
 
   // Finish (and save) the answer even if the student closes the tab mid-stream.
@@ -154,7 +151,7 @@ export async function POST(request: Request) {
       stream: result.stream,
       generateMessageId: () => assistantMessageId,
       messageMetadata: ({ part }) =>
-        part.type === "finish" ? { ...summary(), remaining: Math.max(0, cap - usage.used) } : undefined,
+        part.type === "finish" ? { ...summary(), remaining: admitted.remaining, plan: admitted.state.plan } : undefined,
       onError: () => "Something went wrong while answering. Please try again.",
     }),
   });

@@ -42,6 +42,10 @@ export interface ChatTurn {
   abortSignal?: AbortSignal;
   /** "Ask about this…" from the viewer: this exact slide/section/code part (a key of this course). */
   focusSlide?: string;
+  /** What the student's plan doesn't allow (PRD F12), for the model. */
+  planNote?: string | null;
+  /** Gives back what the plan gate took when the turn produced nothing. */
+  refund?: () => Promise<void>;
 }
 
 export interface TurnSummary {
@@ -249,7 +253,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null)].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null)].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
@@ -307,7 +311,8 @@ export async function runChatTurn(turn: ChatTurn) {
       await db.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", turn.conversationId);
     } else {
       // Nothing reached the student: don't charge them for it.
-      await db.rpc("refund_message", { p_user_id: turn.userId });
+      if (turn.refund) await turn.refund();
+      else await db.rpc("refund_message", { p_user_id: turn.userId });
       errors.push({ code: "empty_answer", detail: "no text produced; message refunded" });
     }
 

@@ -216,8 +216,7 @@ The primary signal is **direct student feedback**: students say it helped, and t
 
 ### F8. Usage cap
 
-- Each student has a daily cap of **50 messages** (configurable).
-- When a student reaches the cap, the input is disabled with the message "Daily limit reached. Resets at midnight (WAT)."
+Replaced by **F12 Plans and payments** (Nov 2026): the daily cap now depends on the plan.
 
 ### F9. Admin and operations (no UI in MVP)
 
@@ -386,6 +385,86 @@ pictures with no text; some solutions were done "on the board"; the model does a
    (20 cases). Each checks the answer states the slide's numbers (within its rounding) and that they
    came from a tool in that turn (`traces.tool_calls[].detail.values`).
 Calculation courses get 10 steps per turn (others 6).
+
+
+### F12. Plans and payments (launch, Monday 16 Nov 2026)
+
+Two plans. The chat stays on Claude Haiku for everyone; plans change limits, not the model.
+Every number, price and date below lives in one file: `apps/web/lib/plans/config.ts`. The server
+enforces every limit; the UI only displays what the server says.
+
+**Free (forever)**
+- Messages: `FREE_FIRST_DAY` (20) on the account's first day, then `FREE_DAILY` (5) a day.
+- Every course in the student's programme is open. **Premium courses** are limited:
+  `PREMIUM_FREE_FIRST_DAY` (8) questions per premium course on the first day, then
+  `PREMIUM_FREE_DAILY` (2) per premium course a day. These count inside the daily cap.
+- Summaries: `FREE_SUMMARIES` (1) in total, ever, in any course.
+- Quiz mode: locked.
+
+**Finals (one-time payment, no renewal)**
+- Price: ₦3,000 (`FINALS_PRICE_EARLY`) until `PRICE_CHANGE_DATE` (22 Nov 2026, 23:59 Lagos),
+  then ₦5,000 (`FINALS_PRICE`). The server decides the price when checkout starts.
+- Messages: `FINALS_DAILY` (40) a day; no premium-course limit; unlimited summaries; quiz mode.
+- Valid until `PLAN_END_DATE` (the last first-semester paper; owner sets it before launch). The
+  student then falls back to Free.
+
+**Rules**
+- A "day" is a calendar day in Africa/Lagos; limits reset at midnight Lagos time.
+- "First day" = the Lagos calendar day the account was created (`profiles.created_at`).
+- Students who joined during the pilot are past their first day: they get 5 a day on Free.
+- A message refused by a limit is not counted. A turn that fails before any answer text is refunded
+  (both the daily and the premium-course count).
+- Summary and quiz requests are recognised on the server from the student's message (the starter
+  buttons send fixed wording). A Free student who has used their summary, or asks for a quiz, is
+  refused before the model runs. The prompt also tells the model not to quiz or summarise on Free
+  when those are locked, as a second line of defence.
+
+**Premium courses**: `premium: true|false` (default false) in each programme's own `course.yaml`, so
+the same code can be premium in one programme and not another (CSC409: premium in Software
+Engineering, not in Computer Science). Launch set (programme → courses): computer-science CSC402,
+INS401; software-engineering CSC409, INS401; information-science-and-media-studies ISM413, ISM411;
+mass-communication CMS401, MCM409; film-and-multimedia-studies FMM405, CMS401;
+business-administration BUA402, BUA-COMPANY-LAW; economics ECO-ADV-ECONOMETRICS, ECO401; finance
+FIN411, FIN413; accounting ACC407, ACC401; mechanical-engineering GET501, MEE521.
+Free students see a "Premium" badge and "N free questions left today" on these.
+
+**Limits in the UI**: when a limit is hit (daily cap, premium-course cap, summary used, quiz
+tapped) a pricing sheet opens, with the reset time where relevant and a "Get Finals" button. Every
+limit/lock event is logged (`limit_events`: user, plan, course, feature, time).
+
+**Payments (Paystack)**: one-time payment by card, bank transfer or USSD. The plan is granted only
+after server-side verification: the Paystack webhook (HMAC-SHA512 signature checked) and/or the
+verify endpoint, never the browser redirect alone. Granting is idempotent on the Paystack
+reference, and the amount paid must match the amount the server set at checkout. Test keys until
+the owner says go live; keys live only in env vars (`PAYSTACK_SECRET_KEY`).
+Optional referral code at checkout (no discount), stored on the payment; the `referral_stats` view
+shows paid count and revenue per code. `npm run plans:comp -- <email>` grants Finals for free to
+testers and influencers (`source: comp`).
+
+**Tables**: `entitlements` (user_id, plan, starts_at, ends_at, source paystack|comp,
+paystack_reference), `payments` (amount, reference, status, referral_code, raw event),
+`referral_codes`, `limit_events`, plus `usage_course_daily` (premium-course counts) and
+`summary_uses` (lifetime summaries).
+
+**Pricing page (in the app)** and a **Plans section on the landing page** (after "How it works",
+before the final call to action; "Pricing" in the nav): Free vs Finals, Finals highlighted, early
+price with ₦5,000 struck through and a countdown until `PRICE_CHANGE_DATE`, a feature comparison,
+"Premium courses are the heaviest courses in your programme.", and "One-time payment. No
+subscription. Pay with card, transfer or USSD." All figures come from the plans config.
+
+**Acceptance**
+- Free: 20 on day one, 5 after; premium course 8 on day one and 2 after, inside the daily cap;
+  second summary refused; quiz refused.
+- Premium flag respected per programme (same code, different flag).
+- Finals: 40 a day, no premium limit, summaries and quiz allowed; stops at `PLAN_END_DATE`.
+- Price ₦3,000 before `PRICE_CHANGE_DATE` and ₦5,000 after: on the server, the pricing page and the
+  landing page.
+- A replayed webhook or a forged signature never grants a plan.
+- Limits reset at midnight Lagos time.
+
+**Build phases**: (1) config, premium flags, entitlements, server-side limits; (2) Paystack
+checkout, webhook, verify (test mode); (3) pricing page, limit UI, badges, referral field, comp
+script, landing Plans section; (4) phone test with a Paystack test card, go-live checklist.
 
 ---
 
