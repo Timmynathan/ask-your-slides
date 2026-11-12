@@ -76,7 +76,7 @@ export function PricingSheet({
             ))}
           </ul>
           <div className="mt-5">
-            <CheckoutButton price={offer.price} />
+            <CheckoutButton price={offer.price} open={!!offer.paymentsOpen} />
           </div>
           <p className="mt-3 text-center text-[12px] text-muted">One-time {naira(offer.price)}. No subscription. Card, transfer or USSD.</p>
         </div>

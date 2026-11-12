@@ -465,6 +465,28 @@ subscription. Pay with card, transfer or USSD." All figures come from the plans 
 **Build phases**: (1) config, premium flags, entitlements, server-side limits; (2) Paystack
 checkout, webhook, verify (test mode); (3) pricing page, limit UI, badges, referral field, comp
 script, landing Plans section; (4) phone test with a Paystack test card, go-live checklist.
+Phases 1–3 built (Nov 2026). Until a Paystack key is set, every "Get Finals" button says
+"Payments open soon" and checkout refuses without creating a payment. The owner's /admin page has
+a Plans section: Finals sold, revenue, active plans (paid / comp), referral codes, limit hits.
+
+**Phase 4: test on a phone (Paystack test mode)**
+1. Paystack dashboard (Test mode): copy the test secret key into `apps/web/.env.local` and into
+   Vercel as `PAYSTACK_SECRET_KEY`; set the test webhook URL to
+   `https://askyourslides.com/api/pay/webhook`. Redeploy.
+2. On a phone, signed in as a Free test student: hit a limit (or tap Quiz me), "Get Finals", type a
+   referral code, pay with one of Paystack's test cards (Paystack docs, "Test payments").
+3. Expect: back on /pay/return, "You're on Finals"; Quiz me works; no Premium badges; /admin shows
+   1 sold and the referral code. Also try a failed test card (no plan granted) and a test bank
+   transfer (Finals switches on when the transfer lands).
+4. Webhook check: Paystack dashboard → the payment → webhook delivered with 200.
+
+**Go-live checklist**
+- [ ] `PLAN_END_DATE` in `apps/web/lib/plans/config.ts` = the last first-semester paper (23:59 Lagos).
+- [ ] Paystack business verified; live secret key in Vercel as `PAYSTACK_SECRET_KEY`, plus `PAYSTACK_LIVE=1`.
+- [ ] Live webhook URL `https://askyourslides.com/api/pay/webhook` set in the Paystack dashboard (Live mode).
+- [ ] Redeploy; one real ₦ payment by the owner (then refund it in Paystack if wanted), check /admin.
+- [ ] Referral codes for influencers agreed (any code is recorded; `referral_codes` is optional).
+- [ ] Comp plans for testers: `npm run plans:comp -- <email> --note "…"`.
 
 ---
 

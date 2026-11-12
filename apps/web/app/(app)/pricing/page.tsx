@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/session";
 import { TIME_ZONE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
+import { paymentsOpen } from "@/lib/plans/paystack";
 import { adminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Plans · Ask Your Slides" };
@@ -67,7 +68,7 @@ async function Loaded({ searchParams }: { searchParams: Promise<{ checkout?: str
                   Go to my courses
                 </Link>
               ) : (
-                <CheckoutButton price={offer.price} autoFocus={checkout} openReferral={checkout} />
+                <CheckoutButton price={offer.price} open={paymentsOpen()} autoFocus={checkout} openReferral={checkout} />
               )
             }
           />

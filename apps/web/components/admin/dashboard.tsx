@@ -4,6 +4,7 @@
 // daily charts), Feedback (every thumbs down with the question and answer), Answers (latest
 // answers with cost, speed, tools, citations, errors), Courses, Students, Health (slowest,
 // costliest, error codes). Read-only. Data: public.admin_overview() via the server.
+import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -55,6 +56,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 const SECTIONS = [
   ["overview", "Overview"],
+  ["plans", "Plans"],
   ["feedback", "Feedback"],
   ["answers", "Answers"],
   ["courses", "Courses"],
@@ -62,7 +64,7 @@ const SECTIONS = [
   ["health", "Health"],
 ] as const;
 
-export function AdminDashboard({ data, range, email }: { data: Overview; range: Range; email: string }) {
+export function AdminDashboard({ data, plans, range, email }: { data: Overview; plans: PlanStats; range: Range; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const t = data.totals;
@@ -129,7 +131,7 @@ export function AdminDashboard({ data, range, email }: { data: Overview; range: 
             <Tile label="Time to first word" value={secs(t.avg_ttft_ms)} sub="average" />
             <Tile label="Slowest 5% of answers" value={secs(t.p95_latency_ms)} sub="p95 full answer" />
             <Tile label="Answers with errors" value={pct(t.answers_with_errors, t.answers)} sub={`${n(t.answers_with_errors)} of ${n(t.answers)}`} warn={t.answers > 0 && t.answers_with_errors / t.answers > 0.05} />
-            <Tile label="Daily limit reached" value={n(t.cap_hits)} sub="student-days at the cap" />
+            <Tile label="Limits reached" value={n(plans.limits.reduce((s, l) => s + l.hits, 0))} sub="daily, premium, summary, quiz" />
             <Tile label="Feedback given" value={n(rated)} sub={pct(rated, t.answers) + " of answers rated"} />
             <Tile label="Cost per student" value={usd(t.active_students ? t.cost_usd / t.active_students : 0)} sub="per active student" />
           </div>
@@ -159,6 +161,7 @@ export function AdminDashboard({ data, range, email }: { data: Overview; range: 
           </div>
         </section>
 
+        <Plans plans={plans} />
         <Feedback data={data} />
         <Answers data={data} />
 
@@ -395,6 +398,45 @@ function Students({ data }: { data: Overview }) {
         ])}
         empty="No students yet."
       />
+    </section>
+  );
+}
+
+const LIMIT_LABEL: Record<string, string> = {
+  daily_cap: "Daily limit",
+  premium_cap: "Premium-course limit",
+  summary: "Second summary (Free)",
+  quiz: "Quiz mode (Free)",
+};
+
+/** PRD F12: what Finals is earning, who referred it, and which limits push students to the sheet. */
+function Plans({ plans: p }: { plans: PlanStats }) {
+  return (
+    <section id="plans" className="scroll-mt-24 space-y-4">
+      <SectionTitle title="Plans" note="Payments and limit hits in the period; active plans right now." />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Tile label="Finals sold" value={n(p.paid)} sub={`${n(p.pending)} checkout${p.pending === 1 ? "" : "s"} not finished`} />
+        <Tile label="Revenue" value={`₦${n(p.revenueNaira)}`} sub="paid through Paystack" />
+        <Tile label="Finals active now" value={n(p.activeFinals.paystack + p.activeFinals.comp)} sub={`${n(p.activeFinals.paystack)} paid · ${n(p.activeFinals.comp)} free (comp)`} />
+        <Tile label="Students who hit a limit" value={n(Math.max(0, ...p.limits.map((l) => l.students)))} sub="most for any one limit" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card title="Limits reached">
+          <Table
+            compact
+            head={["Limit", "Times", "Students"]}
+            rows={p.limits.map((l) => [LIMIT_LABEL[l.feature] ?? l.feature, n(l.hits), n(l.students)])}
+          />
+        </Card>
+        <Card title="Referral codes (all time)">
+          <Table
+            compact
+            empty="No payments yet."
+            head={["Code", "Paid", "Revenue", "Not finished"]}
+            rows={p.referrals.map((r) => [r.code, n(r.paid), `₦${n(r.revenue)}`, n(r.pending)])}
+          />
+        </Card>
+      </div>
     </section>
   );
 }

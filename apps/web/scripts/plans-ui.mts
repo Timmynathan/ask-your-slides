@@ -75,7 +75,8 @@ try {
     const sheet = page.getByRole("dialog");
     await sheet.waitFor({ timeout: 15000 });
     check(await sheet.getByText("Quiz mode comes with Finals").isVisible(), "Quiz me → pricing sheet");
-    check(await sheet.getByRole("button", { name: /Get Finals/ }).isVisible(), "sheet has Get Finals");
+    const closed = await sheet.getByRole("button", { name: "Payments open soon" }).isVisible();
+    check(closed || (await sheet.getByRole("button", { name: /Get Finals/ }).isVisible()), closed ? "sheet: Payments open soon (no Paystack key yet)" : "sheet has Get Finals");
     await shot(page, `${label}-sheet-quiz`);
     await sheet.getByRole("button", { name: "Maybe later" }).click();
     const { data: used } = await admin.from("usage_daily").select("message_count").eq("user_id", userId).maybeSingle();
@@ -95,8 +96,12 @@ try {
 
     // Pricing page, as after "Get Finals" on the landing page.
     await page.goto(`${BASE}/pricing?checkout=1`, { waitUntil: "networkidle" });
-    check(await page.getByLabel("Referral code (optional)").isVisible(), "pricing ?checkout=1 opens the referral field");
-    check(await page.getByRole("button", { name: /Get Finals · ₦/ }).isVisible(), "pricing: Get Finals with the price");
+    if (await page.getByRole("button", { name: "Payments open soon" }).isVisible()) {
+      check(await page.getByRole("button", { name: "Payments open soon" }).isDisabled(), "pricing: Payments open soon (no Paystack key yet), disabled");
+    } else {
+      check(await page.getByLabel("Referral code (optional)").isVisible(), "pricing ?checkout=1 opens the referral field");
+      check(await page.getByRole("button", { name: /Get Finals · ₦/ }).isVisible(), "pricing: Get Finals with the price");
+    }
     await shot(page, `${label}-pricing`, true);
     await ctx.close();
   }

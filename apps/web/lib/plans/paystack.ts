@@ -24,6 +24,17 @@ export function secretKey(): string {
   return key;
 }
 
+/** Payments can start: a key is set (and a live key only with PAYSTACK_LIVE=1). Until then the
+ *  buttons say "Payments open soon" and checkout refuses without creating anything. */
+export function paymentsOpen(): boolean {
+  try {
+    secretKey();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Paystack signs each webhook body with HMAC-SHA512 of the raw body, keyed by the secret key. */
 export function validSignature(rawBody: string, signature: string | null, key = secretKey()): boolean {
   if (!signature) return false;

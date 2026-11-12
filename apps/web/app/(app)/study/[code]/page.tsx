@@ -10,6 +10,7 @@ import { resolveCourse } from "@/lib/study/course-link";
 import { planState, usageNow } from "@/lib/plans/entitlement";
 import { nextLagosMidnight } from "@/lib/plans/limits";
 import { planOffer } from "@/lib/plans/offer";
+import { paymentsOpen } from "@/lib/plans/paystack";
 import { adminClient } from "@/lib/supabase/admin";
 import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 
@@ -87,7 +88,7 @@ async function Loaded({ params, searchParams }: Props) {
         premiumLimited,
         binding: premiumLimited && plan.left < dailyLeft ? "premium_cap" : "daily_cap",
         resetsAt: nextLagosMidnight(now).toISOString(),
-        offer: planOffer(now),
+        offer: { ...planOffer(now), paymentsOpen: paymentsOpen() },
       }}
       pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
       past={past}

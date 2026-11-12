@@ -7,7 +7,7 @@ import { useId, useRef, useState } from "react";
 import { BusyLabel } from "@/components/ui/spinner";
 import { naira } from "@/lib/plans/offer";
 
-export function CheckoutButton({ price, autoFocus = false, openReferral = false }: { price: number; autoFocus?: boolean; openReferral?: boolean }) {
+export function CheckoutButton({ price, open = true, autoFocus = false, openReferral = false }: { price: number; open?: boolean; autoFocus?: boolean; openReferral?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCode, setShowCode] = useState(openReferral);
@@ -15,6 +15,17 @@ export function CheckoutButton({ price, autoFocus = false, openReferral = false 
   const inFlight = useRef(false);
   const id = useId();
   const router = useRouter();
+
+  if (!open) {
+    return (
+      <div>
+        <button type="button" disabled className="inline-flex w-full items-center justify-center rounded-full bg-brand px-6 py-3.5 text-[15px] font-medium text-brand-ink opacity-60">
+          Payments open soon
+        </button>
+        <p className="mt-3 text-center text-sm text-muted">Finals goes on sale shortly. Keep studying free in the meantime.</p>
+      </div>
+    );
+  }
 
   async function pay() {
     if (inFlight.current) return;

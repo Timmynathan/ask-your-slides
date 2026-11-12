@@ -30,6 +30,8 @@ export interface PlanOffer {
   planEndAt: string;
   free: { firstDay: number; daily: number; premiumFirstDay: number; premiumDaily: number; summaries: number };
   finals: { daily: number };
+  /** Set by the server (lib/plans/paystack.ts paymentsOpen): false until a Paystack key is set. */
+  paymentsOpen?: boolean;
 }
 
 const dayMonth = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: TIME_ZONE });

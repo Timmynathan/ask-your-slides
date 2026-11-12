@@ -179,6 +179,19 @@ describe("POST /api/pay/checkout", () => {
     expect(t.payments.at(-1)).toMatchObject({ amount_kobo: 500000, referral_code: null });
   });
 
+  it("until a Paystack key is set: 'payments open soon', nothing created, Paystack never called", async () => {
+    delete process.env.PAYSTACK_SECRET_KEY;
+    const before = t.payments.length;
+    const res = await start();
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ error: "Payments open soon." });
+    expect(t.payments.length).toBe(before);
+    expect(fetchMock).not.toHaveBeenCalled();
+    // A live key without PAYSTACK_LIVE=1 is treated the same.
+    process.env.PAYSTACK_SECRET_KEY = "sk_live_x";
+    expect((await start()).status).toBe(503);
+  });
+
   it("refuses a student who already has Finals, and signed-out visitors", async () => {
     t.entitlements.push({ id: "e", user_id: "u1", plan: "finals", starts_at: "2026-11-01T00:00:00Z", ends_at: "2099-01-01T00:00:00Z", paystack_reference: "x" });
     expect((await start()).status).toBe(409);

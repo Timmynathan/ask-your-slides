@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PLAN_END_DATE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
 import { finalsPrice } from "@/lib/plans/limits";
-import { cleanReferral, initializeTransaction, newReference } from "@/lib/plans/paystack";
+import { cleanReferral, initializeTransaction, newReference, paymentsOpen } from "@/lib/plans/paystack";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user?.email) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
 
+  if (!paymentsOpen()) return NextResponse.json({ error: "Payments open soon." }, { status: 503 });
   const body = Body.parse(await request.json().catch(() => ({})));
   const now = new Date();
   if (now >= PLAN_END_DATE) {
