@@ -8,6 +8,8 @@ import { isPartnerId } from "@/lib/partners";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { resolveCourse } from "@/lib/study/course-link";
 import { planState, usageNow } from "@/lib/plans/entitlement";
+import { nextLagosMidnight } from "@/lib/plans/limits";
+import { planOffer } from "@/lib/plans/offer";
 import { adminClient } from "@/lib/supabase/admin";
 import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 
@@ -65,6 +67,8 @@ async function Loaded({ params, searchParams }: Props) {
     now,
   });
   const cap = plan.used + plan.left;
+  const premiumLimited = plan.limits.course !== null;
+  const dailyLeft = plan.limits.daily - plan.used;
 
   return (
     <Workspace
@@ -78,6 +82,13 @@ async function Loaded({ params, searchParams }: Props) {
       user={{ id: user.id, email: user.email ?? "", displayName: profile?.display_name ?? null }}
       partner={profile.study_partner}
       usage={{ used: plan.used, cap }}
+      plan={{
+        id: plan.limits.plan,
+        premiumLimited,
+        binding: premiumLimited && plan.left < dailyLeft ? "premium_cap" : "daily_cap",
+        resetsAt: nextLagosMidnight(now).toISOString(),
+        offer: planOffer(now),
+      }}
       pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
       past={past}
       initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}

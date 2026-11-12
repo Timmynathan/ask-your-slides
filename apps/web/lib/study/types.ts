@@ -58,6 +58,17 @@ export interface WorkspaceData {
   user: { id: string; email: string; displayName: string | null };
   partner: PartnerId;
   usage: { used: number; cap: number };
+  /** PRD F12: the student's plan here, for badges, the "n left" wording and the pricing sheet. */
+  plan: {
+    id: "free" | "finals";
+    /** Free + a premium course: this course has its own small daily allowance. */
+    premiumLimited: boolean;
+    /** Which limit is reached first today (for the sheet when the student is already capped). */
+    binding: "daily_cap" | "premium_cap";
+    /** Next Lagos midnight. */
+    resetsAt: string;
+    offer: import("@/lib/plans/offer").PlanOffer;
+  };
   /** For "Is this helping you study?": questions asked so far, and whether it has been answered. */
   pulse: { questions: number; answered: boolean };
   /** Past questions (PRD F10) of this course a student can practise: in total and per topic. */

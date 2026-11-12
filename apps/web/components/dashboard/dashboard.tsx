@@ -27,6 +27,8 @@ export interface DashboardCourse {
   materials: number;
   /** Fewer than LIMITED_MAIN_MATERIALS slides/notes files: shown with a "Limited materials" tag. */
   limited: boolean;
+  /** PRD F12, Free students only: a premium course and its free questions left today (else null). */
+  premiumLeft: number | null;
   chats: number;
   lastStudiedAt: string | null; // ISO, for sorting
   lastStudied: string | null; // "3 Nov", formatted on the server
@@ -231,6 +233,21 @@ function LimitedTag({ onDark = false }: { onDark?: boolean }) {
   );
 }
 
+const freeLeft = (n: number) => `${n} free question${n === 1 ? "" : "s"} left today`;
+
+function PremiumTag({ onDark = false }: { onDark?: boolean }) {
+  return (
+    <span
+      title="Premium courses are the heaviest courses in your programme. Free gives a few questions a day; Finals has no limit."
+      className={`inline-block rounded-full px-2.5 py-0.5 align-middle text-[12px] font-semibold ${
+        onDark ? "mb-2 ml-1 bg-white/15 text-white" : "ml-2 bg-pau-100 text-pau-800 dark:text-pau-400"
+      }`}
+    >
+      Premium
+    </span>
+  );
+}
+
 function ElectiveTag({ onDark = false }: { onDark?: boolean }) {
   return (
     <span
@@ -259,6 +276,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
       <div className="mt-auto">
         {c.elective && <ElectiveTag onDark />}
         {c.limited && <LimitedTag onDark />}
+        {c.premiumLeft !== null && <PremiumTag onDark />}
         <h2 className="truncate text-[22px] leading-tight text-white" title={c.title}>
           {c.title}
         </h2>
@@ -266,6 +284,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
           {meta(c)}
           {c.lastStudied && ` · Studied ${c.lastStudied}`}
         </p>
+        {c.premiumLeft !== null && <p className="mt-1 text-[13px] text-white/80">{freeLeft(c.premiumLeft)}</p>}
       </div>
     </li>
   );
@@ -280,6 +299,8 @@ function CourseRow({ course: c }: { course: DashboardCourse }) {
         {c.title}
         {c.elective && <ElectiveTag />}
         {c.limited && <LimitedTag />}
+        {c.premiumLeft !== null && <PremiumTag />}
+        {c.premiumLeft !== null && <span className="ml-2 align-middle text-[13px] text-muted">{freeLeft(c.premiumLeft)}</span>}
       </span>
       <span className="hidden w-24 shrink-0 text-sm text-muted sm:block">{c.shownCode ?? ""}</span>
       <span className="hidden w-28 shrink-0 text-sm text-muted md:block">

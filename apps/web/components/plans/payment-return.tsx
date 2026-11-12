@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
+import { FINALS_DAILY } from "@/lib/plans/config";
 
 type State = "checking" | "paid" | "pending" | "failed" | "error";
 
@@ -35,7 +36,7 @@ export function PaymentReturn({ reference, pending = false }: { reference: strin
 
   const copy: Record<State, { title: string; body: string }> = {
     checking: { title: "Confirming your payment…", body: "This takes a few seconds." },
-    paid: { title: "You're on Finals", body: "40 messages a day, every course with no limits, unlimited summaries and quiz mode." },
+    paid: { title: "You're on Finals", body: `${FINALS_DAILY} messages a day, every course with no limits, unlimited summaries and quiz mode.` },
     pending: {
       title: "Still waiting for your bank",
       body: "Transfers and USSD can take a few minutes. Finals switches on by itself as soon as the payment lands; you can keep studying.",

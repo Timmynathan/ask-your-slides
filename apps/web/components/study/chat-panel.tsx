@@ -1,5 +1,6 @@
 "use client";
 
+import { LIMIT_CODES, type LimitCode } from "@/components/plans/pricing-sheet";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -42,12 +43,32 @@ interface Props {
   pulseDue: boolean;
   onQuestion(): void;
   onPulseDone(answered: boolean): void;
+  /** PRD F12. */
+  plan: "free" | "finals";
+  /** Free + premium course: "free questions" wording. */
+  premiumLimited: boolean;
+  /** The limit already reached, if the student arrives capped. */
+  capCode: "daily_cap" | "premium_cap";
+  resetsAt: string;
+  /** A limit or lock stopped the student: open the pricing sheet. */
+  onLimit(code: LimitCode, resetsAt: string | null): void;
 }
 
 function textOf(m: Msg | undefined): string {
   return (m?.parts ?? [])
     .map((p) => (p.type === "text" ? p.text : ""))
     .join("");
+}
+
+/** The server's refusal code (lib/plans/gate.ts), if this error is a plan limit or lock. */
+function limitOf(e: Error | undefined): { code: LimitCode; resetsAt: string | null } | null {
+  if (!e) return null;
+  try {
+    const j = JSON.parse(e.message) as { code?: string; resets_at?: string | null };
+    return LIMIT_CODES.includes(j.code as LimitCode) ? { code: j.code as LimitCode, resetsAt: j.resets_at ?? null } : null;
+  } catch {
+    return null;
+  }
 }
 
 function errorText(e: Error | undefined): string | null {
@@ -74,6 +95,11 @@ export function ChatPanel({
   pulseDue,
   onQuestion,
   onPulseDone,
+  plan,
+  premiumLimited,
+  capCode,
+  resetsAt,
+  onLimit,
 }: Props) {
   const p = PARTNERS[partner];
   const conversationId = useRef<string | null>(chatId);
@@ -226,10 +252,26 @@ export function ChatPanel({
 
   const busy = sending || status === "submitted" || status === "streaming";
   const errText = errorText(error);
-  const capped = left <= 0 || errText === DAILY_LIMIT;
+  const limit = limitOf(error);
+  const capped = left <= 0 || errText === DAILY_LIMIT || limit?.code === "daily_cap" || limit?.code === "premium_cap";
+  // The cap the student is stopped by: the one just refused, or the one they arrived at.
+  const lastCap = limit && (limit.code === "daily_cap" || limit.code === "premium_cap") ? limit : { code: capCode, resetsAt };
   useEffect(() => {
-    if (errText === DAILY_LIMIT) onRemaining(0);
-  }, [errText, onRemaining]);
+    if (!limit) {
+      if (errText === DAILY_LIMIT) onRemaining(0);
+      return;
+    }
+    // A plan limit or lock (PRD F12): the server refused before answering. Quiz and summary
+    // requests leave nothing behind (the question wasn't saved); a reached cap stays shown.
+    onLimit(limit.code, limit.resetsAt);
+    if (limit.code === "quiz" || limit.code === "summary") {
+      setMessages((prev) => (prev.at(-1)?.role === "user" ? prev.slice(0, -1) : prev));
+      clearError();
+    } else {
+      onRemaining(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per refusal
+  }, [error]);
 
   async function submit(raw: string) {
     const text = raw.trim();
@@ -428,10 +470,19 @@ export function ChatPanel({
           {capped ? (
             <div className="flex items-center gap-3 rounded-[28px] bg-sunken/70 px-4 py-3 text-sm text-ink">
               <Mascot partner={partner} size={36} />
-              <p>
+              <p className="min-w-0 flex-1">
                 {fill(p.capped, studentName)}
                 <span className="sr-only"> {DAILY_LIMIT}</span>
               </p>
+              {plan === "free" && (
+                <button
+                  type="button"
+                  onClick={() => onLimit(lastCap.code, lastCap.resetsAt)}
+                  className="shrink-0 rounded-full bg-brand px-4 py-2 text-[13px] font-medium text-brand-ink transition hover:opacity-90 active:scale-95"
+                >
+                  Get Finals
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-5 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
@@ -527,9 +578,9 @@ export function ChatPanel({
             ) : (
               <span />
             )}
-            {!capped && left < 10 && (
+            {!capped && (premiumLimited || left < 10) && (
               <span>
-                {left} message{left === 1 ? "" : "s"} left today
+                {premiumLimited ? `${left} free question${left === 1 ? "" : "s"} left today` : `${left} message${left === 1 ? "" : "s"} left today`}
               </span>
             )}
           </p>

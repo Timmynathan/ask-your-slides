@@ -2,6 +2,7 @@
 
 // Avatar button (the student's initial) with their name, email, Sign out and Delete account. Used on My courses and
 // in the study workspace.
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { useClickAway } from "@/lib/ui/use-click-away";
 import { DeleteAccountDialog } from "./delete-account-dialog";
@@ -52,6 +53,9 @@ export function AccountMenu({ user, onChangePartner }: { user: { email: string; 
             >
               Change programme
             </button>
+            <Link href="/pricing" onClick={() => setOpen(false)} className="mb-2 block px-1 text-left text-ink hover:underline">
+              Plans and pricing
+            </Link>
             <SignOutButton className="text-ink hover:underline" />
             <button
               type="button"

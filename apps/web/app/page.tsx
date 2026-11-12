@@ -6,6 +6,8 @@ import { ChatDemo } from "@/components/landing/chat-demo";
 import { FeatureDeck } from "@/components/landing/feature-deck";
 import { CoursePills } from "@/components/landing/course-pills";
 import { StretchNav } from "@/components/landing/stretch-nav";
+import { PlansSection } from "@/components/landing/plans-section";
+import { landingOffer } from "@/lib/plans/landing-offer";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
@@ -26,7 +28,7 @@ const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 tex
 
 export default async function Landing() {
   // Departments, courses and counts come from the database (cached hourly), not from the copy.
-  const catalog = await getCatalog();
+  const [catalog, offer] = await Promise.all([getCatalog(), landingOffer()]);
   return (
     <div className="flex min-h-dvh flex-col bg-page">
       <Banner text="Every PAU course slide, ready to chat with." linkText="Start studying" href="/sign-up" />
@@ -39,6 +41,7 @@ export default async function Landing() {
           <a href="#why" className="type-menu hover:opacity-70">Why us</a>
           <a href="#demo" className="type-menu hover:opacity-70">How it works</a>
           <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
+          <a href="#plans" className="type-menu hover:opacity-70">Pricing</a>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
@@ -191,6 +194,9 @@ export default async function Landing() {
           </div>
         </section>
 
+        {/* Plans (PRD F12): figures from the plans config the server enforces. */}
+        <PlansSection offer={offer} />
+
         {/* Closing call to action */}
         <section className="mx-auto max-w-6xl px-5 py-20">
           <div className="flex flex-col items-center gap-8 rounded-[25px] bg-pau-100 px-6 py-14 text-center md:flex-row md:justify-between md:px-14 md:text-left">
@@ -226,6 +232,7 @@ export default async function Landing() {
               <p className="font-medium text-ink">Product</p>
               <a href="#demo" className="block text-muted hover:text-ink">How it works</a>
               <a href="#partners" className="block text-muted hover:text-ink">Study partners</a>
+              <a href="#plans" className="block text-muted hover:text-ink">Pricing</a>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-ink">Account</p>

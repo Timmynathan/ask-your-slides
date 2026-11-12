@@ -15,6 +15,7 @@ import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 import { SourcesPanel } from "./sources-panel";
+import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
 
 // Inside one course, laid out like a notebook: a top bar (logo back to My courses, the course name,
 // invite, study partner, account), then three panels on a soft background: Topics | chat | the
@@ -47,6 +48,10 @@ export function Workspace(data: WorkspaceData) {
   const onQuestion = useCallback(() => setQuestions((n) => n + 1), []);
   const onPulseDone = useCallback(() => setPulseClosed(true), []);
   const studentName = data.user.displayName?.trim().split(/\s+/)[0] ?? null;
+  // PRD F12: the pricing sheet, opened when a limit or lock stops the student.
+  const [sheet, setSheet] = useState<{ code: LimitCode; resetsAt: string | null } | null>(null);
+  const onLimit = useCallback((code: LimitCode, resetsAt: string | null) => setSheet({ code, resetsAt }), []);
+  const closeSheet = useCallback(() => setSheet(null), []);
 
   const course = useMemo(() => data.courses.find((c) => c.id === courseId)!, [data.courses, courseId]);
   const topics = useMemo(() => data.topics.filter((t) => t.course_id === courseId), [data.topics, courseId]);
@@ -123,6 +128,7 @@ export function Workspace(data: WorkspaceData) {
               Limited materials
             </span>
           )}
+          {data.plan.premiumLimited && <PremiumTag left={remaining} />}
         </h1>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
@@ -213,6 +219,11 @@ export function Workspace(data: WorkspaceData) {
               pulseDue={!pulseClosed && questions >= 10}
               onQuestion={onQuestion}
               onPulseDone={onPulseDone}
+              plan={data.plan.id}
+              premiumLimited={data.plan.premiumLimited}
+              capCode={data.plan.binding}
+              resetsAt={data.plan.resetsAt}
+              onLimit={onLimit}
             />
           </div>
         </main>
@@ -251,6 +262,7 @@ export function Workspace(data: WorkspaceData) {
       </div>
 
 
+      {sheet && <PricingSheet code={sheet.code} resetsAt={sheet.resetsAt} offer={data.plan.offer} onClose={closeSheet} />}
     </div>
   );
 }
@@ -281,5 +293,23 @@ function PastComingSoon() {
         <p className="mx-auto mt-3 max-w-sm text-[15px] text-muted">Past exam questions to practise, marked against the real paper. Ready before your exams.</p>
       </div>
     </div>
+  );
+}
+
+/** Free + premium course (PRD F12): the badge, with today's free questions on wider screens
+ *  (phones see the count under the message box). */
+function PremiumTag({ left }: { left: number }) {
+  return (
+    <>
+      <span
+        title="Premium courses are the heaviest courses in your programme. Free gives a few questions a day; Finals has no limit."
+        className="ml-2 rounded-full bg-pau-100 px-2.5 py-0.5 align-middle text-[12px] font-semibold text-pau-800 dark:text-pau-400"
+      >
+        Premium
+      </span>
+      <span className="ml-2 hidden align-middle text-[13px] text-muted sm:inline">
+        {left} free question{left === 1 ? "" : "s"} left today
+      </span>
+    </>
   );
 }

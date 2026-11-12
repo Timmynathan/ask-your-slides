@@ -180,8 +180,16 @@ body {
   100% { opacity: 1; transform: none; filter: none; }
 }
 .pill-swap { animation: pill-swap 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+/* Landing Plans section: cards rise in once, on the pills' curve (components/landing/reveal.tsx). */
+.reveal-wait { opacity: 0; }
+@keyframes reveal-in {
+  0% { opacity: 0; transform: translateY(18px); filter: blur(2px); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+.reveal-in { animation: reveal-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @media (prefers-reduced-motion: reduce) {
-  .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y, .pill-swap { animation: none; }
+  .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y, .pill-swap, .reveal-in { animation: none; }
+  .reveal-wait { opacity: 1; }
 }
 
 /* Brand name and menus (brand spec): Inter 400, 16px / 24px, black. */
