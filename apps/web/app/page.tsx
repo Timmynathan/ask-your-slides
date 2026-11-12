@@ -5,6 +5,7 @@ import { Banner } from "@/components/landing/banner";
 import { ChatDemo } from "@/components/landing/chat-demo";
 import { FeatureDeck } from "@/components/landing/feature-deck";
 import { CoursePills } from "@/components/landing/course-pills";
+import { StretchNav } from "@/components/landing/stretch-nav";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
@@ -30,26 +31,24 @@ export default async function Landing() {
     <div className="flex min-h-dvh flex-col bg-page">
       <Banner text="Every PAU course slide, ready to chat with." linkText="Start studying" href="/sign-up" />
 
-      <header className="sticky top-0 z-20 px-3 pt-3 sm:px-5">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between rounded-full border border-line bg-page/85 pl-5 pr-2 backdrop-blur">
-          <Link href="/" aria-label="Ask Your Slides home">
-            <Logo />
+      <StretchNav>
+        <Link href="/" aria-label="Ask Your Slides home">
+          <Logo />
+        </Link>
+        <div className="hidden items-center gap-8 md:flex">
+          <a href="#why" className="type-menu hover:opacity-70">Why us</a>
+          <a href="#demo" className="type-menu hover:opacity-70">How it works</a>
+          <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
+            Log in
           </Link>
-          <div className="hidden items-center gap-8 md:flex">
-            <a href="#why" className="type-menu hover:opacity-70">Why us</a>
-            <a href="#demo" className="type-menu hover:opacity-70">How it works</a>
-            <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
-              Log in
-            </Link>
-            <Link href="/sign-up" className="type-menu rounded-full bg-brand px-5 py-2.5 !text-brand-ink hover:opacity-90">
-              Try for free
-            </Link>
-          </div>
-        </nav>
-      </header>
+          <Link href="/sign-up" className="type-menu rounded-full bg-brand px-5 py-2.5 !text-brand-ink hover:opacity-90">
+            Try for free
+          </Link>
+        </div>
+      </StretchNav>
 
       <main className="flex-1">
         {/* Hero: the value in one line (no more uploading slides to a chatbot), one button. */}
