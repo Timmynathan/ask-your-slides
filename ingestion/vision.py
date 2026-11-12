@@ -33,6 +33,28 @@ Describe only what that text does not already capture: diagrams, charts, figures
 If there is nothing meaningful beyond the extracted text (only a logo, a decorative picture or a background), reply with exactly NONE.
 Under 150 words. Plain sentences, no preamble."""
 
+# Calculation courses (course.yaml calculation_heavy): formulas and worked solutions are often
+# equation objects or pictures with no text layer, so the page image is the only source. Transcribed
+# exactly, not summarised: a wrong symbol here would be cited in every answer on the topic.
+MATH_PROMPT_VERSION = "math2"
+MATH_DESCRIBE = """This image is {where}. It is from a calculation course (finance, accounting, economics or engineering); students revise worked calculations from it.
+
+Text already extracted from it:
+<extracted_text>
+{text}
+</extracted_text>
+
+Transcribe exactly everything the extracted text misses:
+- Every formula in LaTeX between $$ and $$, with the slide's own symbols (subscripts, Greek letters, fractions, summations). If the slide defines the symbols, list the definitions.
+- Every worked solution: each line of working in order, with every number exactly as shown. Never skip, merge or summarise a step, and never correct the slide's arithmetic.
+- Tables as Markdown tables, every cell.
+- Charts and diagrams: what they show, with axis labels and the values shown.
+If a symbol or number is unreadable, write [unclear] instead of guessing. If text runs off the edge of the slide, transcribe only what is visible and write [cut off]; never complete it.
+Don't repeat what the extracted text already says, except where a formula or table needs it for context. If a title or heading appears only in the image, start with it.
+If there is nothing beyond the extracted text (only a logo, a decorative picture or a background), reply with exactly NONE.
+No preamble."""
+
+
 @dataclass
 class VisionResult:
     text: str | None
@@ -56,42 +78,51 @@ def _get_client() -> anthropic.Anthropic:
         return _client
 
 
-def _prompt(where: str, extracted_text: str) -> str:
-    return DESCRIBE.format(where=where, text=extracted_text.strip()[:4000] or "(none)")
+def _prompt(where: str, extracted_text: str, math: bool = False) -> str:
+    return (MATH_DESCRIBE if math else DESCRIBE).format(where=where, text=extracted_text.strip()[:4000] or "(none)")
 
 
-def _prompt_path(png: bytes, prompt: str) -> Path:
-    key = hashlib.sha256(f"{VISION_MODEL}|{PROMPT_VERSION}|{prompt}".encode() + png).hexdigest()
+def _version(math: bool) -> str:
+    return MATH_PROMPT_VERSION if math else PROMPT_VERSION
+
+
+def _prompt_path(png: bytes, prompt: str, model: str = VISION_MODEL, math: bool = False) -> Path:
+    key = hashlib.sha256(f"{model}|{_version(math)}|{prompt}".encode() + png).hexdigest()
     return CACHE / "vision" / f"{key}.json"
 
 
-def _content_path(png: bytes, extracted_text: str) -> Path:
+def _content_path(png: bytes, extracted_text: str, model: str = VISION_MODEL, math: bool = False) -> Path:
     """Keyed by what is on the page only (image + its text), not by which course it is in: the same
     file in another course or programme (IOH-ETHICS in Accounting and Film, CS files reused by
     Software Engineering) reuses the description instead of paying for it again."""
-    key = hashlib.sha256(f"{VISION_MODEL}|{PROMPT_VERSION}|{extracted_text.strip()[:4000]}".encode() + png).hexdigest()
+    key = hashlib.sha256(f"{model}|{_version(math)}|{extracted_text.strip()[:4000]}".encode() + png).hexdigest()
     return CACHE / "vision-content" / f"{key}.json"
 
 
-def cached_path(png: bytes, where: str, extracted_text: str, twins: list[str] = ()) -> Path | None:
+def cached_path(png: bytes, where: str, extracted_text: str, twins: list[str] = (), math: bool = False,
+                model: str = VISION_MODEL) -> Path | None:
     """The cache file that already describes this page, if any. `twins` are the `where` texts of the
     same file elsewhere in the catalog (descriptions cached before content keys existed)."""
-    for path in (_content_path(png, extracted_text), _prompt_path(png, _prompt(where, extracted_text)),
-                 *(_prompt_path(png, _prompt(w, extracted_text)) for w in twins)):
+    for path in (_content_path(png, extracted_text, model, math), _prompt_path(png, _prompt(where, extracted_text, math), model, math),
+                 *(_prompt_path(png, _prompt(w, extracted_text, math), model, math) for w in twins)):
         if path.is_file():
             return path
     return None
 
 
-def describe(png: bytes, where: str, extracted_text: str, twins: list[str] = ()) -> VisionResult:
-    hit = cached_path(png, where, extracted_text, twins)
+def describe(png: bytes, where: str, extracted_text: str, twins: list[str] = (), math: bool = False,
+             model: str | None = None) -> VisionResult:
+    """math=True: the calculation-course prompt (exact LaTeX and working), longer output, and
+    `model` (MATH_VISION_MODEL) may be a stronger model than the default."""
+    model = model or VISION_MODEL
+    hit = cached_path(png, where, extracted_text, twins, math, model)
     if hit:
         data = json.loads(hit.read_text())
-        _save(_content_path(png, extracted_text), data)
+        _save(_content_path(png, extracted_text, model, math), data)
         result = VisionResult(text=data["text"], cached=True, refused=data.get("refused", False), note=data.get("note", ""))
     else:
-        result = _call(png, _prompt(where, extracted_text), max_tokens=600)
-        _save(_content_path(png, extracted_text), {"text": result.text, "refused": result.refused, "note": result.note})
+        result = _call(png, _prompt(where, extracted_text, math), max_tokens=1500 if math else 600, model=model, math=math)
+        _save(_content_path(png, extracted_text, model, math), {"text": result.text, "refused": result.refused, "note": result.note})
     if result.text and result.text.strip().upper().rstrip(".") == "NONE":
         result.text = None
     return result
@@ -103,18 +134,19 @@ def _save(path: Path, data: dict) -> None:
         path.write_text(json.dumps(data))
 
 
-def _call(png: bytes, prompt: str, max_tokens: int) -> VisionResult:
-    path = _prompt_path(png, prompt)
+def _call(png: bytes, prompt: str, max_tokens: int, model: str = VISION_MODEL, math: bool = False) -> VisionResult:
+    path = _prompt_path(png, prompt, model, math)
     if path.is_file():
         data = json.loads(path.read_text())
         return VisionResult(text=data["text"], cached=True, refused=data.get("refused", False), note=data.get("note", ""))
 
     try:
         response = _get_client().messages.create(
-            model=VISION_MODEL,
+            model=model,
             max_tokens=max_tokens,
             # A description is a perception task; thinking adds cost and latency, not accuracy.
-            thinking={"type": "disabled"},
+            # Sonnet 5.5 turns thinking off with "between_tools" (it rejects "disabled").
+            thinking={"type": "disabled"} if "haiku" in model else {"type": "between_tools"},
             messages=[
                 {
                     "role": "user",

@@ -1,0 +1,100 @@
+{
+  "programme": "finance",
+  "level": 400,
+  "why": "Worked examples from FIN408, FIN410 and FIN413 slides.",
+  "cases": [
+    {
+      "id": "npv-annuity",
+      "course": "FIN408",
+      "question": "A project needs N1,000,000 now and returns N300,000 a year for six years, no residual value, required return 12%. What is the NPV?",
+      "numbers": [
+        {
+          "label": "NPV",
+          "any": [
+            233422.2,
+            233422
+          ],
+          "tol": 0.005
+        }
+      ],
+      "calculated": true,
+      "why": "FIN408 Lecture note 5a"
+    },
+    {
+      "id": "plant-choice",
+      "course": "FIN408",
+      "question": "Plant A costs N750,000 and returns N150,000 a year for 5 years; Plant B costs N750,000 and returns N200,000 a year for 5 years. Required return 8%. Compute each NPV and say which plant to accept.",
+      "numbers": [
+        {
+          "label": "NPV A",
+          "any": [
+            -151093.5,
+            -151093,
+            -151094
+          ],
+          "tol": 0.005
+        },
+        {
+          "label": "NPV B",
+          "any": [
+            48542,
+            48542.01
+          ],
+          "tol": 0.005
+        }
+      ],
+      "calculated": true,
+      "why": "FIN408 Lecture note 5a"
+    },
+    {
+      "id": "holding-period-return",
+      "course": "FIN410",
+      "question": "An investor bought a security for N2,500,000 a year ago. It is now worth N2,800,000 and paid a dividend of N200,000 during the year. What is the rate of return?",
+      "numbers": [
+        {
+          "label": "return %",
+          "any": [
+            20
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "FIN410 Portfolio Risk and Return, Example 1"
+    },
+    {
+      "id": "fv-compound",
+      "course": "FIN413",
+      "question": "An investor puts N6,250,000 into a three-year investment paying 15% a year. How much will it be worth after 3 years?",
+      "numbers": [
+        {
+          "label": "future value",
+          "any": [
+            9505468.75,
+            9505625
+          ],
+          "tol": 0.0005
+        }
+      ],
+      "calculated": true,
+      "why": "FIN413 Week 1, Example 1 (the slide rounds 1.15^3 to 1.5209 and gets N9,505,625)"
+    },
+    {
+      "id": "lottery-annuity-due",
+      "course": "FIN413",
+      "question": "You can take $1,000,000 at the beginning of each year for 25 years or $10,000,000 today. The discount rate is 10%. Which should you choose?",
+      "numbers": [
+        {
+          "label": "PV of the annuity due",
+          "any": [
+            9984744,
+            9984770,
+            9985000
+          ],
+          "tol": 0.002
+        }
+      ],
+      "calculated": true,
+      "why": "FIN413 Week 2, lottery example"
+    }
+  ]
+}

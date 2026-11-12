@@ -1,8 +1,9 @@
 "use client";
 
 import { memo, type ReactNode } from "react";
+import "katex/dist/katex.min.css";
 import ReactMarkdown, { type Components } from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MATH_REHYPE, MATH_REMARK } from "@/lib/study/math";
 import {
   chipLabel,
   chipParts,
@@ -87,7 +88,7 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
   };
 
   const md = (s: string): ReactNode => (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+    <ReactMarkdown remarkPlugins={MATH_REMARK} rehypePlugins={MATH_REHYPE} components={components}>
       {markersToLinks(s)}
     </ReactMarkdown>
   );

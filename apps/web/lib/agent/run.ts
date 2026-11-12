@@ -10,6 +10,7 @@ import { parseSlideKey } from "@/lib/study/course-code";
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
 export const HISTORY_LIMIT = 12; // PRD §10.6
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
+const MAX_STEPS_CALCULATION = 10; // plus calculate (sometimes twice, after a fix) and optimize
 const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
 const MAX_OUTPUT_TOKENS_SUMMARY = 3000; // once the agent has read whole materials
 // Claude Haiku 5.5, prompts <= 100K tokens (check the provider page before launch).
@@ -23,6 +24,8 @@ export interface ChatTurn {
   courseTitle: string;
   /** false: the code is a placeholder (IOH-ETHICS); the course is named by its title only. */
   courseCodeConfirmed?: boolean;
+  /** course.yaml calculation_heavy: calculate/optimize tools, calculation rules, more steps. */
+  calculationHeavy?: boolean;
   department?: string | null;
   topicId: string | null;
   topicTitle: string | null;
@@ -104,6 +107,7 @@ export async function runChatTurn(turn: ChatTurn) {
     courseTitle: turn.courseTitle,
     topicId: turn.topicId,
     topicTitle: turn.topicTitle,
+    calculationHeavy: !!turn.calculationHeavy,
     abortSignal: turn.abortSignal,
   });
 
@@ -255,7 +259,7 @@ export async function runChatTurn(turn: ChatTurn) {
       { role: "tool", content: pre.map((c) => ({ type: "tool-result" as const, toolCallId: c.id, toolName: c.name, output: { type: "json" as const, value: c.output as never } })) },
     ],
     tools: buildTools(ctx),
-    stopWhen: isStepCount(MAX_STEPS),
+    stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     prepareStep: () => (ctx.readMaterial || summaryAsked ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY } : {}),
     providerOptions: {

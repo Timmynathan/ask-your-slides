@@ -113,15 +113,16 @@ class Store:
         with self.db.transaction():
             row = self.db.execute(
                 "insert into courses (institution, school, programme, code, title, department, level, semester, session, "
-                "aliases, lms_course_id, lecturer, sort_order, elective, code_confirmed) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "aliases, lms_course_id, lecturer, sort_order, elective, code_confirmed, calculation_heavy) "
+                "values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
                 "on conflict (institution, programme, code) do update set school = excluded.school, "
                 "title = excluded.title, department = excluded.department, level = excluded.level, "
                 "semester = excluded.semester, session = excluded.session, aliases = excluded.aliases, "
                 "lms_course_id = excluded.lms_course_id, lecturer = excluded.lecturer, sort_order = excluded.sort_order, "
-                "elective = excluded.elective, code_confirmed = excluded.code_confirmed "
+                "elective = excluded.elective, code_confirmed = excluded.code_confirmed, calculation_heavy = excluded.calculation_heavy "
                 "returning id",
                 (c.institution, c.school, c.programme, c.code, c.title, c.department, c.level, c.semester, c.session,
-                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order, c.elective, c.code_confirmed),
+                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order, c.elective, c.code_confirmed, c.calculation_heavy),
             ).fetchone()
             course_id = str(row["id"])
             srow = self.db.execute(

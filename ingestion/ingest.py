@@ -35,7 +35,8 @@ import pdf_extract
 import pptx_extract
 import vision
 from chunks import build_chunk, image_path, looks_garbled, sanitize, slide_key, unit
-from config import DATA, PIPELINE_VERSION, VISION_MODEL, VISION_USD_PER_MTOK
+import batch
+from config import DATA, MATH_VISION_MODEL, PIPELINE_VERSION, VISION_MODEL, VISION_USD_PER_MTOK
 from manifest import Course, ManifestError, Material, load, programmes, title_from_filename
 from store import SlideRow, Store
 
@@ -49,6 +50,8 @@ class Stats:
     vision_calls: int = 0
     vision_cached: int = 0
     embed_chars: int = 0  # dry run: text that would be embedded (cost estimate)
+    math_calls: int = 0  # dry run: paid vision calls with the maths prompt (calculation courses)
+    vision_usd: float = 0.0  # real run: vision cost at each call's model price
     transcribed: int = 0
     refusals: int = 0
     input_tokens: int = 0
@@ -90,8 +93,11 @@ def twin_index(courses: list[Course]) -> dict[str, list[str]]:
     return out
 
 
-def content_hash(m: Material) -> str:
-    h = hashlib.sha256(f"v{PIPELINE_VERSION}|order {m.order}|".encode())
+def content_hash(m: Material, math: bool = False) -> str:
+    """Changes when the file, its order, the pipeline or the course's maths mode changes. Turning on
+    calculation_heavy re-processes the course so formula pages get the maths transcription (other
+    pages come from the vision cache)."""
+    h = hashlib.sha256(f"v{PIPELINE_VERSION}|order {m.order}|{'math|' if math else ''}".encode())
     h.update(m.file.read_bytes())
     return h.hexdigest()
 
@@ -169,7 +175,7 @@ TEXT_TYPES = {"docx", "ipynb", "code"}
 
 
 def enrich(plans: list[PagePlan], where: str, twins: list[str], stats: Stats, workers: int,
-           use_vision: bool) -> dict[int, tuple[str | None, str | None]]:
+           use_vision: bool, math: bool = False) -> dict[int, tuple[str | None, str | None]]:
     """Returns {page number: (visual_description, transcription)}.
 
     transcribe → local OCR (Tesseract): verbatim, free, offline. Not Claude: a word-for-word copy of
@@ -188,7 +194,8 @@ def enrich(plans: list[PagePlan], where: str, twins: list[str], stats: Stats, wo
     describe_todo = [p for p in plans if p.mode == "describe" and p.reason]
 
     def one(p: PagePlan):
-        return p, vision.describe(p.png, f"{where}, page {p.number}", p.body, [f"{w}, page {p.number}" for w in twins])
+        return p, vision.describe(p.png, f"{where}, page {p.number}", p.body, [f"{w}, page {p.number}" for w in twins],
+                                  math=math, model=MATH_VISION_MODEL if math else None)
 
     with ThreadPoolExecutor(workers) as pool:
         for p, r in pool.map(one, describe_todo):
@@ -196,6 +203,8 @@ def enrich(plans: list[PagePlan], where: str, twins: list[str], stats: Stats, wo
             stats.vision_cached += r.cached
             stats.input_tokens += r.input_tokens
             stats.output_tokens += r.output_tokens
+            pin, pout = batch.price(MATH_VISION_MODEL if math else VISION_MODEL)
+            stats.vision_usd += (r.input_tokens * pin + r.output_tokens * pout) / 1e6
             if r.refused:
                 stats.refusals += 1
                 print(f"    ! page {p.number}: vision declined ({r.note}); kept its extracted text")
@@ -242,7 +251,7 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
         if m.file_type == "code" and not m.title_override:
             title += m.file.suffix  # "PlayerMovement.cs": chips read "PlayerMovement.cs · lines 12–48"
         topic_label = m.topic or "(course-level)"
-        chash = content_hash(m)
+        chash = content_hash(m, course.calculation_heavy)
         ex = existing.get(m.cmid)
         label = f"{m.order:02d} {m.kind:9} {title[:48]:48} → {topic_label}"
         if m.review:
@@ -298,8 +307,12 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
         where = where_prefix(course, m)
         twins = [w for w in args.twins.get(file_sha(m.file), []) if w != where]
         if dry:
+            math = course.calculation_heavy
             cached = sum(1 for p in plans if p.reason and p.mode == "describe"
-                         and vision.cached_path(p.png, f"{where}, page {p.number}", p.body, [f"{w}, page {p.number}" for w in twins]))
+                         and vision.cached_path(p.png, f"{where}, page {p.number}", p.body, [f"{w}, page {p.number}" for w in twins],
+                                                math, MATH_VISION_MODEL if math else vision.VISION_MODEL))
+            if math:
+                stats.math_calls += n_vision - cached
             if cached:
                 summary += f" ({cached} already described)"
             print(f"  + {status:8} {label}  [{summary}]")
@@ -309,7 +322,7 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
             stats.embed_chars += sum(len(p.body) + 300 for p in plans)
             continue
 
-        results = enrich(plans, where, twins, stats, args.workers, use_vision=not args.no_vision)
+        results = enrich(plans, where, twins, stats, args.workers, use_vision=not args.no_vision, math=course.calculation_heavy)
         slides: list[SlideRow] = []
         for p in plans:
             visual, transcript = results.get(p.number, (None, None))
@@ -392,15 +405,25 @@ EST_VISION_IN, EST_VISION_OUT = 2_000, 120
 VOYAGE_USD_PER_MTOK = 0.06
 
 
+EST_MATH_OUT = 450  # the maths prompt transcribes every line of working
+
+
+def math_usd(calls: int) -> float:
+    pin, pout = batch.price(MATH_VISION_MODEL)
+    return calls * (EST_VISION_IN * pin + EST_MATH_OUT * pout) / 1e6
+
+
 def print_estimate(stats: Stats) -> None:
-    paid = stats.vision_calls - stats.vision_cached
+    paid = stats.vision_calls - stats.vision_cached - stats.math_calls
     vin, vout = paid * EST_VISION_IN, paid * EST_VISION_OUT
     vusd = vin / 1e6 * VISION_USD_PER_MTOK[0] + vout / 1e6 * VISION_USD_PER_MTOK[1]
+    musd = math_usd(stats.math_calls)
+    print(f"  estimate: {MATH_VISION_MODEL} {stats.math_calls} maths transcriptions (calculation courses) ≈ ${musd:.2f}")
     etok = stats.embed_chars // 4
     eusd = etok / 1e6 * VOYAGE_USD_PER_MTOK
-    print(f"  estimate: {VISION_MODEL} {paid} paid vision calls ≈ {vin / 1e6:.2f}M in / {vout / 1e6:.2f}M out tokens ≈ ${vusd:.2f}")
+    print(f"            {VISION_MODEL} {paid} paid vision calls ≈ {vin / 1e6:.2f}M in / {vout / 1e6:.2f}M out tokens ≈ ${vusd:.2f}")
     print(f"            voyage-4 ≈ {etok / 1e6:.2f}M tokens ≈ ${eusd:.2f} (an upper bound: unchanged chunks are reused)")
-    print(f"            total ≈ ${vusd + eusd:.2f}")
+    print(f"            total ≈ ${vusd + musd + eusd:.2f}")
 
 
 def print_report(rows: list[tuple], dry: bool) -> None:
@@ -472,20 +495,21 @@ def main() -> int:
         t0 = time.time()
         report: list[tuple] = []
         for course in selected:
-            before = (stats.pages, stats.vision_calls, stats.vision_cached, stats.input_tokens, stats.output_tokens,
+            before = (stats.pages, stats.vision_calls, stats.vision_cached, stats.vision_usd, stats.output_tokens,
                       embed.tokens_used, stats.embed_chars)
             ingest_course(store, course, args, stats)
-            d = [a - b for a, b in zip((stats.pages, stats.vision_calls, stats.vision_cached, stats.input_tokens,
+            d = [a - b for a, b in zip((stats.pages, stats.vision_calls, stats.vision_cached, stats.vision_usd,
                                         stats.output_tokens, embed.tokens_used, stats.embed_chars), before)]
             if args.dry_run:
                 paid = d[1] - d[2]
-                usd = (paid * EST_VISION_IN / 1e6 * VISION_USD_PER_MTOK[0] + paid * EST_VISION_OUT / 1e6 * VISION_USD_PER_MTOK[1]
-                       + d[6] / 4 / 1e6 * VOYAGE_USD_PER_MTOK)
+                vision_part = math_usd(paid) if course.calculation_heavy else \
+                    paid * (EST_VISION_IN * VISION_USD_PER_MTOK[0] + EST_VISION_OUT * VISION_USD_PER_MTOK[1]) / 1e6
+                usd = vision_part + d[6] / 4 / 1e6 * VOYAGE_USD_PER_MTOK
                 report.append((course.key, len(course.materials), d[0], paid, d[2], usd))
             else:
                 n_mat, n_chunks = store.course_counts(course)
                 paid = d[1] - d[2]
-                usd = d[3] / 1e6 * VISION_USD_PER_MTOK[0] + d[4] / 1e6 * VISION_USD_PER_MTOK[1] + d[5] / 1e6 * VOYAGE_USD_PER_MTOK
+                usd = d[3] + d[5] / 1e6 * VOYAGE_USD_PER_MTOK
                 report.append((course.key, n_mat, n_chunks, paid, d[2], usd))
         print_report(report, args.dry_run)
 
@@ -499,7 +523,7 @@ def main() -> int:
         if args.dry_run:
             print_estimate(stats)
         if not args.dry_run:
-            usd = stats.input_tokens / 1e6 * VISION_USD_PER_MTOK[0] + stats.output_tokens / 1e6 * VISION_USD_PER_MTOK[1]
+            usd = stats.vision_usd
             print(f"  {VISION_MODEL}: {stats.input_tokens} in / {stats.output_tokens} out tokens ≈ ${usd:.3f}")
             print(f"  voyage-4: {embed.tokens_used} tokens, {embed.reused} chunks reused from cache")
         return 0

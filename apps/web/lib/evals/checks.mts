@@ -56,3 +56,43 @@ export function scoreTrace(t: TraceLike, courseCode: string): Checks {
     not_covered_opening: /^\s*your slides don't cover this/i.test(text),
   };
 }
+
+// ── Calculation courses (golden cases from the slides' own worked examples) ──────────────────
+
+/** Every number written in an answer, with thousands separators, LaTeX "{,}" and "\," removed.
+ *  "₦9,505,468.75" → 9505468.75; "24.8\%" → 24.8; "5{,}000{,}000" → 5000000. */
+export function numbersIn(text: string): number[] {
+  const flat = text
+    .replace(/\[\[s:[A-Za-z0-9-]+\]\]/g, " ") // slide keys are not answers
+    .replace(/\{,\}/g, ",")
+    .replace(/\\[,;!]/g, "")
+    .replace(/(\d)\s(?=\d{3}\b)/g, "$1,"); // "1 000 000"
+  return [...flat.matchAll(/-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?/g)].map((m) => Number(m[0].replace(/,/g, "")));
+}
+
+const near = (a: number, b: number, tol: number) => Math.abs(a - b) <= Math.max(Math.abs(b) * tol, 1e-9);
+
+/** Is `value` (or its percentage form) one of the numbers? Default tolerance 0.5%: the slides
+ *  round to 2–4 significant figures. */
+export function hasNumber(numbers: number[], value: number, tol = 0.005): number | null {
+  return numbers.find((n) => near(n, value, tol) || near(n, value * 100, tol) || near(n * 100, value, tol)) ?? null;
+}
+
+export interface NumberCheck {
+  /** What the number is, e.g. "cost of equity (DGM)". */
+  label: string;
+  /** Any of these is accepted (e.g. the exact value and the slide's rounded one). */
+  any: number[];
+  tol?: number;
+}
+
+/** For each expected number: found in the answer? and was it computed by a tool this turn? */
+export function checkNumbers(answer: string, expected: NumberCheck[], computed: string[]) {
+  const said = numbersIn(answer);
+  const tool = computed.flatMap((v) => numbersIn(v));
+  return expected.map((e) => {
+    const found = e.any.map((v) => hasNumber(said, v, e.tol)).find((n) => n !== null) ?? null;
+    const fromTool = found !== null && hasNumber(tool, found, e.tol ?? 0.005) !== null;
+    return { label: e.label, found, fromTool };
+  });
+}

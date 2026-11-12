@@ -6,6 +6,8 @@ import { must } from "@/lib/supabase/admin";
 import { embedQuery } from "./embed";
 import { chunkBody, decideFallback, DEFAULT_KINDS, matchSlides, type SlideHit } from "./retrieval";
 import { MATERIAL_KEY_RE, parseMaterialKey } from "@/lib/study/course-code";
+import { calculate } from "./calculator";
+import { solveLp, solveTransport } from "./optimizer";
 
 // ── Context ──────────────────────────────────────────────────────────────────
 // course and topic come from the conversation row, never from the model (PRD §10.2): no tool
@@ -42,16 +44,20 @@ export interface AgentContext {
   courseTitle: string;
   topicId: string | null;
   topicTitle: string | null;
+  /** Calculation course (course.yaml calculation_heavy): calculate and optimize are offered. */
+  calculationHeavy?: boolean;
   /** slide_key → citation info: every slide a tool returned this turn. The only citable set. */
   retrieved: Map<string, Citation>;
   toolLog: ToolLogEntry[];
   fellBack: boolean;
   readMaterial: boolean;
+  /** Every value calculate/optimize returned this turn (traces; the golden check compares answers to them). */
+  computed: string[];
   abortSignal?: AbortSignal;
 }
 
-export function newContext(base: Omit<AgentContext, "retrieved" | "toolLog" | "fellBack" | "readMaterial">): AgentContext {
-  return { ...base, retrieved: new Map(), toolLog: [], fellBack: false, readMaterial: false };
+export function newContext(base: Omit<AgentContext, "retrieved" | "toolLog" | "fellBack" | "readMaterial" | "computed">): AgentContext {
+  return { ...base, retrieved: new Map(), toolLog: [], fellBack: false, readMaterial: false, computed: [] };
 }
 
 // ── Tool definition helper (support-agent convention) ───────────────────────
@@ -360,8 +366,98 @@ export const getMaterialPages = defineTool({
 
 // ── The tool set handed to the model ─────────────────────────────────────────
 
+// ── Calculation courses: the model writes the calculation, the server works out the numbers ──
+
+const calcStep = z.object({
+  name: z.string().trim().max(40).optional().describe("Optional variable name for this step's result, e.g. ke, wacc, npv_a"),
+  expr: z.string().trim().min(1).max(600).describe("A maths expression; may use names from earlier steps"),
+});
+
+export const calculateTool = defineTool({
+  name: "calculate",
+  purpose: "Work out numbers exactly (worked examples, checks)",
+  description:
+    "Evaluates calculations exactly. Use it for EVERY number you state that is computed (not copied from a slide): " +
+    "never do arithmetic yourself. Send all steps of one calculation in one call; each step may name its result for later steps. " +
+    "Syntax: + - * / ^, parentheses, sqrt, exp, log (natural), log10, abs, round(x, n), sum, mean, median, std, variance, " +
+    "max, min, matrices [[1,2],[3,4]], inv, transpose, det, multiply, units ('5 kN / 20 cm^2 to MPa', '1500 rpm to Hz'). " +
+    "Finance (positive amounts; cash flow 0 is today): npv(rate, [cf0, cf1, ...]), irr([cf0, cf1, ...]), pv(rate, n, payment, future?), " +
+    "fv(rate, n, payment, present?), pmt(rate, n, present, future?), annuity(rate, n) (annuity factor), discount(rate, n) (discount factor), " +
+    "cagr(start, end, years), wavg(values, weights) (e.g. WACC). Econometrics: ols(X, y) = least-squares coefficients (put a column of 1s in X for the intercept). " +
+    "Rates are decimals (12% = 0.12). Returns each step's value; show the student the steps.",
+  input: z.object({ steps: z.array(calcStep).min(1).max(30) }),
+  async handler(ctx, { steps }) {
+    const r = calculate(steps);
+    ctx.computed.push(...r.steps.map((s) => s.value));
+    if (!r.ok) {
+      return {
+        status: "refused",
+        result: {
+          ok: false,
+          done: r.steps,
+          error: r.error,
+          message_for_agent: `Step ${r.error!.step} failed: ${r.error!.message}. Fix that expression and call calculate again; don't compute it yourself.`,
+        },
+        detail: { values: r.steps.map((s) => s.value) },
+      };
+    }
+    return { status: "ok", result: { ok: true, steps: r.steps.map(({ name, expr, value }) => ({ name, expr, value })) }, detail: { values: r.steps.map((s) => s.value) } };
+  },
+});
+
+const lpConstraint = z.object({
+  name: z.string().max(60).optional(),
+  coefficients: z.record(z.string(), z.number()),
+  op: z.enum(["<=", ">=", "="]),
+  rhs: z.number(),
+});
+
+export const optimizeTool = defineTool({
+  name: "optimize",
+  purpose: "Check an optimisation answer (LP, transportation)",
+  description:
+    "Finds the true optimum of a linear programme or a transportation problem, to CHECK an answer. " +
+    "Teach the method the slides use (graphical, simplex tableau, North-West corner, least cost, VAM, MODI) step by step yourself, " +
+    "with calculate for the arithmetic; then call optimize and say whether the method's result is optimal (e.g. 'VAM gives 3,350, which is optimal'). " +
+    "problem 'lp': sense max|min, objective {var: coefficient}, constraints [{coefficients {var: a}, op <=|>=|=, rhs}], integers? [vars]. " +
+    "problem 'transportation': sources [{name, supply}], destinations [{name, demand}], costs[source][destination] (unit costs); " +
+    "unbalanced problems get a zero-cost dummy, as on the slides.",
+  input: z.object({
+    problem: z.enum(["lp", "transportation"]),
+    lp: z
+      .object({
+        sense: z.enum(["max", "min"]),
+        objective: z.record(z.string(), z.number()),
+        constraints: z.array(lpConstraint).min(1).max(100),
+        integers: z.array(z.string()).optional(),
+      })
+      .optional(),
+    transportation: z
+      .object({
+        sources: z.array(z.object({ name: z.string().max(60), supply: z.number().nonnegative() })).min(1).max(20),
+        destinations: z.array(z.object({ name: z.string().max(60), demand: z.number().nonnegative() })).min(1).max(20),
+        costs: z.array(z.array(z.number())).min(1).max(20),
+      })
+      .optional(),
+  }),
+  async handler(ctx, input) {
+    if (input.problem === "lp") {
+      if (!input.lp) return refused("missing_input", "problem 'lp' needs the lp field.");
+      const r = solveLp(input.lp);
+      if (r.objective !== null) ctx.computed.push(String(r.objective), ...Object.values(r.values).map(String));
+      return { status: r.ok ? "ok" : "refused", result: { ...r }, detail: { objective: r.objective } };
+    }
+    if (!input.transportation) return refused("missing_input", "problem 'transportation' needs the transportation field.");
+    const r = solveTransport(input.transportation);
+    if (r.total_cost !== null) ctx.computed.push(String(r.total_cost), ...r.shipments.map((s) => String(s.quantity)));
+    return { status: r.ok ? "ok" : "refused", result: { ...r }, detail: { total_cost: r.total_cost } };
+  },
+});
+
 export const TOOLS = [searchSlides, listTopics, getMaterialPages];
+export const CALC_TOOLS = [calculateTool, optimizeTool];
 
 export function buildTools(ctx: AgentContext): ToolSet {
-  return Object.fromEntries(TOOLS.map((t) => [t.name, t.forTurn(ctx)]));
+  const tools = ctx.calculationHeavy ? [...TOOLS, ...CALC_TOOLS] : TOOLS;
+  return Object.fromEntries(tools.map((t) => [t.name, t.forTurn(ctx)]));
 }

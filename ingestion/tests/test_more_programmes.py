@@ -77,3 +77,28 @@ def test_entity_fragment_topic_is_refused(tmp_path: Path):
     make_course(tmp_path, "CSC401", [row(1, "slides/01-a.pdf", topic="Amp;")], topics=("Amp;",))
     with pytest.raises(ManifestError, match="looks broken"):
         load(tmp_path)
+
+
+def test_calculation_heavy_flag_and_maths_mode(tmp_path: Path, monkeypatch):
+    import ingest
+    make_catalog(tmp_path, {"accounting": ["ACC404"]})
+    make_course(tmp_path, "ACC404", [row(1, "slides/01-a.pdf")], programme="accounting",
+                info={"calculation_heavy": True, "aliases": []})
+    (c,) = load(tmp_path)
+    assert c.calculation_heavy
+    m = c.materials[0]
+    # Turning the flag on re-processes the course (formula pages get the maths prompt).
+    assert ingest.content_hash(m, True) != ingest.content_hash(m, False)
+    # The maths prompt is its own cache entry, per model: a Haiku description is never reused as Sonnet's.
+    png, text = b"png", "Ke ="
+    assert vision._prompt("w", text, math=True) != vision._prompt("w", text)
+    assert vision._content_path(png, text, "claude-haiku-5-5", True) != vision._content_path(png, text, "claude-haiku-5-5", False)
+    assert vision._content_path(png, text, "claude-sonnet-5-5", True) != vision._content_path(png, text, "claude-haiku-5-5", True)
+    assert "[cut off]" in vision.MATH_DESCRIBE and "$$" in vision.MATH_DESCRIBE
+
+
+def test_calculation_heavy_must_be_boolean(tmp_path: Path):
+    make_catalog(tmp_path, {"accounting": ["ACC404"]})
+    make_course(tmp_path, "ACC404", [row(1, "slides/01-a.pdf")], programme="accounting", info={"calculation_heavy": "yes", "aliases": []})
+    with pytest.raises(ManifestError, match="calculation_heavy must be true or false"):
+        load(tmp_path)

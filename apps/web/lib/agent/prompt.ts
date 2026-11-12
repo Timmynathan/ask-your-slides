@@ -43,6 +43,7 @@ No headings in normal answers; a short bold lead-in is fine. Summaries and overv
 12. Integrity. Normal revision is always fine. Do not help someone cheat during an exam that is happening right now.
 13. Student work. Results marked student_work: true are student group presentations, not lecturer material. Use them only when the student asks for that presentation or its group, and then begin that part with "This comes from a student group presentation, not the lecturer's slides." Never use student work to answer an ordinary course question. Results with a location (a Word section, notebook cells or code lines) are cited with their slide_key like any slide.
 14. Code overviews. When the student asks you to explain the code, scripts or notebooks of a topic or course, you receive every such file: explain each one in turn, in teaching order, under a short heading with its file name, saying what it does and walking through its key parts, cited with its lines or cells. Don't skip a file; if two files are versions of the same script, say what changed between them.
+15. Maths. Write formulas in LaTeX between double dollar signs: inline $$K_e = \frac{D_1}{P_0} + g$$, or on its own line for a key formula. Never use single dollar signs for maths (a single $ is money). Plain numbers and units need no LaTeX. For a worked example: state the formula (cited to its slide when it is on one), then the values substituted, then each step on its own line, then the answer with its unit, in words.
 
 Example answers. They show the shape only; in a real answer use only slide keys returned in that turn.
 
@@ -87,6 +88,25 @@ export function partnerContext(voice: string | null, studentName: string | null)
 }
 
 export function chatContext(ctx: {
+  courseCode: string;
+  courseTitle: string;
+  courseCodeConfirmed?: boolean;
+  calculationHeavy?: boolean;
+  department?: string | null;
+  topicTitle: string | null;
+}): string {
+  return chatScope(ctx) + (ctx.calculationHeavy ? `\n\n${CALCULATION_RULES}` : "");
+}
+
+/** Calculation courses (course.yaml calculation_heavy): numbers come from tools, never from memory. */
+export const CALCULATION_RULES = `This is a calculation course. Numbers:
+- Every number you state that is computed (not copied from a slide or the question) must come from the calculate tool in this turn. Never do arithmetic in your head, not even a "simple" step. Send all steps of a calculation in one call, with named steps (ke, kd, wacc), then show the steps and the tool's values exactly, rounded only at the end.
+- Use the formula and method the slides use, in their notation. If the slides show a worked example on the same idea, follow its layout. If the slides don't give the formula, use the standard one and say so in a <general> block.
+- For optimisation methods (graphical LP, simplex, North-West corner, least cost, VAM, MODI, assignment): teach the method's own steps (with calculate for the arithmetic), then call optimize to check the final answer and say whether it is optimal.
+- If a slide says the solution was done "on the board" or omits it, solve it fully with the tools and say the working is yours, not the slides'.
+- Rates are decimals in the tool (12% = 0.12); give answers as the slides do (percent, naira ₦, units).`;
+
+function chatScope(ctx: {
   courseCode: string;
   courseTitle: string;
   courseCodeConfirmed?: boolean;

@@ -14,7 +14,7 @@ import { createClient } from "@supabase/supabase-js";
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { citedKeys } from "../lib/evals/checks.mts";
+import { checkNumbers, citedKeys, type NumberCheck } from "../lib/evals/checks.mts";
 
 const REPO = path.resolve(import.meta.dirname, "../../..");
 if (existsSync(path.join(REPO, ".env"))) process.loadEnvFile(path.join(REPO, ".env"));
@@ -42,6 +42,12 @@ interface Case {
   focus_slide?: string;
   /** The answer must not open by doubting what the student meant ("your slides don't show…"). */
   no_confusion?: boolean;
+  /** Calculation courses: numbers the answer must state (from the slide's worked example). */
+  numbers?: NumberCheck[];
+  /** The calculate tool ran this turn, and every expected number it states came from a tool. */
+  calculated?: boolean;
+  /** The optimize tool checked the answer (LP / transportation). */
+  optimized?: boolean;
   why?: string;
 }
 
@@ -59,7 +65,7 @@ interface Student {
 }
 const students: Student[] = [];
 
-async function student(programme: string): Promise<Student> {
+async function student(programme: string, level = 400): Promise<Student> {
   const email = `golden-${programme.slice(0, 8)}-${Date.now()}-${students.length}@pau.edu.ng`;
   await admin.auth.admin.createUser({ email, email_confirm: true });
   const { data } = await admin.auth.admin.generateLink({ type: "magiclink", email });
@@ -70,7 +76,7 @@ async function student(programme: string): Promise<Student> {
   if (!res.ok) throw new Error(`sign-in failed: ${res.status}`);
   const cookie = res.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
   const { data: p } = await admin.from("profiles").select("id").eq("email", email).single();
-  await admin.from("profiles").update({ onboarded: true, study_partner: "ada", programme, level: 400 }).eq("id", p!.id);
+  await admin.from("profiles").update({ onboarded: true, study_partner: "ada", programme, level }).eq("id", p!.id);
   const s = { email, id: p!.id as string, cookie };
   students.push(s);
   return s;
@@ -120,10 +126,21 @@ async function kinds(courseId: string, keys: string[]) {
   );
 }
 
+/** The trace of the latest turn in a conversation (written when the stream ends: wait for it). */
+async function lastTrace(conversationId: string) {
+  for (let i = 0; i < 20; i++) {
+    const { data } = await admin.from("traces").select("tool_calls").eq("conversation_id", conversationId)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (data) return data as { tool_calls: unknown[] };
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return null;
+}
+
 async function runCases(file: string) {
-  const spec = JSON.parse(readFileSync(file, "utf8")) as { programme: string; cases: Case[] };
+  const spec = JSON.parse(readFileSync(file, "utf8")) as { programme: string; level?: number; cases: Case[] };
   console.log(`\n${path.relative(REPO, file)} (${spec.cases.length} cases, programme ${spec.programme})`);
-  const s = await student(spec.programme);
+  const s = await student(spec.programme, spec.level ?? 400);
   for (const c of spec.cases) {
     console.log(`\n[${c.id}] ${c.course}${c.topic ? ` › ${c.topic}` : ""}: ${c.question}`);
     const { courseId, topicId } = await courseIds(c.course, spec.programme, c.topic);
@@ -164,6 +181,17 @@ async function runCases(file: string) {
     if (c.no_confusion) {
       check(!/(don't|do not|doesn't) (show|have|contain|include)|closest match|not sure which/i.test(a.text.slice(0, 300)),
         "answers about the item asked about, without doubting which one", a.text.slice(0, 120).replace(/\n/g, " "));
+    }
+    if (c.numbers || c.calculated || c.optimized) {
+      const trace = await lastTrace(body.conversation.id);
+      const calls = (trace?.tool_calls ?? []) as { name: string; detail?: { values?: string[]; objective?: number; total_cost?: number } }[];
+      const computed = calls.flatMap((t) => [...(t.detail?.values ?? []), ...[t.detail?.objective, t.detail?.total_cost].filter((x) => x != null).map(String)]);
+      if (c.calculated) check(calls.some((t) => t.name === "calculate"), "worked the numbers out with the calculate tool", calls.map((t) => t.name).join(",") || "no tools");
+      if (c.optimized) check(calls.some((t) => t.name === "optimize"), "checked the answer with the optimize tool", calls.map((t) => t.name).join(","));
+      for (const r of checkNumbers(a.text, c.numbers ?? [], computed)) {
+        check(r.found !== null, `states ${r.label}`, r.found !== null ? String(r.found) : `not found in: ${a.text.replace(/\s+/g, " ").slice(0, 160)}`);
+        if (c.calculated && r.found !== null) check(r.fromTool, `${r.label} came from a tool, not the model's head`, computed.slice(0, 8).join(" "));
+      }
     }
     if (c.not_covered) {
       check(NOT_COVERED.test(a.text), "opens with \"Your slides don't cover this\"", a.text.slice(0, 80).replace(/\n/g, " "));

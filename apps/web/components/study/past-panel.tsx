@@ -4,8 +4,9 @@
 // "Past questions" in the Topics panel, or from a topic chat's "N past questions" chip (practice for
 // that topic, with a way back to the chat). Answers are fetched only after an attempt.
 import { useEffect, useMemo, useState } from "react";
+import "katex/dist/katex.min.css";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MATH_REHYPE, MATH_REMARK } from "@/lib/study/math";
 import { Spinner } from "@/components/ui/spinner";
 import {
   buildExamMap,
@@ -483,7 +484,7 @@ function FeedbackList({ title, items, tone, mark }: { title: string; items: stri
 function Md({ text }: { text: string }) {
   return (
     <div className="[&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-sunken [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-[13px] [&_table]:my-2 [&_table]:w-full [&_table]:text-sm [&_td]:border-b [&_td]:border-line [&_td]:px-2 [&_td]:py-1 [&_th]:border-b [&_th]:border-line-strong [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={MATH_REMARK} rehypePlugins={MATH_REHYPE}>{text}</ReactMarkdown>
     </div>
   );
 }

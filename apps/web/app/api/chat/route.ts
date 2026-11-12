@@ -53,11 +53,11 @@ export async function POST(request: Request) {
   // from this row, never from the request body.
   const { data: convo } = await supabase
     .from("conversations")
-    .select("id, title, course_id, topic_id, courses(code, code_confirmed, title, department), topics(title)")
+    .select("id, title, course_id, topic_id, courses(code, code_confirmed, calculation_heavy, title, department), topics(title)")
     .eq("id", conversationId)
     .maybeSingle();
   if (!convo) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
-  const course = convo.courses as unknown as { code: string; code_confirmed: boolean; title: string; department: string };
+  const course = convo.courses as unknown as { code: string; code_confirmed: boolean; calculation_heavy: boolean; title: string; department: string };
   const topic = convo.topics as unknown as { title: string } | null;
 
   // Editing: the question must be one of the student's own, in this chat (RLS + the filters).
@@ -131,6 +131,7 @@ export async function POST(request: Request) {
     courseCode: course.code,
     courseTitle: course.title,
     courseCodeConfirmed: course.code_confirmed,
+    calculationHeavy: course.calculation_heavy,
     department: course.department,
     topicId: convo.topic_id,
     topicTitle: topic?.title ?? null,

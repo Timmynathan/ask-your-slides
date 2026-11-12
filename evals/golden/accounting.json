@@ -1,0 +1,263 @@
+{
+  "programme": "accounting",
+  "level": 400,
+  "why": "Worked examples from the ACC404 slides: the answer's numbers must match the slide's and come from the calculate tool (PRD F11, calculation courses).",
+  "cases": [
+    {
+      "id": "wc-effective-cost",
+      "course": "ACC404",
+      "question": "A firm's ₦25m net working capital is financed by a ₦10m bank overdraft at 20%, an ₦8m short-term loan at 18% and ₦7m of retained earnings at 15%. What is the total annual cost and the effective cost of financing the working capital?",
+      "numbers": [
+        {
+          "label": "total cost (₦m)",
+          "any": [
+            4.49,
+            4490000
+          ]
+        },
+        {
+          "label": "effective cost %",
+          "any": [
+            17.96
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Working Capital Management, Example 2 (slide answer 17.96%)",
+      "cite_any": [
+        "ACC404-03"
+      ]
+    },
+    {
+      "id": "eoq",
+      "course": "ACC404",
+      "question": "A firm has annual demand of 50,000 units, ordering cost of N50 per order, carrying cost of N10 per unit and purchase price N30. Calculate the EOQ and the total inventory cost.",
+      "numbers": [
+        {
+          "label": "EOQ (units)",
+          "any": [
+            707.1,
+            707
+          ]
+        },
+        {
+          "label": "ordering + holding cost",
+          "any": [
+            7071,
+            1507071
+          ],
+          "tol": 0.01
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Inventory Management, EOQ example"
+    },
+    {
+      "id": "reorder-levels",
+      "course": "ACC404",
+      "question": "Zion Nig Limited: maximum usage 300 units per week, minimum usage 100 units per week, lead time 4 to 6 weeks, re-order quantity 1,000 units. Calculate the re-order level, maximum level and minimum level.",
+      "numbers": [
+        {
+          "label": "re-order level",
+          "any": [
+            1800
+          ]
+        },
+        {
+          "label": "maximum level",
+          "any": [
+            2400
+          ]
+        },
+        {
+          "label": "minimum level",
+          "any": [
+            800
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Inventory Management, Example 1 (standard CIMA formulas)"
+    },
+    {
+      "id": "receivable-days",
+      "course": "ACC404",
+      "question": "Jolo Limited had sales of N10 million and year-end receivables of N2 million, financed by an overdraft at 6% a year. Compute the receivables days and the annual cost of financing the receivables.",
+      "numbers": [
+        {
+          "label": "receivable days",
+          "any": [
+            73
+          ]
+        },
+        {
+          "label": "annual financing cost",
+          "any": [
+            120000
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Account Receivables Management, Example 1"
+    },
+    {
+      "id": "settlement-discount",
+      "course": "ACC404",
+      "question": "Vitrak Limited is offered a 3% settlement discount for paying in 20 days instead of the normal 60 days. It can borrow on overdraft at 12% a year. What is the annualised cost of not taking the discount, and should it take the discount?",
+      "numbers": [
+        {
+          "label": "annualised cost %",
+          "any": [
+            28.22,
+            32.04
+          ],
+          "tol": 0.01
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Account Payable Management example (simple or compound annualisation both accepted)"
+    },
+    {
+      "id": "risk-adjusted-npv",
+      "course": "ACC404",
+      "question": "A project costs N1,000,000 and returns N300,000, N500,000, N400,000 and N200,000 over four years. The discount rate is 10% and the risk-adjusted discount rate is 15%. What is the project's risk-adjusted NPV?",
+      "numbers": [
+        {
+          "label": "NPV at 15%",
+          "any": [
+            16298.54,
+            16299,
+            16300
+          ],
+          "tol": 0.01
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Investment Decision with Risk, Example 3"
+    },
+    {
+      "id": "certainty-equivalent-npv",
+      "course": "ACC404",
+      "question": "Risk-free rate 10%, initial outlay N500,000. Cash flows: year 1 N300,000 (certainty equivalent coefficient 0.5), year 2 N150,000 (0.6), year 3 N200,000 (0.7). Determine the NPV and advise management.",
+      "numbers": [
+        {
+          "label": "NPV",
+          "any": [
+            -184072.13,
+            -184072
+          ],
+          "tol": 0.005
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Investment Decision with Risk, Example 5"
+    },
+    {
+      "id": "cost-of-equity-dgm",
+      "course": "ACC404",
+      "question": "Pasta Plc has issued 30% of its 100 million authorised N1 ordinary shares. It just paid a dividend of N15 million, expected to grow at 4%, and the share price is N2.5. What is its cost of equity?",
+      "numbers": [
+        {
+          "label": "cost of equity",
+          "any": [
+            0.248,
+            24.8
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Cost of Capital, Pasta Plc example",
+      "cite_any": [
+        "ACC404-08"
+      ]
+    },
+    {
+      "id": "dgm-vs-capm",
+      "course": "ACC404",
+      "question": "Delta Nig. Plc: beta 1.4, risk-free rate 5.2%, market risk premium 7%, share price N30, last dividend N2 growing at 8%. What is the cost of equity using the dividend growth model and using CAPM?",
+      "numbers": [
+        {
+          "label": "Ke by DGM",
+          "any": [
+            0.152,
+            15.2
+          ]
+        },
+        {
+          "label": "Ke by CAPM",
+          "any": [
+            0.15,
+            15
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Cost of Capital, Delta example"
+    },
+    {
+      "id": "expected-return-sd",
+      "course": "ACC404",
+      "question": "Markiv Plc returns: boom 20% (probability 0.2), normal 15% (0.5), recession 10% (0.3). Compute the expected return, variance and standard deviation.",
+      "numbers": [
+        {
+          "label": "expected return %",
+          "any": [
+            14.5
+          ]
+        },
+        {
+          "label": "variance",
+          "any": [
+            12.25
+          ]
+        },
+        {
+          "label": "standard deviation %",
+          "any": [
+            3.5
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Risk and Return, Examples 2 and 3 (slide: E(R) 14.5%)"
+    },
+    {
+      "id": "portfolio-return",
+      "course": "ACC404",
+      "question": "A portfolio holds security X (return 10%, N4,000,000 invested) and Y (return 8%, N6,000,000). What is the portfolio return?",
+      "numbers": [
+        {
+          "label": "portfolio return %",
+          "any": [
+            8.8
+          ]
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Risk and Return, portfolio Example 1"
+    },
+    {
+      "id": "noi-approach",
+      "course": "ACC404",
+      "question": "Gold PLC has N500,000 of 13% debt, net operating income of N600,000 and an overall cost of capital of 15%. Using the NOI approach, compute the firm's value and its cost of equity.",
+      "numbers": [
+        {
+          "label": "firm value",
+          "any": [
+            4000000
+          ]
+        },
+        {
+          "label": "cost of equity %",
+          "any": [
+            15.29,
+            15.3
+          ],
+          "tol": 0.01
+        }
+      ],
+      "calculated": true,
+      "why": "ACC404 Capital Structure Theories, Gold PLC (slide answer 15.3%)"
+    }
+  ]
+}

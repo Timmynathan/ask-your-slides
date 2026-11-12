@@ -16,3 +16,7 @@ alter table public.slides add constraint slides_slide_key_check
 
 -- false = placeholder code: never shown to students.
 alter table public.courses add column code_confirmed boolean not null default true;
+
+-- Calculation courses (Finance, Accounting, Economics, Mechanical Engineering; course.yaml
+-- calculation_heavy: true): the chat gets the calculate/optimize tools and the maths rules.
+alter table public.courses add column calculation_heavy boolean not null default false;

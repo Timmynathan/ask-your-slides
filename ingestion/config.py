@@ -17,6 +17,9 @@ PIPELINE_VERSION = "1"
 VISION_MODEL = os.environ.get("VISION_MODEL", "claude-haiku-5-5")
 # Claude Haiku 5.5, prompts <= 100K tokens. Used only for the cost estimate printed after a run.
 VISION_USD_PER_MTOK = (0.10, 0.50)
+# Formula and worked-solution pages of calculation courses (vision.MATH_DESCRIBE). Chosen after the
+# 30-page comparison (scripts: ingestion/math_compare.py); Haiku until then.
+MATH_VISION_MODEL = os.environ.get("MATH_VISION_MODEL", VISION_MODEL)
 
 # Past papers (PRD §9.4): extraction, analysis and model answers, through the Batches API.
 # claude-haiku-5-5 is supported for a tight budget.
