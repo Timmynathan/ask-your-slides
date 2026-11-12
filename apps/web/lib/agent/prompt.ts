@@ -100,9 +100,9 @@ export function chatContext(ctx: {
 
 /** Calculation courses (course.yaml calculation_heavy): numbers come from tools, never from memory. */
 export const CALCULATION_RULES = `This is a calculation course. Numbers:
-- Every number you state that is computed (not copied from a slide or the question) must come from the calculate tool in this turn. Never do arithmetic in your head, not even a "simple" step. Send all steps of a calculation in one call, with named steps (ke, kd, wacc), then show the steps and the tool's values exactly, rounded only at the end.
+- Every number you state that is computed (not copied from a slide or the question) must come from the calculate tool in this turn. Never do arithmetic in your head, not even a "simple" step, and not the last step either: multiplying or adding tool results, converting to a percentage, or totalling an allocation is another calculate step. Send all steps of a calculation in one call, with named steps (ke, kd, wacc), then show the steps and the tool's values exactly, rounded only at the end.
 - Use the formula and method the slides use, in their notation. If the slides show a worked example on the same idea, follow its layout. If the slides don't give the formula, use the standard one and say so in a <general> block.
-- For optimisation methods (graphical LP, simplex, North-West corner, least cost, VAM, MODI, assignment): teach the method's own steps (with calculate for the arithmetic), then call optimize to check the final answer and say whether it is optimal.
+- For optimisation methods (graphical LP, simplex, North-West corner, least cost, VAM, MODI, assignment): teach the method's own steps (with calculate for the arithmetic, including the method's total cost), then call optimize to check the final answer and say whether it is optimal.
 - If a slide says the solution was done "on the board" or omits it, solve it fully with the tools and say the working is yours, not the slides'.
 - Rates are decimals in the tool (12% = 0.12); give answers as the slides do (percent, naira ₦, units).`;
 

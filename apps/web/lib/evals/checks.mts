@@ -64,6 +64,11 @@ export function scoreTrace(t: TraceLike, courseCode: string): Checks {
 export function numbersIn(text: string): number[] {
   const flat = text
     .replace(/\[\[s:[A-Za-z0-9-]+\]\]/g, " ") // slide keys are not answers
+    // "−N151,093", "-₦151,093", "negative N184,072", "(N151,093)" → -151093
+    .replace(/[−–]/g, "-")
+    .replace(/\bnegative\s+(?=[N₦$]?\s?\d)/gi, "-")
+    .replace(/-\s?[N₦$]\s?(?=\d)/g, "-")
+    .replace(/\(\s?[N₦$]?\s?(\d[\d,]*(?:\.\d+)?)\s?\)/g, "-$1")
     .replace(/\{,\}/g, ",")
     .replace(/\\[,;!]/g, "")
     .replace(/(\d)\s(?=\d{3}\b)/g, "$1,"); // "1 000 000"
@@ -92,7 +97,8 @@ export function checkNumbers(answer: string, expected: NumberCheck[], computed: 
   const tool = computed.flatMap((v) => numbersIn(v));
   return expected.map((e) => {
     const found = e.any.map((v) => hasNumber(said, v, e.tol)).find((n) => n !== null) ?? null;
-    const fromTool = found !== null && hasNumber(tool, found, e.tol ?? 0.005) !== null;
+    // The tool's value may be in another unit than the answer's (4,490,000 vs "₦4.49m"): either form counts.
+    const fromTool = found !== null && (hasNumber(tool, found, e.tol ?? 0.005) !== null || e.any.some((v) => hasNumber(tool, v, e.tol) !== null));
     return { label: e.label, found, fromTool };
   });
 }

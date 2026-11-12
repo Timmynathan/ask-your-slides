@@ -6,6 +6,7 @@ describe("number checks for calculation golden cases", () => {
     expect(numbersIn("FV = ₦9,505,468.75 [[s:FIN413-06-26]]")).toEqual([9505468.75]);
     expect(numbersIn("$$K_e = 24.8\\%$$ and $$5{,}000{,}000$$")).toEqual([24.8, 5000000]);
     expect(numbersIn("a total of 1 000 000 units")).toEqual([1000000]);
+    expect(numbersIn("Plant A's is about −N151,093; B is negative ₦184,072.13 or (N5,000)")).toEqual([-151093, -184072.13, -5000]);
   });
 
   it("matches rates as decimals or percentages, within the slides' rounding", () => {
@@ -26,5 +27,7 @@ describe("number checks for calculation golden cases", () => {
       { label: "WACC", found: 17.5, fromTool: false },
       { label: "Kd", found: null, fromTool: false },
     ]);
+    // ₦4.49m in the answer, 4,490,000 from the tool: the same number.
+    expect(checkNumbers("Total ₦4.49m.", [{ label: "total", any: [4.49, 4490000] }], ["4490000"])[0].fromTool).toBe(true);
   });
 });

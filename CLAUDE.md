@@ -11,7 +11,10 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
 - Also the source of real user traces for Proofline (the owner's agent eval harness).
 
 ## Status (Nov 2026)
-- Programmes live in data: CS 400-level (7 courses) and ISMS 400-level (8 courses, ISM415 = elective).
+- Programmes live (Nov 2026): 10 final-year programmes, 60 courses: CS, Software Eng, Mechanical Eng (500-level),
+  ISMS, Mass Comm, Film & Multimedia, Business Admin, Economics, Finance, Accounting. Placeholder codes
+  (code_confirmed: false) show only the title. 11 calculation courses (calculation_heavy: true) get the
+  calculate/optimize tools; their formula pages were read with Sonnet. Slide images are WebP q75 (free 1 GB plan).
 - Past questions phases 1–3 done for CS (extraction, tagging, model answers, exam map, practice, topic chips).
   ISMS past papers not added yet (source ZIP exists; must match papers on course code AND title).
 - Pilot plan: free; launch to final-year students ~21 Nov 2026; exams from 5 Dec 2026.
