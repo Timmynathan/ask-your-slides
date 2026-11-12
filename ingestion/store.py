@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -10,6 +11,7 @@ import httpx
 import psycopg
 from config import BUCKET, env
 from manifest import Course, Material, Topic
+from PIL import Image
 from psycopg.rows import dict_row
 
 
@@ -27,6 +29,12 @@ class SlideRow:
     png: bytes | None = None
     label: str | None = None  # Word section path, "Cells 4–6", "lines 12–48"; None for pages/slides
     view: dict | None = None  # notebook cells / code lines for the viewer (no page image)
+
+
+def to_webp(png: bytes, quality: int = 80) -> bytes:
+    buf = io.BytesIO()
+    Image.open(io.BytesIO(png)).convert("RGB").save(buf, "WEBP", quality=quality, method=6)
+    return buf.getvalue()
 
 
 def vector_literal(v: list[float]) -> str:
@@ -105,15 +113,15 @@ class Store:
         with self.db.transaction():
             row = self.db.execute(
                 "insert into courses (institution, school, programme, code, title, department, level, semester, session, "
-                "aliases, lms_course_id, lecturer, sort_order, elective) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "aliases, lms_course_id, lecturer, sort_order, elective, code_confirmed) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
                 "on conflict (institution, programme, code) do update set school = excluded.school, "
                 "title = excluded.title, department = excluded.department, level = excluded.level, "
                 "semester = excluded.semester, session = excluded.session, aliases = excluded.aliases, "
                 "lms_course_id = excluded.lms_course_id, lecturer = excluded.lecturer, sort_order = excluded.sort_order, "
-                "elective = excluded.elective "
+                "elective = excluded.elective, code_confirmed = excluded.code_confirmed "
                 "returning id",
                 (c.institution, c.school, c.programme, c.code, c.title, c.department, c.level, c.semester, c.session,
-                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order, c.elective),
+                 list(c.aliases), c.lms_course_id, c.lecturer, c.sort_order, c.elective, c.code_confirmed),
             ).fetchone()
             course_id = str(row["id"])
             srow = self.db.execute(
@@ -122,6 +130,16 @@ class Store:
                 (course_id, c.session, c.lms_course_id),
             ).fetchone()
         return course_id, str(srow["id"])
+
+    def course_counts(self, c: Course) -> tuple[int, int]:
+        """(materials, chunks) stored for a course."""
+        row = self.db.execute(
+            "select (select count(*) from materials m where m.course_id = c.id) as materials, "
+            "(select count(*) from slides s where s.course_id = c.id) as chunks "
+            "from courses c where c.institution = %s and c.programme = %s and c.code = %s",
+            (c.institution, c.programme, c.code),
+        ).fetchone()
+        return (row["materials"], row["chunks"]) if row else (0, 0)
 
     def upsert_programmes(self, programmes: list) -> None:
         """Programme names, departments and schools from catalog.yaml (onboarding lists them)."""
@@ -211,11 +229,14 @@ class Store:
 
     # ── storage ─────────────────────────────────────────────
     def upload_images(self, slides: list[SlideRow], workers: int = 8) -> None:
+        """Pages are rendered as PNG (vision reads those) and stored as WebP: ~34% of the size, same
+        look on screen (quality 80, measured on 60 PAU pages)."""
         def put(s: SlideRow) -> None:
+            webp = s.image_path.endswith(".webp")
             r = self.http.post(
                 f"/object/{BUCKET}/{s.image_path}",
-                content=s.png,
-                headers={"Content-Type": "image/png", "x-upsert": "true", "cache-control": "3600"},
+                content=to_webp(s.png) if webp else s.png,
+                headers={"Content-Type": "image/webp" if webp else "image/png", "x-upsert": "true", "cache-control": "3600"},
             )
             if r.status_code >= 300:
                 raise RuntimeError(f"upload {s.image_path} failed: {r.status_code} {r.text[:200]}")

@@ -5,6 +5,7 @@ import { createCitationFilter } from "./citations";
 import { CORE_INSTRUCTIONS, chatContext, partnerContext } from "./prompt";
 import { buildTools, getMaterialPages, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
+import { parseSlideKey } from "@/lib/study/course-code";
 
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
 export const HISTORY_LIMIT = 12; // PRD §10.6
@@ -20,6 +21,8 @@ export interface ChatTurn {
   courseId: string;
   courseCode: string;
   courseTitle: string;
+  /** false: the code is a placeholder (IOH-ETHICS); the course is named by its title only. */
+  courseCodeConfirmed?: boolean;
   department?: string | null;
   topicId: string | null;
   topicTitle: string | null;
@@ -219,10 +222,10 @@ export async function runChatTurn(turn: ChatTurn) {
   // (titles can repeat, so a search could pick another one). Otherwise it searches.
   // "Explain the code in this topic": every practical file (scripts, notebooks) of the topic or
   // course is read first, so the answer covers each file, not just the best search matches.
-  const focus = turn.focusSlide?.match(/^([A-Z]{3}\d{3}-\d{2,3})-(\d{1,3})$/);
+  const focus = turn.focusSlide ? parseSlideKey(turn.focusSlide) : null;
   const preCalls: { tool: typeof searchSlides | typeof getMaterialPages; input: Record<string, unknown> }[] = [];
   if (focus) {
-    preCalls.push({ tool: getMaterialPages, input: { material: focus[1], from: Number(focus[2]), to: Number(focus[2]) } });
+    preCalls.push({ tool: getMaterialPages, input: { material: focus.material, from: focus.number, to: focus.number } });
   } else if (asksForCodeOverview(turn.userMessage)) {
     for (const m of await practicalMaterials(db, turn.courseId, turn.topicId)) {
       preCalls.push({ tool: getMaterialPages, input: { material: materialKey(turn.courseCode, m.material_order), from: 1, to: m.pages } });

@@ -10,7 +10,6 @@ import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
 import { CourseIcon } from "./course-icon";
-import { displayCode } from "@/lib/study/format";
 import { useClickAway } from "@/lib/ui/use-click-away";
 
 export interface DashboardCourse {
@@ -23,7 +22,11 @@ export interface DashboardCourse {
   /** Shown with an "Elective" tag (course.yaml elective: true). */
   elective: boolean;
   sortOrder: number;
+  /** "CSC 402", or null when the code is a placeholder (only the title is shown). */
+  shownCode: string | null;
   materials: number;
+  /** Fewer than LIMITED_MAIN_MATERIALS slides/notes files: shown with a "Limited materials" tag. */
+  limited: boolean;
   chats: number;
   lastStudiedAt: string | null; // ISO, for sorting
   lastStudied: string | null; // "3 Nov", formatted on the server
@@ -215,6 +218,19 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
   );
 }
 
+function LimitedTag({ onDark = false }: { onDark?: boolean }) {
+  return (
+    <span
+      title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
+      className={`inline-block rounded-full px-2.5 py-0.5 align-middle text-[12px] font-medium ${
+        onDark ? "mb-2 ml-1 bg-amber-200/20 text-amber-100" : "ml-2 bg-amber-50 text-amber-800"
+      }`}
+    >
+      Limited materials
+    </span>
+  );
+}
+
 function ElectiveTag({ onDark = false }: { onDark?: boolean }) {
   return (
     <span
@@ -228,20 +244,21 @@ function ElectiveTag({ onDark = false }: { onDark?: boolean }) {
 }
 
 function meta(c: DashboardCourse) {
-  return `${displayCode(c.code)} · ${c.materials} ${c.materials === 1 ? "material" : "materials"}`;
+  return `${c.shownCode ? `${c.shownCode} · ` : ""}${c.materials} ${c.materials === 1 ? "material" : "materials"}`;
 }
 
 function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-navy p-7 text-white transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
-      <Link href={c.href} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
+      <Link href={c.href} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
       <div className="flex items-start justify-between">
         <CourseIcon title={c.title} size={34} className="mt-1" light />
         <CardMenu course={c} onDark />
       </div>
       <div className="mt-auto">
         {c.elective && <ElectiveTag onDark />}
+        {c.limited && <LimitedTag onDark />}
         <h2 className="truncate text-[22px] leading-tight text-white" title={c.title}>
           {c.title}
         </h2>
@@ -257,13 +274,14 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
 function CourseRow({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="relative flex items-center gap-4 border-b border-line/70 px-5 py-3.5 last:border-0 hover:bg-pau-50">
-      <Link href={c.href} className="absolute inset-0 z-0" aria-label={`Open ${displayCode(c.code)}, ${c.title}`} />
+      <Link href={c.href} className="absolute inset-0 z-0" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
       <CourseIcon title={c.title} size={22} />
       <span className="min-w-0 flex-1 truncate text-[16px] text-ink">
         {c.title}
         {c.elective && <ElectiveTag />}
+        {c.limited && <LimitedTag />}
       </span>
-      <span className="hidden w-24 shrink-0 text-sm text-muted sm:block">{displayCode(c.code)}</span>
+      <span className="hidden w-24 shrink-0 text-sm text-muted sm:block">{c.shownCode ?? ""}</span>
       <span className="hidden w-28 shrink-0 text-sm text-muted md:block">
         {c.materials} {c.materials === 1 ? "material" : "materials"}
       </span>
@@ -297,7 +315,7 @@ function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDa
     <div ref={root} className="relative z-10">
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label={`More options for ${displayCode(c.code)}`}
+        aria-label={`More options for ${c.shownCode ?? c.title}`}
         aria-expanded={open}
         className={`grid h-9 w-9 place-items-center rounded-full transition active:scale-90 ${onDark ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-muted hover:bg-black/5 hover:text-ink"}`}
       >

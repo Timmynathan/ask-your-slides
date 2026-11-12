@@ -5,6 +5,7 @@ import { HISTORY_LIMIT, historyText, runChatTurn } from "@/lib/agent/run";
 import { isPartnerId, PARTNERS } from "@/lib/partners";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { SLIDE_KEY_RE } from "@/lib/study/course-code";
 
 export const maxDuration = 60;
 
@@ -25,7 +26,7 @@ const Body = z.object({
   // replaced by this one.
   edit: z.boolean().optional(),
   // "Ask about this…" from the viewer: the exact slide/section/code part the question is about.
-  focus_slide: z.string().regex(/^[A-Z]{3}\d{3}-\d{2,3}-\d{1,3}$/).optional(),
+  focus_slide: z.string().regex(SLIDE_KEY_RE).optional(),
 });
 
 const EDIT_GONE_MESSAGE = "That question can't be edited any more. Refresh the page and try again.";
@@ -52,11 +53,11 @@ export async function POST(request: Request) {
   // from this row, never from the request body.
   const { data: convo } = await supabase
     .from("conversations")
-    .select("id, title, course_id, topic_id, courses(code, title, department), topics(title)")
+    .select("id, title, course_id, topic_id, courses(code, code_confirmed, title, department), topics(title)")
     .eq("id", conversationId)
     .maybeSingle();
   if (!convo) return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
-  const course = convo.courses as unknown as { code: string; title: string; department: string };
+  const course = convo.courses as unknown as { code: string; code_confirmed: boolean; title: string; department: string };
   const topic = convo.topics as unknown as { title: string } | null;
 
   // Editing: the question must be one of the student's own, in this chat (RLS + the filters).
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
     courseId: convo.course_id,
     courseCode: course.code,
     courseTitle: course.title,
+    courseCodeConfirmed: course.code_confirmed,
     department: course.department,
     topicId: convo.topic_id,
     topicTitle: topic?.title ?? null,

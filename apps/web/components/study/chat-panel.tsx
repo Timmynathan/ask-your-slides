@@ -13,6 +13,7 @@ import { AnswerActions, type Rating } from "./answer-actions";
 import { PulseCard } from "./pulse-card";
 import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
+import { courseName } from "@/lib/study/course-code";
 
 type Meta = {
   citations?: CitationInfo[];
@@ -363,7 +364,7 @@ export function ChatPanel({
                     citations={m.metadata?.citations ?? []}
                     fallback={m.metadata?.fallback ?? null}
                     topicTitle={topic?.title ?? null}
-                    courseCode={course.code}
+                    courseName={courseName(course)}
                     courseId={course.id}
                     sortOrder={course.sort_order}
                     onCite={onCite}

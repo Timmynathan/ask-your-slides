@@ -344,6 +344,27 @@ searches `other` materials (student work is then labelled).
 **Zero past papers** (all ISMS courses for now): no Past questions entry, no Exam map, no chips;
 nothing is shown rather than an error.
 
+**Ten programmes (Nov 2026).** Eight more final-year programmes were added as data, same layout:
+Software Engineering, Mechanical Engineering (SST); Mass Communication, Film and Multimedia Studies
+(SMC); Business Administration, Economics, Finance, Accounting (SMSS).
+- **Levels come from the catalog.** Mechanical Engineering's final year is 500 level; programme
+  selection offers each programme the levels it has in `catalog.yaml` (`programme_choices()`).
+- **Placeholder codes.** Some LMS courses show no code; the catalog gives them a placeholder
+  (`IOH-ETHICS`, `BUA-COMPANY-LAW`) and `course.yaml` says `code_confirmed: false` (also used for a
+  guessed code such as ACC401). The UI then shows only the course title (dashboard, course header,
+  page title, share text, answers, landing pills), and the agent names the course by its title.
+  Slide keys still carry the code (`IOH-ETHICS-03-12`): placeholder parts start with a letter, so
+  keys split unambiguously. Format checked in ingestion, the database and the app.
+- **Limited materials.** A course with fewer than 4 main materials (`slides` or `notes`) shows a
+  "Limited materials" tag on its card and in its header. The agent's thin-slides rule already
+  applies (explain fully, general knowledge marked).
+- **Nothing is paid twice.** The same file in several courses (IOH-ETHICS in Accounting and Film;
+  CS files reused by Software Engineering) reuses its vision descriptions: descriptions are cached
+  by page image + text, and older ones are found through the same file's other courses. Embeddings
+  are cached by exact chunk text. Re-running ingestion after a manifest edit only re-chunks and
+  re-embeds what changed (metadata edits never re-render or re-describe).
+- `kind: skipped` rows (xlsx, csv, sql, duplicates) are listed but never ingested.
+
 ---
 
 ## 7. User flow
@@ -1061,6 +1082,7 @@ gantt
 | v1.2 | Structured quiz UI (multiple choice cards, score). |
 | v2 (images) | **Truly multimodal answers.** Today images reach the chat only as text: Claude Haiku describes diagrams, charts, tables and image-only slides at ingestion (≈150 words each; 17% of CS and 40% of ISMS chunks have one), and the chat reads those descriptions, never the image. Gaps: fine details beyond the description, images inside Word notes (ISM413: 0 of 214 sections described), notebook chart outputs ("[image output]"), and figures on text-heavy slides that skip vision. Plan, in order of value: (1) "Ask about this slide/section" sends the slide image itself to the model with the question (the item is already known, `focus_slide`; ≈$0.001 per question); (2) describe images in .docx notes and notebook outputs at ingestion; (3) longer descriptions for diagram-heavy slides. |
 | v1.3 | Voice: ask questions by speech, listen to answers. |
+| v1.4 (calculator) | **Calculator tool for calculation-heavy courses** (Finance, Accounting, Economics, Mechanical Engineering). Plan only; not built. Problem: Haiku does arithmetic in its head, so NPV, WACC, ratios, depreciation schedules or stress calculations can be slightly wrong, and a wrong number in a worked example costs trust. Design: a `calculate` tool the agent calls for every number it states in a worked example: input is an arithmetic expression or a small named-variable program (`rate = 0.12; npv = -1000 + 400/(1+rate) + 500/(1+rate)^2`), evaluated server-side by a safe expression engine (no code execution: numbers, + − × ÷ ^, parentheses, `ln`, `exp`, `sqrt`, `sum`, financial helpers `npv`, `irr`, `pmt`, `fv`, `pv`), returning the value and each step. Answers show the steps; the formula is cited to the slide that gives it. Enabled per course by a `calculation_heavy: true` flag in `course.yaml` (so CS/ISMS prompts stay unchanged), with a prompt rule "never state a computed number you did not get from `calculate`". Evaluation: ~15 golden cases from the slides' own worked examples (FIN, ACC, ECO, MEE), checked to the slide's answer; a check that every number in a worked example matches a tool result. Cost: no extra model calls beyond the tool round trip (~1–2 extra steps per calculation question). |
 | v2.0 | MCP server: students connect the course slides to Claude, ChatGPT, or other tools. |
 | v2.1 | Other levels and departments; per-student course selection. |
 | v2.2 | Mobile app (PWA first). |

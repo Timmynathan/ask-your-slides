@@ -23,7 +23,7 @@ import {
   type QuestionTopic,
 } from "@/lib/past/map";
 import type { CitationInfo } from "@/lib/study/format";
-import { displayCode } from "@/lib/study/format";
+import { courseName } from "@/lib/study/course-code";
 import type { CourseItem, TopicItem } from "@/lib/study/types";
 import { Answer } from "./answer";
 
@@ -140,7 +140,7 @@ function ExamMapView({ course, topics, data, onPractise }: { course: CourseItem;
   const total = practised(data.questions.filter((q) => q.origin === "past_paper")).length;
 
   if (!total) {
-    return <p className="mx-auto mt-14 max-w-sm text-center text-[15px] text-muted">No past papers for {displayCode(course.code)} yet.</p>;
+    return <p className="mx-auto mt-14 max-w-sm text-center text-[15px] text-muted">No past papers for {courseName(course)} yet.</p>;
   }
   if (map.few) {
     return (
@@ -158,7 +158,7 @@ function ExamMapView({ course, topics, data, onPractise }: { course: CourseItem;
   return (
     <div className="mx-auto max-w-3xl">
       <p className="mb-4 text-sm text-muted">
-        Which topics came up in {displayCode(course.code)}&apos;s last {map.papers.length} papers ({map.papers.map((p) => paperLabel(p)).join(", ")}).
+        Which topics came up in {courseName(course)}&apos;s last {map.papers.length} papers ({map.papers.map((p) => paperLabel(p)).join(", ")}).
       </p>
       <ul className="space-y-2">
         {map.rows.map((r) => (
@@ -451,12 +451,12 @@ function ResultView({ result, draft, course, onCite, partnerName }: { result: Re
         </p>
       )}
       {result.mode === "mcq" && result.explanation ? (
-        <Answer text={result.explanation} citations={result.citations} fallback={null} topicTitle={null} courseCode={course.code} courseId={course.id} sortOrder={course.sort_order} onCite={onCite} partnerName={partnerName} />
+        <Answer text={result.explanation} citations={result.citations} fallback={null} topicTitle={null} courseName={courseName(course)} courseId={course.id} sortOrder={course.sort_order} onCite={onCite} partnerName={partnerName} />
       ) : (
         result.model_answer && (
           <div>
             <h4 className="mb-2 text-[13px] text-muted">Model answer</h4>
-            <Answer text={result.model_answer} citations={result.citations} fallback={null} topicTitle={null} courseCode={course.code} courseId={course.id} sortOrder={course.sort_order} onCite={onCite} partnerName={partnerName} />
+            <Answer text={result.model_answer} citations={result.citations} fallback={null} topicTitle={null} courseName={courseName(course)} courseId={course.id} sortOrder={course.sort_order} onCite={onCite} partnerName={partnerName} />
           </div>
         )
       )}

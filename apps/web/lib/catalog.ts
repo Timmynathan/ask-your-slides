@@ -1,5 +1,6 @@
 import "server-only";
 import { cacheLife } from "next/cache";
+import { displayCode } from "@/lib/study/course-code";
 import { adminClient } from "@/lib/supabase/admin";
 
 // What's on offer, read from the database instead of written into the copy: departments, courses
@@ -16,13 +17,14 @@ export async function getCatalog(): Promise<Catalog> {
   cacheLife("hours");
   const db = adminClient();
   const [{ data: courses }, { count }] = await Promise.all([
-    db.from("courses").select("code, department").order("sort_order"),
+    db.from("courses").select("code, code_confirmed, department").order("sort_order"),
     db.from("slides").select("*", { count: "exact", head: true }),
   ]);
-  const rows = (courses ?? []) as { code: string; department: string }[];
+  const rows = (courses ?? []) as { code: string; code_confirmed: boolean; department: string }[];
   return {
     departments: [...new Set(rows.map((c) => c.department))],
-    courseCodes: [...new Set(rows.map((c) => c.code))], // a code can repeat across programmes
+    // A code can repeat across programmes; placeholder codes (IOH-ETHICS) are never shown.
+    courseCodes: [...new Set(rows.filter((c) => c.code_confirmed !== false).map((c) => c.code))],
     courseCount: rows.length,
     slideCount: count ?? 0,
   };
@@ -43,5 +45,5 @@ export function roughCount(n: number): string {
 
 /** "CSC402" → "CSC 402". */
 export function spacedCode(code: string): string {
-  return code.replace(/^([A-Z]+)/, "$1 ");
+  return displayCode(code);
 }

@@ -14,6 +14,7 @@ import hashlib
 import json
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 
 import anthropic
 
@@ -55,17 +56,55 @@ def _get_client() -> anthropic.Anthropic:
         return _client
 
 
-def describe(png: bytes, where: str, extracted_text: str) -> VisionResult:
-    prompt = DESCRIBE.format(where=where, text=extracted_text.strip()[:4000] or "(none)")
-    result = _call(png, prompt, max_tokens=600)
+def _prompt(where: str, extracted_text: str) -> str:
+    return DESCRIBE.format(where=where, text=extracted_text.strip()[:4000] or "(none)")
+
+
+def _prompt_path(png: bytes, prompt: str) -> Path:
+    key = hashlib.sha256(f"{VISION_MODEL}|{PROMPT_VERSION}|{prompt}".encode() + png).hexdigest()
+    return CACHE / "vision" / f"{key}.json"
+
+
+def _content_path(png: bytes, extracted_text: str) -> Path:
+    """Keyed by what is on the page only (image + its text), not by which course it is in: the same
+    file in another course or programme (IOH-ETHICS in Accounting and Film, CS files reused by
+    Software Engineering) reuses the description instead of paying for it again."""
+    key = hashlib.sha256(f"{VISION_MODEL}|{PROMPT_VERSION}|{extracted_text.strip()[:4000]}".encode() + png).hexdigest()
+    return CACHE / "vision-content" / f"{key}.json"
+
+
+def cached_path(png: bytes, where: str, extracted_text: str, twins: list[str] = ()) -> Path | None:
+    """The cache file that already describes this page, if any. `twins` are the `where` texts of the
+    same file elsewhere in the catalog (descriptions cached before content keys existed)."""
+    for path in (_content_path(png, extracted_text), _prompt_path(png, _prompt(where, extracted_text)),
+                 *(_prompt_path(png, _prompt(w, extracted_text)) for w in twins)):
+        if path.is_file():
+            return path
+    return None
+
+
+def describe(png: bytes, where: str, extracted_text: str, twins: list[str] = ()) -> VisionResult:
+    hit = cached_path(png, where, extracted_text, twins)
+    if hit:
+        data = json.loads(hit.read_text())
+        _save(_content_path(png, extracted_text), data)
+        result = VisionResult(text=data["text"], cached=True, refused=data.get("refused", False), note=data.get("note", ""))
+    else:
+        result = _call(png, _prompt(where, extracted_text), max_tokens=600)
+        _save(_content_path(png, extracted_text), {"text": result.text, "refused": result.refused, "note": result.note})
     if result.text and result.text.strip().upper().rstrip(".") == "NONE":
         result.text = None
     return result
 
 
+def _save(path: Path, data: dict) -> None:
+    if not path.is_file():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data))
+
+
 def _call(png: bytes, prompt: str, max_tokens: int) -> VisionResult:
-    key = hashlib.sha256(f"{VISION_MODEL}|{PROMPT_VERSION}|{prompt}".encode() + png).hexdigest()
-    path = CACHE / "vision" / f"{key}.json"
+    path = _prompt_path(png, prompt)
     if path.is_file():
         data = json.loads(path.read_text())
         return VisionResult(text=data["text"], cached=True, refused=data.get("refused", False), note=data.get("note", ""))

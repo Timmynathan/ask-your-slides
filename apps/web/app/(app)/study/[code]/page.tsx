@@ -24,7 +24,7 @@ async function Loaded({ params, searchParams }: Props) {
   const { supabase, user } = await requireUser();
 
   const [{ data: courses }, { data: profile, error: profileError }, { data: used }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }] = await Promise.all([
-    supabase.from("courses").select("id, code, programme, department, title, sort_order, elective").order("sort_order"),
+    supabase.from("courses").select("id, code, code_confirmed, programme, department, title, sort_order, elective").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, department, programme").eq("id", user.id).single(),
     supabase.rpc("my_usage_today"),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),

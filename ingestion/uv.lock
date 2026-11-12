@@ -298,6 +298,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "httpx" },
+    { name = "pillow" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pymupdf" },
     { name = "python-docx" },
@@ -315,6 +316,7 @@ dev = [
 requires-dist = [
     { name = "anthropic" },
     { name = "httpx" },
+    { name = "pillow" },
     { name = "psycopg", extras = ["binary"] },
     { name = "pymupdf" },
     { name = "python-docx", specifier = ">=1.2.0" },

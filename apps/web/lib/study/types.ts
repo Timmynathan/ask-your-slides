@@ -7,6 +7,8 @@ export interface CourseItem {
   title: string;
   sort_order: number;
   elective?: boolean;
+  /** false: a placeholder code (IOH-ETHICS); only the title is shown. */
+  code_confirmed?: boolean;
 }
 
 export interface TopicItem {

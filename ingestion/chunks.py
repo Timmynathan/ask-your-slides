@@ -21,8 +21,9 @@ def slide_key(course_code: str, material_order: int, number: int) -> str:
 
 
 def image_path(course_id: str, material_order: int, number: int) -> str:
-    """Storage path under the course's database id: course codes repeat across programmes."""
-    return f"{course_id}/{material_order:02d}/{number}.png"
+    """Storage path under the course's database id: course codes repeat across programmes.
+    WebP since Nov 2026 (a third of the PNG size); older materials keep their .png until re-processed."""
+    return f"{course_id}/{material_order:02d}/{number}.webp"
 
 
 def unit(kind: str, is_pptx: bool, file_type: str = "pdf") -> str:

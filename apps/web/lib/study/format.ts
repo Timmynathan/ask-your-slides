@@ -113,6 +113,4 @@ export function courseDot(sortOrder: number): string {
   return COURSE_DOTS[(sortOrder - 1 + COURSE_DOTS.length) % COURSE_DOTS.length];
 }
 
-export function displayCode(code: string): string {
-  return code.replace(/^([A-Z]+)/, "$1 ");
-}
+export { displayCode } from "@/lib/study/course-code";

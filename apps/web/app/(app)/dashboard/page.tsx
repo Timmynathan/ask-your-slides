@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Dashboard, type DashboardCourse } from "@/components/dashboard/dashboard";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
+import { countMain, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
 import { courseHref } from "@/lib/study/course-link";
 
 export const metadata: Metadata = { title: "My courses · Ask Your Slides" };
@@ -14,7 +15,7 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", t
 async function Loaded() {
   const { supabase, user } = await requireUser();
   const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }] = await Promise.all([
-    supabase.from("courses").select("id, code, programme, title, department, sort_order, elective, materials(count)").order("sort_order"),
+    supabase.from("courses").select("id, code, code_confirmed, programme, title, department, sort_order, elective, materials(kind)").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, programme").eq("id", user.id).single(),
     supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
   ]);
@@ -36,7 +37,9 @@ async function Loaded() {
         department: c.department as string,
         elective: !!c.elective,
         sortOrder: c.sort_order as number,
-        materials: (c.materials as unknown as { count: number }[])[0]?.count ?? 0,
+        shownCode: shownCode(c as { code: string; code_confirmed: boolean }),
+        materials: (c.materials as { kind: string }[]).length,
+        limited: countMain(c.materials as { kind: string }[]) < LIMITED_MAIN_MATERIALS,
         chats: mine.length,
         lastStudiedAt: mine[0]?.updated_at ?? null,
         lastStudied: mine[0] ? day.format(new Date(mine[0].updated_at)) : null,

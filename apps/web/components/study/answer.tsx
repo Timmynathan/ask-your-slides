@@ -7,7 +7,6 @@ import {
   chipLabel,
   chipParts,
   citeKey,
-  displayCode,
   isCiteHref,
   markersToLinks,
   splitAnswer,
@@ -21,7 +20,8 @@ interface Props {
   citations: CitationInfo[];
   fallback: { topic: string; used: boolean } | null;
   topicTitle: string | null;
-  courseCode: string;
+  /** "CSC 402", or the title when the code is a placeholder. */
+  courseName: string;
   /** Slide keys are unique within a course; the viewer needs both. */
   courseId: string;
   sortOrder: number;
@@ -30,7 +30,7 @@ interface Props {
   partnerName?: string;
 }
 
-export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseCode, courseId, onCite, partnerName = "Your study partner" }: Props) {
+export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseName, courseId, onCite, partnerName = "Your study partner" }: Props) {
   const byKey = new Map(citations.map((c) => [c.slide_key, c]));
   const segments = splitAnswer(text);
   // The label comes from the server (citations outside the topic), not from the model's wording.
@@ -100,7 +100,7 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
             <path d="M2 8h11M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span>
-            Not in <em className="not-italic font-medium">{topicTitle}</em>: from elsewhere in {displayCode(courseCode)}
+            Not in <em className="not-italic font-medium">{topicTitle}</em>: from elsewhere in {courseName}
           </span>
         </p>
       )}

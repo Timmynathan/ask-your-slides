@@ -1,3 +1,4 @@
+import { displayCode } from "@/lib/study/course-code";
 // System prompt (PRD §10.5). The rules that matter most are also enforced in code:
 // citations are validated on the stream (citations.ts), course/topic scope is injected by the
 // server (tools.ts), and the fallback label comes from the server, not from the model's wording.
@@ -85,15 +86,25 @@ export function partnerContext(voice: string | null, studentName: string | null)
   return parts.join(" ");
 }
 
-export function chatContext(ctx: { courseCode: string; courseTitle: string; department?: string | null; topicTitle: string | null }): string {
-  const course = `${ctx.courseCode.replace(/^([A-Z]+)/, "$1 ")} ${ctx.courseTitle}${ctx.department ? ` (${ctx.department})` : ""}`;
+export function chatContext(ctx: {
+  courseCode: string;
+  courseTitle: string;
+  courseCodeConfirmed?: boolean;
+  department?: string | null;
+  topicTitle: string | null;
+}): string {
+  const confirmed = ctx.courseCodeConfirmed !== false;
+  const course = `${confirmed ? `${displayCode(ctx.courseCode)} ` : ""}${ctx.courseTitle}${ctx.department ? ` (${ctx.department})` : ""}`;
+  // A placeholder code appears in slide keys but is not the course's real code: never say it.
+  const noCode = confirmed ? "" : ` This course has no official code: call it "${ctx.courseTitle}", never by the code in its slide keys.`;
   if (!ctx.topicTitle) {
-    return `This chat covers the whole course ${course}.`;
+    return `This chat covers the whole course ${course}.${noCode}`;
   }
   return (
     `This chat is about the topic "${ctx.topicTitle}" in ${course}. search_slides searches this topic first and widens to ` +
     `the whole course only when the topic doesn't cover the question. When you use a result with outside_topic: true, ` +
     `say plainly which part of the course it comes from, e.g. "This is covered under <topic>, not ${ctx.topicTitle}." ` +
-    `Use scope "course" only when the student asks to connect this topic with others; don't set it because a question seems to belong to another topic, since the search widens by itself when it should.`
+    `Use scope "course" only when the student asks to connect this topic with others; don't set it because a question seems to belong to another topic, since the search widens by itself when it should.` +
+    noCode
   );
 }

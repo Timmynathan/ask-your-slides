@@ -17,6 +17,7 @@ half-ingested course.
 
 from __future__ import annotations
 
+import html
 import os
 import re
 from dataclasses import dataclass
@@ -27,7 +28,12 @@ import yaml
 
 KINDS = ("slides", "notes", "reading", "practical", "outline", "other")
 SKIPPED = "skipped"
-CODE_RE = re.compile(r"^[A-Z]{3}[0-9]{3}$")
+# A real code (CSC420, GET501) or a placeholder for a course the LMS shows no code for
+# (IOH-ETHICS, BUA-COMPANY-LAW). Placeholder parts start with a letter, so a slide key
+# (CODE-<order>-<number>) still splits unambiguously. Keep in step with the database checks
+# (migration 20261112000001) and the web app (lib/study/course-code.ts).
+CODE_RE = re.compile(r"^[A-Z]{2,4}(?:[0-9]{3}|(?:-[A-Z][A-Z0-9]*)+)$")
+REAL_CODE_RE = re.compile(r"^[A-Z]{2,4}[0-9]{3}$")
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SESSION_RE = re.compile(r"^(\d{4})-(\d{4})$")
 SEMESTER_RE = re.compile(r"^semester_([12])$")
@@ -97,6 +103,7 @@ class Course:
     skipped: tuple[dict, ...]
     past_papers: tuple[PastPaper, ...]
     elective: bool = False
+    code_confirmed: bool = True  # False: a placeholder code; the app shows only the title
 
     @property
     def key(self) -> str:
@@ -202,7 +209,7 @@ def _load_institution(data_root: Path, inst_dir: Path, problems: list[str], star
                         code = str(code)
                         cwhere = f"{inst}/{pid}/{code}"
                         if not CODE_RE.match(code):
-                            problems.append(f"{where}: {pid} {level}: bad course code {code!r} (e.g. CSC420)")
+                            problems.append(f"{where}: {pid} {level}: bad course code {code!r} (e.g. CSC420, or a placeholder like IOH-ETHICS)")
                             continue
                         course_dir = inst_dir / sid / pid / f"{level}-level" / code
                         listed.add(course_dir)
@@ -251,10 +258,15 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         problems.append(f"{where}: course.yaml current_session {current!r} but the catalog says {session!r}")
     aliases = [str(a) for a in info.get("aliases") or []]
     for a in aliases:
-        if not CODE_RE.match(a):
+        if not re.fullmatch(r"[A-Z]{3}[0-9]{3}", a):  # the database's alias check
             problems.append(f"{where}: bad alias {a!r} (an old course code, e.g. CSC403)")
     if expect["code"] in aliases:
         problems.append(f"{where}: aliases include the course's own code")
+    code_confirmed = info.get("code_confirmed", True)
+    if not isinstance(code_confirmed, bool):
+        problems.append(f"{where}: code_confirmed must be true or false")
+    elif code_confirmed and not REAL_CODE_RE.match(expect["code"]):
+        problems.append(f"{where}: {expect['code']} is a placeholder code; add code_confirmed: false to course.yaml")
     lms_id = info.get("lms_course_id")
     if lms_id is not None and not isinstance(lms_id, int):
         problems.append(f"{where}: lms_course_id must be a number")
@@ -273,7 +285,10 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
     if manifest.get("session") not in (None, session):
         problems.append(f"{mwhere}: session is {manifest.get('session')!r}, expected {session}")
 
-    topics = [Topic(order=int(t["order"]), title=str(t["title"]).strip()) for t in manifest.get("topics") or []]
+    topics = [Topic(order=int(t["order"]), title=_text(t["title"])) for t in manifest.get("topics") or []]
+    for t in topics:
+        if not re.search(r"[A-Za-z]{2}", re.sub(r"(?i)\bamp;", "", t.title)):
+            problems.append(f"{mwhere}: topic title {t.title!r} looks broken (an HTML entity left from the LMS?); give it a real title")
     _check_unique(problems, mwhere, "topic order", [t.order for t in topics])
     _check_unique(problems, mwhere, "topic title", [t.title for t in topics])
     topic_titles = {t.title for t in topics}
@@ -313,14 +328,14 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         if file_type is None:
             problems.append(f"{rwhere}: can't tell what kind of file {rel} is (supported: {', '.join(filetype.SUPPORTED.values())})")
             continue
-        topic = row.get("topic")
+        topic = _text(row["topic"]) if row.get("topic") is not None else None
         if topic is not None and topic not in topic_titles:
             problems.append(f"{rwhere}: topic {topic!r} is not in {expect['code']}'s topic list")
             continue
         materials.append(Material(
-            course=expect["code"], order=order, cmid=cmid, section=row.get("lms_section"), file=path,
+            course=expect["code"], order=order, cmid=cmid, section=_text(row["lms_section"]) if row.get("lms_section") else None, file=path,
             rel_file=_rel(data_root, path), topic=topic, kind=kind, review=row.get("review"),
-            title_override=row.get("title"), file_type=file_type, source=material_source(row.get("review")),
+            title_override=_text(row["title"]) if row.get("title") else None, file_type=file_type, source=material_source(row.get("review")),
         ))
     _check_unique(problems, mwhere, "lms_order", [m.order for m in materials])
 
@@ -333,6 +348,7 @@ def _load_course(data_root: Path, course_dir: Path, problems: list[str], where: 
         title=str(info["title"]).strip(), department=department, level=expect["level"], semester=expect["semester"],
         session=session, aliases=tuple(aliases), lecturer=info.get("lecturer") or None, lms_course_id=lms_id,
         sort_order=sort_order, dir=course_dir, elective=info.get("elective") is True,
+        code_confirmed=info.get("code_confirmed", True) is not False,
         topics=tuple(sorted(topics, key=lambda t: t.order)),
         materials=tuple(sorted(materials, key=lambda m: m.order)),
         skipped=tuple(skipped), past_papers=past_papers,
@@ -389,6 +405,11 @@ def material_source(review: str | None) -> str:
     return "student" if review and STUDENT_WORK.match(review) else "lecturer"
 
 
+def _text(v) -> str:
+    """LMS text as people read it: '&amp;' → '&' (manifests are scraped from HTML)."""
+    return html.unescape(str(v)).strip()
+
+
 def _opt_str(v) -> str | None:
     return str(v).strip() or None if v is not None else None
 
@@ -401,7 +422,7 @@ def title_from_filename(stem: str) -> str:
     """
     s = re.sub(r"^\d+[-_ ]+", "", stem)
     words = [w for w in re.split(r"[-_ ]+", s) if w]
-    words = [w for w in words if w.lower() != "pau" and not re.fullmatch(r"[A-Za-z]{3}\d{3}", w)]
+    words = [w for w in words if w.lower() != "pau" and not re.fullmatch(r"[A-Za-z]{2,4}\d{3}", w)]
     if words and re.fullmatch(r"(?i)lecture\d*", words[0]):
         rest = words[1:]
         if words[0].lower() == "lecture" and rest and rest[0].isdigit():

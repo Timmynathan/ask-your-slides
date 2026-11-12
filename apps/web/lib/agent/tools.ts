@@ -5,6 +5,7 @@ import { z } from "zod";
 import { must } from "@/lib/supabase/admin";
 import { embedQuery } from "./embed";
 import { chunkBody, decideFallback, DEFAULT_KINDS, matchSlides, type SlideHit } from "./retrieval";
+import { MATERIAL_KEY_RE, parseMaterialKey } from "@/lib/study/course-code";
 
 // ── Context ──────────────────────────────────────────────────────────────────
 // course and topic come from the conversation row, never from the model (PRD §10.2): no tool
@@ -268,7 +269,7 @@ export const listTopics = defineTool({
       status: "ok",
       result: {
         ok: true,
-        course: `${ctx.courseCode} ${ctx.courseTitle}`,
+        course: ctx.courseTitle,
         topics: (must(topics) as { id: string; topic_order: number; title: string }[]).map((t) => ({
           order: t.topic_order,
           title: t.title,
@@ -293,12 +294,12 @@ export const getMaterialPages = defineTool({
     "Returns the slides/pages of one material in order, at most 40 per call (use from/to for longer ones). " +
     "Take the material key from list_topics, e.g. 'CSC420-02'. Each page has a slide_key to cite.",
   input: z.object({
-    material: z.string().trim().regex(/^[A-Z]{3}\d{3}-\d{2,3}$/, "Use a material key from list_topics, e.g. CSC420-02"),
+    material: z.string().trim().regex(MATERIAL_KEY_RE, "Use a material key from list_topics, e.g. CSC420-02"),
     from: z.number().int().min(1).optional(),
     to: z.number().int().min(1).optional(),
   }),
   async handler(ctx, { material, from = 1, to }) {
-    const [code, order] = material.split("-");
+    const { code, order } = parseMaterialKey(material)!;
     if (code !== ctx.courseCode) {
       return refused("other_course", `${material} is not in ${ctx.courseCode}. Use a material key from list_topics.`);
     }

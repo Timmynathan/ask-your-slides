@@ -48,6 +48,7 @@ class Stats:
     pages: int = 0
     vision_calls: int = 0
     vision_cached: int = 0
+    embed_chars: int = 0  # dry run: text that would be embedded (cost estimate)
     transcribed: int = 0
     refusals: int = 0
     input_tokens: int = 0
@@ -65,6 +66,28 @@ class PagePlan:
     reason: str | None  # why it needs extra work (None = text layer is enough)
     mode: str  # 'describe' (Claude vision) | 'transcribe' (local OCR)
     pdf: Path
+
+
+def file_sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def where_prefix(course: Course, m: Material) -> str:
+    """How a page's vision prompt names where it is from (part of the vision cache key)."""
+    title = m.title_override or title_from_filename(m.file.stem)
+    return f"{unit(m.kind, m.file_type == 'pptx')}s from \"{title}\" ({m.kind}), course {course.code} {course.title}"
+
+
+def twin_index(courses: list[Course]) -> dict[str, list[str]]:
+    """file hash → the vision `where` of every material with that exact file, across the catalog.
+    The same file in several courses (IOH-ETHICS in Accounting and Film; CS slides reused by Software
+    Engineering) is described once: later copies reuse the cached description."""
+    out: dict[str, list[str]] = {}
+    for c in courses:
+        for m in c.materials:
+            if m.file_type not in TEXT_TYPES:
+                out.setdefault(file_sha(m.file), []).append(where_prefix(c, m))
+    return out
 
 
 def content_hash(m: Material) -> str:
@@ -145,7 +168,8 @@ def plan_text_units(m: Material) -> tuple[list[TextUnit], str]:
 TEXT_TYPES = {"docx", "ipynb", "code"}
 
 
-def enrich(plans: list[PagePlan], where_prefix: str, stats: Stats, workers: int, use_vision: bool) -> dict[int, tuple[str | None, str | None]]:
+def enrich(plans: list[PagePlan], where: str, twins: list[str], stats: Stats, workers: int,
+           use_vision: bool) -> dict[int, tuple[str | None, str | None]]:
     """Returns {page number: (visual_description, transcription)}.
 
     transcribe → local OCR (Tesseract): verbatim, free, offline. Not Claude: a word-for-word copy of
@@ -164,7 +188,7 @@ def enrich(plans: list[PagePlan], where_prefix: str, stats: Stats, workers: int,
     describe_todo = [p for p in plans if p.mode == "describe" and p.reason]
 
     def one(p: PagePlan):
-        return p, vision.describe(p.png, f"{where_prefix}, page {p.number}", p.body)
+        return p, vision.describe(p.png, f"{where}, page {p.number}", p.body, [f"{w}, page {p.number}" for w in twins])
 
     with ThreadPoolExecutor(workers) as pool:
         for p, r in pool.map(one, describe_todo):
@@ -271,14 +295,21 @@ def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
         status = "changed" if ex else "new"
         stats.materials[status] += 1
         summary = f"{len(plans)} {unit_name}s, vision {n_vision}" + (f", OCR {n_transcribe}" if n_transcribe else "")
+        where = where_prefix(course, m)
+        twins = [w for w in args.twins.get(file_sha(m.file), []) if w != where]
         if dry:
+            cached = sum(1 for p in plans if p.reason and p.mode == "describe"
+                         and vision.cached_path(p.png, f"{where}, page {p.number}", p.body, [f"{w}, page {p.number}" for w in twins]))
+            if cached:
+                summary += f" ({cached} already described)"
             print(f"  + {status:8} {label}  [{summary}]")
             stats.vision_calls += n_vision
+            stats.vision_cached += cached
             stats.transcribed += n_transcribe
+            stats.embed_chars += sum(len(p.body) + 300 for p in plans)
             continue
 
-        where = f"{unit_name}s from \"{title}\" ({m.kind}), course {course.code} {course.title}"
-        results = enrich(plans, where, stats, args.workers, use_vision=not args.no_vision)
+        results = enrich(plans, where, twins, stats, args.workers, use_vision=not args.no_vision)
         slides: list[SlideRow] = []
         for p in plans:
             visual, transcript = results.get(p.number, (None, None))
@@ -322,6 +353,8 @@ def ingest_text_material(store: Store, course: Course, m: Material, title: str, 
     summary = f"{len(units)} {unit_name}s"
     if args.dry_run:
         print(f"  + {status:8} {label}  [{summary}]")
+        stats.embed_chars += sum(len(u.body) + 300 for u in units)
+        stats.pages += len(units)
         return
     rows: list[SlideRow] = []
     for u in units:
@@ -351,6 +384,36 @@ def ingest_text_material(store: Store, course: Course, m: Material, title: str, 
         store.delete_images(stale)
     stats.pages += len(units)
     print(f"  + {status:8} {label}  [{summary}]  {time.time() - t0:.0f}s")
+
+
+# Cost estimate (dry run). A 1280px page image is ~1,250 tokens; with the prompt and the page's text
+# a vision call averages ~2,000 input and ~120 output tokens. Voyage: ~4 characters per token.
+EST_VISION_IN, EST_VISION_OUT = 2_000, 120
+VOYAGE_USD_PER_MTOK = 0.06
+
+
+def print_estimate(stats: Stats) -> None:
+    paid = stats.vision_calls - stats.vision_cached
+    vin, vout = paid * EST_VISION_IN, paid * EST_VISION_OUT
+    vusd = vin / 1e6 * VISION_USD_PER_MTOK[0] + vout / 1e6 * VISION_USD_PER_MTOK[1]
+    etok = stats.embed_chars // 4
+    eusd = etok / 1e6 * VOYAGE_USD_PER_MTOK
+    print(f"  estimate: {VISION_MODEL} {paid} paid vision calls ≈ {vin / 1e6:.2f}M in / {vout / 1e6:.2f}M out tokens ≈ ${vusd:.2f}")
+    print(f"            voyage-4 ≈ {etok / 1e6:.2f}M tokens ≈ ${eusd:.2f} (an upper bound: unchanged chunks are reused)")
+    print(f"            total ≈ ${vusd + eusd:.2f}")
+
+
+def print_report(rows: list[tuple], dry: bool) -> None:
+    """Per course: materials, chunks, vision calls (paid / reused from cache) and cost."""
+    if not rows:
+        return
+    head = "new/changed chunks" if dry else "chunks in DB"
+    print(f"\nPer course ({'estimate' if dry else 'this run'}; materials = {'in manifest' if dry else 'in DB'}):")
+    print(f"  {'course':52} {'materials':>9} {head:>18} {'vision paid':>11} {'reused':>7} {'cost':>8}")
+    for key, mats, chunks, paid, reused, usd in rows:
+        print(f"  {key:52} {mats:>9} {chunks:>18} {paid:>11} {reused:>7} {'$' + format(usd, '.3f'):>8}")
+    print(f"  {'total':52} {sum(r[1] for r in rows):>9} {sum(r[2] for r in rows):>18} {sum(r[3] for r in rows):>11} "
+          f"{sum(r[4] for r in rows):>7} {'$' + format(sum(r[5] for r in rows), '.2f'):>8}")
 
 
 def main() -> int:
@@ -404,21 +467,41 @@ def main() -> int:
 
         if not args.dry_run:
             store.upsert_programmes(programmes(DATA))
+        args.twins = twin_index(courses)
         stats = Stats()
         t0 = time.time()
+        report: list[tuple] = []
         for course in selected:
+            before = (stats.pages, stats.vision_calls, stats.vision_cached, stats.input_tokens, stats.output_tokens,
+                      embed.tokens_used, stats.embed_chars)
             ingest_course(store, course, args, stats)
+            d = [a - b for a, b in zip((stats.pages, stats.vision_calls, stats.vision_cached, stats.input_tokens,
+                                        stats.output_tokens, embed.tokens_used, stats.embed_chars), before)]
+            if args.dry_run:
+                paid = d[1] - d[2]
+                usd = (paid * EST_VISION_IN / 1e6 * VISION_USD_PER_MTOK[0] + paid * EST_VISION_OUT / 1e6 * VISION_USD_PER_MTOK[1]
+                       + d[6] / 4 / 1e6 * VOYAGE_USD_PER_MTOK)
+                report.append((course.key, len(course.materials), d[0], paid, d[2], usd))
+            else:
+                n_mat, n_chunks = store.course_counts(course)
+                paid = d[1] - d[2]
+                usd = d[3] / 1e6 * VISION_USD_PER_MTOK[0] + d[4] / 1e6 * VISION_USD_PER_MTOK[1] + d[5] / 1e6 * VOYAGE_USD_PER_MTOK
+                report.append((course.key, n_mat, n_chunks, paid, d[2], usd))
+        print_report(report, args.dry_run)
 
         print("\n" + ("Plan (dry run — nothing written)" if args.dry_run else "Done") + f" in {time.time() - t0:.0f}s")
         print("  materials: " + ", ".join(f"{k} {v}" for k, v in stats.materials.items()))
         if stats.pages:
             print(f"  pages processed: {stats.pages}  (images {stats.image_bytes / 1e6:.1f} MB, avg {stats.image_bytes / stats.pages / 1024:.0f} KB)")
         print(f"  OCR: {stats.transcribed} pages   vision: {stats.vision_calls} calls"
-              + ("" if args.dry_run else f", {stats.vision_cached} from cache, {stats.refusals} refused"))
+              + (f", {stats.vision_cached} already described (free)" if args.dry_run
+                 else f", {stats.vision_cached} from cache, {stats.refusals} refused"))
+        if args.dry_run:
+            print_estimate(stats)
         if not args.dry_run:
             usd = stats.input_tokens / 1e6 * VISION_USD_PER_MTOK[0] + stats.output_tokens / 1e6 * VISION_USD_PER_MTOK[1]
             print(f"  {VISION_MODEL}: {stats.input_tokens} in / {stats.output_tokens} out tokens ≈ ${usd:.3f}")
-            print(f"  voyage-4: {embed.tokens_used} tokens")
+            print(f"  voyage-4: {embed.tokens_used} tokens, {embed.reused} chunks reused from cache")
         return 0
     finally:
         store.close()

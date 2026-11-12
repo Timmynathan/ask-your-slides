@@ -29,7 +29,7 @@ from config import DATA
 from manifest import load
 from store import Store, vector_literal
 
-KEY_RE = re.compile(r"^[A-Z]{3}[0-9]{3}-[0-9]{2,3}-[0-9]{1,3}$")
+KEY_RE = re.compile(r"^[A-Z]{2,4}(?:[0-9]{3}|(?:-[A-Z][A-Z0-9]*)+)-[0-9]{2,3}-[0-9]{1,3}$")
 
 
 def check_course(store: Store, course, failures: list[str]) -> tuple[int, int]:

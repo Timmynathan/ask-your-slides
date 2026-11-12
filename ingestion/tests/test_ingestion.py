@@ -212,7 +212,7 @@ def test_chunk_header_and_keys():
     ]
     assert "Visual description" not in chunk
     assert slide_key("CSC420", 2, 12) == "CSC420-02-12"
-    assert image_path("6f1c0d2e-0000-4000-8000-000000000001", 2, 12) == "6f1c0d2e-0000-4000-8000-000000000001/02/12.png"
+    assert image_path("6f1c0d2e-0000-4000-8000-000000000001", 2, 12) == "6f1c0d2e-0000-4000-8000-000000000001/02/12.webp"
 
 
 def test_garbled_text_layer_is_detected():

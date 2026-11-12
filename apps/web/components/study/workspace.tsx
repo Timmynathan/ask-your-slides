@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
-import { displayCode } from "@/lib/study/format";
+import { countMain, courseFullName, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
 import { courseHref, courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
@@ -60,7 +60,7 @@ export function Workspace(data: WorkspaceData) {
     if (past === "list") params.set("past", "1");
     const qs = params.toString();
     window.history.replaceState(window.history.state, "", `/study/${course.code}${qs ? `?${qs}` : ""}`);
-    document.title = `${displayCode(course.code)}${past === "list" ? " · Past questions" : topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
+    document.title = `${courseName(course)}${past === "list" ? " · Past questions" : topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
   }, [course, data.courses, topic, chatId, past]);
 
   const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {
@@ -97,7 +97,7 @@ export function Workspace(data: WorkspaceData) {
 
   // Built on click: the site address is only known in the browser (no server/client mismatch).
   const invite = () => {
-    const text = `I'm revising ${displayCode(course.code)} with Ask Your Slides: answers straight from our lecture slides, with the slide cited. Try it: ${window.location.origin}${courseHref(course, data.courses)}`;
+    const text = `I'm revising ${courseName(course)} with Ask Your Slides: answers straight from our lecture slides, with the slide cited. Try it: ${window.location.origin}${courseHref(course, data.courses)}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -113,8 +113,16 @@ export function Workspace(data: WorkspaceData) {
         </Link>
         <h1 className="min-w-0 truncate text-[17px] text-ink sm:ml-1 sm:text-[19px]">
           {course.title}
-          <span className="ml-2 hidden text-sm text-muted sm:inline">{displayCode(course.code)}</span>
+          {shownCode(course) && <span className="ml-2 hidden text-sm text-muted sm:inline">{shownCode(course)}</span>}
           {course.elective && <span className="ml-2 rounded-full bg-pau-100 px-2.5 py-0.5 align-middle text-[12px] font-medium text-brand">Elective</span>}
+          {countMain(data.materials) < LIMITED_MAIN_MATERIALS && (
+            <span
+              title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
+              className="ml-2 hidden rounded-full bg-amber-50 px-2.5 py-0.5 align-middle text-[12px] font-medium text-amber-800 sm:inline"
+            >
+              Limited materials
+            </span>
+          )}
         </h1>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
@@ -146,7 +154,7 @@ export function Workspace(data: WorkspaceData) {
             onOpenScope={openScope}
             onOpenChat={openChat}
             pastActive={past === "list"}
-            courseLabel={`${displayCode(course.code)} ${course.title}`}
+            courseLabel={courseFullName(course)}
           />
         </aside>
 
