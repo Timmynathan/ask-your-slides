@@ -31,7 +31,7 @@ class SlideRow:
     view: dict | None = None  # notebook cells / code lines for the viewer (no page image)
 
 
-def to_webp(png: bytes, quality: int = 80) -> bytes:
+def to_webp(png: bytes, quality: int = 75) -> bytes:
     buf = io.BytesIO()
     Image.open(io.BytesIO(png)).convert("RGB").save(buf, "WEBP", quality=quality, method=6)
     return buf.getvalue()
@@ -230,8 +230,9 @@ class Store:
 
     # ── storage ─────────────────────────────────────────────
     def upload_images(self, slides: list[SlideRow], workers: int = 8) -> None:
-        """Pages are rendered as PNG (vision reads those) and stored as WebP: ~34% of the size, same
-        look on screen (quality 80, measured on 60 PAU pages)."""
+        """Pages are rendered as PNG (vision reads those) and stored as WebP at full width, quality 75:
+        ~30% of the PNG size, no visible difference on slide text (checked on 150 PAU pages). Keeps
+        all programmes inside Supabase's free 1 GB (owner's choice, Nov 2026)."""
         def put(s: SlideRow) -> None:
             webp = s.image_path.endswith(".webp")
             r = self.http.post(
