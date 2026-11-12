@@ -153,6 +153,8 @@ async function main() {
     // Features deck: tabs bring a card forward; dragging the front card shows the next tab's card.
     {
       await lp.evaluate(() => document.getElementById("features")!.scrollIntoView({ block: "start" }));
+      check((await lp.locator("[role=tab]").allInnerTexts()).slice(0, 5).join(",") === "Slide viewer,Ask,Summaries,Explain again,Quiz me" &&
+        (await lp.locator("[role=tab][aria-selected=true]").innerText()) === "Slide viewer", "the deck opens on Slide viewer, then Ask, Summaries, Explain again, Quiz me");
       await lp.getByRole("tab", { name: "Quiz me" }).click();
       const panel = lp.getByRole("tabpanel");
       await lp.waitForTimeout(500);
@@ -164,8 +166,8 @@ async function main() {
       await lp.mouse.move(bb.x + 320, bb.y + 50, { steps: 8 });
       await lp.mouse.up();
       await lp.waitForTimeout(700);
-      check((await lp.getByRole("tabpanel").locator("h3").innerText()) === "Explained again, in plain words" &&
-        (await lp.locator("[role=tab][aria-selected=true]").innerText()) === "Explain again",
+      check((await lp.getByRole("tabpanel").locator("h3").innerText()) === "Four ways to explain the same slide" &&
+        (await lp.locator("[role=tab][aria-selected=true]").innerText()) === "Study partners",
         "dragging the front card away shows the next one, and the tabs follow");
       await lp.evaluate(() => window.scrollTo(0, 0));
     }

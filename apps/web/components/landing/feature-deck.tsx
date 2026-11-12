@@ -27,6 +27,33 @@ const bubble = "rounded-2xl bg-[#eef2f8] px-3.5 py-2.5 text-[14px] text-[#191919
 
 const CARDS: Card[] = [
   {
+    tab: "Slide viewer",
+    eyebrow: "See the slide",
+    title: "The slide behind every answer",
+    body: "Tap a citation and the real slide opens beside the chat. Flip through the deck, or ask about that slide.",
+    tint: "bg-[#d8eef3]",
+    inner: "bg-[#ecf7f9]",
+    preview: (
+      <PreviewCard>
+        <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/10">
+          <div className="bg-[#0b1b4d] px-3 py-2 text-center text-[13px] font-bold text-white">Indexing: Why Are Indexes So Popular?</div>
+          <div className="space-y-1.5 px-3 py-2.5 text-[12.5px] leading-snug text-[#0b1b4d]">
+            <p>▪ Without an index, the DBMS must scan every row.</p>
+            <p>
+              ▪ <span className="rounded-sm bg-[#fde68a]">A B+ tree index keeps keys sorted.</span>
+            </p>
+            <p>▪ Leaves are linked, so range queries walk them in order.</p>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between text-[12px] text-[#5f6673]">
+          <span>‹</span>
+          <span>Slide 21 of 31</span>
+          <span>›</span>
+        </div>
+      </PreviewCard>
+    ),
+  },
+  {
     tab: "Ask",
     eyebrow: "Ask your slides",
     title: "Answers straight from your slides",
@@ -74,6 +101,26 @@ const CARDS: Card[] = [
     ),
   },
   {
+    tab: "Explain again",
+    eyebrow: "Still confused?",
+    title: "Explained again, in plain words",
+    body: "Say “I still don't understand” and your study partner explains it another way, clearly marked as beyond your slides.",
+    tint: "bg-[#ece4fb]",
+    inner: "bg-[#f5f0fd]",
+    preview: (
+      <PreviewCard>
+        <p className={`${bubble} ml-auto max-w-[85%]`}>I still don&apos;t understand</p>
+        <div className={`mt-3 text-[13.5px] ${BEYOND_BOX}`}>
+          <BeyondSlidesLabel name="Ada" className="text-[11.5px]" />
+          <p className="text-[#191919]">
+            Think of a library. You don&apos;t check every shelf for one book: you follow the signs to the right shelf. An index is
+            those signs for a table.
+          </p>
+        </div>
+      </PreviewCard>
+    ),
+  },
+  {
     tab: "Quiz me",
     eyebrow: "Quiz me",
     title: "Practice that marks you",
@@ -103,26 +150,6 @@ const CARDS: Card[] = [
     ),
   },
   {
-    tab: "Explain again",
-    eyebrow: "Still confused?",
-    title: "Explained again, in plain words",
-    body: "Say “I still don't understand” and your study partner explains it another way, clearly marked as beyond your slides.",
-    tint: "bg-[#ece4fb]",
-    inner: "bg-[#f5f0fd]",
-    preview: (
-      <PreviewCard>
-        <p className={`${bubble} ml-auto max-w-[85%]`}>I still don&apos;t understand</p>
-        <div className={`mt-3 text-[13.5px] ${BEYOND_BOX}`}>
-          <BeyondSlidesLabel name="Ada" className="text-[11.5px]" />
-          <p className="text-[#191919]">
-            Think of a library. You don&apos;t check every shelf for one book: you follow the signs to the right shelf. An index is
-            those signs for a table.
-          </p>
-        </div>
-      </PreviewCard>
-    ),
-  },
-  {
     tab: "Study partners",
     eyebrow: "Study partners",
     title: "Four ways to explain the same slide",
@@ -141,33 +168,6 @@ const CARDS: Card[] = [
               </span>
             </div>
           ))}
-        </div>
-      </PreviewCard>
-    ),
-  },
-  {
-    tab: "Slide viewer",
-    eyebrow: "See the slide",
-    title: "The slide behind every answer",
-    body: "Tap a citation and the real slide opens beside the chat. Flip through the deck, or ask about that slide.",
-    tint: "bg-[#d8eef3]",
-    inner: "bg-[#ecf7f9]",
-    preview: (
-      <PreviewCard>
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/10">
-          <div className="bg-[#0b1b4d] px-3 py-2 text-center text-[13px] font-bold text-white">Indexing: Why Are Indexes So Popular?</div>
-          <div className="space-y-1.5 px-3 py-2.5 text-[12.5px] leading-snug text-[#0b1b4d]">
-            <p>▪ Without an index, the DBMS must scan every row.</p>
-            <p>
-              ▪ <span className="rounded-sm bg-[#fde68a]">A B+ tree index keeps keys sorted.</span>
-            </p>
-            <p>▪ Leaves are linked, so range queries walk them in order.</p>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between text-[12px] text-[#5f6673]">
-          <span>‹</span>
-          <span>Slide 21 of 31</span>
-          <span>›</span>
         </div>
       </PreviewCard>
     ),
