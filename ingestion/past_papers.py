@@ -5,8 +5,13 @@
     npm run ingest:past -- --yes                            # skip the confirmation prompt
     npm run ingest:past -- --no-store                       # extract + report, don't write the DB
 
-Steps (phase 1): render pages → extract with PAST_Q_MODEL through the Message Batches API → apply
-the paper's review file → check → write the review report → store (status ok | needs_review).
+Steps (phase 1): render pages (scanned pages turned upright first, orientation.py) → extract with
+PAST_Q_MODEL through the Message Batches API → apply the paper's review file → check (incl. the
+paper's printed code and title against the course) → write the review report and the course-match
+report → store (status ok | needs_review; only ok is shown to students).
+
+A paper whose file is byte-identical to one already extracted for another course (Software
+Engineering's copies of the CS papers) reuses that extraction: no model call.
 
 Idempotent: a paper whose file, model, prompt and review file are unchanged is skipped; every model
 reply is cached in data/.cache/batches, so re-running after a fix only pays for what changed.
@@ -31,12 +36,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from concurrent.futures import ThreadPoolExecutor
+
 import batch
+import orientation
 import pymupdf
 import yaml
-from config import DATA, PAST_Q_MODEL, ROOT
+from config import CACHE, DATA, PAST_Q_MODEL, ROOT
 from manifest import Course, ManifestError, PastPaper, load
-from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check
+from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check, course_match
 
 PROMPT_VERSION = "2"  # bump only to re-extract every paper (a re-store replaces its questions)
 LONG_EDGE = 1568  # Claude's vision input is downscaled beyond this; render at it so nothing is wasted
@@ -113,7 +121,7 @@ EXTRACT_PROMPT = """You are transcribing a past {paper_type} paper from {institu
 Course: {code} {title}{older}.
 The paper's listing says: session {session}{listed}.
 
-The {n} page image(s) above are the paper, in order.{text_layer}
+The {n} page image(s) above are the paper, in order.{text_layer}{owner_note}
 
 Return every question as structured data. Rules:
 
@@ -163,10 +171,13 @@ class Job:
     course: Course
     paper: PastPaper
     file_hash: str
-    review: dict | None
+    review: dict | None  # the paper's .review.yaml
     review_hash: str
     params: dict
     pages: int
+    orientation: tuple[str, ...] = ()  # per page: "upright", "turned 90° (…)", …
+    reuse: dict | None = None  # the stored extraction of a byte-identical paper (no model call)
+    reuse_from: str | None = None  # that paper's course code
 
     @property
     def custom_id(self) -> str:
@@ -181,23 +192,54 @@ class Job:
         return f"{self.course.code} {Path(self.paper.rel_file).name}"
 
 
-def render_pages(path: Path) -> list[tuple[bytes, str]]:
-    """[(jpeg, text layer)] per page, long edge = LONG_EDGE px. JPEG keeps scanned pages small."""
-    out = []
+ORIENTATION_CACHE = CACHE / "orientation"
+
+
+def _orientations(path: Path, file_hash: str) -> dict[int, dict]:
+    """{page index: {rotate, applied, words_as_is, words_turned}} for scanned pages, cached per file."""
+    cache = ORIENTATION_CACHE / f"{file_hash}.json"
+    if cache.is_file():
+        return {int(k): v for k, v in json.loads(cache.read_text()).items()}
+    images: dict[int, bytes] = {}
     with pymupdf.open(path) as doc:
-        for page in doc:
+        for i, page in enumerate(doc):
+            if len(page.get_text("text").strip()) > 40:
+                continue  # a real text layer: the page is the right way up
             zoom = LONG_EDGE / max(page.rect.width, page.rect.height)
-            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False)
-            out.append((pix.tobytes("jpeg", jpg_quality=88), page.get_text("text").strip()))
+            images[i] = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY).tobytes("png")
+    with ThreadPoolExecutor(8) as ex:
+        found = dict(zip(images, ex.map(orientation.check, images.values())))
+    out = {i: {"rotate": o.rotate, "applied": o.applied, "words_as_is": o.words_as_is, "words_turned": o.words_turned} for i, o in found.items()}
+    ORIENTATION_CACHE.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(out))
     return out
 
 
-def build_params(course: Course, paper: PastPaper, pages: list[tuple[bytes, str]]) -> dict:
+def render_pages(path: Path, fix_orientation: bool = True) -> list[tuple[bytes, str, str]]:
+    """[(jpeg, text layer, orientation note)] per page, long edge = LONG_EDGE px. JPEG keeps scanned
+    pages small. Scanned pages Tesseract proves are sideways or upside down are turned upright first."""
+    turns: dict[int, dict] = {}
+    if fix_orientation and orientation.available():
+        turns = _orientations(path, hashlib.sha256(path.read_bytes()).hexdigest())
+    out = []
+    with pymupdf.open(path) as doc:
+        for i, page in enumerate(doc):
+            t = turns.get(i)
+            note = orientation.Orientation(t["rotate"], t["applied"], t["words_as_is"], t["words_turned"]).describe() if t else "upright"
+            if t and t["applied"]:
+                page.set_rotation((page.rotation + t["rotate"]) % 360)
+            zoom = LONG_EDGE / max(page.rect.width, page.rect.height)
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False)
+            out.append((pix.tobytes("jpeg", jpg_quality=88), page.get_text("text").strip(), note))
+    return out
+
+
+def build_params(course: Course, paper: PastPaper, pages: list[tuple]) -> dict:
     content: list[dict] = []
-    for i, (jpeg, _) in enumerate(pages, 1):
+    for i, page in enumerate(pages, 1):
         content.append({"type": "text", "text": f"Page {i}:"})
-        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.standard_b64encode(jpeg).decode()}})
-    layer = "\n\n".join(f"--- Page {i} ---\n{text}" for i, (_, text) in enumerate(pages, 1) if len(text) > 40)
+        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64.standard_b64encode(page[0]).decode()}})
+    layer = "\n\n".join(f"--- Page {i} ---\n{page[1]}" for i, page in enumerate(pages, 1) if len(page[1]) > 40)
     text_layer = (
         f"\n\nThe PDF also has a text layer (use it to read words exactly, but trust the images for layout, tables and anything missing):\n<text_layer>\n{layer}\n</text_layer>"
         if layer else ""
@@ -213,6 +255,8 @@ def build_params(course: Course, paper: PastPaper, pages: list[tuple[bytes, str]
         code=course.code, title=course.title,
         older=f" (older codes: {', '.join(course.aliases)})" if course.aliases else "",
         session=paper.session, listed=listed, n=len(pages), text_layer=text_layer,
+        # e.g. "Typed paper with some answers filled in (unverified). Use the questions only."
+        owner_note=f"\n\nNote from the course owner about this file: {paper.note}" if paper.note and not paper.note.startswith("review:") else "",
     )})
     return {
         "model": PAST_Q_MODEL,
@@ -235,7 +279,22 @@ def make_job(course: Course, paper: PastPaper) -> Job:
     review = yaml.safe_load(review_bytes) if review_bytes else None
     pages = render_pages(paper.file)
     return Job(course, paper, hashlib.sha256(raw).hexdigest(), review, hashlib.sha256(review_bytes).hexdigest(),
-               build_params(course, paper, pages), len(pages))
+               build_params(course, paper, pages), len(pages), orientation=tuple(p[2] for p in pages))
+
+
+def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str] | None:
+    """(raw extraction, source course code) of a byte-identical paper already extracted for another
+    course with the same model and prompt; None if there is none. Its saved reply is reused as is."""
+    rows = store.db.execute(
+        """select p.source_file, c.code from past_papers p join courses c on c.id = p.course_id
+           where p.file_hash = %s and p.course_id <> %s and p.extraction_model = %s order by p.created_at""",
+        (job.file_hash, course_id, PAST_Q_MODEL),
+    ).fetchall()
+    for r in rows:
+        dump = REPORTS / "past_papers" / f"{r['code']}-{Path(r['source_file']).stem}.json"
+        if dump.is_file():
+            return json.loads(dump.read_text())["raw"], r["code"]
+    return None
 
 
 # ── store ──────────────────────────────────────────────────
@@ -272,7 +331,13 @@ def save_paper(store, course_id: str, job: Job, extraction: dict, checked: Check
 # ── report ─────────────────────────────────────────────────
 def report_section(job: Job, extraction: dict | None, checked: Checked | None, error: str | None) -> str:
     lines = [f"## {job.name}", "", f"- File: `{job.paper.rel_file}` ({job.pages} pages, {'scanned' if job.paper.scanned else 'text layer'})",
-             f"- Listed: {job.paper.session} {job.paper.type}, code on paper {job.paper.code_on_paper or '—'}"]
+             f"- Listed: {job.paper.session} {job.paper.type}, code on paper {job.paper.code_on_paper or '—'}"
+             + (f" · **guessed match**: {job.paper.review}" if job.paper.review else "")]
+    turned = [f"p{i} {o}" for i, o in enumerate(job.orientation, 1) if o != "upright"]
+    if turned:
+        lines.append(f"- Orientation: {'; '.join(turned)}")
+    if job.reuse is not None:
+        lines.append(f"- Reused the extraction of the identical {job.reuse_from} paper (no model call)")
     if error:
         return "\n".join([*lines, f"- **Status: not extracted** — {error}", ""])
     assert extraction is not None and checked is not None
@@ -299,6 +364,20 @@ def report_section(job: Job, extraction: dict | None, checked: Checked | None, e
         marks = "" if q.get("marks") is None else f"{q['marks']:g}"
         lines.append(f"| {q['number']} | {q.get('section') or ''} | {marks} | {q['type']} | {q.get('confidence')} | {text.replace('|', '/') or '*(stem only)*'} |")
     return "\n".join([*lines, ""])
+
+
+def course_match_report(matches: list[tuple[Job, str, str, str]]) -> str:
+    """Every paper's printed code and title against its course. Papers that don't match stay
+    needs_review (not shown to students) until the owner confirms them in the paper's review file
+    (accept: [code_mismatch] / [title_mismatch] / [course_unconfirmed]) or moves them."""
+    order = {"mismatch": 0, "unconfirmed": 1, "match": 2}
+    lines = ["# Past papers: course match", "",
+             "Papers that don't match stay hidden from students until confirmed.", "",
+             "| Verdict | Programme | Course | Paper | Guessed | Printed / detail | Status |", "|---|---|---|---|---|---|---|"]
+    for j, verdict, detail, status in sorted(matches, key=lambda m: (order[m[1]], m[0].course.programme, m[0].name)):
+        lines.append(f"| {verdict} | {j.course.programme} | {j.course.code} {j.course.title} | {Path(j.paper.rel_file).name} | "
+                     f"{'yes' if j.paper.review else ''} | {detail.replace('|', '/')} | {status} |")
+    return "\n".join(lines) + "\n"
 
 
 # ── main ───────────────────────────────────────────────────
@@ -373,8 +452,15 @@ def main(argv: list[str] | None = None) -> int:
     if not jobs:
         print("Nothing to do.")
         return 0
+    if store:
+        for j in jobs:
+            found = find_reuse(store, j, course_ids[j.course.key])
+            if found:
+                j.reuse, j.reuse_from = found
+                print(f"  identical to the {j.reuse_from} paper, reused (no model call): {j.name}")
 
-    uncached = [j for j in jobs if batch.cached(j.params) is None]
+    model_jobs = [j for j in jobs if j.reuse is None]
+    uncached = [j for j in model_jobs if batch.cached(j.params) is None]
     print(f"{len(jobs)} paper(s) to process, {len(uncached)} need the model ({PAST_Q_MODEL}).")
     if uncached:
         estimate(uncached)
@@ -387,28 +473,37 @@ def main(argv: list[str] | None = None) -> int:
         print("Everything is cached: $0.")
         return 0
 
-    replies = batch.run({j.custom_id: j.params for j in jobs}, label="extract")
+    replies = batch.run({j.custom_id: j.params for j in model_jobs}, label="extract") if model_jobs else {}
     REPORTS.mkdir(parents=True, exist_ok=True)
     sections = []
+    matches: list[tuple[Job, str, str, str]] = []  # (job, verdict, detail, status)
     spent = 0.0
     stored = needs_review = failed = 0
     for j in jobs:
-        r = replies[j.custom_id]
-        if not r.cached:
-            spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
-        if r.error or not r.text:
+        if j.reuse is not None:
+            text, error = json.dumps(j.reuse), None
+        else:
+            r = replies[j.custom_id]
+            if not r.cached:
+                spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
+            text, error = r.text, r.error
+        if error or not text:
             failed += 1
-            sections.append(report_section(j, None, None, r.error or "empty reply"))
+            sections.append(report_section(j, None, None, error or "empty reply"))
             continue
         try:
-            raw = json.loads(r.text)
+            raw = json.loads(text)
             extraction, accepted = apply_review(raw, j.review)
         except (json.JSONDecodeError, ValueError) as e:
             failed += 1
             sections.append(report_section(j, None, None, f"unusable reply: {e}"))
             continue
+        also = (j.reuse_from,) if j.reuse_from else ()
         checked = check(extraction, course_code=j.course.code, aliases=j.course.aliases, listed_code=j.paper.code_on_paper,
-                        accepted=accepted, course_title=j.course.title)
+                        accepted=accepted, course_title=j.course.title, guessed=bool(j.paper.review), also_codes=also)
+        verdict, detail = course_match(extraction.get("paper") or {}, course_code=j.course.code, aliases=j.course.aliases,
+                                       listed_codes=(j.paper.code_on_paper, *also), course_title=j.course.title)
+        matches.append((j, verdict, detail, checked.status))
         dump = REPORTS / "past_papers" / f"{j.course.code}-{Path(j.paper.rel_file).stem}.json"
         dump.parent.mkdir(parents=True, exist_ok=True)
         dump.write_text(json.dumps({"model": PAST_Q_MODEL, "raw": raw, "checked": checked.questions,
@@ -426,6 +521,14 @@ def main(argv: list[str] | None = None) -> int:
     header = f"# Past papers review — {now:%Y-%m-%d %H:%M}\n\nModel: {PAST_Q_MODEL} · prompt v{PROMPT_VERSION} · spent ≈ ${spent:.3f}\n\n"
     report.write_text(header + "\n".join(sections))
     print(f"\nReport: {report}")
+    if matches:
+        mreport = REPORTS / f"past_course_match-{now:%Y-%m-%d-%H%M}.md"
+        mreport.write_text(course_match_report(matches))
+        bad = [m for m in matches if m[1] != "match"]
+        print(f"Course match: {len(matches) - len(bad)} match, {sum(m[1] == 'mismatch' for m in matches)} mismatch, "
+              f"{sum(m[1] == 'unconfirmed' for m in matches)} unconfirmed → {mreport}")
+        for j, verdict, detail, status in bad:
+            print(f"  {verdict:<12} {j.course.programme}/{j.name}: {detail} ({'guessed, ' if j.paper.review else ''}{status})")
     print(f"Stored {stored} paper(s) ({needs_review} need review), {failed} failed. Spent ≈ ${spent:.3f}.")
     if store:
         store.close()

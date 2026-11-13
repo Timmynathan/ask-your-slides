@@ -90,11 +90,47 @@ def test_unreadable_low_confidence_and_mcq_without_options_block():
     assert codes(c, "warning") == ["medium_confidence:Q4"]
 
 
-def test_old_code_on_paper_is_fine_but_unknown_code_warns():
+def test_old_code_on_paper_is_fine_but_unknown_code_needs_the_title():
     base = {"questions": [q("Q1", marks=5)]}
     assert codes(check({**base, "paper": paper(code="CSC 403")}, course_code="CSC420", aliases=("CSC403",))) == ["no_total"]
+    # A different code alone: it may be another course → held back.
     c = check({**base, "paper": paper(code="CSC 999")}, course_code="CSC420", aliases=("CSC403",))
-    assert codes(c, "warning") == ["code_mismatch"]
+    assert codes(c, "blocking") == ["code_mismatch"] and c.status == "needs_review"
+    # A renumbered course that prints its own title: only a warning.
+    titled = {**base, "paper": {**paper(code="CSC 999"), "title_on_paper": "Data Management II"}}
+    c = check(titled, course_code="CSC420", course_title="Data Management II")
+    assert codes(c, "warning") == ["code_mismatch"] and c.status == "ok"
+
+
+def test_guessed_course_must_be_confirmed_by_the_paper():
+    base = {"questions": [q("Q1", marks=5)]}
+    title = "Advanced Financial Reporting"
+    # Guessed from the archive folder, nothing printed → held back until the owner confirms.
+    c = check({**base, "paper": paper(code=None)}, course_code="ACC401", course_title=title, guessed=True)
+    assert codes(c, "blocking") == ["course_unconfirmed"]
+    assert check({**base, "paper": paper(code=None)}, course_code="ACC401", course_title=title, guessed=True,
+                 accepted={"course_unconfirmed"}).status == "ok"
+    # Guessed, and the paper prints another code (even with a matching title) → held back.
+    other = {**base, "paper": {**paper(code="ACC 403"), "title_on_paper": title}}
+    assert codes(check(other, course_code="ACC401", course_title=title, guessed=True), "blocking") == ["code_mismatch"]
+    # Guessed and confirmed by the printed code and title → published.
+    same = {**base, "paper": {**paper(code="ACC 401"), "title_on_paper": title}}
+    assert check(same, course_code="ACC401", course_title=title, guessed=True).status == "ok"
+    # Not guessed and nothing printed: nothing to object to.
+    assert check({**base, "paper": paper(code=None)}, course_code="ACC401", course_title=title).status == "ok"
+
+
+def test_course_match_verdicts_for_the_report():
+    from past_validate import course_match
+
+    kw = {"course_code": "ECO406", "course_title": "Monetary Economics"}
+    assert course_match({"code_on_paper": "ECO 406", "title_on_paper": None}, **kw)[0] == "match"
+    assert course_match({"code_on_paper": "ECO 416", "title_on_paper": "Monetary Economics"}, **kw)[0] == "match"
+    assert course_match({"code_on_paper": "ECO 416", "title_on_paper": None}, **kw)[0] == "mismatch"
+    assert course_match({"code_on_paper": "ECO 406", "title_on_paper": "Public Finance"}, **kw)[0] == "mismatch"
+    assert course_match({"code_on_paper": None, "title_on_paper": None}, **kw)[0] == "unconfirmed"
+    # A reused paper's source code counts (SEN412 = CSC412).
+    assert course_match({"code_on_paper": "CSC 412", "title_on_paper": None}, course_code="SEN412", listed_codes=("CSC412",))[0] == "match"
 
 
 def test_review_file_fixes_and_accepts():
@@ -222,7 +258,64 @@ def test_paper_title_must_match_the_course_code_reuse():
     ]
     assert all(title_similarity(a, b) >= 0.6 for a, b in pairs)
     assert title_similarity("Entertainment Media", "Media Law and Policy") < 0.6
-    ex = {"paper": {**paper(), "title_on_paper": "ISM 413: Entertainment Media"}, "questions": [q("Q1", marks=5)]}
+    ex = {"paper": {**paper(code="ISM 413"), "title_on_paper": "ISM 413: Entertainment Media"}, "questions": [q("Q1", marks=5)]}
     c = check(ex, course_code="ISM413", course_title="Media Law and Policy")
     assert codes(c, "blocking") == ["title_mismatch"]
     assert check(ex, course_code="ISM413", course_title="Media Law and Policy", accepted={"title_mismatch"}).status == "ok"
+
+
+def test_orientation_turns_only_when_the_turn_reads_clearly_better(monkeypatch):
+    import orientation as o
+
+    words = {}
+    monkeypatch.setattr(o, "turn", lambda image, r: f"{image.decode()}@{r}".encode())
+    monkeypatch.setattr(o, "clear_words", lambda image: words.get(image.decode(), 0))
+    # Tesseract says 180°, but the page reads far better as it is (handwriting fooled it): leave it.
+    monkeypatch.setattr(o, "suggest", lambda image: 180)
+    words.update({"a": 200, "a@180": 5})
+    r = o.check(b"a")
+    assert not r.applied and r.rotate == 180
+    # Sideways and unreadable as it is: the suggested quarter turn makes it readable → turned.
+    monkeypatch.setattr(o, "suggest", lambda image: 270)
+    words.update({"b": 0, "b@270": 160, "b@90": 3})
+    assert o.check(b"b") == o.Orientation(270, True, 0, 160)
+    # No suggestion but the page reads poorly: every quarter turn is tried, the best one wins.
+    monkeypatch.setattr(o, "suggest", lambda image: 0)
+    words.update({"c": 2, "c@90": 120})
+    assert o.check(b"c").applied and o.check(b"c").rotate == 90
+    # Reads poorly every way (small print): left as is.
+    words.update({"d": 4})
+    assert not o.check(b"d").applied
+
+
+def test_render_pages_turns_a_sideways_scan_upright(tmp_path: Path, monkeypatch):
+    import past_papers
+
+    monkeypatch.setattr(past_papers, "ORIENTATION_CACHE", tmp_path / "cache")
+    monkeypatch.setattr(past_papers.orientation, "check", lambda image: past_papers.orientation.Orientation(90, True, 0, 100))
+    pdf = tmp_path / "scan.pdf"
+    doc = pymupdf.open()
+    doc.new_page(width=842, height=595)  # landscape, no text layer: like a sideways phone photo
+    doc.save(pdf)
+    jpeg, text, note = past_papers.render_pages(pdf)[0]
+    from PIL import Image
+    import io
+    w, h = Image.open(io.BytesIO(jpeg)).size
+    assert h > w and note.startswith("turned 90°")
+    assert (tmp_path / "cache").is_dir()  # cached per file: re-runs don't call Tesseract again
+
+
+def test_owner_note_reaches_the_prompt_but_review_notes_do_not(tmp_path: Path):
+    from manifest import PastPaper
+    from past_papers import build_params
+
+    class C:
+        institution, code, title, aliases = "pau", "ECO405", "Development Planning", ()
+
+    pages = [(b"\xff\xd8x", "", "upright")]
+    kw = dict(file=tmp_path / "p.pdf", rel_file="x/p.pdf", session="2021/2022", type="test", code_on_paper=None, scanned=False)
+    note = "Typed paper with some answers filled in (unverified). Use the questions only."
+    prompt = build_params(C, PastPaper(**kw, note=note), pages)["messages"][0]["content"][-1]["text"]
+    assert f"Note from the course owner about this file: {note}" in prompt
+    prompt = build_params(C, PastPaper(**kw, note="review: guessed from the folder"), pages)["messages"][0]["content"][-1]["text"]
+    assert "Note from the course owner" not in prompt

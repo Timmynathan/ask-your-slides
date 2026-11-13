@@ -127,8 +127,32 @@ def title_similarity(a: str, b: str) -> float:
     return len(x & y) / min(len(x), len(y)) if x and y else 1.0
 
 
+def course_match(paper: dict, *, course_code: str, aliases: tuple[str, ...] = (), listed_codes: tuple[str | None, ...] = (),
+                 course_title: str | None = None) -> tuple[str, str]:
+    """Does the printed code and title belong to this course? → (verdict, detail).
+
+    verdict: "match" (what is printed agrees), "mismatch" (a printed code or title disagrees),
+    "unconfirmed" (neither is printed). PAU reuses codes for other courses, so the title decides
+    when both are printed; a code alone that differs is a mismatch.
+    """
+    code, title = paper.get("code_on_paper"), paper.get("title_on_paper")
+    known = {normalize_code(c) for c in (course_code, *aliases, *listed_codes) if c}
+    code_ok = normalize_code(code) in known if code else None
+    title_ok = title_similarity(title, course_title) >= TITLE_MATCH if title and course_title else None
+    printed = f"printed {code or '—'} · {title or '—'}"
+    if code_ok is None and title_ok is None:
+        return "unconfirmed", f"no course code or title printed; listed as {course_code} {course_title or ''}".strip()
+    if title_ok is False or (code_ok is False and not title_ok):
+        return "mismatch", f"{printed}; course is {course_code} {course_title or ''}".strip()
+    return "match", printed
+
+
 def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), listed_code: str | None = None,
-          accepted: set[str] | None = None, course_title: str | None = None) -> Checked:
+          accepted: set[str] | None = None, course_title: str | None = None, guessed: bool = False,
+          also_codes: tuple[str, ...] = ()) -> Checked:
+    """`guessed`: the paper was matched to this course from an archive folder name (past_papers.yaml
+    `review:`), so the paper itself must confirm it before students see it. `also_codes`: codes known
+    to be the same course (a reused paper's source course, e.g. CSC412 for SEN412)."""
     accepted = accepted or set()
     problems: list[Problem] = []
     add = lambda code, sev, detail, q=None: problems.append(Problem(code, sev, detail, q))
@@ -220,16 +244,22 @@ def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), 
             span = f"{lo:g}" if lo == hi else f"{lo:g}–{hi:g}"
             add("total_marks", "warning", f"paper total {float(total):g}, but {how} gives {span}")
 
-    # ── code on the paper ──────────────────────────────────
-    seen = normalize_code(paper.get("code_on_paper"))
-    known = {normalize_code(c) for c in (course_code, *aliases, listed_code) if c}
-    if seen and seen not in known:
-        add("code_mismatch", "warning", f"paper says {paper.get('code_on_paper')!r}; expected one of {sorted(known)}")
+    # ── the course on the paper ────────────────────────────
     # PAU reuses codes for different courses (ISM413 was Entertainment Media): code AND title must match.
+    seen = normalize_code(paper.get("code_on_paper"))
+    known = {normalize_code(c) for c in (course_code, *aliases, listed_code, *also_codes) if c}
     printed = paper.get("title_on_paper")
-    if course_title and printed and title_similarity(printed, course_title) < TITLE_MATCH:
+    title_ok = bool(course_title and printed and title_similarity(printed, course_title) >= TITLE_MATCH)
+    if seen and seen not in known:
+        # A renumbered course still prints its own title; without that (or for a guessed match) a
+        # different code means it may be another course.
+        sev = "warning" if title_ok and not guessed else "blocking"
+        add("code_mismatch", sev, f"paper says {paper.get('code_on_paper')!r}; expected one of {sorted(known)}")
+    if course_title and printed and not title_ok:
         add("title_mismatch", "blocking",
             f"the paper's title {printed!r} doesn't match the course {course_title!r}: it may be another course that used this code")
+    if guessed and not seen and not printed:
+        add("course_unconfirmed", "blocking", "matched to this course from the archive folder name, and the paper prints no code or title to confirm it")
     for note in extraction.get("page_notes") or []:
         add("page_note", "info", str(note))
 

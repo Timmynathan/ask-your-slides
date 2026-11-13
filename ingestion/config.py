@@ -22,9 +22,11 @@ VISION_USD_PER_MTOK = (0.10, 0.50)
 # and numbers, and stricter about text cut off at the slide's edge. Only these pages use it.
 MATH_VISION_MODEL = os.environ.get("MATH_VISION_MODEL", "claude-sonnet-5-5")
 
-# Past papers (PRD §9.4): extraction, analysis and model answers, through the Batches API.
-# claude-haiku-5-5 is supported for a tight budget.
+# Past papers (PRD §9.4), through the Batches API. Step 1 (OCR + question extraction from scans) needs
+# the stronger reader; step 2 (topics, relevance, model answers from retrieved slides) runs on Haiku
+# (owner's cost plan "version C", Nov 2026).
 PAST_Q_MODEL = os.environ.get("PAST_Q_MODEL", "claude-sonnet-5-5")
+PAST_ANSWER_MODEL = os.environ.get("PAST_ANSWER_MODEL", "claude-haiku-5-5")
 
 EMBED_MODEL = "voyage-4"
 EMBED_DIMS = 1024  # must match vector(1024) in supabase/migrations

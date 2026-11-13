@@ -80,6 +80,9 @@ class PastPaper:
     instructions: str | None = None
     duration: str | None = None
     note: str | None = None
+    # past_papers.yaml `review:`: the course was guessed from the archive folder name; the paper's
+    # printed code/title must confirm it before it is published (past_validate.check guessed=True).
+    review: str | None = None
 
 
 @dataclass(frozen=True)
@@ -399,7 +402,7 @@ def _load_past_papers(data_root: Path, course_dir: Path, problems: list[str], wh
             code_on_paper=row.get("code_on_paper"), scanned=bool(row.get("scanned")),
             pages=int(row["pages"]) if str(row.get("pages") or "").isdigit() else None,
             instructions=_opt_str(row.get("instructions")), duration=_opt_str(row.get("duration")),
-            note=_opt_str(row.get("note")),
+            note=_opt_str(row.get("note")), review=_opt_str(row.get("review")),
         ))
     _check_unique(problems, pwhere, "file", [p.rel_file for p in papers])
     return tuple(papers)
