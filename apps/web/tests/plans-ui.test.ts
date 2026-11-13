@@ -25,7 +25,8 @@ describe("plan offer = what the server charges", () => {
     const t = text(landing(BEFORE));
     expect(t).toContain("₦3,000");
     expect(t).toMatch(/<s|₦5,000/); // struck-through full price
-    expect(t).toContain("₦3,000 until 22 Nov, then ₦5,000");
+    expect(t).not.toContain("₦3,000 until 22 Nov"); // owner removed that line (13 Nov 2026)
+    expect(t).toContain("Goes up to ₦5,000 after 22 Nov"); // still under the button
   });
 
   it("after PRICE_CHANGE_DATE: ₦5,000 only, no early price, no countdown", () => {
@@ -82,7 +83,6 @@ describe("landing Plans section", () => {
       { label: "Quiz mode", free: false, finals: true },
       { label: "Past questions", free: "Exam map + 1 practice question per course", finals: "Every past question" },
       { label: "Model answers and marked practice", free: false, finals: true },
-      { label: "Valid", free: "Forever", finals: "Until your last paper" },
     ]);
   });
 

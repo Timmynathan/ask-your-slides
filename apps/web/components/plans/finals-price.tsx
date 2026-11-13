@@ -36,9 +36,6 @@ export function FinalsPrice({ offer, size = "lg" }: { offer: PlanOffer; size?: "
       </p>
       {early && (
         <>
-          <p className="mt-2 text-sm text-muted">
-            {naira(offer.earlyPrice)} until {offer.priceChangeLabel}, then {naira(offer.fullPrice)}
-          </p>
           {left && (
             <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-pau-100 px-2.5 py-0.5 text-[12px] font-medium text-pau-800 dark:text-pau-400">
               <ClockIcon />
