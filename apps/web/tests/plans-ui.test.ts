@@ -67,7 +67,7 @@ describe("landing Plans section", () => {
       "1 summary",
       "Start free",
       "Get Finals",
-      "One-time payment. No subscription. Pay with card, transfer or USSD.",
+      "One-time payment. No subscription. Pay by bank transfer.",
       "Premium courses are the heaviest courses in your programme.",
     ]) {
       expect(t, s).toContain(s);
@@ -83,8 +83,8 @@ describe("landing Plans section", () => {
     ]);
   });
 
-  it("Get Finals goes to sign-up, then straight to checkout", () => {
-    expect(landing(BEFORE)).toContain(`href="/sign-up?next=${encodeURIComponent("/pricing?checkout=1")}"`);
+  it("Get Finals goes to sign-up, then straight to the payment page", () => {
+    expect(landing(BEFORE)).toContain(`href="/sign-up?next=${encodeURIComponent("/pay")}"`);
   });
 
   it("is accessible: a real heading, labelled icons", () => {
@@ -101,6 +101,7 @@ describe("no plan figures typed into the UI", () => {
       ...readdirSync(path.resolve("components/plans")).map((f) => path.join("components/plans", f)),
       "components/landing/plans-section.tsx",
       "app/(app)/pricing/page.tsx",
+      "app/(app)/pay/page.tsx",
     ];
     for (const f of files) {
       const src = readFileSync(path.resolve(f), "utf8");

@@ -1,5 +1,5 @@
-// Plans numbers for the owner's /admin page (PRD F12): payments and revenue in the period, active
-// Finals plans (paid / comp), referral codes, and limit hits by kind. Service role only.
+// Plans numbers for the owner's /admin page (PRD F12): approved transfers and revenue in the period,
+// active Finals plans (paid / comp), referral codes, and limit hits by kind. Service role only.
 import "server-only";
 import type { adminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/admin";
@@ -10,7 +10,7 @@ export interface PlanStats {
   paid: number;
   revenueNaira: number;
   pending: number;
-  activeFinals: { paystack: number; comp: number };
+  activeFinals: { manual: number; comp: number };
   referrals: { code: string; paid: number; revenue: number; pending: number }[];
   limits: { feature: string; hits: number; students: number }[];
 }
@@ -18,14 +18,14 @@ export interface PlanStats {
 export async function planStats(db: Db, from: string | null, now = new Date()): Promise<PlanStats> {
   const nowIso = now.toISOString();
   const [payments, ents, refs, events] = await Promise.all([
-    from ? db.from("payments").select("status, amount_kobo").gte("created_at", from) : db.from("payments").select("status, amount_kobo"),
+    from ? db.from("payment_requests").select("status, amount_naira").gte("created_at", from) : db.from("payment_requests").select("status, amount_naira"),
     db.from("entitlements").select("source").lte("starts_at", nowIso).gt("ends_at", nowIso),
-    db.from("referral_stats").select("referral_code, paid, revenue_naira, pending"),
+    db.from("referral_stats").select("referral_code, approved, revenue_naira, pending"),
     (from ? db.from("limit_events").select("feature, user_id").gte("created_at", from) : db.from("limit_events").select("feature, user_id")).limit(50_000),
   ]);
-  const pay = must(payments) as { status: string; amount_kobo: number }[];
-  const ok = pay.filter((p) => p.status === "success");
-  const active = must(ents) as { source: "paystack" | "comp" }[];
+  const pay = must(payments) as { status: string; amount_naira: number }[];
+  const ok = pay.filter((p) => p.status === "approved");
+  const active = must(ents) as { source: "manual" | "comp" }[];
   const ev = must(events) as { feature: string; user_id: string }[];
   const byFeature = new Map<string, { hits: number; users: Set<string> }>();
   for (const e of ev) {
@@ -36,12 +36,12 @@ export async function planStats(db: Db, from: string | null, now = new Date()): 
   }
   return {
     paid: ok.length,
-    revenueNaira: ok.reduce((s, p) => s + p.amount_kobo, 0) / 100,
+    revenueNaira: ok.reduce((s, p) => s + p.amount_naira, 0),
     pending: pay.filter((p) => p.status === "pending").length,
-    activeFinals: { paystack: active.filter((a) => a.source === "paystack").length, comp: active.filter((a) => a.source === "comp").length },
-    referrals: (must(refs) as { referral_code: string; paid: number; revenue_naira: number; pending: number }[]).map((r) => ({
+    activeFinals: { manual: active.filter((a) => a.source === "manual").length, comp: active.filter((a) => a.source === "comp").length },
+    referrals: (must(refs) as { referral_code: string; approved: number; revenue_naira: number; pending: number }[]).map((r) => ({
       code: r.referral_code,
-      paid: Number(r.paid),
+      paid: Number(r.approved),
       revenue: Number(r.revenue_naira),
       pending: Number(r.pending),
     })),

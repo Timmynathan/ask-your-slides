@@ -415,9 +415,9 @@ function Plans({ plans: p }: { plans: PlanStats }) {
     <section id="plans" className="scroll-mt-24 space-y-4">
       <SectionTitle title="Plans" note="Payments and limit hits in the period; active plans right now." />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Tile label="Finals sold" value={n(p.paid)} sub={`${n(p.pending)} checkout${p.pending === 1 ? "" : "s"} not finished`} />
-        <Tile label="Revenue" value={`₦${n(p.revenueNaira)}`} sub="paid through Paystack" />
-        <Tile label="Finals active now" value={n(p.activeFinals.paystack + p.activeFinals.comp)} sub={`${n(p.activeFinals.paystack)} paid · ${n(p.activeFinals.comp)} free (comp)`} />
+        <Tile label="Finals sold" value={n(p.paid)} sub={`${n(p.pending)} waiting for approval`} />
+        <Tile label="Revenue" value={`₦${n(p.revenueNaira)}`} sub="approved bank transfers" />
+        <Tile label="Finals active now" value={n(p.activeFinals.manual + p.activeFinals.comp)} sub={`${n(p.activeFinals.manual)} paid · ${n(p.activeFinals.comp)} free (comp)`} />
         <Tile label="Students who hit a limit" value={n(Math.max(0, ...p.limits.map((l) => l.students)))} sub="most for any one limit" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -432,7 +432,7 @@ function Plans({ plans: p }: { plans: PlanStats }) {
           <Table
             compact
             empty="No payments yet."
-            head={["Code", "Paid", "Revenue", "Not finished"]}
+            head={["Code", "Approved", "Revenue", "Pending"]}
             rows={p.referrals.map((r) => [r.code, n(r.paid), `₦${n(r.revenue)}`, n(r.pending)])}
           />
         </Card>

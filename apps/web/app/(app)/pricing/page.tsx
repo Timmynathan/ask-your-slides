@@ -3,14 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
-import { CheckoutButton } from "@/components/plans/checkout-button";
 import { CompareTable } from "@/components/plans/compare-table";
+import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import { requireUser } from "@/lib/auth/session";
 import { TIME_ZONE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
-import { paymentsOpen } from "@/lib/plans/paystack";
+import { latestRequest, paymentsOpen } from "@/lib/plans/manual-pay";
 import { adminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Plans · Ask Your Slides" };
@@ -18,19 +18,16 @@ export const metadata: Metadata = { title: "Plans · Ask Your Slides" };
 const longDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: TIME_ZONE });
 const action = "inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium";
 
-// In-app pricing (PRD F12): Free and Finals; "Get Finals" goes to Paystack through the server.
-// ?checkout=1 (from the landing page's "Get Finals", after sign-up) opens the referral field and
-// focuses the pay button.
-async function Loaded({ searchParams }: { searchParams: Promise<{ checkout?: string }> }) {
-  const sp = await searchParams;
+// In-app pricing (PRD F12): Free and Finals; "Get Finals" goes to /pay (bank transfer + WhatsApp).
+async function Loaded() {
   const { supabase, user } = await requireUser();
   const { data: profile } = await supabase.from("profiles").select("onboarded, programme").eq("id", user.id).single();
-  if (!profile?.onboarded || !profile.programme) redirect(`/welcome?next=${encodeURIComponent("/pricing?checkout=1")}`);
+  if (!profile?.onboarded || !profile.programme) redirect(`/welcome?next=${encodeURIComponent("/pricing")}`);
 
   const now = new Date();
-  const state = await planState(adminClient(), user.id, now);
+  const db = adminClient();
+  const [state, latest] = await Promise.all([planState(db, user.id, now), latestRequest(db, user.id)]);
   const offer = planOffer(now);
-  const checkout = sp.checkout === "1";
 
   return (
     <div className="min-h-dvh bg-page text-ink">
@@ -68,11 +65,11 @@ async function Loaded({ searchParams }: { searchParams: Promise<{ checkout?: str
                   Go to my courses
                 </Link>
               ) : (
-                <CheckoutButton price={offer.price} open={paymentsOpen()} autoFocus={checkout} openReferral={checkout} />
+                <GetFinalsLink price={offer.price} open={paymentsOpen()} pending={latest?.status === "pending"} />
               )
             }
           />
-          <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay with card, transfer or USSD.</p>
+          <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>
         </div>
 
         <div className="mt-14">
@@ -85,10 +82,10 @@ async function Loaded({ searchParams }: { searchParams: Promise<{ checkout?: str
   );
 }
 
-export default function PricingPage(props: { searchParams: Promise<{ checkout?: string }> }) {
+export default function PricingPage() {
   return (
     <Suspense fallback={<div className="min-h-dvh bg-page" />}>
-      <Loaded {...props} />
+      <Loaded />
     </Suspense>
   );
 }

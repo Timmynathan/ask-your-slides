@@ -1,5 +1,5 @@
--- Plans (migration 20261113000001, PRD F12): daily and premium-course caps are counted atomically,
--- refused messages are free, summaries are counted for life, a Paystack reference grants once, and
+-- Plans (migrations 20261113000001 + 20261113000002_manual_payments, PRD F12): daily and premium-course caps are counted atomically,
+-- refused messages are free, summaries are counted for life, only an admin approval grants Finals (once per request), and
 -- the premium flag belongs to the programme's course row. Caps are passed in by the server
 -- (lib/plans/config.ts); the values below are the launch values.
 -- Run: npm run test:db (rolled back at the end).
@@ -32,7 +32,7 @@ declare
   n   int;
   ok  int;
   e1  uuid;
-  e2  uuid;
+  i   int;
 begin
   -- Premium belongs to the programme's row, not to the code.
   if (select premium from courses where id = cs) or not (select premium from courses where id = sen) then
@@ -97,39 +97,77 @@ begin
   select * into r from consume_summary(u, sen, null);
   if not r.allowed or r.used <> 2 then raise exception 'FAIL: unlimited summaries should be allowed and counted'; end if;
 
-  -- A Paystack reference grants once, however many times the webhook/verify arrive.
-  e1 := grant_finals(u, '2026-12-23 23:59:59+01', 'paystack', 'ref_test_1', null);
-  e2 := grant_finals(u, '2026-12-23 23:59:59+01', 'paystack', 'ref_test_1', null);
-  if e1 is null or e1 <> e2 or (select count(*) from entitlements where user_id = u) <> 1 then
-    raise exception 'FAIL: replaying a reference must not grant a second plan';
+  -- Manual payments: a request is pending until an admin approves it; approving twice grants once.
+  select * into r from create_payment_request(u, 'plans.student@pau.edu.ng', 'AYS-TST2', 3000, 'TOLU', now() - interval '1 hour', 3);
+  if not r.allowed then raise exception 'FAIL: first payment request should be allowed'; end if;
+  if (select count(*) from entitlements where user_id = u) <> 0 then
+    raise exception 'FAIL: a request alone must never grant Finals';
   end if;
-  -- A comp grant has no reference; a Paystack grant must have one.
-  perform grant_finals(u, '2026-12-23 23:59:59+01', 'comp', null, 'tester');
+  select * into r from approve_payment_request(r.request_id, '2026-12-23 23:59:59+01', 'owner');
+  e1 := r.entitlement_id;
+  if r.outcome <> 'approved' then raise exception 'FAIL: approve outcome %', r.outcome; end if;
+  select * into r from approve_payment_request((select id from payment_requests where user_id = u), '2026-12-23 23:59:59+01', 'owner');
+  if r.outcome <> 'already_approved' or r.entitlement_id <> e1 or (select count(*) from entitlements where user_id = u) <> 1 then
+    raise exception 'FAIL: approving twice must not grant a second plan';
+  end if;
+  if (select source from entitlements where id = e1) <> 'manual'
+     or (select ends_at from entitlements where id = e1) <> '2026-12-23 23:59:59+01' then
+    raise exception 'FAIL: approval should grant a manual plan until the end date';
+  end if;
+  if reject_payment_request((select id from payment_requests where user_id = u), 'x', 'owner') <> 'already_approved' then
+    raise exception 'FAIL: an approved request must not be rejectable';
+  end if;
+  -- At most 3 pending requests a day; rejecting frees nothing for the day, rejected never grants.
+  for i in 1..3 loop
+    select * into r from create_payment_request(u, 'plans.student@pau.edu.ng', 'AYS-TST2', 5000, null, now() - interval '1 hour', 3);
+    if not r.allowed then raise exception 'FAIL: pending request % of 3 should be allowed', i; end if;
+  end loop;
+  select * into r from create_payment_request(u, 'plans.student@pau.edu.ng', 'AYS-TST2', 5000, null, now() - interval '1 hour', 3);
+  if r.allowed or r.pending_today <> 3 then raise exception 'FAIL: a 4th pending request in a day should be refused'; end if;
+  if reject_payment_request(
+       (select id from payment_requests where user_id = u and status = 'pending' order by created_at limit 1), ' Wrong amount ', 'owner') <> 'rejected' then
+    raise exception 'FAIL: reject a pending request';
+  end if;
+  if (select count(*) from entitlements where user_id = u) <> 1
+     or (select note from payment_requests where status = 'rejected' and user_id = u) <> 'Wrong amount' then
+    raise exception 'FAIL: rejecting must not grant, and keeps the trimmed note';
+  end if;
+  select * into r from approve_payment_request((select id from payment_requests where status = 'rejected' and user_id = u), '2026-12-23 23:59:59+01', 'owner');
+  if r.outcome <> 'rejected' then raise exception 'FAIL: a rejected request must not be approvable'; end if;
+  -- A comp plan has no request; a manual plan must have one.
+  insert into entitlements (user_id, plan, ends_at, source, note) values (u, 'finals', '2026-12-23 23:59:59+01', 'comp', 'tester');
   begin
-    perform grant_finals(u, '2026-12-23 23:59:59+01', 'paystack', null, null);
-    raise exception 'FAIL: a paystack grant without a reference was accepted';
+    insert into entitlements (user_id, plan, ends_at, source) values (u, 'finals', '2026-12-23 23:59:59+01', 'manual');
+    raise exception 'FAIL: a manual plan without a request was accepted';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into payment_references (user_id, reference) values (u, 'AYS-0OIL');
+    raise exception 'FAIL: a reference with ambiguous characters was accepted';
   exception when check_violation then null;
   end;
 
   -- Students can't read or call any of this.
   if has_table_privilege('authenticated', 'public.entitlements', 'select')
-     or has_table_privilege('anon', 'public.payments', 'select')
+     or has_table_privilege('anon', 'public.payment_requests', 'select')
+     or has_table_privilege('authenticated', 'public.payment_references', 'select')
      or has_function_privilege('authenticated', 'public.consume_message_plan(uuid, date, int, uuid, int)', 'execute')
-     or has_function_privilege('authenticated', 'public.grant_finals(uuid, timestamptz, text, text, text)', 'execute') then
+     or has_function_privilege('authenticated', 'public.approve_payment_request(uuid, timestamptz, text)', 'execute')
+     or has_function_privilege('authenticated', 'public.create_payment_request(uuid, text, text, int, text, timestamptz, int)', 'execute') then
     raise exception 'FAIL: plan tables/functions must be service-role only';
   end if;
 
-  -- referral_stats: paid count and revenue per code.
-  insert into payments (user_id, reference, plan, amount_kobo, status, referral_code) values
-    (u, 'ref_a', 'finals', 300000, 'success', 'TOLU'),
-    (u, 'ref_b', 'finals', 500000, 'success', 'TOLU'),
-    (u, 'ref_c', 'finals', 300000, 'pending', 'TOLU');
+  -- referral_stats: approved requests and revenue per code (TOLU: one approved at 3000, none pending).
   select * into r from referral_stats where referral_code = 'TOLU';
-  if r.paid <> 2 or r.revenue_naira <> 8000 or r.pending <> 1 then
-    raise exception 'FAIL: referral_stats TOLU expected 2 paid / 8000 / 1 pending, got % / % / %', r.paid, r.revenue_naira, r.pending;
+  if r.approved <> 1 or r.revenue_naira <> 3000 or r.pending <> 0 then
+    raise exception 'FAIL: referral_stats TOLU expected 1 / 3000 / 0, got % / % / %', r.approved, r.revenue_naira, r.pending;
+  end if;
+  select * into r from referral_stats where referral_code = '(none)';
+  if r.approved <> 0 or r.pending <> 2 then
+    raise exception 'FAIL: referral_stats (none) expected 0 approved / 2 pending, got % / %', r.approved, r.pending;
   end if;
 
-  raise notice 'PASS plans: caps (20/5, premium 8/2 inside the cap, Finals 40), refunds, summaries, grant once, per-programme premium, privileges, referral stats';
+  raise notice 'PASS plans: caps (20/5, premium 8/2 inside the cap, Finals 40), refunds, summaries, manual requests (pending until approved, approve once, reject, 3 pending a day), per-programme premium, privileges, referral stats';
 end $$;
 
 rollback;

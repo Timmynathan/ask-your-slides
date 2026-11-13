@@ -10,7 +10,7 @@ import { resolveCourse } from "@/lib/study/course-link";
 import { planState, usageNow } from "@/lib/plans/entitlement";
 import { nextLagosMidnight } from "@/lib/plans/limits";
 import { planOffer } from "@/lib/plans/offer";
-import { paymentsOpen } from "@/lib/plans/paystack";
+import { paymentsOpen } from "@/lib/plans/manual-pay";
 import { adminClient } from "@/lib/supabase/admin";
 import type { ChatItem, CourseItem, MaterialItem, TopicItem } from "@/lib/study/types";
 

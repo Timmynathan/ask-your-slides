@@ -28,6 +28,11 @@ export function nextLagosMidnight(at: Date): Date {
   return new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0) - 60 * 60 * 1000);
 }
 
+/** The midnight in Lagos that started `at`'s day. */
+export function lagosDayStart(at: Date): Date {
+  return new Date(nextLagosMidnight(at).getTime() - 24 * 60 * 60 * 1000);
+}
+
 /** True on the Lagos calendar day the account was created. */
 export function isFirstDay(createdAt: Date, now: Date): boolean {
   return lagosDay(createdAt) === lagosDay(now);

@@ -1,7 +1,7 @@
 // Plans in a real browser (PRD F12, phase 3), against a running app (default http://localhost:3000).
 // Signs in a temporary Computer Science student (no email sent), checks the Premium badge and
-// counts, the quiz lock and the premium-course cap (pricing sheet), the pricing page, and a comp
-// grant; then deletes the student. No model calls: costs nothing.
+// counts, the quiz lock and the premium-course cap (pricing sheet), the pricing page, /pay (bank
+// transfer + WhatsApp handoff, pending state, nothing granted), and a comp grant; then deletes the student. No model calls: costs nothing.
 //
 //   npm run dev   (in another terminal)   then   node scripts/plans-ui.mts
 import { createClient } from "@supabase/supabase-js";
@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
 import { PLAN_END_DATE, PREMIUM_FREE_FIRST_DAY } from "../lib/plans/config.ts";
+import { finalsPrice } from "../lib/plans/limits.ts";
 
 const ROOT_ENV = path.resolve(import.meta.dirname, "../../../.env");
 if (existsSync(ROOT_ENV)) process.loadEnvFile(ROOT_ENV);
@@ -76,7 +77,7 @@ try {
     await sheet.waitFor({ timeout: 15000 });
     check(await sheet.getByText("Quiz mode comes with Finals").isVisible(), "Quiz me → pricing sheet");
     const closed = await sheet.getByRole("button", { name: "Payments open soon" }).isVisible();
-    check(closed || (await sheet.getByRole("button", { name: /Get Finals/ }).isVisible()), closed ? "sheet: Payments open soon (no Paystack key yet)" : "sheet has Get Finals");
+    check(closed || (await sheet.getByRole("link", { name: /Get Finals · ₦/ }).getAttribute("href")) === "/pay", closed ? "sheet: Payments open soon (bank details not set)" : "sheet: Get Finals → /pay");
     await shot(page, `${label}-sheet-quiz`);
     await sheet.getByRole("button", { name: "Maybe later" }).click();
     const { data: used } = await admin.from("usage_daily").select("message_count").eq("user_id", userId).maybeSingle();
@@ -94,20 +95,48 @@ try {
     await admin.from("usage_course_daily").delete().eq("user_id", userId);
     await admin.from("usage_daily").delete().eq("user_id", userId);
 
-    // Pricing page, as after "Get Finals" on the landing page.
-    await page.goto(`${BASE}/pricing?checkout=1`, { waitUntil: "networkidle" });
+    // Pricing page → /pay.
+    await page.goto(`${BASE}/pricing`, { waitUntil: "networkidle" });
     if (await page.getByRole("button", { name: "Payments open soon" }).isVisible()) {
-      check(await page.getByRole("button", { name: "Payments open soon" }).isDisabled(), "pricing: Payments open soon (no Paystack key yet), disabled");
-    } else {
-      check(await page.getByLabel("Referral code (optional)").isVisible(), "pricing ?checkout=1 opens the referral field");
-      check(await page.getByRole("button", { name: /Get Finals · ₦/ }).isVisible(), "pricing: Get Finals with the price");
+      check(await page.getByRole("button", { name: "Payments open soon" }).isDisabled(), "pricing: Payments open soon (bank details not set), disabled");
+      await shot(page, `${label}-pricing`, true);
+      await ctx.close();
+      continue;
     }
     await shot(page, `${label}-pricing`, true);
+    await page.getByRole("link", { name: /Get Finals · ₦/ }).click();
+    await page.waitForURL(/\/pay$/);
+
+    // /pay: bank details, the student's reference, then "I've sent it" → pending row + WhatsApp.
+    const ref = (await page.locator("span.font-mono", { hasText: /^AYS-/ }).first().textContent())?.trim() ?? "";
+    check(/^AYS-[2-9A-HJKMNP-Z]{4}$/.test(ref), "pay: the student's reference", ref);
+    check(await page.getByRole("button", { name: "Copy account number" }).isVisible(), "pay: copy account number");
+    check(await page.getByRole("button", { name: "Copy reference" }).isVisible(), "pay: copy reference");
+    await shot(page, `${label}-pay`, true);
+    await page.getByRole("button", { name: "Have a referral code?" }).click();
+    await page.getByLabel("Referral code (optional)").fill("tolu");
+    let wa = "";
+    await page.route("https://wa.me/**", (r) => ((wa = r.request().url()), r.fulfill({ body: "whatsapp" })));
+    await page.getByRole("button", { name: /I've sent it/ }).click();
+    await page.waitForURL(/wa\.me/);
+    const price = finalsPrice(new Date());
+    const text = new URL(wa).searchParams.get("text") ?? "";
+    check(text === `Hi, I've paid ₦${price.toLocaleString("en-NG")} for AskYourSlides Finals. Email: ${email}. Reference: ${ref}. Receipt attached.`, "WhatsApp opens with the receipt message", text);
+    const { data: reqs } = await admin.from("payment_requests").select("status, amount_naira, reference, referral_code, email").eq("user_id", userId);
+    check(reqs?.length === 1 && reqs[0].status === "pending" && reqs[0].amount_naira === price && reqs[0].reference === ref && reqs[0].referral_code === "TOLU" && reqs[0].email === email, "one pending request, server price, reference, referral", JSON.stringify(reqs));
+    const { count: ents } = await admin.from("entitlements").select("id", { count: "exact", head: true }).eq("user_id", userId);
+    check(ents === 0, "a request alone grants nothing");
+    await page.goto(`${BASE}/pay`, { waitUntil: "networkidle" });
+    check(await page.getByText("Payment pending", { exact: true }).isVisible(), "pay: pending state after the handoff");
+    await shot(page, `${label}-pay-pending`, true);
+    await page.goto(`${BASE}/pricing`, { waitUntil: "networkidle" });
+    check(await page.getByRole("link", { name: /Payment pending/ }).isVisible(), "pricing: Payment pending");
+    await admin.from("payment_requests").delete().eq("user_id", userId);
     await ctx.close();
   }
 
   // A comp plan: Finals, no Premium limit.
-  const { error } = await admin.rpc("grant_finals", { p_user_id: userId, p_ends_at: PLAN_END_DATE.toISOString(), p_source: "comp", p_reference: null, p_note: "plans-ui test" });
+  const { error } = await admin.from("entitlements").insert({ user_id: userId, plan: "finals", ends_at: PLAN_END_DATE.toISOString(), source: "comp", note: "plans-ui test" });
   check(!error, "comp grant");
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   await ctx.addCookies(cookies);

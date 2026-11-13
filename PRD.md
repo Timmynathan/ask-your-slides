@@ -432,25 +432,39 @@ Free students see a "Premium" badge and "N free questions left today" on these.
 tapped) a pricing sheet opens, with the reset time where relevant and a "Get Finals" button. Every
 limit/lock event is logged (`limit_events`: user, plan, course, feature, time).
 
-**Payments (Paystack)**: one-time payment by card, bank transfer or USSD. The plan is granted only
-after server-side verification: the Paystack webhook (HMAC-SHA512 signature checked) and/or the
-verify endpoint, never the browser redirect alone. Granting is idempotent on the Paystack
-reference, and the amount paid must match the amount the server set at checkout. Test keys until
-the owner says go live; keys live only in env vars (`PAYSTACK_SECRET_KEY`).
-Optional referral code at checkout (no discount), stored on the payment; the `referral_stats` view
-shows paid count and revenue per code. `npm run plans:comp -- <email>` grants Finals for free to
-testers and influencers (`source: comp`).
+**Payments (manual bank transfer, launch; replaced Paystack on 13 Nov 2026)**: "Get Finals" (in
+the app, and on the landing page after sign-up) opens `/pay`, which shows the plan and amount (the
+server's price), the bank details (Opay, account number with a copy button, account name), the
+student's own reference (`AYS-XXXX`, kept for good, copy button: "Put this reference in your
+transfer description."), an optional referral code field, and "I've sent it — send receipt on
+WhatsApp". That button records a `payment_requests` row (pending, with the server's amount) and
+opens `wa.me/<WHATSAPP_NUMBER>` with "Hi, I've paid ₦<amount> for AskYourSlides Finals. Email:
+<email>. Reference: <reference>. Receipt attached." The student then sees "Payment pending — we'll
+activate Finals once we confirm your transfer (usually within a few hours)" on /pay and /pricing.
+- Never granted automatically: only an admin approval in `/admin/payments` (ADMIN_EMAILS, checked
+  on the server on every request) grants Finals until `PLAN_END_DATE` (`source: manual`, one plan
+  per request however often Approve is clicked). Reject takes an optional note shown on /pay.
+- Price lock: the amount is fixed when the request is made, so a request made before
+  `PRICE_CHANGE_DATE` is ₦3,000 even if approved after.
+- At most `MAX_PENDING_REQUESTS_A_DAY` (3) pending requests per student per Lagos day.
+- Emails (Resend): the owner on each new request; the student when approved.
+- Config: `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`, `WHATSAPP_NUMBER` (env, Vercel +
+  `apps/web/.env.local`); until all four are set "Get Finals" says "Payments open soon".
+- Referral code stored on the request; the `referral_stats` view counts approved requests and
+  revenue per code. `npm run plans:comp -- <email>` grants Finals free to testers and influencers
+  (`source: comp`).
 
-**Tables**: `entitlements` (user_id, plan, starts_at, ends_at, source paystack|comp,
-paystack_reference), `payments` (amount, reference, status, referral_code, raw event),
-`referral_codes`, `limit_events`, plus `usage_course_daily` (premium-course counts) and
-`summary_uses` (lifetime summaries).
+**Tables**: `entitlements` (user_id, plan, starts_at, ends_at, source manual|comp,
+payment_request_id), `payment_requests` (user, email, reference, plan, amount_naira,
+referral_code, status pending|approved|rejected, note, decided_by/at), `payment_references` (one
+per student), `referral_codes`, `limit_events`, plus `usage_course_daily` (premium-course counts)
+and `summary_uses` (lifetime summaries).
 
 **Pricing page (in the app)** and a **Plans section on the landing page** (after "How it works",
 before the final call to action; "Pricing" in the nav): Free vs Finals, Finals highlighted, early
 price with ₦5,000 struck through and a countdown until `PRICE_CHANGE_DATE`, a feature comparison,
 "Premium courses are the heaviest courses in your programme.", and "One-time payment. No
-subscription. Pay with card, transfer or USSD." All figures come from the plans config.
+subscription. Pay by bank transfer." All figures come from the plans config.
 
 **Acceptance**
 - Free: 20 on day one, 5 after; premium course 8 on day one and 2 after, inside the daily cap;
@@ -459,32 +473,21 @@ subscription. Pay with card, transfer or USSD." All figures come from the plans 
 - Finals: 40 a day, no premium limit, summaries and quiz allowed; stops at `PLAN_END_DATE`.
 - Price ₦3,000 before `PRICE_CHANGE_DATE` and ₦5,000 after: on the server, the pricing page and the
   landing page.
-- A replayed webhook or a forged signature never grants a plan.
+- A payment request alone never grants a plan; approving twice grants once; a rejected request
+  never grants; non-admins can't open /admin/payments or call its API.
 - Limits reset at midnight Lagos time.
 
-**Build phases**: (1) config, premium flags, entitlements, server-side limits; (2) Paystack
-checkout, webhook, verify (test mode); (3) pricing page, limit UI, badges, referral field, comp
-script, landing Plans section; (4) phone test with a Paystack test card, go-live checklist.
-Phases 1–3 built (Nov 2026). Until a Paystack key is set, every "Get Finals" button says
-"Payments open soon" and checkout refuses without creating a payment. The owner's /admin page has
-a Plans section: Finals sold, revenue, active plans (paid / comp), referral codes, limit hits.
+**Build phases**: (1) config, premium flags, entitlements, server-side limits; (2) payments; (3)
+pricing page, limit UI, badges, referral field, comp script, landing Plans section — all built
+(Nov 2026). Paystack was built, then replaced before launch by the manual bank-transfer flow,
+in three phases: (M1) `payment_requests`, /pay, WhatsApp handoff, pending state — built; (M2)
+/admin/payments, approve/reject, emails, price lock; (M3) phone test end to end, go-live
+checklist. The owner's /admin page has a Plans section: Finals approved, revenue, active plans
+(paid / comp), referral codes, limit hits.
 
-**Phase 4: test on a phone (Paystack test mode)**
-1. Paystack dashboard (Test mode): copy the test secret key into `apps/web/.env.local` and into
-   Vercel as `PAYSTACK_SECRET_KEY`; set the test webhook URL to
-   `https://askyourslides.com/api/pay/webhook`. Redeploy.
-2. On a phone, signed in as a Free test student: hit a limit (or tap Quiz me), "Get Finals", type a
-   referral code, pay with one of Paystack's test cards (Paystack docs, "Test payments").
-3. Expect: back on /pay/return, "You're on Finals"; Quiz me works; no Premium badges; /admin shows
-   1 sold and the referral code. Also try a failed test card (no plan granted) and a test bank
-   transfer (Finals switches on when the transfer lands).
-4. Webhook check: Paystack dashboard → the payment → webhook delivered with 200.
-
-**Go-live checklist**
+**Go-live checklist** (filled in at M3)
 - [ ] `PLAN_END_DATE` in `apps/web/lib/plans/config.ts` = the last first-semester paper (23:59 Lagos).
-- [ ] Paystack business verified; live secret key in Vercel as `PAYSTACK_SECRET_KEY`, plus `PAYSTACK_LIVE=1`.
-- [ ] Live webhook URL `https://askyourslides.com/api/pay/webhook` set in the Paystack dashboard (Live mode).
-- [ ] Redeploy; one real ₦ payment by the owner (then refund it in Paystack if wanted), check /admin.
+- [ ] `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`, `WHATSAPP_NUMBER` set in Vercel; redeploy.
 - [ ] Referral codes for influencers agreed (any code is recorded; `referral_codes` is optional).
 - [ ] Comp plans for testers: `npm run plans:comp -- <email> --note "…"`.
 

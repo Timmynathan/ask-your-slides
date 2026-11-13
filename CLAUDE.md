@@ -17,10 +17,12 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   calculate/optimize tools; their formula pages were read with Sonnet. Slide images are WebP q75 (free 1 GB plan).
 - Past questions phases 1–3 done for CS (extraction, tagging, model answers, exam map, practice, topic chips).
   ISMS past papers not added yet (source ZIP exists; must match papers on course code AND title).
-- Plans (PRD F12, Nov 2026): Free and Finals (one-time, Paystack). Every number/price/date lives in
-  apps/web/lib/plans/config.ts; limits enforced on the server (lib/plans/gate.ts). Premium courses =
-  course.yaml `premium: true`, per programme. Phases 1–3 built; phase 4 (phone test with Paystack test
-  card) waits for the owner's Paystack account. Never grant a plan from the browser redirect.
+- Plans (PRD F12, Nov 2026): Free and Finals (one-time, manual bank transfer; Paystack was removed
+  before launch). Every number/price/date lives in apps/web/lib/plans/config.ts; limits enforced on
+  the server (lib/plans/gate.ts); bank details + WhatsApp number are env vars. Premium courses =
+  course.yaml `premium: true`, per programme. /pay records a pending payment_request and opens
+  WhatsApp; Finals is granted ONLY by an admin approval (/admin/payments, phase M2). Never grant
+  automatically.
 - Launch to final-year students Mon 16 Nov 2026; price goes up 22 Nov 23:59; exams from 5 Dec 2026.
 
 ## Stack and models

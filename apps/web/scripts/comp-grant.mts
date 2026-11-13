@@ -67,7 +67,7 @@ if (active.length) {
   console.log(`${email} already has Finals (${active.map((a) => `${a.source} until ${a.ends_at.slice(0, 10)}`).join(", ")}). Nothing to do.`);
   process.exit(0);
 }
-const id = must(
-  await db.rpc("grant_finals", { p_user_id: profile.id, p_ends_at: PLAN_END_DATE.toISOString(), p_source: "comp", p_reference: null, p_note: value("note") ?? null }),
-) as string;
+const { id } = must(
+  await db.from("entitlements").insert({ user_id: profile.id, plan: "finals", ends_at: PLAN_END_DATE.toISOString(), source: "comp", note: value("note") ?? null }).select("id").single(),
+) as { id: string };
 console.log(`Granted Finals (comp) to ${email} until ${PLAN_END_DATE.toISOString().slice(0, 10)}. Entitlement ${id}.`);

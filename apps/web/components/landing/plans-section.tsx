@@ -8,7 +8,7 @@ import { Reveal } from "./reveal";
 
 const pill = "inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.98]";
 // After sign-up (and the short Welcome), straight to checkout.
-const FINALS_HREF = `/sign-up?next=${encodeURIComponent("/pricing?checkout=1")}`;
+const FINALS_HREF = `/sign-up?next=${encodeURIComponent("/pay")}`;
 
 export function PlansSection({ offer }: { offer: PlanOffer }) {
   return (
@@ -31,7 +31,7 @@ export function PlansSection({ offer }: { offer: PlanOffer }) {
               </Link>
             }
           />
-          <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay with card, transfer or USSD.</p>
+          <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>
         </Reveal>
 
         <Reveal className="mt-14" delay={80}>

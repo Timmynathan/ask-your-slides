@@ -30,7 +30,7 @@ export interface PlanOffer {
   planEndAt: string;
   free: { firstDay: number; daily: number; premiumFirstDay: number; premiumDaily: number; summaries: number };
   finals: { daily: number };
-  /** Set by the server (lib/plans/paystack.ts paymentsOpen): false until a Paystack key is set. */
+  /** Set by the server (lib/plans/manual-pay.ts paymentsOpen): false until the bank details are set. */
   paymentsOpen?: boolean;
 }
 

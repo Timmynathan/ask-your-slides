@@ -6,8 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { naira, timeLeft, type PlanOffer } from "@/lib/plans/offer";
-import { CheckoutButton } from "./checkout-button";
 import { FinalsPrice } from "./finals-price";
+import { GetFinalsLink } from "./get-finals-link";
 import { CheckIcon } from "./plan-cards";
 
 export type LimitCode = "daily_cap" | "premium_cap" | "summary" | "quiz";
@@ -76,9 +76,9 @@ export function PricingSheet({
             ))}
           </ul>
           <div className="mt-5">
-            <CheckoutButton price={offer.price} open={!!offer.paymentsOpen} />
+            <GetFinalsLink price={offer.price} open={!!offer.paymentsOpen} />
           </div>
-          <p className="mt-3 text-center text-[12px] text-muted">One-time {naira(offer.price)}. No subscription. Card, transfer or USSD.</p>
+          <p className="mt-3 text-center text-[12px] text-muted">One-time {naira(offer.price)}. No subscription. Pay by bank transfer.</p>
         </div>
 
         <button type="button" onClick={onClose} className="mt-4 w-full rounded-full px-6 py-3 text-[15px] text-muted transition hover:bg-sunken hover:text-ink">

@@ -30,6 +30,11 @@ export const PRICE_CHANGE_DATE = new Date("2026-11-22T23:59:00+01:00");
  *  (go-live checklist). Plans already sold keep the end date they were granted with. */
 export const PLAN_END_DATE = new Date("2026-12-23T23:59:00+01:00");
 
+// ── Paying (manual bank transfer, PRD F12) ──────────────────────
+// The bank details and WhatsApp number are env vars (lib/plans/manual-pay.ts), not code.
+/** Pending payment requests a student can make in one Lagos day. */
+export const MAX_PENDING_REQUESTS_A_DAY = 3;
+
 export type PlanId = "free" | "finals";
 
 export const PLAN_NAMES: Record<PlanId, string> = { free: "Free", finals: "Finals" };
