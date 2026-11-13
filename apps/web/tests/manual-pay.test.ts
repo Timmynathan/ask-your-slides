@@ -157,7 +157,7 @@ describe("POST /api/pay/request", () => {
   });
 
   it("until the bank details and WhatsApp number are set: 'Payments open soon', nothing recorded", async () => {
-    delete process.env.WHATSAPP_NUMBER;
+    process.env.WHATSAPP_NUMBER = "";
     const res = await send();
     expect(res.status).toBe(503);
     expect(await res.json()).toMatchObject({ error: "Payments open soon." });
@@ -166,8 +166,9 @@ describe("POST /api/pay/request", () => {
 });
 
 describe("helpers", () => {
-  it("reads every payment detail from env, none from code", () => {
-    expect(paymentDetails({ ...ENV })).toEqual({ bankName: "Opay", accountNumber: "8132265016", accountName: "Ilesanmi Oluwatimilehin", whatsapp: "2348000000000" });
+  it("payment details come from the plans config; env overrides; any empty one closes payments", () => {
+    expect(paymentDetails({})).toEqual({ bankName: "Opay", accountNumber: "8132265016", accountName: "Ilesanmi Oluwatimilehin", whatsapp: "2348132265016" });
+    expect(paymentDetails({ ...ENV })?.whatsapp).toBe("2348000000000");
     for (const k of Object.keys(ENV)) expect(paymentDetails({ ...ENV, [k]: "" })).toBeNull();
   });
 

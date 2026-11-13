@@ -448,8 +448,9 @@ activate Finals once we confirm your transfer (usually within a few hours)" on /
   `PRICE_CHANGE_DATE` is ₦3,000 even if approved after.
 - At most `MAX_PENDING_REQUESTS_A_DAY` (3) pending requests per student per Lagos day.
 - Emails (Resend): the owner on each new request; the student when approved.
-- Config: `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`, `WHATSAPP_NUMBER` (env, Vercel +
-  `apps/web/.env.local`); until all four are set "Get Finals" says "Payments open soon".
+- Config: `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`, `WHATSAPP_NUMBER` in
+  `lib/plans/config.ts` (not secret; an env var of the same name overrides); if any is empty
+  "Get Finals" says "Payments open soon".
 - Referral code stored on the request; the `referral_stats` view counts approved requests and
   revenue per code. `npm run plans:comp -- <email>` grants Finals free to testers and influencers
   (`source: comp`).
@@ -487,7 +488,7 @@ checklist. The owner's /admin page has a Plans section: Finals approved, revenue
 
 **Go-live checklist** (filled in at M3)
 - [ ] `PLAN_END_DATE` in `apps/web/lib/plans/config.ts` = the last first-semester paper (23:59 Lagos).
-- [ ] `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`, `WHATSAPP_NUMBER` set in Vercel; redeploy.
+- [ ] Bank details and WhatsApp number in `lib/plans/config.ts` are right.
 - [ ] Referral codes for influencers agreed (any code is recorded; `referral_codes` is optional).
 - [ ] Comp plans for testers: `npm run plans:comp -- <email> --note "…"`.
 

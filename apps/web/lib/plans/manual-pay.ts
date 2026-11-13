@@ -2,13 +2,14 @@
 // their reference in the description, sends the receipt on WhatsApp, and a payment request waits
 // as 'pending'. Finals is granted ONLY by an admin approval (/admin/payments), never here.
 //
-// Bank details and the WhatsApp number come from env vars (Vercel + apps/web/.env.local):
-//   BANK_NAME, BANK_ACCOUNT_NUMBER, BANK_ACCOUNT_NAME, WHATSAPP_NUMBER (international, digits only)
-// Until all four are set, "Get Finals" shows "Payments open soon".
+// Bank details and the WhatsApp number live in lib/plans/config.ts; an env var with the same name
+// (BANK_NAME, BANK_ACCOUNT_NUMBER, BANK_ACCOUNT_NAME, WHATSAPP_NUMBER) overrides each one.
+// If any of them ends up empty, "Get Finals" shows "Payments open soon".
 import "server-only";
 import { randomInt } from "node:crypto";
 import type { adminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/admin";
+import { BANK_ACCOUNT_NAME, BANK_ACCOUNT_NUMBER, BANK_NAME, WHATSAPP_NUMBER } from "./config";
 import { naira } from "./offer";
 
 type Db = ReturnType<typeof adminClient>;
@@ -23,10 +24,10 @@ export interface PaymentDetails {
 
 /** The transfer details, or null while any of them is missing. */
 export function paymentDetails(env: Record<string, string | undefined> = process.env): PaymentDetails | null {
-  const bankName = env.BANK_NAME?.trim();
-  const accountNumber = env.BANK_ACCOUNT_NUMBER?.replace(/\s/g, "");
-  const accountName = env.BANK_ACCOUNT_NAME?.trim();
-  const whatsapp = env.WHATSAPP_NUMBER?.replace(/\D/g, "");
+  const bankName = (env.BANK_NAME ?? BANK_NAME).trim();
+  const accountNumber = (env.BANK_ACCOUNT_NUMBER ?? BANK_ACCOUNT_NUMBER).replace(/\s/g, "");
+  const accountName = (env.BANK_ACCOUNT_NAME ?? BANK_ACCOUNT_NAME).trim();
+  const whatsapp = (env.WHATSAPP_NUMBER ?? WHATSAPP_NUMBER).replace(/\D/g, "");
   if (!bankName || !accountNumber || !accountName || !whatsapp) return null;
   return { bankName, accountNumber, accountName, whatsapp };
 }

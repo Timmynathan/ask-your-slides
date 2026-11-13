@@ -19,7 +19,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   ISMS past papers not added yet (source ZIP exists; must match papers on course code AND title).
 - Plans (PRD F12, Nov 2026): Free and Finals (one-time, manual bank transfer; Paystack was removed
   before launch). Every number/price/date lives in apps/web/lib/plans/config.ts; limits enforced on
-  the server (lib/plans/gate.ts); bank details + WhatsApp number are env vars. Premium courses =
+  the server (lib/plans/gate.ts); bank details + WhatsApp number are in that config too. Premium courses =
   course.yaml `premium: true`, per programme. /pay records a pending payment_request and opens
   WhatsApp; Finals is granted ONLY by an admin approval (/admin/payments, phase M2). Never grant
   automatically.

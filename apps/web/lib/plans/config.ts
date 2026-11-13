@@ -31,7 +31,13 @@ export const PRICE_CHANGE_DATE = new Date("2026-11-22T23:59:00+01:00");
 export const PLAN_END_DATE = new Date("2026-12-23T23:59:00+01:00");
 
 // ── Paying (manual bank transfer, PRD F12) ──────────────────────
-// The bank details and WhatsApp number are env vars (lib/plans/manual-pay.ts), not code.
+// Where students transfer and send the receipt (shown on /pay). Not secret. An env var with the
+// same name overrides each one; set one to "" to show "Payments open soon" instead.
+export const BANK_NAME = "Opay";
+export const BANK_ACCOUNT_NUMBER = "8132265016";
+export const BANK_ACCOUNT_NAME = "Ilesanmi Oluwatimilehin";
+/** International format, digits only (wa.me). */
+export const WHATSAPP_NUMBER = "2348132265016";
 /** Pending payment requests a student can make in one Lagos day. */
 export const MAX_PENDING_REQUESTS_A_DAY = 3;
 
