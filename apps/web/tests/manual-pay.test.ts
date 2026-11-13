@@ -21,12 +21,14 @@ function makeDb() {
       limit: () => q,
       single: async () => ({ data: match()[0] ?? null, error: match()[0] ? null : { message: "none" } }),
       maybeSingle: async () => ({ data: match()[0] ?? null, error: null }),
-      upsert: async (row: Row) => {
+      upsert: (row: Row) => {
         const rows = (t[table] ??= []);
-        if (rows.some((r) => r.user_id === row.user_id)) return { data: null, error: null };
-        if (rows.some((r) => r.reference === row.reference)) return { data: null, error: { code: "23505", message: "duplicate reference" } };
-        rows.push({ ...row });
-        return { data: null, error: null };
+        let result: { data: Row | null; error: { code: string; message: string } | null };
+        if (rows.some((r) => r.user_id === row.user_id)) result = { data: null, error: null };
+        else if (rows.some((r) => r.reference === row.reference)) result = { data: null, error: { code: "23505", message: "duplicate reference" } };
+        else (rows.push({ ...row }), (result = { data: { reference: row.reference }, error: null }));
+        const done = { select: () => done, maybeSingle: async () => result };
+        return done;
       },
       then: (resolve: (v: unknown) => void) => resolve({ data: match(), error: null }),
     };

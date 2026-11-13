@@ -9,8 +9,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
-import { PLAN_END_DATE, PREMIUM_FREE_FIRST_DAY } from "../lib/plans/config.ts";
-import { finalsPrice } from "../lib/plans/limits.ts";
+import { FINALS_PRICE, FINALS_PRICE_EARLY, PLAN_END_DATE, PREMIUM_FREE_FIRST_DAY, PRICE_CHANGE_DATE } from "../lib/plans/config.ts";
 
 const ROOT_ENV = path.resolve(import.meta.dirname, "../../../.env");
 if (existsSync(ROOT_ENV)) process.loadEnvFile(ROOT_ENV);
@@ -119,7 +118,7 @@ try {
     await page.route("https://wa.me/**", (r) => ((wa = r.request().url()), r.fulfill({ body: "whatsapp" })));
     await page.getByRole("button", { name: /I've sent it/ }).click();
     await page.waitForURL(/wa\.me/);
-    const price = finalsPrice(new Date());
+    const price = new Date() < PRICE_CHANGE_DATE ? FINALS_PRICE_EARLY : FINALS_PRICE;
     const text = new URL(wa).searchParams.get("text") ?? "";
     check(text === `Hi, I've paid ₦${price.toLocaleString("en-NG")} for AskYourSlides Finals. Email: ${email}. Reference: ${ref}. Receipt attached.`, "WhatsApp opens with the receipt message", text);
     const { data: reqs } = await admin.from("payment_requests").select("status, amount_naira, reference, referral_code, email").eq("user_id", userId);

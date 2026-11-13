@@ -46,12 +46,24 @@ export function newReference(): string {
 
 /** The student's transfer reference: made once, kept for good. */
 export async function referenceFor(db: Db, userId: string): Promise<string> {
+  const existing = must(await db.from("payment_references").select("reference").eq("user_id", userId).maybeSingle()) as { reference: string } | null;
+  if (existing) return existing.reference;
+  // The reference comes back from the insert itself: an identical read in the same render would
+  // be served from React's fetch memo (still "none").
   for (let attempt = 0; attempt < 8; attempt++) {
-    const existing = must(await db.from("payment_references").select("reference").eq("user_id", userId).maybeSingle()) as { reference: string } | null;
-    if (existing) return existing.reference;
-    const { error } = await db.from("payment_references").upsert({ user_id: userId, reference: newReference() }, { onConflict: "user_id", ignoreDuplicates: true });
-    // 23505 here = the random reference was taken by someone else: draw again.
+    const { data, error } = await db
+      .from("payment_references")
+      .upsert({ user_id: userId, reference: newReference() }, { onConflict: "user_id", ignoreDuplicates: true })
+      .select("reference")
+      .maybeSingle();
+    if (data) return (data as { reference: string }).reference;
+    // 23505 = the random reference was taken by someone else: draw again.
     if (error && error.code !== "23505") throw new Error(error.message);
+    if (!error) {
+      // Ignored: a parallel request made this student's reference first.
+      const made = must(await db.from("payment_references").select("reference, user_id").eq("user_id", userId).single()) as { reference: string };
+      return made.reference;
+    }
   }
   throw new Error("Couldn't make a payment reference.");
 }
