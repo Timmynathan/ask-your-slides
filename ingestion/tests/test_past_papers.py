@@ -36,7 +36,8 @@ def test_parse_number():
     assert parse_number("Q2b") == (2, 2, None)
     assert parse_number("Q2b(iii)") == (2, 2, 3)
     assert parse_number("2b") is None
-    assert parse_number("Q2(i)") is None
+    assert parse_number("Q2(i)") == (2, None, 1)  # roman parts straight under a question
+    assert parse_number("Q2(xx)") is None
     assert normalize_code("PAU-CSC 412") == "CSC412"
 
 
@@ -319,3 +320,18 @@ def test_owner_note_reaches_the_prompt_but_review_notes_do_not(tmp_path: Path):
     assert f"Note from the course owner about this file: {note}" in prompt
     prompt = build_params(C, PastPaper(**kw, note="review: guessed from the folder"), pages)["messages"][0]["content"][-1]["text"]
     assert "Note from the course owner" not in prompt
+
+
+def test_roman_parts_straight_under_a_question():
+    from past_validate import expected_parent, parse_number
+
+    assert parse_number("Q2(iii)") == (2, None, 3) and expected_parent("Q2(iii)") == "Q2"
+    ex = {"paper": paper(total=None), "questions": [q("Q1", "Answer these", None), q("Q1ii", marks=2), q("Q1i", marks=2), q("Q1iii", marks=2)]}
+    for x in ex["questions"][1:]:
+        x["parent"] = "Q1"
+    c = check(ex, course_code="CSC420")
+    assert [x["number"] for x in c.questions] == ["Q1", "Q1(i)", "Q1(ii)", "Q1(iii)"]
+    assert codes(c, "blocking") == [] and c.questions[0]["marks"] == 6
+    # A lone "Q1i" is the ninth lettered part, not a numeral: left alone (and flagged as a gap).
+    lone = {"paper": paper(), "questions": [q("Q1", "", None), {**q("Q1i", marks=2), "parent": "Q1"}]}
+    assert [x["number"] for x in check(lone, course_code="CSC420").questions] == ["Q1", "Q1i"]

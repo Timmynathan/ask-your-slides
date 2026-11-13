@@ -18,7 +18,10 @@ from dataclasses import dataclass, field
 
 QUESTION_TYPES = ("define", "explain", "compare", "calculate", "code", "case_study", "mcq", "essay")
 CONFIDENCE = ("high", "medium", "low")
-NUMBER_RE = re.compile(r"^Q(\d+)(?:([a-z])(?:\(([ivx]+)\))?)?$")
+# Q2, Q2b, Q2b(iii), and Q2(iii): roman parts straight under a question (no lettered part), as
+# many SMSS papers number them.
+NUMBER_RE = re.compile(r"^Q(\d+)([a-z])?(?:\(([ivx]+)\))?$")
+_BARE_ROMAN = (re.compile(r"^Q(\d+)()([ivx]+)$"), re.compile(r"^Q(\d+)([a-z])([ivx]+)$"))  # 'Q1ii' before 'Q1bii'
 ROMAN = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii"]
 TOLERANCE = 0.01
 
@@ -53,7 +56,7 @@ class Checked:
 
 
 def parse_number(number: str) -> tuple[int, int | None, int | None] | None:
-    """'Q2b(iii)' → (2, 2, 3); 'Q2b' → (2, 2, None); 'Q2' → (2, None, None)."""
+    """'Q2b(iii)' → (2, 2, 3); 'Q2(iii)' → (2, None, 3); 'Q2b' → (2, 2, None); 'Q2' → (2, None, None)."""
     m = NUMBER_RE.match(number or "")
     if not m:
         return None
@@ -70,7 +73,7 @@ def expected_parent(number: str) -> str | None:
     if not m:
         return None
     if m.group(3):
-        return f"Q{m.group(1)}{m.group(2)}"
+        return f"Q{m.group(1)}{m.group(2) or ''}"
     if m.group(2):
         return f"Q{m.group(1)}"
     return None
@@ -147,6 +150,26 @@ def course_match(paper: dict, *, course_code: str, aliases: tuple[str, ...] = ()
     return "match", printed
 
 
+def normalize_numbers(questions: list[dict]) -> list[dict]:
+    """'Q1ii' → 'Q1(ii)' (parents too). A one-letter numeral ('Q1i', 'Q1v', 'Q1x') is renamed only
+    when 'Q1ii' is also there: on its own it may be a lettered part."""
+    numbers = {q.get("number") or "" for q in questions}
+    rename: dict[str, str] = {}
+    for n in numbers:
+        m = _BARE_ROMAN[0].match(n) or _BARE_ROMAN[1].match(n)
+        if not m or m.group(3) not in ROMAN:
+            continue
+        base = f"Q{m.group(1)}{m.group(2) or ''}"
+        if len(m.group(3)) == 1 and f"{base}ii" not in numbers:
+            continue
+        rename[n] = f"{base}({m.group(3)})"
+    for q in questions:
+        q["number"] = rename.get(q.get("number"), q.get("number"))
+        if q.get("parent") in rename:
+            q["parent"] = rename[q["parent"]]
+    return questions
+
+
 def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), listed_code: str | None = None,
           accepted: set[str] | None = None, course_title: str | None = None, guessed: bool = False,
           also_codes: tuple[str, ...] = ()) -> Checked:
@@ -158,7 +181,7 @@ def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), 
     add = lambda code, sev, detail, q=None: problems.append(Problem(code, sev, detail, q))
 
     paper = extraction.get("paper") or {}
-    raw = [dict(q) for q in extraction.get("questions") or []]
+    raw = normalize_numbers([dict(q) for q in extraction.get("questions") or []])
     if not raw:
         add("no_questions", "blocking", "no questions were extracted")
 
@@ -298,9 +321,13 @@ def _check_gaps(numbers: list[str], add) -> None:
         if sorted(letters) != list(range(1, max(letters) + 1)):
             missing = sorted(set(range(1, max(letters) + 1)) - letters)
             add("numbering_gap", "blocking", f"Q{top}: part(s) {', '.join(chr(96 + m) for m in missing)} missing", f"Q{top}")
+    for _, p in parsed:
+        if p and not p[1] and p[2]:
+            romans.setdefault((p[0], 0), set()).add(p[2])
     for (top, sub), rs in romans.items():
+        label = f"Q{top}{chr(96 + sub) if sub else ''}"
         if sorted(rs) != list(range(1, max(rs) + 1)):
-            add("numbering_gap", "blocking", f"Q{top}{chr(96 + sub)}: roman parts not consecutive", f"Q{top}{chr(96 + sub)}")
+            add("numbering_gap", "blocking", f"{label}: roman parts not consecutive", label)
 
 
 def _answerable_range(paper: dict, tops: list[str], marks: dict[str, float], by_number: dict[str, dict]) -> tuple[float, float, str]:

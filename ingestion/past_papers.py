@@ -282,9 +282,10 @@ def make_job(course: Course, paper: PastPaper) -> Job:
                build_params(course, paper, pages), len(pages), orientation=tuple(p[2] for p in pages))
 
 
-def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str] | None:
-    """(raw extraction, source course code) of a byte-identical paper already extracted for another
-    course with the same model and prompt; None if there is none. Its saved reply is reused as is."""
+def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str, dict | None] | None:
+    """(raw extraction, source course code, source review file) of a byte-identical paper already
+    extracted for another course with the same model; None if there is none. Its saved reply is
+    reused as is, with its review file when this copy has none of its own."""
     rows = store.db.execute(
         """select p.source_file, c.code from past_papers p join courses c on c.id = p.course_id
            where p.file_hash = %s and p.course_id <> %s and p.extraction_model = %s order by p.created_at""",
@@ -293,7 +294,9 @@ def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str] | None:
     for r in rows:
         dump = REPORTS / "past_papers" / f"{r['code']}-{Path(r['source_file']).stem}.json"
         if dump.is_file():
-            return json.loads(dump.read_text())["raw"], r["code"]
+            src_review = (DATA / r["source_file"]).with_name(Path(r["source_file"]).stem + ".review.yaml")
+            review = yaml.safe_load(src_review.read_text()) if src_review.is_file() else None
+            return json.loads(dump.read_text())["raw"], r["code"], review
     return None
 
 
@@ -324,8 +327,14 @@ def save_paper(store, course_id: str, job: Job, extraction: dict, checked: Check
                      extraction_confidence, sort_order)
                    values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) returning id""",
                 (course_id, pid, q["number"], ids.get(q["parent"]) if q["parent"] else None, q.get("section"), q.get("text") or "",
-                 q.get("marks"), q["type"], json.dumps(q["options"]) if q.get("options") else None, q.get("confidence"), order),
+                 q.get("marks"), stored_type(q), json.dumps(q["options"]) if q.get("options") else None, q.get("confidence"), order),
             ).fetchone()["id"]
+
+
+def stored_type(q: dict) -> str:
+    """The database requires options on an mcq. A "multiple choice" entry without at least two (e.g. a
+    TRUE/FALSE stem) is stored as a plain question; check() has already flagged it (mcq_options)."""
+    return "explain" if q["type"] == "mcq" and len(q.get("options") or []) < 2 else q["type"]
 
 
 # ── report ─────────────────────────────────────────────────
@@ -456,7 +465,9 @@ def main(argv: list[str] | None = None) -> int:
         for j in jobs:
             found = find_reuse(store, j, course_ids[j.course.key])
             if found:
-                j.reuse, j.reuse_from = found
+                j.reuse, j.reuse_from, src_review = found
+                if j.review is None and src_review:
+                    j.review = src_review
                 print(f"  identical to the {j.reuse_from} paper, reused (no model call): {j.name}")
 
     model_jobs = [j for j in jobs if j.reuse is None]
