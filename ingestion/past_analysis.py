@@ -295,9 +295,11 @@ def roll_up(store, course_id: str) -> None:
            where q.id in (select id from parents)""",
         (course_id,),
     )
+    # A stem can't be a multiple-choice question itself (it has no options): its parts are.
     store.db.execute(
         """update past_questions q set type = (
-             select mode() within group (order by c.type) from past_questions c where c.parent_id = q.id)
+             select case when m = 'mcq' and q.options is null then 'explain' else m end
+             from (select mode() within group (order by c.type) as m from past_questions c where c.parent_id = q.id) x)
            where q.course_id = %s and exists (select 1 from past_questions c where c.parent_id = q.id)""",
         (course_id,),
     )
