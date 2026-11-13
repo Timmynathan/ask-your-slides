@@ -410,6 +410,7 @@ const LIMIT_LABEL: Record<string, string> = {
   premium_cap: "Premium-course limit",
   summary: "Second summary (Free)",
   quiz: "Quiz mode (Free)",
+  past: "Past questions (Free)",
 };
 
 /** PRD F12: what Finals is earning, who referred it, and which limits push students to the sheet. */

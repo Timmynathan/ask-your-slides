@@ -9,7 +9,10 @@ import type { CitationInfo } from "@/lib/study/format";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
-import { admitChatTurn } from "@/lib/plans/gate";
+import { admitChatTurn, LIMIT_MESSAGES } from "@/lib/plans/gate";
+import { canPractise, pastAccess } from "@/lib/past/access";
+import { groundingOf } from "@/lib/past/map";
+import { logLimitEvent, planState } from "@/lib/plans/entitlement";
 
 // POST /api/past/attempt (PRD F10 B)
 //   {question_id, answer}         written: marked by CHAT_MODEL against the scheme (counts towards the daily cap)
@@ -62,7 +65,15 @@ export async function POST(request: Request) {
     : [q];
   const byId = new Map(family.map((x) => [x.id, x]));
   const max = effectiveMarks(q, byId, family) || 1;
+  // Free vs Finals (PRD F12): Free practises its free question(s) per course; everything else is Finals.
+  const state = await planState(db, auth.user.id, new Date());
+  const access = await pastAccess(db, auth.user.id, q.course_id, state.plan);
+  if (!canPractise(access, q.id)) {
+    await logLimitEvent(db, { userId: auth.user.id, plan: state.plan, courseId: q.course_id, feature: "past" });
+    return NextResponse.json({ error: LIMIT_MESSAGES.past, code: "past", plan: state.plan }, { status: 403 });
+  }
   const reveal = {
+    grounding: groundingOf(q.relevance),
     model_answer: q.model_answer,
     citations: await citationsFor(q),
     answer_key: q.type === "mcq" ? q.answer_key : null,

@@ -45,6 +45,6 @@ export async function planStats(db: Db, from: string | null, now = new Date()): 
       revenue: Number(r.revenue_naira),
       pending: Number(r.pending),
     })),
-    limits: ["daily_cap", "premium_cap", "summary", "quiz"].map((f) => ({ feature: f, hits: byFeature.get(f)?.hits ?? 0, students: byFeature.get(f)?.users.size ?? 0 })),
+    limits: ["daily_cap", "premium_cap", "summary", "quiz", "past"].map((f) => ({ feature: f, hits: byFeature.get(f)?.hits ?? 0, students: byFeature.get(f)?.users.size ?? 0 })),
   };
 }

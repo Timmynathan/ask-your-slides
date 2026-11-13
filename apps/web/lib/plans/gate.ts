@@ -14,6 +14,7 @@ export const LIMIT_MESSAGES: Record<LimitFeature, string> = {
   premium_cap: "You've used today's free questions for this premium course. Resets at midnight (WAT).",
   summary: "You've used your free summary. Summaries are unlimited on Finals.",
   quiz: "Quiz mode comes with Finals.",
+  past: "You've used this course's free practice question. Every past question comes with Finals.",
 };
 
 export interface Refusal {

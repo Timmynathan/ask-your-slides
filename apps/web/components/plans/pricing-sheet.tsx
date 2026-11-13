@@ -10,8 +10,8 @@ import { FinalsPrice } from "./finals-price";
 import { GetFinalsLink } from "./get-finals-link";
 import { CheckIcon } from "./plan-cards";
 
-export type LimitCode = "daily_cap" | "premium_cap" | "summary" | "quiz";
-export const LIMIT_CODES: LimitCode[] = ["daily_cap", "premium_cap", "summary", "quiz"];
+export type LimitCode = "daily_cap" | "premium_cap" | "summary" | "quiz" | "past";
+export const LIMIT_CODES: LimitCode[] = ["daily_cap", "premium_cap", "summary", "quiz", "past"];
 
 export function PricingSheet({
   code,
@@ -45,6 +45,10 @@ export function PricingSheet({
     },
     summary: { title: "You've used your free summary", body: "Finals gives you unlimited summaries, in every course." },
     quiz: { title: "Quiz mode comes with Finals", body: "Get quizzed on any topic, one question at a time, marked against your slides." },
+    past: {
+      title: "Practise every past question with Finals",
+      body: `Free includes the exam map and ${offer.free.practicePerCourse} practice question${offer.free.practicePerCourse === 1 ? "" : "s"} per course. Finals unlocks every past question, with model answers and marking.`,
+    },
   };
   const c = copy[code];
 

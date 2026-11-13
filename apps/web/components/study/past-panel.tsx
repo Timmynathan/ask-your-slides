@@ -11,6 +11,11 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   buildExamMap,
   effectiveMarks,
+  GENERAL_NOTICE,
+  GROUNDING_LABEL,
+  groundingOf,
+  paperSummary,
+  type Grounding,
   marksLabel,
   oldCode,
   paperLabel,
@@ -27,8 +32,12 @@ import type { CitationInfo } from "@/lib/study/format";
 import { courseName } from "@/lib/study/course-code";
 import type { CourseItem, TopicItem } from "@/lib/study/types";
 import { Answer } from "./answer";
+import type { LimitCode } from "@/components/plans/pricing-sheet";
+import { LockIcon } from "@/components/plans/plan-cards";
 
 interface PastData {
+  /** PRD F12: Free practises its free question(s) per course; Finals everything. */
+  access: { plan: "free" | "finals"; freeQuestions: string[]; freeLimit: number };
   papers: PastPaper[];
   questions: PastQuestion[];
   questionTopics: QuestionTopic[];
@@ -45,6 +54,8 @@ interface Props {
   onBack: (() => void) | null;
   onCite(slideKey: string): void;
   onRemaining(remaining: number): void;
+  /** A Finals-only part was tapped: open the pricing sheet. */
+  onLimit(code: LimitCode, resetsAt: string | null): void;
   partnerName: string;
 }
 
@@ -63,7 +74,7 @@ function loadPast(courseId: string): Promise<PastData> {
   return cache.get(courseId)!;
 }
 
-export function PastPanel({ course, topics, topicId, onBack, onCite, onRemaining, partnerName }: Props) {
+export function PastPanel({ course, topics, topicId, onBack, onCite, onRemaining, onLimit, partnerName }: Props) {
   const [data, setData] = useState<PastData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"map" | "practice">(topicId ? "practice" : "map");
@@ -104,6 +115,7 @@ export function PastPanel({ course, topics, topicId, onBack, onCite, onRemaining
             </button>
           ))}
         </div>
+        {data && data.papers.length > 0 && <p className="w-full text-[12.5px] text-muted sm:ml-2 sm:w-auto">{paperSummary(data.papers)}</p>}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-10">
@@ -125,6 +137,7 @@ export function PastPanel({ course, topics, topicId, onBack, onCite, onRemaining
             onChange={() => setSelection(null)}
             onCite={onCite}
             onRemaining={onRemaining}
+            onLimit={onLimit}
             partnerName={partnerName}
           />
         ) : (
@@ -247,6 +260,7 @@ function Picker({ course, topics, data, onPick }: { course: CourseItem; topics: 
 // ── Practice: one question at a time ───────────────────────
 type Result = {
   mode: "marked" | "mcq" | "revealed";
+  grounding: Grounding | null;
   score?: number;
   max: number;
   correct?: boolean;
@@ -265,9 +279,12 @@ function Practice(props: {
   onChange(): void;
   onCite(key: string): void;
   onRemaining(n: number): void;
+  onLimit(code: LimitCode, resetsAt: string | null): void;
   partnerName: string;
 }) {
   const { course, topics, data, selection } = props;
+  const [freeUsed, setFreeUsed] = useState<string[]>(data.access.freeQuestions);
+  const [refused, setRefused] = useState<string[]>([]); // the server said "Finals only"
   const list = useMemo(
     () =>
       selection.kind === "topic"
@@ -293,6 +310,9 @@ function Practice(props: {
   const result = results[q.id];
   const draft = drafts[q.id] ?? "";
   const done = data.attempts[q.id];
+  const grounding = groundingOf(q.relevance);
+  // Free: the course's free practice question(s) and nothing else (the server checks again).
+  const locked = refused.includes(q.id) || (data.access.plan === "free" && !freeUsed.includes(q.id) && freeUsed.length >= data.access.freeLimit);
 
   const send = async (payload: { answer?: string; reveal?: true }) => {
     setBusy(payload.reveal ? "reveal" : "mark");
@@ -302,9 +322,15 @@ function Practice(props: {
       const body = await r.json().catch(() => null);
       if (!r.ok) {
         if (typeof body?.remaining === "number") props.onRemaining(body.remaining);
+        if (body?.code === "past" || body?.code === "daily_cap" || body?.code === "premium_cap") {
+          if (body.code === "past") setRefused((x) => [...x, q.id]);
+          props.onLimit(body.code, body.resets_at ?? null);
+          return;
+        }
         throw new Error(body?.error ?? "Something went wrong. Try again.");
       }
       if (typeof body.remaining === "number") props.onRemaining(body.remaining);
+      if (data.access.plan === "free") setFreeUsed((u) => (u.includes(q.id) ? u : [...u, q.id]));
       setResults((m) => ({ ...m, [q.id]: body as Result }));
     } catch (e) {
       setError((e as Error).message);
@@ -344,8 +370,13 @@ function Practice(props: {
           )}
           <span>· {q.number}</span>
           {marksLabel(max) && <span>· {marksLabel(max)}</span>}
-          {q.relevance === "not_covered" && <span className="rounded-full bg-sunken px-2 py-0.5 text-ink/70">Not in this year&apos;s slides</span>}
-          {q.relevance === "partial" && <span className="rounded-full bg-sunken px-2 py-0.5 text-ink/70">Partly in this year&apos;s slides</span>}
+          {grounding && (
+            <span
+              className={`rounded-full px-2 py-0.5 ${grounding === "slides" ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200" : grounding === "partial" ? "bg-sunken text-ink/70" : "bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100"}`}
+            >
+              {GROUNDING_LABEL[grounding]}
+            </span>
+          )}
           {done && !result && <span className="ml-auto text-emerald-700 dark:text-emerald-300">{done.revealed ? "Answer seen" : `Done · ${done.score}/${done.max}`}</span>}
         </header>
 
@@ -359,7 +390,19 @@ function Practice(props: {
           <Md text={q.text} />
         </div>
 
-        {q.type === "mcq" && q.options ? (
+        {locked && !result ? (
+          <div className="mt-5 rounded-2xl bg-sunken/70 p-5 text-center">
+            <p className="flex items-center justify-center gap-2 text-[15px] font-medium text-ink">
+              <LockIcon /> Practise this with Finals
+            </p>
+            <p className="mx-auto mt-1 max-w-sm text-[13.5px] text-muted">
+              You&apos;ve used this course&apos;s free practice question. Finals unlocks every past question, with model answers and marking.
+            </p>
+            <button type="button" onClick={() => props.onLimit("past", null)} className="cta-shine mt-4 rounded-full bg-brand px-6 py-2.5 text-sm font-medium text-brand-ink transition hover:opacity-95">
+              Lock in Finals
+            </button>
+          </div>
+        ) : q.type === "mcq" && q.options ? (
           <div className="mt-4 grid gap-2">
             {q.options.map((o) => {
               const picked = draft === o.label;
@@ -429,6 +472,14 @@ function Practice(props: {
 function ResultView({ result, draft, course, onCite, partnerName }: { result: Result; draft: string | null; course: CourseItem; onCite(k: string): void; partnerName: string }) {
   return (
     <div className="mt-5 space-y-4 border-t border-line pt-4">
+      {result.grounding === "general" && (
+        <p role="note" className="rounded-xl bg-amber-50 px-4 py-3 text-[14px] text-amber-900 ring-1 ring-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:ring-amber-800">
+          {GENERAL_NOTICE}
+        </p>
+      )}
+      {result.grounding === "partial" && (
+        <p role="note" className="text-[13px] text-muted">Partly from your slides: the cited parts are from them; the rest is general knowledge.</p>
+      )}
       {draft && result.mode === "marked" && (
         <details className="text-[14px] text-ink/80">
           <summary className="cursor-pointer text-[13px] text-muted">Your answer</summary>

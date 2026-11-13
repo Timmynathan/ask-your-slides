@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
+import { pastAccess } from "@/lib/past/access";
+import { planState } from "@/lib/plans/entitlement";
+import { adminClient } from "@/lib/supabase/admin";
 
 // GET /api/past?course=<uuid> → one course's past papers and questions, without answers (PRD F10).
 // Read as the student: RLS returns only reviewed papers, and the answer columns are not granted.
@@ -42,7 +45,12 @@ export async function GET(request: Request) {
     }
   }
 
+  // What this student may practise (PRD F12); enforced again in /api/past/attempt.
+  const db = adminClient();
+  const access = await pastAccess(db, auth.user.id, course, (await planState(db, auth.user.id, new Date())).plan);
+
   return NextResponse.json({
+    access,
     papers: papers.data,
     questions: (questions.data ?? []).map((q) => ({ ...q, marks: q.marks == null ? null : Number(q.marks) })),
     questionTopics: topics.data,

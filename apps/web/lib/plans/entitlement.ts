@@ -78,7 +78,7 @@ export async function usageNow(db: Db, state: PlanState, opts: { userId: string;
   return { limits, day, used, courseUsed, summariesUsed, left };
 }
 
-export type LimitFeature = "daily_cap" | "premium_cap" | "summary" | "quiz";
+export type LimitFeature = "daily_cap" | "premium_cap" | "summary" | "quiz" | "past";
 
 /** Every time a limit or lock stops a student (PRD F12). Never fails the request. */
 export async function logLimitEvent(db: Db, e: { userId: string; plan: PlanId; courseId: string | null; feature: LimitFeature }) {

@@ -196,3 +196,27 @@ export function marksLabel(marks: number | null): string | null {
   const n = Number(marks);
   return `${Number.isInteger(n) ? n : n.toFixed(1)} mark${n === 1 ? "" : "s"}`;
 }
+
+// ── Where a model answer comes from (answer design v2, PRD F10) ─────────────
+// Decided by the analysis step through relevance (ingestion/past_analysis.py, migration
+// 20261113000003): covered → slides, partial → partial, not_covered → general.
+export type Grounding = "slides" | "partial" | "general";
+
+export function groundingOf(relevance: Relevance | string | null | undefined): Grounding | null {
+  return relevance === "covered" ? "slides" : relevance === "partial" ? "partial" : relevance === "not_covered" ? "general" : null;
+}
+
+export const GROUNDING_LABEL: Record<Grounding, string> = {
+  slides: "From your slides",
+  partial: "Partly from your slides",
+  general: "Not from your slides",
+};
+
+/** Shown with every general answer. */
+export const GENERAL_NOTICE = "Not from your slides. Either this topic hasn't been uploaded yet, or it isn't in this year's slides.";
+
+/** "4 papers: 2025/26 exam, 2025/26 test, 2024/25 exam, 2022/23 exam", newest first. */
+export function paperSummary(papers: Pick<PastPaper, "session" | "type">[]): string {
+  const sorted = [...papers].sort((a, b) => b.session.localeCompare(a.session) || a.type.localeCompare(b.type));
+  return `${papers.length} paper${papers.length === 1 ? "" : "s"}: ${sorted.map((p) => paperLabel(p)).join(", ")}`;
+}

@@ -42,7 +42,7 @@ import batch
 import orientation
 import pymupdf
 import yaml
-from config import CACHE, DATA, PAST_Q_MODEL, ROOT
+from config import CACHE, DATA, PAST_ANSWER_MODEL, PAST_Q_MODEL, ROOT
 from manifest import Course, ManifestError, PastPaper, load
 from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check, course_match
 
@@ -426,6 +426,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-store", action="store_true", help="extract and report only; don't write the database")
     ap.add_argument("--force", action="store_true", help="re-store papers even if unchanged (with --analyse: re-answer questions)")
     ap.add_argument("--analyse", action="store_true", help="step 2: slides, topics, relevance, model answers for stored papers")
+    ap.add_argument("--recheck", action="store_true", help="with --analyse: redo partial/general answers whose search now finds new slides")
     args = ap.parse_args(argv)
 
     try:
@@ -553,26 +554,47 @@ def analyse(courses: list[Course], args) -> int:
     store = Store()
     chosen = [c for c in courses if not args.course or any(c.matches(s) for s in args.course)]
     work: list[tuple[Course, list[dict], list]] = []
+    reused = rechecked = 0
+    # CS before SEN: a Software Engineering copy reuses the CS answer once it exists.
+    chosen.sort(key=lambda c: c.programme == "software-engineering")
     for c in chosen:
         cid = store.course_id(c)
         if cid is None:
             continue
-        jobs = pa.load_jobs(store, cid, force=args.force)
+        jobs = pa.load_jobs(store, cid, force=args.force, recheck=args.recheck)
         if not jobs:
             continue
         topics = pa.course_topics(store, cid)
+        todo = []
         for j in jobs:
             pa.retrieve(store, j)
+            if args.recheck:
+                if not j.slides or not pa.has_new_slides(store, j):
+                    continue
+                rechecked += 1
+            src = pa.reuse_answer(store, j) if not args.recheck else None
+            if src:
+                pa.save_reused(store, j, src, topics)
+                reused += 1
+                continue
             j.params = pa.build_params(c, topics, j)
-        work.append((c, topics, jobs))
+            todo.append(j)
+        if todo:
+            work.append((c, topics, todo))
+        elif jobs:
+            pa.roll_up(store, cid)
+    if reused:
+        print(f"Reused {reused} answer(s) from identical papers in another programme (same slides): $0.")
+    if args.recheck:
+        print(f"Recheck: {rechecked} partial/general answer(s) now find new slides and will be regenerated.")
     all_jobs = [j for _, _, js in work for j in js]
     if not all_jobs:
         print("No new questions to analyse; checking repeats only.")
     uncached = [j for j in all_jobs if batch.cached(j.params) is None]
-    print(f"{len(all_jobs)} question(s) to analyse, {len(uncached)} need the model ({PAST_Q_MODEL}).")
+    print(f"{len(all_jobs)} question(s) to analyse, {len(uncached)} need the model ({PAST_ANSWER_MODEL}).")
     if all_jobs and uncached:
         tin, tout = pa.estimate_tokens(uncached)
-        print(f"Estimate: {tin:,} in, ~{tout:,} out ≈ ${batch.batch_cost(PAST_Q_MODEL, tin, tout):.2f}")
+        print(f"Estimate: {tin:,} in, ~{tout:,} out ≈ ${batch.batch_cost(PAST_ANSWER_MODEL, tin, tout):.2f}")
         if args.estimate:
             return 0
         if not args.yes and input("Submit? [y/N] ").strip().lower() != "y":
@@ -581,15 +603,16 @@ def analyse(courses: list[Course], args) -> int:
     replies = batch.run({j.custom_id: j.params for j in all_jobs}, label="analyse") if all_jobs else {}
 
     spent = 0.0
-    lines = [f"# Past questions analysis — {datetime.now():%Y-%m-%d %H:%M}", "", f"Model: {PAST_Q_MODEL} · analysis v{pa.ANALYSE_VERSION}", ""]
+    lines = [f"# Past questions analysis — {datetime.now():%Y-%m-%d %H:%M}", "", f"Model: {PAST_ANSWER_MODEL} · analysis v{pa.ANALYSE_VERSION}", ""]
+    grounded = {"slides": 0, "partial": 0, "general": 0}
     failed = flagged = 0
     for c, topics, jobs in work:
         names = {str(t["id"]): t["title"] for t in topics}
-        lines += [f"## {c.code} {c.title}", "", "| Paper | # | Marks | Relevance | Topics | Cites | Problems |", "|---|---|---|---|---|---|---|"]
+        lines += [f"## {c.programme}/{c.code} {c.title}", "", "| Paper | # | Marks | Grounding | Topics | Cites | Problems |", "|---|---|---|---|---|---|---|"]
         for j in jobs:
             r = replies[j.custom_id]
             if not r.cached:
-                spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
+                spent += batch.batch_cost(PAST_ANSWER_MODEL, r.input_tokens, r.output_tokens)
             if r.error or not r.text:
                 failed += 1
                 lines.append(f"| {j.paper} | {j.number} | | | | | **failed**: {r.error or 'empty'} |")
@@ -599,7 +622,8 @@ def analyse(courses: list[Course], args) -> int:
             flagged += bool(a.problems)
             cites = len(set(pa.CITE_RE.findall(a.model_answer)))
             marks = "" if j.marks is None else f"{j.marks:g}"
-            lines.append(f"| {j.paper} | {j.number} | {marks} | {a.relevance} | {'; '.join(names[t] for t in a.topics)} | {cites} | "
+            grounded[pa.grounding(a.relevance)] += 1
+            lines.append(f"| {j.paper} | {j.number} | {marks} | {pa.grounding(a.relevance)} | {'; '.join(names[t] for t in a.topics)} | {cites} | "
                          f"{'; '.join(a.problems).replace('|', '/')} |")
         pa.roll_up(store, store.course_id(c))
         lines.append("")
@@ -618,7 +642,7 @@ def analyse(courses: list[Course], args) -> int:
         for k, (c, cid, pairs, _) in repeat_jobs.items():
             r = rep[k]
             if not r.cached:
-                spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
+                spent += batch.batch_cost(PAST_ANSWER_MODEL, r.input_tokens, r.output_tokens)
             if r.error or not r.text:
                 lines.append(f"- {c.code}: repeat check failed ({r.error})")
                 continue
@@ -632,7 +656,8 @@ def analyse(courses: list[Course], args) -> int:
         lines.append("")
     REPORTS.mkdir(parents=True, exist_ok=True)
     report = REPORTS / f"past_analysis-{datetime.now():%Y-%m-%d-%H%M}.md"
-    lines.insert(3, f"Spent ≈ ${spent:.3f} · {len(all_jobs)} questions · {flagged} with problems · {failed} failed\n")
+    lines.insert(3, f"Spent ≈ ${spent:.3f} · {len(all_jobs)} questions · {flagged} with problems · {failed} failed · "
+                    f"grounding: {grounded['slides']} slides, {grounded['partial']} partial, {grounded['general']} general · {reused} reused\n")
     report.write_text("\n".join(lines))
     print(f"Report: {report}\nAnalysed {len(all_jobs) - failed} question(s), {flagged} with problems, {failed} failed. Spent ≈ ${spent:.3f}.")
     store.close()

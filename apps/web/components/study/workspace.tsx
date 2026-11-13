@@ -197,6 +197,7 @@ export function Workspace(data: WorkspaceData) {
                 onBack={past === "topic" ? () => setPast(null) : null}
                 onCite={setPreview}
                 onRemaining={onRemaining}
+                onLimit={onLimit}
                 partnerName={p.name}
               />
               )}

@@ -1,5 +1,17 @@
 """Past questions, analysis step (PRD §9.4 steps 4–5): retrieve slides, tag topics, judge relevance to
-this year's slides, write one model answer + marking scheme per question.
+this year's slides, write one model answer + marking scheme per question (PAST_ANSWER_MODEL).
+
+Answer design v2 (every course, CS included):
+- Retrieval: the whole course first to find the question's topic, then that topic, merged topic-first.
+- Nothing relevant (best similarity under NO_MATCH_SIMILARITY, the chat's own cut-off): no slides are
+  sent and the answer is general, inside <general>. The model also judges whether the slides it got
+  really cover the question (relevance). Grounding = slides | partial | general follows from
+  relevance (supabase migration 20261113000003): no slides → not_covered; "covered" without one
+  slide citation → partial.
+- Calculations: numbered steps with the working. MCQs: the key is stored and attempts are marked in
+  code (no model call).
+- New slides: --recheck re-retrieves partial/general answers and regenerates those whose search now
+  finds slides they didn't have.
 
 Only entries a student practises get a request: questions without parts, and parts. A question that
 has parts takes its topics (union) and relevance (best) from them.
@@ -12,12 +24,15 @@ import re
 from dataclasses import dataclass, field
 
 import batch
-from config import PAST_Q_MODEL
+from config import PAST_ANSWER_MODEL
 from embed import embed_documents, embed_query
 from store import vector_literal
 
-ANALYSE_VERSION = "1"
+ANALYSE_VERSION = "2"
 SLIDES_PER_QUESTION = 8
+TOPIC_SLIDES = 6  # from the question's topic, ahead of the course-wide results
+NO_MATCH_SIMILARITY = 0.3  # same cut-off as chat (apps/web/lib/agent/tools.ts NO_MATCH_SIMILARITY)
+GENERAL_LABEL = "Not from your slides. Either this topic hasn't been uploaded yet, or it isn't in this year's slides."
 SLIDE_CHARS = 1400
 RELEVANCE_RANK = {"covered": 2, "partial": 1, "not_covered": 0}
 CITE_RE = re.compile(r"\[\[s:([A-Za-z0-9-]+)\]\]")
@@ -49,20 +64,21 @@ INSTRUCTIONS = """You prepare exam practice for final-year students at Pan-Atlan
 
 1. topics: the order numbers of the 1–3 course topics the question examines, most relevant first. Use the slides' topics as evidence, but judge by what the question asks.
 
-2. relevance: how well this year's slides (the ones given) teach what the question needs.
+2. relevance: do the slides given here actually teach what this question needs? Judge the content, not shared words.
    - covered: the slides teach what is needed for full marks.
    - partial: they teach some of it; a student would need more.
-   - not_covered: they don't teach it (for example the topic is no longer in the course).
+   - not_covered: they don't teach it, or no slides were given.
    relevance_note: one short sentence saying why.
 
 3. model_answer: one strong answer a student could write in the exam, in Markdown.
    - Size it to the marks: about one developed point per 2 marks (6 marks ≈ 3 developed points, 10 marks ≈ 5), following the command word (define, describe, explain, compare, calculate, sketch…). Use short headings or a numbered list when the question has several parts (i, ii, …).
-   - Calculations: show the formula, the working and the final values. Code or SQL: a code block. "Draw/sketch": describe the diagram clearly or give a simple text diagram, with every label the question asks for.
+   - Calculations: numbered steps ("Step 1", "Step 2", …), each with the formula used, the numbers put in and the result, then the final answer in bold with its unit. Code or SQL: a code block. "Draw/sketch": describe the diagram clearly or give a simple text diagram, with every label the question asks for.
    - Citations: every sentence that comes from the slides ends with [[s:SLIDE_KEY]], using only keys of the slides given here, exactly as written.
    - Anything not from the slides (standard knowledge needed for full marks, worked numbers, an example) goes inside a <general> block on its own lines:
      <general>
      ...
      </general>
+   - When relevance is not_covered, the whole answer goes in one <general> block (a correct, exam-standard answer from general knowledge).
    - Write it as the answer itself. Never mention searching, "the slides provided", or what was found.
 
 4. marking_scheme: the points an examiner would award, each with its marks, adding up exactly to the question's marks.
@@ -90,10 +106,11 @@ class QuestionJob:
         return f"q-{self.id}"
 
 
-def load_jobs(store, course_id: str, force: bool = False) -> list[QuestionJob]:
+def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False) -> list[QuestionJob]:
+    """Questions to answer: unanswered ones (all with force). recheck: only partial/general answers."""
     rows = store.db.execute(
         """select q.id, q.course_id, q.number, q.parent_id, q.text, q.marks, q.type, q.options, q.model_answer,
-                  p.session, p.type as paper_type, p.status
+                  q.relevance, p.session, p.type as paper_type, p.status
            from past_questions q join past_papers p on p.id = q.paper_id
            where q.course_id = %s order by p.session, p.source_file, q.sort_order""",
         (course_id,),
@@ -102,7 +119,12 @@ def load_jobs(store, course_id: str, force: bool = False) -> list[QuestionJob]:
     has_parts = {str(r["parent_id"]) for r in rows if r["parent_id"]}
     jobs = []
     for r in rows:
-        if str(r["id"]) in has_parts or r["status"] != "ok" or (r["model_answer"] and not force):
+        if str(r["id"]) in has_parts or r["status"] != "ok":
+            continue
+        if recheck:
+            if not r["model_answer"] or r["relevance"] not in ("partial", "not_covered"):
+                continue
+        elif r["model_answer"] and not force:
             continue
         context, p = [], r["parent_id"]
         while p:
@@ -118,16 +140,39 @@ def load_jobs(store, course_id: str, force: bool = False) -> list[QuestionJob]:
     return jobs
 
 
+_MATCH = """select slide_id, slide_key, material_title, material_kind, topic_id, topic_title, slide_number, title, chunk_text,
+                  similarity, score
+           from match_slides(%s, %s::extensions.vector, %s, %s, %s)"""
+
+
 def retrieve(store, job: QuestionJob) -> None:
-    """Same hybrid search as chat (match_slides), whole course, query = stem + question."""
+    """Same hybrid search as chat (match_slides), query = stem + question. Topic first: the whole
+    course finds the question's topic (most search weight), that topic is searched on its own, and
+    its slides lead, followed by the rest of the course's. No slide at or above NO_MATCH_SIMILARITY
+    → nothing is sent and the answer is general."""
     stem = " ".join(job.context)[-600:]
     job.query = f"{stem}\n{job.text}".strip()
-    vec = embed_query(job.query[:4000])
-    job.slides = store.db.execute(
-        """select slide_id, slide_key, material_title, material_kind, topic_title, slide_number, title, chunk_text, similarity
-           from match_slides(%s, %s::extensions.vector, %s, %s)""",
-        (job.course_id, vector_literal(vec), job.query[:2000], SLIDES_PER_QUESTION),
-    ).fetchall()
+    vec = vector_literal(embed_query(job.query[:4000]))
+    course = store.db.execute(_MATCH, (job.course_id, vec, job.query[:2000], SLIDES_PER_QUESTION, None)).fetchall()
+    weight: dict[str, float] = {}
+    for s in course:
+        if s["topic_id"]:
+            weight[str(s["topic_id"])] = weight.get(str(s["topic_id"]), 0.0) + float(s["score"] or 0)
+    topic = max(weight, key=weight.get) if weight else None
+    in_topic = store.db.execute(_MATCH, (job.course_id, vec, job.query[:2000], TOPIC_SLIDES, topic)).fetchall() if topic else []
+    merged, seen = [], set()
+    for s in [*in_topic, *course]:
+        if s["slide_id"] not in seen:
+            seen.add(s["slide_id"])
+            merged.append(s)
+    best = max((float(s["similarity"]) for s in merged if s["similarity"] is not None), default=0.0)
+    job.slides = merged[:SLIDES_PER_QUESTION] if best >= NO_MATCH_SIMILARITY else []
+
+
+def has_new_slides(store, job: QuestionJob) -> bool:
+    """--recheck: does the search now find slides this answer wasn't written from?"""
+    old = {str(r["slide_id"]) for r in store.db.execute("select slide_id from question_slides where question_id = %s", (job.id,)).fetchall()}
+    return any(str(s["slide_id"]) not in old for s in job.slides)
 
 
 def build_params(course, topics: list[dict], job: QuestionJob) -> dict:
@@ -146,14 +191,22 @@ def build_params(course, topics: list[dict], job: QuestionJob) -> dict:
         f"Options:\n{options}" if options else "",
     ] if x)
     return {
-        "model": PAST_Q_MODEL,
-        "max_tokens": 16000,
+        "model": PAST_ANSWER_MODEL,
+        "max_tokens": 8000,
         "system": [{"type": "text", "text": INSTRUCTIONS, "cache_control": {"type": "ephemeral"}}],
-        "output_config": {"effort": "medium", "format": {"type": "json_schema", "schema": ANALYSE_SCHEMA}},
+        **model_options(PAST_ANSWER_MODEL),
+        "output_config": {**model_options(PAST_ANSWER_MODEL).get("output_config", {}),
+                          "format": {"type": "json_schema", "schema": ANALYSE_SCHEMA}},
         "messages": [{"role": "user", "content": (
             f"Course: {course.code} {course.title}\n\nTopics:\n{topic_list}\n\n<slides>\n{slides}\n</slides>\n\n{question}"
         )}],
     }
+
+
+def model_options(model: str) -> dict:
+    """Haiku answers from the retrieved slides without extended thinking (cost plan C); Sonnet keeps
+    medium effort."""
+    return {"thinking": {"type": "disabled"}} if "haiku" in model else {"output_config": {"effort": "medium"}}
 
 
 def course_topics(store, course_id: str) -> list[dict]:
@@ -163,7 +216,7 @@ def course_topics(store, course_id: str) -> list[dict]:
 @dataclass
 class Analysed:
     topics: list[str]  # topic ids
-    relevance: str
+    relevance: str  # decides grounding: covered → slides, partial → partial, not_covered → general
     model_answer: str
     marking_scheme: list[dict]
     answer_key: str | None
@@ -192,6 +245,14 @@ def check_analysis(raw: dict, job: QuestionJob, topics: list[dict]) -> Analysed:
         return text.strip()
 
     answer = keep(raw["model_answer"]) or ""
+    relevance = raw["relevance"]
+    if not job.slides:
+        relevance = "not_covered"  # nothing passed the search cut-off
+    elif relevance == "covered" and not CITE_RE.search(answer):
+        relevance = "partial"
+        problems.append("covered but cites no slide: stored as partial")
+    if relevance == "not_covered" and "<general>" not in answer:
+        answer = f"<general>\n{answer}\n</general>"
     scheme = [p for p in raw["marking_scheme"] if p.get("point")]
     if job.marks is not None and scheme and abs(sum(float(p["marks"]) for p in scheme) - job.marks) > 0.01:
         problems.append(f"marking scheme adds up to {sum(float(p['marks']) for p in scheme):g}, not {job.marks:g}")
@@ -202,7 +263,7 @@ def check_analysis(raw: dict, job: QuestionJob, topics: list[dict]) -> Analysed:
             problems.append(f"MCQ answer key {key!r} is not one of {sorted(labels)}")
     else:
         key = None
-    return Analysed(topic_ids, raw["relevance"], answer, scheme, key, keep(raw.get("explanation")) if job.type == "mcq" else None, problems)
+    return Analysed(topic_ids, relevance, answer, scheme, key, keep(raw.get("explanation")) if job.type == "mcq" else None, problems)
 
 
 def save(store, job: QuestionJob, a: Analysed) -> None:
@@ -249,11 +310,51 @@ def roll_up(store, course_id: str) -> None:
     )
 
 
+def grounding(relevance: str | None) -> str | None:
+    return {"covered": "slides", "partial": "partial", "not_covered": "general"}.get(relevance or "")
+
+
 def estimate_tokens(jobs: list[QuestionJob]) -> tuple[int, int]:
-    """Exact input tokens (count_tokens is free) and an output guess (answer + scheme + thinking)."""
+    """Exact input tokens (count_tokens is free) and an output guess (answer + scheme; no thinking on Haiku)."""
     tin = sum(batch.count_input_tokens(j.params) for j in jobs)  # type: ignore[arg-type]
-    tout = sum(900 + int(120 * (j.marks or 5)) + 1500 for j in jobs)
+    tout = sum(400 + int(120 * (j.marks or 5)) for j in jobs)
     return tin, tout
+
+
+# ── reuse across programmes (SEN's copies of CS papers) ─────
+def reuse_answer(store, job: QuestionJob) -> dict | None:
+    """The answer of the same question in a byte-identical paper of another course, when every slide it
+    cites has the same text in this course (slide keys are positions, so they're compared by content).
+    Returns the source row (relevance, answer, scheme, key, explanation, topic titles) or None."""
+    src = store.db.execute(
+        """select sq.id, sq.course_id, sq.relevance, sq.model_answer, sq.marking_scheme, sq.answer_key, sq.answer_explanation
+           from past_questions q join past_papers p on p.id = q.paper_id
+           join past_papers sp on sp.file_hash = p.file_hash and sp.course_id <> p.course_id
+           join past_questions sq on sq.paper_id = sp.id and sq.number = q.number
+           where q.id = %s and sq.model_answer is not null and sq.relevance is not null
+           order by sp.created_at limit 1""",
+        (job.id,),
+    ).fetchone()
+    if not src:
+        return None
+    for key in set(CITE_RE.findall(src["model_answer"] or "") + CITE_RE.findall(src["answer_explanation"] or "")):
+        a = store.db.execute("select chunk_text from slides where course_id = %s and slide_key = %s", (src["course_id"], key)).fetchone()
+        b = store.db.execute("select chunk_text from slides where course_id = %s and slide_key = %s", (job.course_id, key)).fetchone()
+        if not a or not b or a["chunk_text"] != b["chunk_text"]:
+            return None
+    topics = store.db.execute(
+        "select t.title from question_topics qt join topics t on t.id = qt.topic_id where qt.question_id = %s", (src["id"],)
+    ).fetchall()
+    return {**src, "topic_titles": [t["title"] for t in topics]}
+
+
+def save_reused(store, job: QuestionJob, src: dict, topics: list[dict]) -> None:
+    """Copy an answer (reuse_answer); topics are matched by title in this course, slides by key."""
+    by_title = {t["title"].strip().lower(): str(t["id"]) for t in topics}
+    topic_ids = [by_title[t.strip().lower()] for t in src["topic_titles"] if t.strip().lower() in by_title]
+    a = Analysed(topic_ids, src["relevance"], src["model_answer"], src["marking_scheme"] or [], src["answer_key"],
+                 src["answer_explanation"], [])
+    save(store, job, a)
 
 
 # ── repeats (PRD §9.4 step 6) ──────────────────────────────
@@ -289,9 +390,11 @@ def repeat_params(course, pairs: list[dict]) -> dict:
         for i, p in enumerate(pairs, 1)
     )
     return {
-        "model": PAST_Q_MODEL,
+        "model": PAST_ANSWER_MODEL,
         "max_tokens": 4000,
-        "output_config": {"effort": "low", "format": {"type": "json_schema", "schema": REPEATS_SCHEMA}},
+        **model_options(PAST_ANSWER_MODEL),
+        "output_config": {**model_options(PAST_ANSWER_MODEL).get("output_config", {}),
+                          "format": {"type": "json_schema", "schema": REPEATS_SCHEMA}},
         "messages": [{"role": "user", "content": (
             f"These are pairs of past exam questions from {course.code} {course.title}, from different papers. "
             "A pair is a repeat when both ask the student for the same idea or skill, even if worded differently or with "
