@@ -7,6 +7,7 @@ import {
   FINALS_PRICE_EARLY,
   FREE_DAILY,
   FREE_FIRST_DAY,
+  FREE_PRACTICE_PER_COURSE,
   FREE_SUMMARIES,
   PLAN_END_DATE,
   PREMIUM_FREE_DAILY,
@@ -28,7 +29,7 @@ export interface PlanOffer {
   /** "22 Nov" (Lagos). */
   priceChangeLabel: string;
   planEndAt: string;
-  free: { firstDay: number; daily: number; premiumFirstDay: number; premiumDaily: number; summaries: number };
+  free: { firstDay: number; daily: number; premiumFirstDay: number; premiumDaily: number; summaries: number; practicePerCourse: number };
   finals: { daily: number };
   /** Set by the server (lib/plans/manual-pay.ts paymentsOpen): false until the bank details are set. */
   paymentsOpen?: boolean;
@@ -51,6 +52,7 @@ export function planOffer(now: Date = new Date()): PlanOffer {
       premiumFirstDay: PREMIUM_FREE_FIRST_DAY,
       premiumDaily: PREMIUM_FREE_DAILY,
       summaries: FREE_SUMMARIES,
+      practicePerCourse: FREE_PRACTICE_PER_COURSE,
     },
     finals: { daily: FINALS_DAILY },
   };
@@ -79,6 +81,12 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     { label: "Answers cite your actual slides", free: true, finals: true },
     { label: "Summaries", free: String(o.free.summaries), finals: "Unlimited" },
     { label: "Quiz mode", free: false, finals: true },
+    {
+      label: "Past questions",
+      free: `Exam map + ${o.free.practicePerCourse} practice question${o.free.practicePerCourse === 1 ? "" : "s"} per course`,
+      finals: "Every past question",
+    },
+    { label: "Model answers and marked practice", free: false, finals: true },
     { label: "Valid", free: "Forever", finals: "Until your last paper" },
   ];
 }

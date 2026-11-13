@@ -150,14 +150,50 @@ def course_match(paper: dict, *, course_code: str, aliases: tuple[str, ...] = ()
     return "match", printed
 
 
+_ARABIC_SUB = re.compile(r"^Q(\d+)([a-z])?\((\d{1,2})\)$")
+_TOP = re.compile(r"^Q(\d+)")
+
+
+def _restart_sections(questions: list[dict]) -> None:
+    """A section that numbers its questions from 1 again (Section A Q1–Q30, Section B Q1–Q6):
+    its questions continue after the highest number before it, so every number is unique. The
+    section letter still says where they are on the paper."""
+    seen: dict[int, str | None] = {}
+    highest = 0
+    offset: dict[str | None, int] = {}
+    for q in questions:
+        m = _TOP.match(q.get("number") or "")
+        if not m:
+            continue
+        top, sec = int(m.group(1)), q.get("section")
+        if sec in offset:
+            top += offset[sec]
+        elif top in seen and seen[top] != sec and q.get("parent") is None:
+            offset[sec] = highest
+            top += highest
+        if sec in offset:
+            for key in ("number", "parent"):
+                v = q.get(key)
+                if v:
+                    q[key] = _TOP.sub(lambda mm: f"Q{int(mm.group(1)) + offset[sec]}", v, count=1)
+        seen.setdefault(top, sec)
+        highest = max(highest, top)
+
+
 def normalize_numbers(questions: list[dict]) -> list[dict]:
-    """'Q1ii' → 'Q1(ii)' (parents too). A one-letter numeral ('Q1i', 'Q1v', 'Q1x') is renamed only
-    when 'Q1ii' is also there: on its own it may be a lettered part."""
+    """Make the model's numbering fit Q1 / Q1a / Q1a(ii) / Q1(ii): restarted sections continue
+    their numbering; 'Q3b(1)' → 'Q3b(i)'; 'Q1ii' → 'Q1(ii)' (parents too). A one-letter numeral
+    ('Q1i', 'Q1v', 'Q1x') is renamed only when 'Q1ii' is also there: alone it may be a lettered part."""
+    _restart_sections(questions)
     numbers = {q.get("number") or "" for q in questions}
     rename: dict[str, str] = {}
     for n in numbers:
+        m = _ARABIC_SUB.match(n)
+        if m and 1 <= int(m.group(3)) <= len(ROMAN):
+            rename[n] = f"Q{m.group(1)}{m.group(2) or ''}({ROMAN[int(m.group(3)) - 1]})"
+    for n in numbers:
         m = _BARE_ROMAN[0].match(n) or _BARE_ROMAN[1].match(n)
-        if not m or m.group(3) not in ROMAN:
+        if n in rename or not m or m.group(3) not in ROMAN:
             continue
         base = f"Q{m.group(1)}{m.group(2) or ''}"
         if len(m.group(3)) == 1 and f"{base}ii" not in numbers:

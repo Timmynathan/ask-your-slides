@@ -335,3 +335,13 @@ def test_roman_parts_straight_under_a_question():
     # A lone "Q1i" is the ninth lettered part, not a numeral: left alone (and flagged as a gap).
     lone = {"paper": paper(), "questions": [q("Q1", "", None), {**q("Q1i", marks=2), "parent": "Q1"}]}
     assert [x["number"] for x in check(lone, course_code="CSC420").questions] == ["Q1", "Q1i"]
+
+
+def test_restarted_section_numbering_and_arabic_subparts():
+    qs = [q("Q1", section="A"), q("Q2", section="A"), q("Q1", "", section="B"), {**q("Q1a", section="B")}, q("Q2", section="B"),
+          q("Q3", "", section="B"), {**q("Q3b(1)", section="B"), "parent": "Q3b"}, q("Q3b", "", section="B"), q("Q3a", section="B"),
+          {**q("Q3b(2)", section="B"), "parent": "Q3b"}]
+    c = check({"paper": paper(), "questions": qs}, course_code="CSC420")
+    assert [x["number"] for x in c.questions] == ["Q1", "Q2", "Q3", "Q3a", "Q4", "Q5", "Q5a", "Q5b", "Q5b(i)", "Q5b(ii)"]
+    assert [x["section"] for x in c.questions][-1] == "B"
+    assert not [p for p in c.problems if p.code in ("duplicate_number", "numbering_format", "wrong_parent")]

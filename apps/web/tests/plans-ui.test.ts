@@ -80,6 +80,8 @@ describe("landing Plans section", () => {
       { label: "Answers cite your actual slides", free: true, finals: true },
       { label: "Summaries", free: "1", finals: "Unlimited" },
       { label: "Quiz mode", free: false, finals: true },
+      { label: "Past questions", free: "Exam map + 1 practice question per course", finals: "Every past question" },
+      { label: "Model answers and marked practice", free: false, finals: true },
       { label: "Valid", free: "Forever", finals: "Until your last paper" },
     ]);
   });

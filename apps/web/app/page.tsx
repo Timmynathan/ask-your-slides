@@ -201,7 +201,9 @@ export default async function Landing() {
         <section className="mx-auto max-w-6xl px-5 py-20">
           <div className="flex flex-col items-center gap-8 rounded-[25px] bg-pau-100 px-6 py-14 text-center md:flex-row md:justify-between md:px-14 md:text-left">
             <div>
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 dark:text-ink md:text-4xl">Exams are coming.</h2>
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 dark:text-ink md:text-4xl">
+                Exams are coming<span className="dots-seq" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
+              </h2>
               <p className="mt-3 text-pau-900/80 dark:text-ink/80">Pick a partner and ask your first question in under a minute.</p>
               <Link href="/sign-up" className={`${pill} mt-6 bg-brand text-brand-ink hover:opacity-90`}>
                 Get started free

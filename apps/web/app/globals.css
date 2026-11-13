@@ -318,3 +318,13 @@ html { scroll-behavior: smooth; }
 }
 @keyframes cta-shine { 0%, 62% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
 @media (prefers-reduced-motion: reduce) { .cta-shine::after { animation: none; display: none; } }
+
+/* "Exams are coming...": the dots appear one by one, then start again. Still for reduced motion. */
+.dots-seq span { opacity: 0; animation-duration: 2.4s; animation-timing-function: linear; animation-iteration-count: infinite; }
+.dots-seq span:nth-child(1) { animation-name: dot-1; }
+.dots-seq span:nth-child(2) { animation-name: dot-2; }
+.dots-seq span:nth-child(3) { animation-name: dot-3; }
+@keyframes dot-1 { 0%, 14% { opacity: 0; } 15%, 89% { opacity: 1; } 90%, 100% { opacity: 0; } }
+@keyframes dot-2 { 0%, 34% { opacity: 0; } 35%, 89% { opacity: 1; } 90%, 100% { opacity: 0; } }
+@keyframes dot-3 { 0%, 54% { opacity: 0; } 55%, 89% { opacity: 1; } 90%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dots-seq span { animation: none; opacity: 1; } }

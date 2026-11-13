@@ -16,6 +16,8 @@ export const PREMIUM_FREE_FIRST_DAY = 8;
 export const PREMIUM_FREE_DAILY = 2;
 /** Summaries in total, ever, in any course. */
 export const FREE_SUMMARIES = 1;
+/** Past questions: Free sees the exam map plus this many practice questions per course. */
+export const FREE_PRACTICE_PER_COURSE = 1;
 
 // ── Finals (one-time payment) ───────────────────────────────────
 /** Messages a day. No premium-course limit, unlimited summaries, quiz mode. */
