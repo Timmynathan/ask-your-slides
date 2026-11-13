@@ -116,11 +116,11 @@ try {
     await page.getByLabel("Referral code (optional)").fill("tolu");
     let wa = "";
     await page.route("https://wa.me/**", (r) => ((wa = r.request().url()), r.fulfill({ body: "whatsapp" })));
-    await page.getByRole("button", { name: /I've sent it/ }).click();
+    await page.getByRole("button", { name: /I've paid/ }).click();
     await page.waitForURL(/wa\.me/);
     const price = new Date() < PRICE_CHANGE_DATE ? FINALS_PRICE_EARLY : FINALS_PRICE;
     const text = new URL(wa).searchParams.get("text") ?? "";
-    check(text === `Hi, I've paid ₦${price.toLocaleString("en-NG")} for AskYourSlides Finals. Email: ${email}. Reference: ${ref}. Receipt attached.`, "WhatsApp opens with the receipt message", text);
+    check(text === `Hi, I've paid ₦${price.toLocaleString("en-NG")} for AskYourSlides Finals. Email: ${email}. Reference: ${ref}.`, "WhatsApp opens with the message (amount, email, reference)", text);
     const { data: reqs } = await admin.from("payment_requests").select("status, amount_naira, reference, referral_code, email").eq("user_id", userId);
     check(reqs?.length === 1 && reqs[0].status === "pending" && reqs[0].amount_naira === price && reqs[0].reference === ref && reqs[0].referral_code === "TOLU" && reqs[0].email === email, "one pending request, server price, reference, referral", JSON.stringify(reqs));
     const { count: ents } = await admin.from("entitlements").select("id", { count: "exact", head: true }).eq("user_id", userId);
@@ -150,6 +150,13 @@ try {
   await page.goto(`${BASE}/pricing`, { waitUntil: "networkidle" });
   check(await page.getByText(/You're on Finals until/).isVisible(), "pricing: on Finals");
   await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+  const welcome = page.getByRole("dialog", { name: "You're on Finals" });
+  check(await welcome.isVisible(), "pop-up: You're on Finals, after the plan is switched on");
+  check(await welcome.getByText("Quiz mode: get quizzed on any topic").isVisible(), "pop-up lists the perks");
+  await shot(page, "finals-welcome");
+  await welcome.getByRole("button", { name: "Start studying" }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  check(!(await page.getByRole("dialog", { name: "You're on Finals" }).isVisible()), "pop-up shows once");
   check((await page.getByText("Premium", { exact: true }).count()) === 0, "Finals: no Premium badges");
   await ctx.close();
 } finally {

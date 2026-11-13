@@ -1,7 +1,7 @@
 // Admin approval of bank-transfer payments (PRD F12, phase 2). Only an admin (ADMIN_EMAILS, checked
 // on the server) can approve or reject; approve grants Finals until PLAN_END_DATE once per request,
 // however many clicks; reject never grants; the price is the one locked when the student made the
-// request. Emails go through Resend (mocked) and never block the flow. The database is an in-memory
+// request. No emails: the student sees a pop-up in the app. The database is an in-memory
 // stand-in with the SQL functions' rules (proven for real in supabase/tests/plans.sql).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,14 +69,12 @@ vi.mock("@/lib/supabase/proxy", async () => {
 });
 
 const decide = (await import("@/app/api/admin/payments/route")).POST;
-const requestPay = (await import("@/app/api/pay/request/route")).POST;
 const { proxy } = await import("@/proxy");
 const { PLAN_END_DATE } = await import("@/lib/plans/config");
 const { NextRequest } = await import("next/server");
 
 const OWNER = { id: "owner", email: "owner@askyourslides.com" };
 const STUDENT = { id: "u1", email: "ada@pau.edu.ng" };
-const KEY = "re_test_secret_key_123";
 const call = (body: unknown) => decide(new Request("https://askyourslides.com/api/admin/payments", { method: "POST", body: JSON.stringify(body) }));
 const REQ = "11111111-1111-4111-8111-111111111111";
 const at = (iso: string) => {
@@ -84,12 +82,11 @@ const at = (iso: string) => {
   vi.setSystemTime(new Date(iso));
 };
 
-const resend = vi.fn<(url: string | URL, init?: RequestInit) => Promise<Response>>(async () => Response.json({ id: "email_1" }));
-const sentEmails = () => resend.mock.calls.map(([, init]) => JSON.parse(String(init!.body)) as { to: string | string[]; subject: string; text: string });
+// Nothing here may call out to the network (no email service).
+const net = vi.fn(async () => Response.json({}));
 
 beforeEach(() => {
   process.env.ADMIN_EMAILS = OWNER.email;
-  process.env.RESEND_API_KEY = KEY;
   authUser = OWNER;
   t = {
     profiles: [{ id: "u1", created_at: "2026-11-10T10:00:00+01:00" }],
@@ -100,13 +97,13 @@ beforeEach(() => {
     ],
   };
   at("2026-11-20T10:00:00+01:00");
-  vi.stubGlobal("fetch", resend);
+  vi.stubGlobal("fetch", net);
 });
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
-  resend.mockClear();
-  delete process.env.RESEND_API_KEY;
+  expect(net).not.toHaveBeenCalled();
+  net.mockClear();
   delete process.env.ADMIN_EMAILS;
 });
 
@@ -133,24 +130,19 @@ describe("only admins", () => {
 });
 
 describe("approve", () => {
-  it("grants Finals until PLAN_END_DATE, marks the request approved, emails the student", async () => {
+  it("grants Finals until PLAN_END_DATE and marks the request approved", async () => {
     const res = await call({ id: REQ, action: "approve" });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ outcome: "approved" });
     expect(t.entitlements).toEqual([expect.objectContaining({ user_id: "u1", source: "manual", payment_request_id: REQ, ends_at: PLAN_END_DATE.toISOString() })]);
     expect(t.payment_requests[0]).toMatchObject({ status: "approved", decided_by: OWNER.email });
-    const [mail] = sentEmails();
-    expect(mail.to).toBe(STUDENT.email);
-    expect(mail.text).toContain("₦3,000");
-    expect(mail.text).toContain("https://askyourslides.com/dashboard");
   });
 
-  it("a double click (two at once, then a third) grants one plan and sends one email", async () => {
+  it("a double click (two at once, then a third) grants one plan", async () => {
     const [a, b] = await Promise.all([call({ id: REQ, action: "approve" }), call({ id: REQ, action: "approve" })]);
     const c = await call({ id: REQ, action: "approve" });
     expect([a.status, b.status, c.status]).toEqual([200, 200, 200]);
     expect(t.entitlements).toHaveLength(1);
-    expect(sentEmails()).toHaveLength(1);
   });
 
   it("price lock: a ₦3,000 request approved after PRICE_CHANGE_DATE stays ₦3,000", async () => {
@@ -158,14 +150,6 @@ describe("approve", () => {
     expect((await call({ id: REQ, action: "approve" })).status).toBe(200);
     expect(t.payment_requests[0].amount_naira).toBe(3000);
     expect(t.entitlements).toHaveLength(1);
-    expect(sentEmails()[0].text).toContain("₦3,000");
-  });
-
-  it("an email failure or a missing key never blocks the approval", async () => {
-    delete process.env.RESEND_API_KEY;
-    expect((await call({ id: REQ, action: "approve" })).status).toBe(200);
-    expect(t.entitlements).toHaveLength(1);
-    expect(resend).not.toHaveBeenCalled();
   });
 });
 
@@ -177,7 +161,6 @@ describe("reject", () => {
     expect(t.entitlements).toEqual([]);
     expect((await call({ id: REQ, action: "approve" })).status).toBe(409);
     expect(t.entitlements).toEqual([]);
-    expect(resend).not.toHaveBeenCalled();
   });
 
   it("an approved request can't be rejected", async () => {
@@ -187,26 +170,13 @@ describe("reject", () => {
   });
 });
 
-describe("emails", () => {
-  it("a new request emails the owner (ADMIN_EMAILS) with the amount, reference and admin link", async () => {
-    authUser = STUDENT;
-    process.env.BANK_NAME = "Opay";
-    const res = await requestPay(new Request("https://askyourslides.com/api/pay/request", { method: "POST", body: JSON.stringify({ referral_code: "tolu" }) }));
-    expect(res.status).toBe(200);
-    const [mail] = sentEmails();
-    expect(mail.to).toEqual([OWNER.email]);
-    expect(mail.subject).toBe("New payment: ₦3,000 · AYS-7K3Q");
-    expect(mail.text).toContain("Referral code: TOLU");
-    expect(mail.text).toContain("https://askyourslides.com/admin/payments");
-    delete process.env.BANK_NAME;
-  });
-
-  it("the Resend key goes only in the Authorization header to Resend, never into a response", async () => {
-    const res = await call({ id: REQ, action: "approve" });
-    const [url, init] = resend.mock.calls[0];
-    expect(String(url)).toBe("https://api.resend.com/emails");
-    expect((init!.headers as Record<string, string>).Authorization).toBe(`Bearer ${KEY}`);
-    expect(String(init!.body)).not.toContain(KEY);
-    expect(JSON.stringify(await res.json())).not.toContain(KEY);
+describe("welcome pop-up", () => {
+  it("planState flags a Finals plan switched on in the last 14 days, not an older one", async () => {
+    const { planState } = await import("@/lib/plans/entitlement");
+    const db = (await import("@/lib/supabase/admin")).adminClient();
+    await call({ id: REQ, action: "approve" });
+    t.entitlements[0].created_at = "2026-11-20T10:00:00+01:00";
+    expect((await planState(db, "u1", new Date("2026-11-21T10:00:00+01:00"))).welcome).toEqual({ id: "ent_1", endsAt: PLAN_END_DATE.toISOString() });
+    expect((await planState(db, "u1", new Date("2026-12-05T10:00:00+01:00"))).welcome).toBeNull();
   });
 });

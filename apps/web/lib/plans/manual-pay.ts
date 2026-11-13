@@ -1,5 +1,5 @@
 // Paying for Finals by bank transfer (PRD F12). The student transfers to the owner's account with
-// their reference in the description, sends the receipt on WhatsApp, and a payment request waits
+// their reference in the description, tells us on WhatsApp (their email is in the message), and a payment request waits
 // as 'pending'. Finals is granted ONLY by an admin approval (/admin/payments), never here.
 //
 // Bank details and the WhatsApp number live in lib/plans/config.ts; an env var with the same name
@@ -76,7 +76,7 @@ export function cleanReferral(code: unknown): string | null {
 }
 
 export function whatsappText(r: { amount: number; email: string; reference: string }): string {
-  return `Hi, I've paid ${naira(r.amount)} for AskYourSlides Finals. Email: ${r.email}. Reference: ${r.reference}. Receipt attached.`;
+  return `Hi, I've paid ${naira(r.amount)} for AskYourSlides Finals. Email: ${r.email}. Reference: ${r.reference}.`;
 }
 
 export function whatsappUrl(number: string, text: string): string {

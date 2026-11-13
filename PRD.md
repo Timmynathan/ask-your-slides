@@ -436,18 +436,21 @@ limit/lock event is logged (`limit_events`: user, plan, course, feature, time).
 the app, and on the landing page after sign-up) opens `/pay`, which shows the plan and amount (the
 server's price), the bank details (Opay, account number with a copy button, account name), the
 student's own reference (`AYS-XXXX`, kept for good, copy button: "Put this reference in your
-transfer description."), an optional referral code field, and "I've sent it — send receipt on
+transfer description."), an optional referral code field, and "I've paid — message us on
 WhatsApp". That button records a `payment_requests` row (pending, with the server's amount) and
 opens `wa.me/<WHATSAPP_NUMBER>` with "Hi, I've paid ₦<amount> for AskYourSlides Finals. Email:
-<email>. Reference: <reference>. Receipt attached." The student then sees "Payment pending — we'll
+<email>. Reference: <reference>." The owner replies on WhatsApp if needed (e.g. asks for a
+receipt) and checks the transfer in Opay. The student then sees "Payment pending — we'll
 activate Finals once we confirm your transfer (usually within a few hours)" on /pay and /pricing.
 - Never granted automatically: only an admin approval in `/admin/payments` (ADMIN_EMAILS, checked
   on the server on every request) grants Finals until `PLAN_END_DATE` (`source: manual`, one plan
   per request however often Approve is clicked). Reject takes an optional note shown on /pay.
+- No emails (PAU inboxes don't reliably receive ours): the next time the student opens the app
+  after approval, a "You're on Finals" pop-up lists the perks (once per plan, per browser; shown
+  for 14 days after the plan starts, comp plans included).
 - Price lock: the amount is fixed when the request is made, so a request made before
   `PRICE_CHANGE_DATE` is ₦3,000 even if approved after.
 - At most `MAX_PENDING_REQUESTS_A_DAY` (3) pending requests per student per Lagos day.
-- Emails (Resend): the owner on each new request; the student when approved.
 - Config: `BANK_NAME`, `BANK_ACCOUNT_NUMBER`, `BANK_ACCOUNT_NAME`, `WHATSAPP_NUMBER` in
   `lib/plans/config.ts` (not secret; an env var of the same name overrides); if any is empty
   "Get Finals" says "Payments open soon".
@@ -482,15 +485,13 @@ subscription. Pay by bank transfer." All figures come from the plans config.
 pricing page, limit UI, badges, referral field, comp script, landing Plans section — all built
 (Nov 2026). Paystack was built, then replaced before launch by the manual bank-transfer flow,
 in three phases: (M1) `payment_requests`, /pay, WhatsApp handoff, pending state — built; (M2)
-/admin/payments, approve/reject, emails (sent once `RESEND_API_KEY` is set; skipped otherwise),
-price lock — built; (M3) phone test end to end, go-live
+/admin/payments, approve/reject, "You're on Finals" pop-up, price lock — built; (M3) phone test end to end, go-live
 checklist. The owner's /admin page has a Plans section: Finals approved, revenue, active plans
 (paid / comp), referral codes, limit hits.
 
 **Go-live checklist** (filled in at M3)
 - [ ] `PLAN_END_DATE` in `apps/web/lib/plans/config.ts` = the last first-semester paper (23:59 Lagos).
 - [ ] Bank details and WhatsApp number in `lib/plans/config.ts` are right.
-- [ ] `RESEND_API_KEY` (server-only secret) in Vercel and `apps/web/.env.local`, so the owner hears of new requests and students of approvals.
 - [ ] Referral codes for influencers agreed (any code is recorded; `referral_codes` is optional).
 - [ ] Comp plans for testers: `npm run plans:comp -- <email> --note "…"`.
 

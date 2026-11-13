@@ -8,6 +8,8 @@ import { isPartnerId } from "@/lib/partners";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { resolveCourse } from "@/lib/study/course-link";
 import { planState, usageNow } from "@/lib/plans/entitlement";
+import { FinalsWelcome } from "@/components/plans/finals-welcome";
+import { FINALS_DAILY } from "@/lib/plans/config";
 import { nextLagosMidnight } from "@/lib/plans/limits";
 import { planOffer } from "@/lib/plans/offer";
 import { paymentsOpen } from "@/lib/plans/manual-pay";
@@ -61,7 +63,8 @@ async function Loaded({ params, searchParams }: Props) {
   // Plan limits (PRD F12): what this student can still send in this course today.
   const db = adminClient();
   const now = new Date();
-  const plan = await usageNow(db, await planState(db, user.id, now), {
+  const state = await planState(db, user.id, now);
+  const plan = await usageNow(db, state, {
     userId: user.id,
     courseId: course.id,
     premium: !!course.premium,
@@ -72,28 +75,31 @@ async function Loaded({ params, searchParams }: Props) {
   const dailyLeft = plan.limits.daily - plan.used;
 
   return (
-    <Workspace
-      courses={courses as CourseItem[]}
-      topics={topics}
-      chats={chatList}
-      materials={(materialRows ?? []).filter((m) => m.course_id === course.id).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count, source_file: m.source_file })) as MaterialItem[]}
-      initialCourseId={course.id}
-      initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
-      initialChatId={initialChat?.id ?? null}
-      user={{ id: user.id, email: user.email ?? "", displayName: profile?.display_name ?? null }}
-      partner={profile.study_partner}
-      usage={{ used: plan.used, cap }}
-      plan={{
-        id: plan.limits.plan,
-        premiumLimited,
-        binding: premiumLimited && plan.left < dailyLeft ? "premium_cap" : "daily_cap",
-        resetsAt: nextLagosMidnight(now).toISOString(),
-        offer: { ...planOffer(now), paymentsOpen: paymentsOpen() },
-      }}
-      pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
-      past={past}
-      initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}
-    />
+    <>
+      <Workspace
+        courses={courses as CourseItem[]}
+        topics={topics}
+        chats={chatList}
+        materials={(materialRows ?? []).filter((m) => m.course_id === course.id).map((m) => ({ id: m.id, course_id: m.course_id, topic_id: m.topic_id, kind: m.kind, material_order: m.material_order, title: m.title, page_count: m.page_count, source_file: m.source_file })) as MaterialItem[]}
+        initialCourseId={course.id}
+        initialTopicId={initialChat ? initialChat.topic_id : topicFromUrl?.id ?? null}
+        initialChatId={initialChat?.id ?? null}
+        user={{ id: user.id, email: user.email ?? "", displayName: profile?.display_name ?? null }}
+        partner={profile.study_partner}
+        usage={{ used: plan.used, cap }}
+        plan={{
+          id: plan.limits.plan,
+          premiumLimited,
+          binding: premiumLimited && plan.left < dailyLeft ? "premium_cap" : "daily_cap",
+          resetsAt: nextLagosMidnight(now).toISOString(),
+          offer: { ...planOffer(now), paymentsOpen: paymentsOpen() },
+        }}
+        pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
+        past={past}
+        initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}
+      />
+      {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} />}
+    </>
   );
 }
 

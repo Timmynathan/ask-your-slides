@@ -112,7 +112,7 @@ describe("POST /api/pay/request", () => {
     expect(t.payment_requests).toEqual([
       expect.objectContaining({ user_id: "u1", email: "ada.obi@pau.edu.ng", reference: "AYS-7K3Q", amount_naira: 3000, referral_code: "TOLU", status: "pending" }),
     ]);
-    const text = "Hi, I've paid ₦3,000 for AskYourSlides Finals. Email: ada.obi@pau.edu.ng. Reference: AYS-7K3Q. Receipt attached.";
+    const text = "Hi, I've paid ₦3,000 for AskYourSlides Finals. Email: ada.obi@pau.edu.ng. Reference: AYS-7K3Q.";
     expect(json.whatsapp_url).toBe(`https://wa.me/2348000000000?text=${encodeURIComponent(text)}`);
     expect(json.whatsapp_url).toContain("%E2%82%A6"); // ₦, URL-encoded
     expect(json.whatsapp_url).not.toMatch(/ /);

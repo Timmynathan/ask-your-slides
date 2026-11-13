@@ -3,14 +3,13 @@ import { z } from "zod";
 import { MAX_PENDING_REQUESTS_A_DAY, PLAN_END_DATE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
 import { finalsPrice, lagosDayStart } from "@/lib/plans/limits";
-import { notifyNewRequest } from "@/lib/plans/payment-admin";
 import { cleanReferral, paymentDetails, referenceFor, whatsappText, whatsappUrl } from "@/lib/plans/manual-pay";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/pay/request {referral_code?} → {reference, amount, whatsapp_url, status: "pending"}
-// "I've sent it": records a pending payment request (PRD F12) and hands back the WhatsApp link
-// with the receipt message filled in, and emails the owner. This NEVER grants Finals: only an
+// "I've paid": records a pending payment request (PRD F12) and hands back the WhatsApp link
+// with the message filled in (amount, email, reference). This NEVER grants Finals: only an
 // admin approval does (/admin/payments).
 // The SERVER decides the amount now and stores it on the request (price lock: a request made
 // before PRICE_CHANGE_DATE stays at the early price, whenever it's approved).
@@ -58,7 +57,6 @@ export async function POST(request: Request) {
     );
   }
 
-  await notifyNewRequest({ email, reference, amount, referral }, new URL(request.url).origin);
   return NextResponse.json({
     status: "pending",
     request_id: row.request_id,

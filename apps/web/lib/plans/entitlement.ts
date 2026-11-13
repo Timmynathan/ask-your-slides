@@ -13,9 +13,16 @@ export interface PlanState {
   endsAt: Date | null;
   /** The account's creation time: decides the first-day allowance. */
   createdAt: Date;
+  /** A Finals plan switched on in the last WELCOME_DAYS days: the app shows the "You're on Finals"
+   *  pop-up once (per device) for it. Null otherwise. */
+  welcome: { id: string; endsAt: string } | null;
 }
 
+const WELCOME_DAYS = 14;
+
 export interface EntitlementRow {
+  id?: string;
+  created_at?: string;
   plan: PlanId;
   starts_at: string;
   ends_at: string;
@@ -35,11 +42,13 @@ export function activeEntitlement(rows: EntitlementRow[], now: Date): Entitlemen
 export async function planState(db: Db, userId: string, now: Date): Promise<PlanState> {
   const [profile, ents] = await Promise.all([
     db.from("profiles").select("created_at").eq("id", userId).single(),
-    db.from("entitlements").select("plan, starts_at, ends_at").eq("user_id", userId),
+    db.from("entitlements").select("id, plan, starts_at, ends_at, created_at").eq("user_id", userId),
   ]);
   const createdAt = new Date((must(profile) as { created_at: string }).created_at);
   const active = activeEntitlement(must(ents) as EntitlementRow[], now);
-  return active ? { plan: active.plan, endsAt: new Date(active.ends_at), createdAt } : { plan: "free", endsAt: null, createdAt };
+  if (!active) return { plan: "free", endsAt: null, createdAt, welcome: null };
+  const fresh = active.id && active.created_at && now.getTime() - new Date(active.created_at).getTime() < WELCOME_DAYS * 86_400_000;
+  return { plan: active.plan, endsAt: new Date(active.ends_at), createdAt, welcome: fresh ? { id: active.id!, endsAt: active.ends_at } : null };
 }
 
 export interface UsageNow {

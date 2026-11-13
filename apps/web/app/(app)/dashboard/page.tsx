@@ -7,6 +7,8 @@ import { isPartnerId } from "@/lib/partners";
 import { countMain, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
 import { courseHref } from "@/lib/study/course-link";
 import { planState } from "@/lib/plans/entitlement";
+import { FinalsWelcome } from "@/components/plans/finals-welcome";
+import { FINALS_DAILY } from "@/lib/plans/config";
 import { lagosDay, limitsFor } from "@/lib/plans/limits";
 import { adminClient } from "@/lib/supabase/admin";
 
@@ -72,12 +74,15 @@ async function Loaded() {
   const lastCourse = last ? list.find((c) => c.id === last.course_id) : undefined;
 
   return (
-    <Dashboard
-      courses={list}
-      partner={profile.study_partner}
-      user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
-      resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
-    />
+    <>
+      <Dashboard
+        courses={list}
+        partner={profile.study_partner}
+        user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
+        resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
+      />
+      {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} />}
+    </>
   );
 }
 

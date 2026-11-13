@@ -1,7 +1,7 @@
 "use client";
 
-// /pay (PRD F12): transfer to the bank account with your reference, then "I've sent it" records a
-// pending request on the server and opens WhatsApp with the receipt message filled in. Finals is
+// /pay (PRD F12): transfer to the bank account with your reference, then "I've paid" records a
+// pending request on the server and opens WhatsApp with the message filled in. Finals is
 // switched on only when the owner approves the request.
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -73,7 +73,7 @@ export function PayForm({
         <div role="status" className="rounded-[20px] bg-amber-50 p-5 text-[15px] text-amber-900 ring-1 ring-amber-200">
           <p className="font-medium">We couldn&apos;t confirm your last transfer.</p>
           {rejectedNote && <p className="mt-1">{rejectedNote}</p>}
-          <p className="mt-1">If you think that&apos;s a mistake, message us on WhatsApp with your receipt.</p>
+          <p className="mt-1">If you think that&apos;s a mistake, message us on WhatsApp.</p>
         </div>
       )}
 
@@ -86,7 +86,7 @@ export function PayForm({
         </div>
         {offer.early && (
           <p className="mt-3 text-sm text-muted">
-            Send your receipt before {offer.priceChangeLabel}, 23:59 to keep {naira(offer.earlyPrice)}, even if we confirm it after.
+            Tell us before {offer.priceChangeLabel}, 23:59 to keep {naira(offer.earlyPrice)}, even if we confirm it after.
           </p>
         )}
       </section>
@@ -107,7 +107,7 @@ export function PayForm({
         <p className="mt-2 text-sm text-muted">It&apos;s yours: it tells us the transfer came from you.</p>
       </Step>
 
-      <Step n={3} title="Send us the receipt on WhatsApp">
+      <Step n={3} title="Tell us on WhatsApp">
         <div className="mt-3">
           {showCode ? (
             <div className="mb-3">
@@ -136,7 +136,7 @@ export function PayForm({
             disabled={busy}
             className="inline-flex w-full items-center justify-center rounded-full bg-brand px-6 py-3.5 text-[15px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           >
-            <BusyLabel busy={busy} label="I've sent it — send receipt on WhatsApp" busyLabel="Opening WhatsApp…" />
+            <BusyLabel busy={busy} label="I've paid — message us on WhatsApp" busyLabel="Opening WhatsApp…" />
           </button>
           {error && (
             <p role="alert" className="mt-3 text-sm text-red-700">

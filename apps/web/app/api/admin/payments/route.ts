@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const admin = auth.user.email!.toLowerCase();
 
   if (action === "approve") {
-    const outcome = await approveRequest(db, id, admin, { origin: new URL(request.url).origin });
+    const outcome = await approveRequest(db, id, admin);
     // A request that was rejected can't be approved here (approve rejects it as "rejected").
     const status = outcome === "approved" || outcome === "already_approved" ? 200 : outcome === "not_found" ? 404 : 409;
     return NextResponse.json({ outcome, message: outcome === "rejected" ? "This request was rejected; it can't be approved." : MESSAGES[outcome] }, { status });

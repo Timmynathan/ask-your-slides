@@ -35,8 +35,8 @@ async function Loaded() {
       <main className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:px-6">
         <h1 className="text-[28px] tracking-tight">Payments</h1>
         <p className="mt-1 text-sm text-muted">
-          Check the transfer in Opay (amount and reference) and the WhatsApp receipt, then approve. Approving switches on Finals until{" "}
-          {PLAN_END_DATE.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })} and emails the student.
+          Check the transfer in Opay (amount, reference) against the student&apos;s WhatsApp message, then approve. Approving switches on Finals until{" "}
+          {PLAN_END_DATE.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })} ; the student sees a pop-up next time they open the app.
         </p>
         <PaymentRequests pending={pending} recent={recent} />
       </main>
