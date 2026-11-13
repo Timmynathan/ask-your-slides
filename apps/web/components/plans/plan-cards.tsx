@@ -42,7 +42,7 @@ export function PlanCards({
           {current === "finals" ? (
             <span className="rounded-full bg-brand px-3 py-1 text-[12px] font-semibold text-brand-ink">Your plan</span>
           ) : (
-            <span className="rounded-full bg-pau-100 px-3 py-1 text-[12px] font-semibold text-pau-800 dark:text-pau-400">Best for exams</span>
+            <span className="rounded-full bg-pau-100 px-3 py-1 text-[12px] font-semibold text-pau-800 dark:text-pau-400">Most students pick this</span>
           )}
         </div>
         <div className="mt-5">
