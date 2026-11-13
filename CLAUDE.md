@@ -15,8 +15,13 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   ISMS, Mass Comm, Film & Multimedia, Business Admin, Economics, Finance, Accounting. Placeholder codes
   (code_confirmed: false) show only the title. 11 calculation courses (calculation_heavy: true) get the
   calculate/optimize tools; their formula pages were read with Sonnet. Slide images are WebP q75 (free 1 GB plan).
-- Past questions phases 1–3 done for CS (extraction, tagging, model answers, exam map, practice, topic chips).
-  ISMS past papers not added yet (source ZIP exists; must match papers on course code AND title).
+- Past questions (Nov 2026): 85 papers across 9 programmes extracted (Sonnet; scans turned upright with
+  Tesseract only when proven; SEN reuses the identical CS papers by file hash). Every paper's printed
+  code/title is checked against the course (past_course_match report); the owner asked to publish the
+  safest matches (review files in data/). Answers: design v2 (PRD F10): slides retrieved topic first,
+  cited [[s:…]], grounding slides|partial|general (general = "Not from your slides…"), Haiku
+  (PAST_ANSWER_MODEL). Free = exam map + 1 practice question per course; Finals = everything.
+  Live since 13 Nov 2026 (kill switch: NEXT_PUBLIC_PAST_QUESTIONS=0). BUA401 2024/25 CA blocked by the content filter.
 - Plans (PRD F12, Nov 2026): Free and Finals (one-time, manual bank transfer; Paystack was removed
   before launch). Every number/price/date lives in apps/web/lib/plans/config.ts; limits enforced on
   the server (lib/plans/gate.ts); bank details + WhatsApp number are in that config too. Premium courses =
@@ -65,6 +70,8 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
 ## Ongoing operations
 - New slides arrive weekly until the semester ends. Sync = owner signs in to elearning.pau.edu.ng in Chrome,
   new files are detected by LMS cmid and added to the course manifest, then ingestion runs for new files only.
+  After new slides: `npm run ingest:past -- --analyse --recheck --course <programme/CODE>` regenerates the
+  partial/general past answers that the new slides now cover (prints the cost first).
 
 ## How to work with the owner
 - Build in phases; stop after each phase so the owner can test; commit after each phase.

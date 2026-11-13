@@ -226,7 +226,7 @@ Replaced by **F12 Plans and payments** (Nov 2026): the daily cap now depends on 
 
 ### F10. Past questions
 
-**Not launched yet** (owner, 10 Nov 2026): exams are in December, so past questions open for every department at once in a couple of weeks. Until then every course, in every programme, shows **Past questions · Soon** in the Topics panel and a big **"Coming soon"** page; topic chips are hidden and the past-question API routes return 404. Launch = set `NEXT_PUBLIC_PAST_QUESTIONS=1` on Vercel and redeploy (`apps/web/lib/past/feature.ts`).
+**Launched 13 Nov 2026** for every final-year programme (owner). Kill switch: set `NEXT_PUBLIC_PAST_QUESTIONS=0` on Vercel and redeploy; every course then shows **Past questions · Soon** and a "Coming soon" page, topic chips hide and the past-question API routes return 404 (`apps/web/lib/past/feature.ts`).
 
 Real PAU past papers, turned into practice: which topics the lecturer examines, and a way to answer
 those questions and be marked. Pilot data: **10 papers across 6 courses** (`past_papers.yaml` per

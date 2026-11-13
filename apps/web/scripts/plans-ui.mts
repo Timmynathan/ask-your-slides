@@ -171,6 +171,9 @@ try {
   const welcome = page.getByRole("dialog", { name: "You're on Finals" });
   check(await welcome.isVisible(), "pop-up: You're on Finals, after the plan is switched on");
   check(await welcome.getByText("Quiz mode: get quizzed on any topic").isVisible(), "pop-up lists the perks");
+  check(await welcome.getByText("Every past question, with model answers and marked practice").isVisible(), "pop-up lists past questions");
+  check((await page.locator(".confetti-piece").count()) > 0, "pop-up: confetti");
+  await page.waitForTimeout(1800); // mid-celebration: confetti falling, perks in
   await shot(page, "finals-welcome");
   await welcome.getByRole("button", { name: "Start studying" }).click();
   await page.reload({ waitUntil: "networkidle" });

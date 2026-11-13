@@ -697,7 +697,7 @@ async function main() {
 
     // Past questions (PRD F10): Exam map, practice, marking, the topic chip.
     console.log("\nPast questions");
-    if (process.env.NEXT_PUBLIC_PAST_QUESTIONS === "1") {
+    if (process.env.NEXT_PUBLIC_PAST_QUESTIONS !== "0") {
       const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();
       const userId = me!.id as string;
       const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
