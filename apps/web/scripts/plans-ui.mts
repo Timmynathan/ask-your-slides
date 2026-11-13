@@ -76,7 +76,7 @@ try {
     await sheet.waitFor({ timeout: 15000 });
     check(await sheet.getByText("Quiz mode comes with Finals").isVisible(), "Quiz me → pricing sheet");
     const closed = await sheet.getByRole("button", { name: "Payments open soon" }).isVisible();
-    check(closed || (await sheet.getByRole("link", { name: /Get Finals · ₦/ }).getAttribute("href")) === "/pay", closed ? "sheet: Payments open soon (bank details not set)" : "sheet: Get Finals → /pay");
+    check(closed || (await sheet.getByRole("link", { name: /Lock in Finals · ₦/ }).getAttribute("href")) === "/pay", closed ? "sheet: Payments open soon (bank details not set)" : "sheet: Lock in Finals → /pay");
     await shot(page, `${label}-sheet-quiz`);
     await sheet.getByRole("button", { name: "Maybe later" }).click();
     const { data: used } = await admin.from("usage_daily").select("message_count").eq("user_id", userId).maybeSingle();
@@ -103,11 +103,29 @@ try {
       continue;
     }
     await shot(page, `${label}-pricing`, true);
-    await page.getByRole("link", { name: /Get Finals · ₦/ }).click();
+    await page.getByRole("link", { name: /Lock in Finals · ₦/ }).click();
     await page.waitForURL(/\/pay$/);
 
+    // Leaving /pay before paying asks first; "Stay" keeps them, "not ready" lets them go.
+    await page.getByRole("link", { name: "Plans" }).click();
+    const leaveDlg = page.getByRole("alertdialog", { name: /Leave without locking in ₦/ });
+    check(await leaveDlg.isVisible(), "pay: leaving asks 'Leave without locking in…?'");
+    await shot(page, `${label}-pay-leave`);
+    await leaveDlg.getByRole("button", { name: /Stay and lock in/ }).click();
+    check(new URL(page.url()).pathname === "/pay" && !(await leaveDlg.isVisible()), "pay: Stay keeps them on /pay");
+    await page.goBack();
+    check(await leaveDlg.isVisible(), "pay: the back button asks too");
+    await leaveDlg.getByRole("button", { name: /Stay and lock in/ }).click();
+    await page.getByRole("link", { name: "Plans" }).click();
+    await leaveDlg.getByRole("button", { name: "Yes, I'm not ready to lock in" }).click();
+    await page.waitForURL(/\/pricing$/);
+    check(true, "pay: 'Yes, I'm not ready to lock in' leaves");
+    await page.getByRole("link", { name: /Lock in Finals · ₦/ }).click();
+    await page.waitForURL(/\/pay$/);
+
+    await page.getByRole("button", { name: "Copy reference" }).waitFor({ timeout: 30000 });
     // /pay: bank details, the student's reference, then "I've sent it" → pending row + WhatsApp.
-    const ref = (await page.locator("span.font-mono", { hasText: /^AYS-/ }).first().textContent())?.trim() ?? "";
+    const ref = (await page.locator("span.font-mono:visible", { hasText: /^AYS-/ }).first().textContent())?.trim() ?? "";
     check(/^AYS-[2-9A-HJKMNP-Z]{4}$/.test(ref), "pay: the student's reference", ref);
     check(await page.getByRole("button", { name: "Copy account number" }).isVisible(), "pay: copy account number");
     check(await page.getByRole("button", { name: "Copy reference" }).isVisible(), "pay: copy reference");

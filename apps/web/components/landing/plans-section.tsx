@@ -2,6 +2,7 @@
 // Every price, limit and date comes from the plans config the server enforces.
 import Link from "next/link";
 import { CompareTable } from "@/components/plans/compare-table";
+import { FinalsCta } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import type { PlanOffer } from "@/lib/plans/offer";
 import { Reveal } from "./reveal";
@@ -26,9 +27,7 @@ export function PlansSection({ offer }: { offer: PlanOffer }) {
               </Link>
             }
             finalsAction={
-              <Link href={FINALS_HREF} className={`${pill} bg-brand text-brand-ink hover:opacity-90`}>
-                Get Finals
-              </Link>
+              <FinalsCta offer={offer} href={FINALS_HREF} />
             }
           />
           <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>

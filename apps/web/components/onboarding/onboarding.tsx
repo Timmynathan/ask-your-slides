@@ -7,13 +7,16 @@ import { Mascot } from "@/components/mascot/mascot";
 import { BusyLabel } from "@/components/ui/spinner";
 import { fill, PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
 import type { ProgrammeChoice } from "@/lib/programmes";
+import type { PlanOffer } from "@/lib/plans/offer";
+import { GetFinalsLink } from "@/components/plans/get-finals-link";
+import { PlanCards } from "@/components/plans/plan-cards";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 
 const DEFAULT_PARTNER: PartnerId = "zara";
 // The default first, so it is the first card a student sees (also on a phone).
 const ORDER: PartnerId[] = [DEFAULT_PARTNER, ...PARTNER_IDS.filter((id) => id !== DEFAULT_PARTNER)];
 
-type Step = "name" | "partner" | "hello";
+type Step = "name" | "partner" | "hello" | "plan";
 
 // First words from the chosen partner. {department} comes from the courses' data, never hard-coded.
 const HELLO: Record<PartnerId, string> = {
@@ -22,7 +25,7 @@ const HELLO: Record<PartnerId, string> = {
   musa: "Welcome, {name}. I'm Dr. Musa. I know {department} can be demanding, and the exams reward clear, well-structured answers. I'll show you how, straight from your school slides.",
   zara: "Hey {name}, I'm Zara! I know {department} can be hard, but I've got you. Quick answer or deep dive, straight from your school slides, with an exam tip when it helps.",
 };
-const STEPS: Step[] = ["name", "partner", "hello"];
+const STEPS: Step[] = ["name", "partner", "hello", "plan"];
 
 interface Props {
   /** Programmes + levels in the catalog ("What do you study?"). */
@@ -33,9 +36,10 @@ interface Props {
   initialProgramme: { programme: string; level: number } | null;
   initialPartner: PartnerId | null;
   startAtPartner: boolean;
+  offer: PlanOffer;
 }
 
-export function Onboarding({ choices, next, initialName, initialProgramme, initialPartner, startAtPartner }: Props) {
+export function Onboarding({ choices, next, initialName, initialProgramme, initialPartner, startAtPartner, offer }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(startAtPartner ? "partner" : "name");
   const [name, setName] = useState(initialName);
@@ -78,7 +82,13 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
     if (await save({ study_partner: partner, onboarded: true })) setStep("hello");
   }
 
-  const index = STEPS.indexOf(step);
+  // Coming from the landing page's "Lock in Finals" (next=/pay): no need to ask which plan.
+  const steps = next === "/pay" ? STEPS.filter((s) => s !== "plan") : STEPS;
+  const index = steps.indexOf(step);
+  const finish = () => {
+    router.replace(next ?? "/dashboard");
+    router.refresh();
+  };
   const chosen = partner ? PARTNERS[partner] : null;
   const firstName = name.trim().split(/\s+/)[0] || null;
 
@@ -88,10 +98,10 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
         <Logo />
         <div className="flex items-center gap-3 text-xs text-muted">
           <span>
-            Step {index + 1} of {STEPS.length}
+            Step {index + 1} of {steps.length}
           </span>
           <div className="flex gap-1.5" aria-hidden>
-            {STEPS.map((s, i) => (
+            {steps.map((s, i) => (
               <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i <= index ? "w-8 bg-brand" : "w-4 bg-line-strong"}`} />
             ))}
           </div>
@@ -215,13 +225,10 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               <Mascot partner={chosen.id} size={200} mood="happy" />
             </div>
             <button
-              onClick={() => {
-                router.replace(next ?? "/dashboard");
-                router.refresh();
-              }}
+              onClick={() => (steps.includes("plan") ? setStep("plan") : finish())}
               className="mt-8 rounded-full bg-brand px-10 py-3.5 text-base font-medium text-brand-ink hover:opacity-90"
             >
-              Start studying
+              {steps.includes("plan") ? "Continue" : "Start studying"}
             </button>
             <button onClick={() => setStep("partner")} className="mt-3 text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
               Choose someone else
@@ -229,6 +236,33 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
             <p className="mt-6 max-w-sm text-[13px] text-muted">
               You can switch study partner any time: tap {chosen.name} at the top of My courses or any course.
             </p>
+          </div>
+        )}
+
+        {step === "plan" && (
+          <div key="plan" className="panel-in w-full max-w-4xl">
+            <div className="text-center">
+              <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Try it free. Upgrade when exams are close.</h1>
+              <p className="mx-auto mt-2 max-w-lg text-muted">Everything works on Free, no card or payment needed. Finals is a one-time payment for exam season.</p>
+            </div>
+            <div className="mt-8">
+              <PlanCards
+                offer={offer}
+                current="free"
+                freeAction={
+                  <button
+                    type="button"
+                    onClick={finish}
+                    autoFocus
+                    className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium text-ink ring-1 ring-line-strong transition hover:bg-sunken"
+                  >
+                    Start free
+                  </button>
+                }
+                finalsAction={<GetFinalsLink offer={offer} open={!!offer.paymentsOpen} />}
+              />
+            </div>
+            <p className="mt-6 text-center text-sm text-muted">You&apos;re on Free now. Upgrade any time from your account menu.</p>
           </div>
         )}
 

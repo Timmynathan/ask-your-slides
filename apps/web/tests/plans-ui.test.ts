@@ -66,7 +66,8 @@ describe("landing Plans section", () => {
       "Premium courses: 2 questions a day",
       "1 summary",
       "Start free",
-      "Get Finals",
+      "Lock in Finals · ₦3,000",
+      "Goes up to ₦5,000 after 22 Nov",
       "One-time payment. No subscription. Pay by bank transfer.",
       "Premium courses are the heaviest courses in your programme.",
     ]) {

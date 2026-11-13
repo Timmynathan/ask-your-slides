@@ -320,14 +320,19 @@ async function main() {
       await op.getByRole("radio", { name: /Tobi/ }).click();
       check((await op.getByRole("radio", { name: /Tobi/ }).getAttribute("aria-checked")) === "true", "choosing a partner selects it");
       await op.getByRole("button", { name: "Study with Tobi" }).click();
-      await op.getByRole("button", { name: "Start studying" }).waitFor();
+      await op.getByRole("button", { name: "Continue" }).waitFor();
       check(await op.getByText("I'm Tobi").isVisible(), "chosen partner introduces themselves");
       const hello = (await op.getByText("I'm Tobi").textContent()) ?? "";
       const { data: chosen } = await admin.from("programmes").select("department").eq("id", isms.id).single();
       check(hello.includes(`I know ${chosen!.department}`) && hello.includes("school slides"),
         "the partner names the chosen programme's department (from the data) and says 'school slides'", hello.slice(0, 120));
       await shot(op, "8-onboarding-hello");
-      await op.getByRole("button", { name: "Start studying" }).click();
+      await op.getByRole("button", { name: "Continue" }).click();
+      // Last step: the plans, with Free as the way in (PRD F12).
+      check(await op.getByRole("heading", { name: /Try it free/ }).isVisible(), "onboarding ends with the plans: try it free");
+      check(await op.getByRole("link", { name: /Lock in Finals · ₦/ }).isVisible(), "Finals is offered at the end of onboarding");
+      await shot(op, "8b-onboarding-plan");
+      await op.getByRole("button", { name: "Start free" }).click();
       await op.getByRole("heading", { name: "My courses" }).waitFor();
       check(new URL(op.url()).pathname === "/dashboard", "after onboarding the student lands on their courses");
       // Isolation in the browser: only the programme's courses; another programme's course is not found.

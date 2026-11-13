@@ -65,7 +65,7 @@ async function Loaded() {
                   Go to my courses
                 </Link>
               ) : (
-                <GetFinalsLink price={offer.price} open={paymentsOpen()} pending={latest?.status === "pending"} />
+                <GetFinalsLink offer={offer} open={paymentsOpen()} pending={latest?.status === "pending"} />
               )
             }
           />

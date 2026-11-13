@@ -6,6 +6,8 @@ import { requireUser } from "@/lib/auth/session";
 import { safeNext } from "@/lib/auth/next";
 import { isPartnerId } from "@/lib/partners";
 import { programmeChoices } from "@/lib/programmes";
+import { planOffer } from "@/lib/plans/offer";
+import { paymentsOpen } from "@/lib/plans/manual-pay";
 
 export const metadata: Metadata = { title: "Welcome · Ask Your Slides" };
 
@@ -27,6 +29,8 @@ async function Loaded({ searchParams }: { searchParams: Promise<{ next?: string 
       initialPartner={isPartnerId(profile?.study_partner) ? profile.study_partner : null}
       // Students who signed up before partners existed only need to choose one.
       startAtPartner={!!profile?.onboarded && !!profile.programme}
+      // Last step: Free or Finals (PRD F12). Free is the default; Finals is one tap away.
+      offer={{ ...planOffer(new Date()), paymentsOpen: paymentsOpen() }}
     />
   );
 }

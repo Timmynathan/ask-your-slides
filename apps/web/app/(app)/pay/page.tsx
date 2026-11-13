@@ -77,10 +77,7 @@ async function Loaded() {
       </header>
       <main className="mx-auto max-w-lg px-4 pb-20 pt-4 sm:px-5">
         <h1 className="font-heading text-4xl font-semibold tracking-tight text-ink">Get Finals</h1>
-        <p className="mt-2 text-muted">
-          {offer.finals.daily} messages a day, every course, unlimited summaries and quiz mode, until your last paper.
-        </p>
-        <div className="mt-8">{body}</div>
+        <div className="mt-6">{body}</div>
       </main>
     </div>
   );
