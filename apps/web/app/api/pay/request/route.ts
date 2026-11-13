@@ -8,7 +8,7 @@ import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // POST /api/pay/request {referral_code?} → {reference, amount, whatsapp_url, status: "pending"}
-// "I've paid": records a pending payment request (PRD F12) and hands back the WhatsApp link
+// "Verify Payment": records a pending payment request (PRD F12) and hands back the WhatsApp link
 // with the message filled in (amount, email, reference). This NEVER grants Finals: only an
 // admin approval does (/admin/payments).
 // The SERVER decides the amount now and stores it on the request (price lock: a request made

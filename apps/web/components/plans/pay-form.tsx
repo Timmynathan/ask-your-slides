@@ -1,6 +1,6 @@
 "use client";
 
-// /pay (PRD F12): transfer to the bank account with your reference, then "I've paid" records a
+// /pay (PRD F12): transfer to the bank account with your reference, then "Verify Payment" records a
 // pending request on the server and opens WhatsApp with the message filled in. Finals is
 // switched on only when the owner approves the request.
 import { useRouter } from "next/navigation";
@@ -136,7 +136,7 @@ export function PayForm({
             disabled={busy}
             className="inline-flex w-full items-center justify-center rounded-full bg-brand px-6 py-3.5 text-[15px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
           >
-            <BusyLabel busy={busy} label="I've paid — message us on WhatsApp" busyLabel="Opening WhatsApp…" />
+            <BusyLabel busy={busy} label="Verify Payment" busyLabel="Opening WhatsApp…" />
           </button>
           {error && (
             <p role="alert" className="mt-3 text-sm text-red-700">

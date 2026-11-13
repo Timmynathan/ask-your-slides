@@ -116,7 +116,7 @@ try {
     await page.getByLabel("Referral code (optional)").fill("tolu");
     let wa = "";
     await page.route("https://wa.me/**", (r) => ((wa = r.request().url()), r.fulfill({ body: "whatsapp" })));
-    await page.getByRole("button", { name: /I've paid/ }).click();
+    await page.getByRole("button", { name: "Verify Payment" }).click();
     await page.waitForURL(/wa\.me/);
     const price = new Date() < PRICE_CHANGE_DATE ? FINALS_PRICE_EARLY : FINALS_PRICE;
     const text = new URL(wa).searchParams.get("text") ?? "";

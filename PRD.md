@@ -436,8 +436,8 @@ limit/lock event is logged (`limit_events`: user, plan, course, feature, time).
 the app, and on the landing page after sign-up) opens `/pay`, which shows the plan and amount (the
 server's price), the bank details (Opay, account number with a copy button, account name), the
 student's own reference (`AYS-XXXX`, kept for good, copy button: "Put this reference in your
-transfer description."), an optional referral code field, and "I've paid — message us on
-WhatsApp". That button records a `payment_requests` row (pending, with the server's amount) and
+transfer description."), an optional referral code field, and "Verify Payment". That
+button records a `payment_requests` row (pending, with the server's amount) and
 opens `wa.me/<WHATSAPP_NUMBER>` with "Hi, I've paid ₦<amount> for AskYourSlides Finals. Email:
 <email>. Reference: <reference>." The owner replies on WhatsApp if needed (e.g. asks for a
 receipt) and checks the transfer in Opay. The student then sees "Payment pending — we'll
