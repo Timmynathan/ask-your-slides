@@ -130,6 +130,13 @@ try {
     await shot(page, `${label}-pay-pending`, true);
     await page.goto(`${BASE}/pricing`, { waitUntil: "networkidle" });
     check(await page.getByRole("link", { name: /Payment pending/ }).isVisible(), "pricing: Payment pending");
+    // A student can't see the admin page or call its API.
+    const adminPage = await page.goto(`${BASE}/admin/payments`);
+    check(adminPage?.status() === 404, "student: /admin/payments is a 404");
+    const { id: reqId } = (await admin.from("payment_requests").select("id").eq("user_id", userId).single()).data!;
+    const apiRes = await page.request.post(`${BASE}/api/admin/payments`, { data: { id: reqId, action: "approve" } });
+    const { count: after } = await admin.from("entitlements").select("id", { count: "exact", head: true }).eq("user_id", userId);
+    check(apiRes.status() === 404 && after === 0, "student: approve API is a 404 and grants nothing");
     await admin.from("payment_requests").delete().eq("user_id", userId);
     await ctx.close();
   }

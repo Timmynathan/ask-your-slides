@@ -21,7 +21,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   before launch). Every number/price/date lives in apps/web/lib/plans/config.ts; limits enforced on
   the server (lib/plans/gate.ts); bank details + WhatsApp number are in that config too. Premium courses =
   course.yaml `premium: true`, per programme. /pay records a pending payment_request and opens
-  WhatsApp; Finals is granted ONLY by an admin approval (/admin/payments, phase M2). Never grant
+  WhatsApp; Finals is granted ONLY by an admin approval (/admin/payments). Emails via Resend need RESEND_API_KEY (server only). Never grant
   automatically.
 - Launch to final-year students Mon 16 Nov 2026; price goes up 22 Nov 23:59; exams from 5 Dec 2026.
 

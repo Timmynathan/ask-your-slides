@@ -482,13 +482,15 @@ subscription. Pay by bank transfer." All figures come from the plans config.
 pricing page, limit UI, badges, referral field, comp script, landing Plans section — all built
 (Nov 2026). Paystack was built, then replaced before launch by the manual bank-transfer flow,
 in three phases: (M1) `payment_requests`, /pay, WhatsApp handoff, pending state — built; (M2)
-/admin/payments, approve/reject, emails, price lock; (M3) phone test end to end, go-live
+/admin/payments, approve/reject, emails (sent once `RESEND_API_KEY` is set; skipped otherwise),
+price lock — built; (M3) phone test end to end, go-live
 checklist. The owner's /admin page has a Plans section: Finals approved, revenue, active plans
 (paid / comp), referral codes, limit hits.
 
 **Go-live checklist** (filled in at M3)
 - [ ] `PLAN_END_DATE` in `apps/web/lib/plans/config.ts` = the last first-semester paper (23:59 Lagos).
 - [ ] Bank details and WhatsApp number in `lib/plans/config.ts` are right.
+- [ ] `RESEND_API_KEY` (server-only secret) in Vercel and `apps/web/.env.local`, so the owner hears of new requests and students of approvals.
 - [ ] Referral codes for influencers agreed (any code is recorded; `referral_codes` is optional).
 - [ ] Comp plans for testers: `npm run plans:comp -- <email> --note "…"`.
 

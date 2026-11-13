@@ -98,6 +98,9 @@ export function AdminDashboard({ data, plans, range, email }: { data: Overview; 
                 </Link>
               ))}
             </div>
+            <Link href="/admin/payments" className="rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-brand-ink transition hover:opacity-90">
+              Payments
+            </Link>
             <button
               type="button"
               onClick={() => startRefresh(() => router.refresh())}
