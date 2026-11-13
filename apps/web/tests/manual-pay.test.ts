@@ -26,7 +26,10 @@ function makeDb() {
         let result: { data: Row | null; error: { code: string; message: string } | null };
         if (rows.some((r) => r.user_id === row.user_id)) result = { data: null, error: null };
         else if (rows.some((r) => r.reference === row.reference)) result = { data: null, error: { code: "23505", message: "duplicate reference" } };
-        else (rows.push({ ...row }), (result = { data: { reference: row.reference }, error: null }));
+        else {
+          rows.push({ ...row });
+          result = { data: { reference: row.reference }, error: null };
+        }
         const done = { select: () => done, maybeSingle: async () => result };
         return done;
       },
