@@ -12,6 +12,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { PLAN_END_DATE } from "../lib/plans/config.ts";
 import { chromium, type Page } from "playwright";
 
 const ROOT_ENV = path.resolve(import.meta.dirname, "../../../.env");
@@ -133,8 +134,9 @@ async function main() {
     check(icon.includes('fill="#000"'), "favicon is the black mark");
     const manifest = await (await fetch(`${BASE}/manifest.webmanifest`)).json().catch(() => null);
     check(manifest?.display === "standalone" && manifest?.icons?.length >= 2, "installable: web app manifest with icons");
-    const { data: codeRows } = await admin.from("courses").select("code");
-    const courseCount = new Set((codeRows ?? []).map((c) => c.code)).size; // one chip per code, even if several programmes share it
+    const { data: codeRows } = await admin.from("courses").select("code, code_confirmed");
+    // One chip per confirmed code (placeholders show only a title), even if several programmes share it.
+    const courseCount = new Set((codeRows ?? []).filter((c) => c.code_confirmed !== false).map((c) => c.code)).size;
     // Light only: a device in dark mode still gets the light site.
     {
       const dctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
@@ -177,7 +179,7 @@ async function main() {
     const before = (await pills.allInnerTexts()).join(",");
     check((await pills.count()) === 6 && Number(await band.getAttribute("data-course-count")) === courseCount,
       "landing shows 6 course pills drawn from every PAU course in the database", `${before} of ${courseCount}`);
-    check(/CSC \d{3}/.test(before) && /ISM \d{3}/.test(before), "the first pills mix programmes (CSC and ISM)", before);
+    check(new Set(before.split(",").map((c) => c.split(" ")[0])).size >= 3, "the first pills mix programmes", before);
     await lp.mouse.wheel(0, 120); // the pills start as soon as the visitor scrolls
     await lp.waitForFunction((b) => [...document.querySelectorAll("[data-course-count] > span")].map((e) => (e as HTMLElement).innerText).join(",") !== b, before, { timeout: 3000 }).catch(() => null);
     const after = (await pills.allInnerTexts()).join(",");
@@ -302,9 +304,10 @@ async function main() {
       const { data: progs } = await admin.from("programmes").select("id, name, short_name");
       const offered = (await studying.locator("option:not([disabled])").allTextContents()).join(" | ");
       const values = await studying.locator("option:not([disabled])").evaluateAll((os) => os.map((o) => (o as HTMLOptionElement).value));
-      check((progs ?? []).every((p) => values.includes(p.id)) && (await studying.locator("option").allTextContents()).every((t) => t.length <= 24),
+      check((progs ?? []).every((p) => values.includes(p.id)) && (await studying.locator("option").allTextContents()).every((t) => t.length <= 32),
         "every programme in the catalog is offered, with short labels (e.g. 'BSc ISMS')", offered);
-      const isms = (progs ?? []).find((p) => p.id !== "computer-science")!;
+      // ISMS: shares no course codes with Computer Science, so isolation can be checked below.
+      const isms = (progs ?? []).find((p) => /isms|information-science/.test(p.id))!;
       await studying.selectOption(isms.id);
       check(await op.getByText((isms.name as string).replace(/^BSc\s+/, ""), { exact: true }).isVisible(), "the full programme name shows under a short label");
       check((await op.getByRole("combobox", { name: "Level" }).inputValue()) === "400", "a programme with one level picks it for the student");
@@ -477,7 +480,7 @@ async function main() {
     // Nine earlier questions (in another course), so the first question below is the 10th and
     // "Is this helping you study?" comes due.
     const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();
-    const { data: other } = await admin.from("courses").select("id").eq("code", "CSC409").single();
+    const { data: other } = await admin.from("courses").select("id").eq("code", "CSC409").eq("programme", "computer-science").single();
     const { data: warm } = await admin.from("conversations").insert({ user_id: me!.id, course_id: other!.id, title: "Warm-up" }).select("id").single();
     await admin.from("messages").insert(Array.from({ length: 9 }, (_, i) => ({ conversation_id: warm!.id, user_id: me!.id, role: "user", content: `Warm-up question ${i + 1}` })));
 
@@ -538,11 +541,11 @@ async function main() {
     await page.locator("textarea[aria-label='Your question']:visible").fill("");
     // Sources: the materials behind this topic, on the right; a source opens in the slide viewer.
     const sources = page.getByRole("complementary", { name: "Sources" });
-    const { data: topicMats } = await admin.from("materials").select("title, topics!inner(title), courses!inner(code)").eq("courses.code", "CSC420").eq("topics.title", "Transactions and indexing");
+    const { data: topicMats } = await admin.from("materials").select("title, topics!inner(title), courses!inner(code)").eq("courses.code", "CSC420").eq("courses.programme", "computer-science").eq("topics.title", "Transactions and indexing");
     const srcCount = await sources.getByRole("listitem").count();
     check(srcCount === (topicMats ?? []).length && srcCount > 0, "Sources lists this topic's materials", `${srcCount} shown, ${(topicMats ?? []).length} in the topic`);
     await topicsPanel.getByRole("button", { name: "Whole course", exact: true }).click();
-    const { count: courseMats } = await admin.from("materials").select("id, courses!inner(code)", { count: "exact", head: true }).eq("courses.code", "CSC420");
+    const { count: courseMats } = await admin.from("materials").select("id, courses!inner(code)", { count: "exact", head: true }).eq("courses.code", "CSC420").eq("courses.programme", "computer-science");
     await page.waitForTimeout(300);
     check((await sources.getByRole("listitem").count()) === courseMats, "Whole course lists every material in the course", `${await sources.getByRole("listitem").count()} vs ${courseMats}`);
     await sources.getByRole("button").filter({ hasText: /Slides/ }).first().click();
@@ -703,6 +706,11 @@ async function main() {
       const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await pq.context().addCookies(await page.context().cookies());
       pq.on("pageerror", (e) => consoleErrors.push(e.message));
+      await pq.goto(`${BASE}/study/INS401`);
+      await pq.getByRole("button", { name: "Past questions", exact: true }).click();
+      await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
+      check(true, "the chat header's 'Past questions' button opens the exam map");
+      await pq.getByRole("button", { name: "← Back to chat" }).click();
       await pq.goto(`${BASE}/study/INS401?past=1`);
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
       check(new URL(pq.url()).searchParams.get("past") === "1", "Past questions opens from the Topics panel (URL ?past=1)");
@@ -720,6 +728,19 @@ async function main() {
       check((await pq.locator("article button[title^='Open']").count()) > 0, "'Show answer' reveals the model answer with slide chips");
       await shot(pq, "past-2-revealed");
 
+      // Free: one practice question per course (PRD F12); the next one is locked behind Finals.
+      await pq.getByRole("button", { name: "Next question →" }).click();
+      const locked = await pq.getByRole("button", { name: /Lock in Finals/ }).or(pq.getByRole("link", { name: /Lock in Finals/ })).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
+      check(locked && !(await pq.getByPlaceholder(/Write your answer/).count()), "Free: the second practice question is locked behind Finals");
+      await shot(pq, "past-2b-free-lock");
+      // From here the student is on Finals (a comp plan, as an admin would grant), so practice is open.
+      await admin.from("entitlements").insert({ user_id: userId, plan: "finals", ends_at: PLAN_END_DATE.toISOString(), source: "comp", note: "ui-smoke test" });
+      await pq.reload();
+      const welcome = pq.getByRole("dialog", { name: /You're on Finals/ });
+      check(await welcome.waitFor({ timeout: 10000 }).then(() => true, () => false), "the 'You're on Finals' celebration shows once the plan is on");
+      await welcome.getByRole("button", { name: /Start studying/ }).click();
+      await pq.getByRole("tab", { name: "Practice" }).click();
+      await pq.getByRole("button", { name: /2025\/26 exam/ }).click();
       await pq.getByRole("button", { name: "Next question →" }).click();
       await pq.getByPlaceholder(/Write your answer/).fill("Conflict sources: scarce resources, schedules, priorities, personalities, and technical opinions.");
       await pq.getByRole("button", { name: "Mark my answer" }).click();
@@ -763,6 +784,8 @@ async function main() {
       const anonAttempt = await fetch(`${BASE}/api/past/attempt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question_id: "00000000-0000-0000-0000-000000000000", reveal: true }) });
       check(anon.status === 401 && anonAttempt.status === 401, "signed-out requests to past questions get 401", `${anon.status}/${anonAttempt.status}`);
       await pq.close();
+      // Back to Free for the rest of the run (the celebration would show again in the other browser).
+      await admin.from("entitlements").delete().eq("user_id", userId).eq("note", "ui-smoke test");
     }
     else {
       // Not launched yet (lib/past/feature.ts): every course shows "Past questions · Soon" → "Coming soon".

@@ -179,6 +179,17 @@ export function Workspace(data: WorkspaceData) {
                 {topicPast} past question{topicPast === 1 ? "" : "s"}
               </button>
             )}
+            {/* The whole course's exam map and practice: small, in place of the old sidebar row. */}
+            {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
+              <button
+                type="button"
+                onClick={() => setPast("list")}
+                className="shrink-0 rounded-full border border-line px-3 py-1 text-[12.5px] text-ink transition hover:bg-sunken active:scale-95"
+                title={`Exam map and practice: ${data.past.total} past questions in ${courseName(course)}`}
+              >
+                {topicPast > 0 ? "All past questions" : "Past questions"}
+              </button>
+            )}
             <IconButton label="Sources" onClick={() => setSourcesOpen(true)} className="xl:hidden">
               <path d="M7 3.5h7l4 4V20.5H7z" />
               <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
@@ -194,7 +205,7 @@ export function Workspace(data: WorkspaceData) {
                 course={course}
                 topics={topics}
                 topicId={past === "topic" ? topicId : null}
-                onBack={past === "topic" ? () => setPast(null) : null}
+                onBack={() => setPast(null)}
                 onCite={setPreview}
                 onRemaining={onRemaining}
                 onLimit={onLimit}
