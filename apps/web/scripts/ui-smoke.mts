@@ -562,8 +562,9 @@ async function main() {
     check((await practise.count()) > 0 && !(await page.getByRole("textbox", { name: "Search the web" }).count()), "the Topics panel opens with Past questions by year (no web search box)", (await practise.allInnerTexts()).join(" | "));
     await shot(page, "1c-laptop-past-box");
     await practise.first().click();
-    const onPaper = await page.locator("main span.tabular-nums:visible").filter({ hasText: /^\d+ of \d+$/ }).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
-    check(onPaper, "'Practise <year> exam' opens practice on that paper");
+    // This student is on Free: past questions are Finals only, so the panel offers Finals instead.
+    const lockShown = await page.getByRole("heading", { name: "Past questions come with Finals" }).locator("visible=true").first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+    check(lockShown, "Free: 'Practise <year> exam' opens the 'Past questions come with Finals' card");
     await page.getByRole("button", { name: "← Back to chat" }).click();
     await topicsPanel.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
@@ -706,7 +707,18 @@ async function main() {
       const pq = await browser.newPage({ viewport: { width: 1440, height: 900 } });
       await pq.context().addCookies(await page.context().cookies());
       pq.on("pageerror", (e) => consoleErrors.push(e.message));
+      // Free: past questions are Finals only (owner, 14 Nov 2026); the card is there, the content isn't.
       await pq.goto(`${BASE}/study/INS401`);
+      await pq.getByRole("region", { name: "Past questions" }).getByRole("button", { name: /^Practise 20/ }).first().click();
+      await pq.getByRole("heading", { name: "Past questions come with Finals" }).waitFor({ timeout: 15000 });
+      check(!(await pq.getByText(/Show answer|Mark my answer|Asked in/).count()), "Free: past questions show 'Past questions come with Finals', no questions");
+      await shot(pq, "past-0-free-lock");
+      // From here the student is on Finals (a comp plan, as an admin would grant).
+      await admin.from("entitlements").insert({ user_id: userId, plan: "finals", ends_at: PLAN_END_DATE.toISOString(), source: "comp", note: "ui-smoke test" });
+      await pq.goto(`${BASE}/study/INS401`);
+      const welcome = pq.getByRole("dialog", { name: /You're on Finals/ });
+      check(await welcome.waitFor({ timeout: 10000 }).then(() => true, () => false), "the 'You're on Finals' celebration shows once the plan is on");
+      await welcome.getByRole("button", { name: /Start studying/ }).click();
       await pq.getByRole("region", { name: "Past questions" }).getByRole("button", { name: /^Exam map/ }).click();
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
       check(true, "the Past questions card's 'Exam map' button opens the exam map");
@@ -728,19 +740,6 @@ async function main() {
       check((await pq.locator("article button[title^='Open']").count()) > 0, "'Show answer' reveals the model answer with slide chips");
       await shot(pq, "past-2-revealed");
 
-      // Free: one practice question per course (PRD F12); the next one is locked behind Finals.
-      await pq.getByRole("button", { name: "Next question →" }).click();
-      const locked = await pq.getByRole("button", { name: /Lock in Finals/ }).or(pq.getByRole("link", { name: /Lock in Finals/ })).first().waitFor({ timeout: 10000 }).then(() => true, () => false);
-      check(locked && !(await pq.getByPlaceholder(/Write your answer/).count()), "Free: the second practice question is locked behind Finals");
-      await shot(pq, "past-2b-free-lock");
-      // From here the student is on Finals (a comp plan, as an admin would grant), so practice is open.
-      await admin.from("entitlements").insert({ user_id: userId, plan: "finals", ends_at: PLAN_END_DATE.toISOString(), source: "comp", note: "ui-smoke test" });
-      await pq.reload();
-      const welcome = pq.getByRole("dialog", { name: /You're on Finals/ });
-      check(await welcome.waitFor({ timeout: 10000 }).then(() => true, () => false), "the 'You're on Finals' celebration shows once the plan is on");
-      await welcome.getByRole("button", { name: /Start studying/ }).click();
-      await pq.getByRole("tab", { name: "Practice" }).click();
-      await pq.locator("main").getByRole("button", { name: /^2025\/26 exam/ }).click();
       await pq.getByRole("button", { name: "Next question →" }).click();
       await pq.getByPlaceholder(/Write your answer/).fill("Conflict sources: scarce resources, schedules, priorities, personalities, and technical opinions.");
       await pq.getByRole("button", { name: "Mark my answer" }).click();

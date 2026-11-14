@@ -46,8 +46,8 @@ export function PricingSheet({
     summary: { title: "You've used your free summary", body: "Finals gives you unlimited summaries, in every course." },
     quiz: { title: "Quiz mode comes with Finals", body: "Get quizzed on any topic, one question at a time, marked against your slides." },
     past: {
-      title: "Practise every past question with Finals",
-      body: `Free includes the exam map and ${offer.free.practicePerCourse} practice question${offer.free.practicePerCourse === 1 ? "" : "s"} per course. Finals unlocks every past question, with model answers and marking.`,
+      title: "Past questions come with Finals",
+      body: "Every real PAU past paper for your courses, the exam map, model answers and marked practice.",
     },
   };
   const c = copy[code];

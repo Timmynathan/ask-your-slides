@@ -1,6 +1,6 @@
 // Past questions on Free vs Finals, and where each answer comes from (PRD F10/F12, answer design v2).
-// Free: the exam map plus FREE_PRACTICE_PER_COURSE practice question(s) per course, enforced by
-// /api/past/attempt (the database is an in-memory stand-in; the plan lookup is mocked).
+// Finals only (owner, 14 Nov 2026): Free gets nothing from /api/past or /api/past/attempt (the
+// database is an in-memory stand-in; the plan lookup is mocked).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { canPractise } from "@/lib/past/access";
 import { GENERAL_NOTICE, GROUNDING_LABEL, groundingOf, paperSummary } from "@/lib/past/map";
@@ -47,6 +47,7 @@ vi.mock("@/lib/plans/entitlement", () => ({
 
 const attempt = (await import("@/app/api/past/attempt/route")).POST;
 const reveal = (id: string) => attempt(new Request("http://localhost/api/past/attempt", { method: "POST", body: JSON.stringify({ question_id: id, reveal: true }) }));
+const getPast = async (course: string) => (await import("@/app/api/past/route")).GET(new Request(`http://localhost/api/past?course=${course}`));
 const Q = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 
 beforeEach(() => {
@@ -56,20 +57,22 @@ beforeEach(() => {
     id: Q(n), course_id: course, paper_id: null, number: `Q${n}`, parent_id: null, text: "Explain.", marks: 5, type: "explain",
     relevance, model_answer: "<general>An answer.</general>", marking_scheme: [], answer_key: null, answer_explanation: null,
   });
-  t = { past_questions: [q(1, "c1", "covered"), q(2, "c1", "not_covered"), q(3, "c2", "partial")], practice_attempts: [], slides: [] };
+  t = { past_questions: [q(1, "c1", "covered"), q(2, "c1", "not_covered"), q(3, "c2", "partial")], practice_attempts: [], slides: [], past_papers: [], question_topics: [] };
 });
 
-describe("Free: the exam map plus one practice question per course", () => {
-  it(`allows ${FREE_PRACTICE_PER_COURSE} question per course (and redoing it), then refuses and logs`, async () => {
-    expect(FREE_PRACTICE_PER_COURSE).toBe(1);
-    expect((await reveal(Q(1))).status).toBe(200);
-    expect((await reveal(Q(1))).status).toBe(200); // the same one again
-    const refused = await reveal(Q(2));
-    expect(refused.status).toBe(403);
-    expect(await refused.json()).toMatchObject({ code: "past", plan: "free" });
-    expect(logged).toEqual([expect.objectContaining({ feature: "past", courseId: "c1" })]);
-    // Another course has its own free question.
-    expect((await reveal(Q(3))).status).toBe(200);
+describe("Free gets no past questions; Finals gets everything", () => {
+  it("Free: the list and every question are refused, and the refusal is logged", async () => {
+    expect(FREE_PRACTICE_PER_COURSE).toBe(0);
+    const list = await getPast("00000000-0000-4000-8000-0000000000c1");
+    const body = await list.json();
+    expect(body).toMatchObject({ locked: true, code: "past", plan: "free" });
+    expect(body.questions).toBeUndefined(); // nothing is sent
+    for (const n of [1, 2, 3]) {
+      const r = await reveal(Q(n));
+      expect(r.status).toBe(403);
+      expect(await r.json()).toMatchObject({ code: "past", plan: "free" });
+    }
+    expect(logged).toEqual(expect.arrayContaining([expect.objectContaining({ feature: "past", courseId: "c1" })]));
   });
 
   it("Finals practises everything", async () => {
@@ -79,11 +82,8 @@ describe("Free: the exam map plus one practice question per course", () => {
   });
 
   it("canPractise mirrors the rule for the UI", () => {
-    const free = { plan: "free" as const, freeQuestions: [], freeLimit: 1 };
-    expect(canPractise(free, "a")).toBe(true);
-    expect(canPractise({ ...free, freeQuestions: ["a"] }, "a")).toBe(true);
-    expect(canPractise({ ...free, freeQuestions: ["a"] }, "b")).toBe(false);
-    expect(canPractise({ plan: "finals", freeQuestions: [], freeLimit: 1 }, "b")).toBe(true);
+    expect(canPractise({ plan: "free", freeQuestions: [], freeLimit: FREE_PRACTICE_PER_COURSE }, "a")).toBe(false);
+    expect(canPractise({ plan: "finals", freeQuestions: [], freeLimit: FREE_PRACTICE_PER_COURSE }, "b")).toBe(true);
   });
 });
 

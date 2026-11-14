@@ -83,7 +83,7 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     { label: "Quiz mode", free: false, finals: true },
     {
       label: "Past questions",
-      free: `Exam map + ${o.free.practicePerCourse} practice question${o.free.practicePerCourse === 1 ? "" : "s"} per course`,
+      free: o.free.practicePerCourse > 0 ? `${o.free.practicePerCourse} practice question${o.free.practicePerCourse === 1 ? "" : "s"} per course` : false,
       finals: "Every past question",
     },
     { label: "Model answers and marked practice", free: false, finals: true },

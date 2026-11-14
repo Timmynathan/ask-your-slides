@@ -65,8 +65,12 @@ const cache = new Map<string, Promise<PastData>>();
 function loadPast(courseId: string): Promise<PastData> {
   if (!cache.has(courseId)) {
     const p = fetch(`/api/past?course=${courseId}`).then(async (r) => {
-      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? "Couldn't load past questions.");
-      const d = (await r.json()) as PastData;
+      if (!r.ok) {
+        const body = await r.json().catch(() => null);
+        throw Object.assign(new Error(body?.error ?? "Couldn't load past questions."), { code: body?.code as string | undefined });
+      }
+      const d = (await r.json()) as PastData & { locked?: boolean };
+      if (d.locked) throw Object.assign(new Error("Past questions come with Finals."), { code: "past" });
       d.papers = d.papers.map((x) => ({ ...x, total_marks: x.total_marks == null ? null : Number(x.total_marks) }));
       return d;
     });
@@ -79,6 +83,7 @@ function loadPast(courseId: string): Promise<PastData> {
 export function PastPanel({ course, topics, topicId, paperId = null, onBack, onCite, onRemaining, onLimit, partnerName }: Props) {
   const [data, setData] = useState<PastData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [locked, setLocked] = useState(false); // Free: past questions are Finals only (server says 403 "past")
   const [tab, setTab] = useState<"map" | "practice">(topicId || paperId ? "practice" : "map");
   const [selection, setSelection] = useState<Selection | null>(
     paperId ? { kind: "paper", id: paperId } : topicId ? { kind: "topic", id: topicId } : null,
@@ -86,7 +91,14 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
 
   useEffect(() => {
     let live = true;
-    loadPast(course.id).then((d) => live && setData(d), (e: Error) => live && setError(e.message));
+    loadPast(course.id).then(
+      (d) => live && setData(d),
+      (e: Error & { code?: string }) => {
+        if (!live) return;
+        if (e.code === "past") setLocked(true);
+        else setError(e.message);
+      },
+    );
     return () => {
       live = false;
     };
@@ -123,7 +135,9 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-10">
-        {error ? (
+        {locked ? (
+          <FinalsOnly course={course} onUnlock={() => onLimit("past", null)} />
+        ) : error ? (
           <p className="mt-10 text-center text-sm text-muted">{error}</p>
         ) : !data ? (
           <div className="mt-16 grid place-items-center text-muted">
@@ -400,7 +414,7 @@ function Practice(props: {
               <LockIcon /> Practise this with Finals
             </p>
             <p className="mx-auto mt-1 max-w-sm text-[13.5px] text-muted">
-              You&apos;ve used this course&apos;s free practice question. Finals unlocks every past question, with model answers and marking.
+              Finals unlocks every past question, with model answers and marking.
             </p>
             <button type="button" onClick={() => props.onLimit("past", null)} className="cta-shine mt-4 rounded-full bg-brand px-6 py-2.5 text-sm font-medium text-brand-ink transition hover:opacity-95">
               Lock in Finals
@@ -540,6 +554,24 @@ function Md({ text }: { text: string }) {
   return (
     <div className="[&_li]:my-0.5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-sunken [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-[13px] [&_table]:my-2 [&_table]:w-full [&_table]:text-sm [&_td]:border-b [&_td]:border-line [&_td]:px-2 [&_td]:py-1 [&_th]:border-b [&_th]:border-line-strong [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5">
       <ReactMarkdown remarkPlugins={MATH_REMARK} rehypePlugins={MATH_REHYPE}>{text}</ReactMarkdown>
+    </div>
+  );
+}
+
+/** Free: past questions are Finals only. A calm card in the panel, with the way to Finals. */
+function FinalsOnly({ course, onUnlock }: { course: CourseItem; onUnlock(): void }) {
+  return (
+    <div className="mx-auto mt-14 max-w-md rounded-[28px] bg-sunken/70 px-6 py-9 text-center">
+      <span className="mx-auto grid size-12 place-items-center rounded-full bg-navy text-white">
+        <LockIcon />
+      </span>
+      <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-ink">Past questions come with Finals</h2>
+      <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">
+        The real PAU past papers for {courseName(course)}, the exam map of which topics come up, model answers and marked practice.
+      </p>
+      <button type="button" onClick={onUnlock} className="cta-shine mt-6 rounded-full bg-brand px-7 py-3 text-[15px] font-medium text-brand-ink transition hover:opacity-95 active:scale-[0.98]">
+        Lock in Finals
+      </button>
     </div>
   );
 }

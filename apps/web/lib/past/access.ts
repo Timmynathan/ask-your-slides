@@ -1,4 +1,4 @@
-// Past questions on Free vs Finals (PRD F12): Free gets the exam map and FREE_PRACTICE_PER_COURSE
+// Past questions on Free vs Finals (PRD F12): Finals only since 14 Nov 2026 (FREE_PRACTICE_PER_COURSE = 0; /api/past sends Free nothing). If an allowance returns, Free gets FREE_PRACTICE_PER_COURSE
 // practice question(s) per course (the first one(s) they open; they can redo them). Finals gets every
 // question, model answers and marked practice. Enforced here, on the server; the UI only mirrors it.
 import "server-only";

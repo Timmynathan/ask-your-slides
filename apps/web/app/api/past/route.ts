@@ -3,7 +3,8 @@ import { z } from "zod";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
 import { pastAccess } from "@/lib/past/access";
-import { planState } from "@/lib/plans/entitlement";
+import { FREE_PRACTICE_PER_COURSE } from "@/lib/plans/config";
+import { logLimitEvent, planState } from "@/lib/plans/entitlement";
 import { adminClient } from "@/lib/supabase/admin";
 
 // GET /api/past?course=<uuid> → one course's past papers and questions, without answers (PRD F10).
@@ -19,6 +20,16 @@ export async function GET(request: Request) {
   const parsed = Query.safeParse(Object.fromEntries(new URL(request.url).searchParams));
   if (!parsed.success) return NextResponse.json({ error: "Which course?" }, { status: 400 });
   const course = parsed.data.course;
+
+  // Finals only (PRD F12, owner 14 Nov 2026): a Free student gets nothing from this route, so the
+  // questions never reach their browser. The UI shows the "Lock in Finals" card instead.
+  const db = adminClient();
+  const plan = (await planState(db, auth.user.id, new Date())).plan;
+  if (plan !== "finals" && FREE_PRACTICE_PER_COURSE === 0) {
+    await logLimitEvent(db, { userId: auth.user.id, feature: "past", plan, courseId: course });
+    // 200, not 403: being on Free is a normal state (no console error), and no question is sent.
+    return NextResponse.json({ locked: true, code: "past", plan });
+  }
 
   const [papers, questions, attempts] = await Promise.all([
     supabase.from("past_papers").select("id, session, type, code_on_paper, instructions, duration, total_marks").eq("course_id", course),
@@ -46,8 +57,7 @@ export async function GET(request: Request) {
   }
 
   // What this student may practise (PRD F12); enforced again in /api/past/attempt.
-  const db = adminClient();
-  const access = await pastAccess(db, auth.user.id, course, (await planState(db, auth.user.id, new Date())).plan);
+  const access = await pastAccess(db, auth.user.id, course, plan);
 
   return NextResponse.json({
     access,
