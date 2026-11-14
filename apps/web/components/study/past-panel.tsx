@@ -3,7 +3,7 @@
 // Past questions (PRD F10): Exam map | Practice, in the study workspace's main area. Opened from
 // "Past questions" in the Topics panel, or from a topic chat's "N past questions" chip (practice for
 // that topic, with a way back to the chat). Answers are fetched only after an attempt.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "katex/dist/katex.min.css";
 import ReactMarkdown from "react-markdown";
 import { MATH_REHYPE, MATH_REMARK } from "@/lib/study/math";
@@ -32,6 +32,7 @@ import type { CitationInfo } from "@/lib/study/format";
 import { courseName } from "@/lib/study/course-code";
 import type { CourseItem, TopicItem } from "@/lib/study/types";
 import { Answer } from "./answer";
+import { PaperViewer } from "./paper-viewer";
 import type { LimitCode } from "@/components/plans/pricing-sheet";
 import { LockIcon } from "@/components/plans/plan-cards";
 
@@ -109,6 +110,21 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
     setTab("practice");
   };
 
+  // The original paper beside the questions: the paper being practised, the current question's
+  // paper (topic practice), or the latest paper (exam map, picker).
+  const [questionPaper, setQuestionPaper] = useState<string | null>(null);
+  const [hasPages, setHasPages] = useState(true);
+  const onPaperReady = useCallback((ok: boolean) => setHasPages(ok), []);
+  const latest = useMemo(() => (data ? newestFirst(data.papers)[0] ?? null : null), [data]);
+  const viewing =
+    tab === "practice" && selection?.kind === "paper"
+      ? selection.id
+      : tab === "practice" && selection?.kind === "topic"
+        ? questionPaper ?? latest?.id ?? null
+        : latest?.id ?? null;
+  const viewingPaper = data?.papers.find((p) => p.id === viewing) ?? null;
+  const showPaper = !locked && !error && !!data && !!viewingPaper;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 px-5 pb-3 pt-1">
@@ -134,6 +150,12 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
         {data && data.papers.length > 0 && <p className="w-full text-[12.5px] text-muted sm:ml-2 sm:w-auto">{paperSummary(data.papers)}</p>}
       </div>
 
+      <div className={`flex min-h-0 flex-1 flex-col ${showPaper && hasPages ? "lg:flex-row lg:gap-5 lg:pl-5" : ""}`}>
+      {showPaper && (
+        <div className={`${hasPages ? "h-[38dvh] shrink-0 px-5 pb-3 lg:h-auto lg:w-1/2 lg:max-w-[640px] lg:px-0 lg:pb-0" : "hidden"} flex min-h-0 flex-col`}>
+          <PaperViewer key={viewingPaper.id} paperId={viewingPaper.id} label={paperLabel(viewingPaper)} onReady={onPaperReady} />
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-10">
         {locked ? (
           <FinalsOnly course={course} onUnlock={() => onLimit("past", null)} />
@@ -157,13 +179,20 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
             onRemaining={onRemaining}
             onLimit={onLimit}
             partnerName={partnerName}
+            onPaper={setQuestionPaper}
           />
         ) : (
           <Picker course={course} topics={topics} data={data} onPick={practise} />
         )}
       </div>
+      </div>
     </div>
   );
+}
+
+/** Newest session first; within a session the exam before tests. */
+function newestFirst(papers: PastPaper[]): PastPaper[] {
+  return [...papers].sort((a, b) => b.session.localeCompare(a.session) || (a.type === "exam" ? -1 : b.type === "exam" ? 1 : 0));
 }
 
 // ── Exam map ───────────────────────────────────────────────
@@ -299,6 +328,8 @@ function Practice(props: {
   onRemaining(n: number): void;
   onLimit(code: LimitCode, resetsAt: string | null): void;
   partnerName: string;
+  /** The current question's paper, so the original paper beside it follows along. */
+  onPaper?(paperId: string | null): void;
 }) {
   const { course, topics, data, selection } = props;
   const [freeUsed, setFreeUsed] = useState<string[]>(data.access.freeQuestions);
@@ -315,6 +346,9 @@ function Practice(props: {
   const [results, setResults] = useState<Record<string, Result>>({});
   const [busy, setBusy] = useState<"mark" | "reveal" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const currentPaper = list[i]?.paper_id ?? null;
+  const { onPaper } = props;
+  useEffect(() => onPaper?.(currentPaper), [onPaper, currentPaper]);
 
   const paper = selection.kind === "paper" ? data.papers.find((p) => p.id === selection.id) : null;
   const title = selection.kind === "topic" ? topics.find((t) => t.id === selection.id)?.title ?? "Topic" : paper ? paperLabel(paper) : "Paper";

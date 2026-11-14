@@ -250,7 +250,8 @@ export function Workspace(data: WorkspaceData) {
         </main>
 
         {/* Right: Sources, or the slide being viewed (which replaces it until closed). */}
-        <div className={preview ? "contents xl:hidden" : "contents"}>
+        {/* Hidden while past questions are open: the original paper takes that room instead. */}
+        <div className={preview ? "contents xl:hidden" : past ? "hidden" : "contents"}>
           <SourcesPanel
             courseId={course.id}
             courseCode={course.code}

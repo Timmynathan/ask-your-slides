@@ -16,6 +16,7 @@ All of it is local and free; only the vision pass that finds the boxes costs mon
 from __future__ import annotations
 
 import io
+import re
 import subprocess
 from dataclasses import dataclass
 
@@ -69,18 +70,36 @@ def straighten(img: np.ndarray) -> np.ndarray:
     return cv2.warpPerspective(img, m, (width, height), flags=cv2.INTER_CUBIC, borderValue=(255, 255, 255))
 
 
-def colour_ink(img: np.ndarray, blue: float = 5.0, red: float = 7.0) -> np.ndarray:
-    """Mask of coloured pen strokes (blue, red), widened slightly to take their soft edges. Judged
-    against the paper around each stroke (Lab colour), so faint blue biro on a yellowish photo still
-    counts, while black print (neutral, like the paper) never does."""
+def tints(img: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Per pixel: how much bluer (db) and redder (da) than the paper around it, plus lightness and
+    the paper's lightness (Lab)."""
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32)
     L, a, b = lab[..., 0], lab[..., 1], lab[..., 2]
     k = max(31, (min(img.shape[:2]) // 25) | 1)
     bgL = cv2.medianBlur(cv2.dilate(L.astype(np.uint8), np.ones((7, 7), np.uint8)), k).astype(np.float32)
-    bga = cv2.medianBlur(a.astype(np.uint8), k).astype(np.float32)
-    bgb = cv2.medianBlur(b.astype(np.uint8), k).astype(np.float32)
+    db = cv2.medianBlur(b.astype(np.uint8), k).astype(np.float32) - b
+    da = a - cv2.medianBlur(a.astype(np.uint8), k).astype(np.float32)
+    return db, da, L, bgL
+
+
+def print_colour(db: np.ndarray, da: np.ndarray, page: np.ndarray, where: np.ndarray) -> tuple[float, float]:
+    """The print's own tint on this photo (a phone camera can make black print look bluish): the
+    median over dark pixels inside the printed blocks, where print far outweighs pen."""
+    sel = (page < 120) & (where > 0)
+    if sel.sum() < 500:
+        sel = page < 120
+    if sel.sum() < 500:
+        return 0.0, 0.0
+    return float(np.median(db[sel])), float(np.median(da[sel]))
+
+
+def colour_ink(img: np.ndarray, ref: tuple[float, float] = (0.0, 0.0), blue: float = 5.0, red: float = 7.0) -> np.ndarray:
+    """Mask of coloured pen strokes (blue, red), widened slightly to take their soft edges. Judged
+    against the paper around each stroke and against this photo's print colour, so faint blue biro
+    counts while black print with a camera colour cast never does."""
+    db, da, L, bgL = tints(img)
     stroke = L < bgL - 12  # darker than the paper here
-    tinted = ((bgb - b) > blue) | ((a - bga) > red)
+    tinted = ((db - ref[0]) > blue) | ((da - ref[1]) > red)
     mask = (stroke & tinted).astype(np.uint8) * 255
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
     return cv2.dilate(mask, np.ones((3, 3), np.uint8))
@@ -141,14 +160,12 @@ def clean(jpeg: bytes, boxes: list[Box] | None = None) -> np.ndarray:
     return page
 
 
-def ink_strokes(img: np.ndarray, page: np.ndarray, words: np.ndarray, tint: float = 3.0) -> np.ndarray:
-    """Coloured pen, judged per stroke: each connected mark's average colour against the paper around
-    it. A blue or red stroke averages blue or red; a black printed letter's camera fringes average out
-    to neutral. Marks that are mostly confidently read printed words are never removed."""
-    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB).astype(np.float32)
-    k = max(31, (min(img.shape[:2]) // 25) | 1)
-    db = cv2.medianBlur(lab[..., 2].astype(np.uint8), k).astype(np.float32) - lab[..., 2]  # + = bluer than the paper
-    da = lab[..., 1] - cv2.medianBlur(lab[..., 1].astype(np.uint8), k).astype(np.float32)  # + = redder
+def ink_strokes(img: np.ndarray, page: np.ndarray, words: np.ndarray, ref: tuple[float, float] = (0.0, 0.0), tint: float = 3.0) -> np.ndarray:
+    """Coloured pen, judged per stroke: each connected mark's average colour against this photo's
+    print colour. A blue or red stroke averages blue or red; a black printed letter (fringes and all)
+    averages like the rest of the print. Marks that are mostly confidently read words are kept."""
+    db, da, _, _ = tints(img)
+    db, da = db - ref[0], da - ref[1]
     dark = (page < 200).astype(np.uint8)
     n, labels, stats, _ = cv2.connectedComponentsWithStats(dark, 8)
     flat = labels.ravel()
@@ -158,7 +175,7 @@ def ink_strokes(img: np.ndarray, page: np.ndarray, words: np.ndarray, tint: floa
     printed = np.bincount(flat, (words > 0).ravel().astype(np.float32), n) / count
     pen = ((blue > tint) | (red > tint + 2)) & (printed < 0.5)
     pen[0] = False
-    # A circled letter merges with its circle: inside a pen mark, black neutral pixels are print.
+    # A circled letter merges with its circle: inside a pen mark, dark print-coloured pixels are print.
     black = (page < 110) & (np.abs(db) < 2.5) & (np.abs(da) < 2.5)
     return pen[labels] & ~black
 
@@ -190,20 +207,31 @@ def clean_blocks(jpeg: bytes, ink: dict) -> np.ndarray:
     h, w = img.shape[:2]
     page = flatten(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
     words = cv2.dilate(printed_words(page, min_conf=60), np.ones((5, 5), np.uint8))
-    ink_mask = cv2.bitwise_and(colour_ink(img), cv2.bitwise_not(words))
-    ink_mask[ink_strokes(img, page, words)] = 255
     keep = np.zeros((h, w), np.uint8)
     pad = max(8, w // 150)
     for b in ink["blocks"]:
         x0, y0, x1, y1 = b["box"]
-        if b["kind"] == "logo":  # the emblem's wordmark ("PAN-ATLANTIC UNIVERSITY") sits beside it
-            grow = (x1 - x0) * 1.5
-            x0, x1 = max(0.0, x0 - grow), min(1.0, x1 + grow)
+        keep[max(0, int(y0 * h)) : int(y1 * h), max(0, int(x0 * w)) : int(x1 * w)] = 255
+    db, da, _, _ = tints(img)
+    ref = print_colour(db, da, page, keep)
+    ink_mask = cv2.bitwise_and(colour_ink(img, ref), cv2.bitwise_not(words))
+    ink_mask[ink_strokes(img, page, words, ref)] = 255
+    keep[:] = 0
+    wordmark = np.zeros((h, w), bool)
+    for b in ink["blocks"]:
+        x0, y0, x1, y1 = b["box"]
         X0, Y0 = max(0, int(x0 * w) - pad), max(0, int(y0 * h) - pad)
         X1, Y1 = min(w, int(x1 * w) + pad), min(h, int(y1 * h) + pad)
-        keep[Y0:Y1, X0:X1] = 255
         if b["kind"] == "logo":
-            ink_mask[Y0:Y1, X0:X1] = 0  # a coloured logo keeps its colour strokes
+            ink_mask[Y0:Y1, X0:X1] = 0  # a coloured emblem keeps its colour strokes (the emblem only)
+            # Its wordmark ("PAN-ATLANTIC UNIVERSITY") sits beside it: there, only solid dark print
+            # is kept (pen notes and numbers written next to the logo are fainter).
+            grow = int((X1 - X0) * 1.5)
+            side = np.zeros((h, w), bool)
+            side[Y0:Y1, max(0, X0 - grow) : min(w, X1 + grow)] = True
+            wordmark |= side
+        keep[Y0:Y1, X0:X1] = 255
+    keep[wordmark & (keep == 0) & (page < 100)] = 255
     # Whole letters: any printed-sized mark that touches a block is kept entirely.
     dark = (page < 170).astype(np.uint8)
     n, labels, stats, _ = cv2.connectedComponentsWithStats(dark, 8)
@@ -217,6 +245,29 @@ def clean_blocks(jpeg: bytes, ink: dict) -> np.ndarray:
     for x0, y0, x1, y1 in ink["personal"]:
         out[max(0, int(y0 * h) - pad) : int(y1 * h) + pad, max(0, int(x0 * w) - pad) : int(x1 * w) + pad] = 255
     return _despeckle(out)
+
+
+def scrub_ids(page: np.ndarray, allowed: str) -> tuple[np.ndarray, int]:
+    """Last safety net for student details: any run of 9+ digits the OCR finds on the cleaned page
+    (a matric number is 10) that isn't printed in the paper's own questions is whited out."""
+    ok, png = cv2.imencode(".png", page)
+    out = subprocess.run(["tesseract", "stdin", "stdout", "--psm", "11", "tsv"], input=png.tobytes(), capture_output=True, check=False)
+    # Long numbers printed in the questions, written with or without spaces/dashes ("+234 812 322 6745").
+    printed = {re.sub(r"\D", "", m) for m in re.findall(r"\+?\d[\d ,.\-()]{7,}\d", allowed)}
+    printed = {p for p in printed if len(p) >= 9}
+    page = page.copy()
+    n = 0
+    for line in out.stdout.decode("utf-8", "ignore").splitlines()[1:]:
+        f = line.split("\t")
+        if len(f) < 12:
+            continue
+        digits = re.sub(r"\D", "", f[11])
+        if len(digits) < 9 or any(digits in p for p in printed):
+            continue
+        x, y, w, h = (int(f[i]) for i in (6, 7, 8, 9))
+        page[max(0, y - 6) : y + h + 6, max(0, x - 6) : x + w + 6] = 255
+        n += 1
+    return page, n
 
 
 def to_webp(page: np.ndarray, long_edge: int = 1600, quality: int = 70) -> bytes:

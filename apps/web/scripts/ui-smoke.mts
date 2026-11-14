@@ -722,6 +722,17 @@ async function main() {
       await pq.getByRole("region", { name: "Past questions" }).getByRole("button", { name: /^Exam map/ }).click();
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
       check(true, "the Past questions card's 'Exam map' button opens the exam map");
+      // The original paper beside the questions: the latest paper, cleaned page images, tap for full screen.
+      const paperView = pq.getByRole("region", { name: /^Original paper: 2025\/26 exam/ });
+      const pageImg = paperView.locator("img").first();
+      const loaded = await pageImg.waitFor({ timeout: 15000 }).then(() => pageImg.evaluate((img: HTMLImageElement) => img.decode().then(() => img.naturalWidth > 500, () => false)), () => false);
+      check(loaded,
+        "the latest original paper shows beside the exam map (cleaned page image)");
+      await shot(pq, "past-1b-paper");
+      await paperView.getByRole("button", { name: /^Page 1/ }).click();
+      const full = pq.getByRole("dialog", { name: /page 1 of/ });
+      check(await full.isVisible(), "tapping a page opens it full screen");
+      await pq.keyboard.press("Escape");
       await pq.getByRole("button", { name: "← Back to chat" }).click();
       await pq.goto(`${BASE}/study/INS401?past=1`);
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });

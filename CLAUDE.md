@@ -21,7 +21,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   safest matches (review files in data/). Answers: design v2 (PRD F10): slides retrieved topic first,
   cited [[s:…]], grounding slides|partial|general (general = "Not from your slides…"), Haiku
   (PAST_ANSWER_MODEL). Past questions are Finals only (owner, 14 Nov 2026): Free gets none.
-  Live since 13 Nov 2026 (kill switch: NEXT_PUBLIC_PAST_QUESTIONS=0). BUA401 2024/25 CA blocked by the content filter.
+  Live since 13 Nov 2026 (kill switch: NEXT_PUBLIC_PAST_QUESTIONS=0). The original papers show beside the questions: cleaned page images (npm run ingest:past:pages: straightened, ink and student details removed; papers with answers written in are never shown). BUA401 2024/25 CA blocked by the content filter.
 - Plans (PRD F12, Nov 2026): Free and Finals (one-time, manual bank transfer; Paystack was removed
   before launch). Every number/price/date lives in apps/web/lib/plans/config.ts; limits enforced on
   the server (lib/plans/gate.ts); bank details + WhatsApp number are in that config too. Premium courses =
