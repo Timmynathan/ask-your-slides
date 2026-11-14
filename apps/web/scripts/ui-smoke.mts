@@ -645,7 +645,7 @@ async function main() {
     // Scrolling up while the answer streams: the chat stays put (it used to snap back down).
     {
       const box = page.locator("main div.overflow-y-auto:visible").first();
-      await page.waitForFunction(() => [...document.querySelectorAll("main li[data-message='assistant']")].at(-1)?.textContent?.length! > 200, null, { timeout: 30000 }).catch(() => null);
+      await page.waitForFunction(() => ([...document.querySelectorAll("main li[data-message='assistant']")].at(-1)?.textContent?.length ?? 0) > 200, null, { timeout: 30000 }).catch(() => null);
       const streaming = await page.getByRole("button", { name: "Send" }).count() === 0;
       if (streaming) {
         await box.hover();
