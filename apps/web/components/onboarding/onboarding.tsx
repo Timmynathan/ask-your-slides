@@ -10,6 +10,7 @@ import type { ProgrammeChoice } from "@/lib/programmes";
 import type { PlanOffer } from "@/lib/plans/offer";
 import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
+import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 
 const DEFAULT_PARTNER: PartnerId = "zara";
@@ -263,6 +264,9 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               />
             </div>
             <p className="mt-6 text-center text-sm text-muted">You&apos;re on Free now. Upgrade any time from your account menu.</p>
+            <div className="mt-4 flex justify-center">
+              <PromoCodeForm onRedeemed={finish} />
+            </div>
           </div>
         )}
 

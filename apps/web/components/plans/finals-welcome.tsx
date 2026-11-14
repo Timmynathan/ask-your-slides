@@ -48,7 +48,8 @@ function confetti(count: number, seed: number) {
   }));
 }
 
-export function FinalsWelcome({ id, endsAt, daily }: { id: string; endsAt: string; daily: number }) {
+/** trial: Finals from a course-rep promo code (lasts a few days), not a payment. */
+export function FinalsWelcome({ id, endsAt, daily, trial = false }: { id: string; endsAt: string; daily: number; trial?: boolean }) {
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const pieces = useMemo(() => confetti(70, 7), []);
@@ -80,6 +81,8 @@ export function FinalsWelcome({ id, endsAt, daily }: { id: string; endsAt: strin
 
   if (!open) return null;
   const until = new Date(endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" });
+  // Rendered only after mount (the effect above opens it), so reading the clock here is fine.
+  const daysLeft = Math.max(1, Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000));
   const perks: { icon: string; text: string }[] = [
     { icon: ICONS.chat, text: `${daily} messages a day` },
     { icon: ICONS.books, text: "All your courses, no limits on premium courses" },
@@ -127,13 +130,13 @@ export function FinalsWelcome({ id, endsAt, daily }: { id: string; endsAt: strin
             <Icon d={ICONS.cap} size={36} />
           </div>
           <p className="welcome-rise mt-5 inline-flex rounded-full bg-white/20 px-3 py-1 text-[12px] font-semibold uppercase tracking-wider" style={{ animationDelay: "250ms" }}>
-            Payment confirmed
+            {trial ? "Promo code applied" : "Payment confirmed"}
           </p>
           <h2 id="welcome-title" className="welcome-rise mt-3 font-heading text-4xl font-semibold tracking-tight" style={{ animationDelay: "380ms" }}>
-            You&apos;re on Finals!
+            {trial ? `You've got Finals for ${daysLeft} day${daysLeft === 1 ? "" : "s"}!` : "You're on Finals!"}
           </h2>
           <p className="welcome-rise mt-2 text-[15px] text-white/85" style={{ animationDelay: "500ms" }}>
-            Thanks for paying. Everything is unlocked. Go ace those exams.
+            {trial ? "Every Finals feature is yours to try. Go explore." : "Thanks for paying. Everything is unlocked. Go ace those exams."}
           </p>
         </div>
         <div className="px-7 pb-7 pt-6">

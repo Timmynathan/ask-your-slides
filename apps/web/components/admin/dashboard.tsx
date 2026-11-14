@@ -101,6 +101,9 @@ export function AdminDashboard({ data, plans, range, email }: { data: Overview; 
             <Link href="/admin/payments" className="rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-brand-ink transition hover:opacity-90">
               Payments
             </Link>
+            <Link href="/admin/promo" className="rounded-full px-3 py-1.5 text-sm font-medium text-brand ring-1 ring-line transition hover:bg-sunken">
+              Promo codes
+            </Link>
             <button
               type="button"
               onClick={() => startRefresh(() => router.refresh())}
@@ -421,7 +424,7 @@ function Plans({ plans: p }: { plans: PlanStats }) {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Tile label="Finals sold" value={n(p.paid)} sub={`${n(p.pending)} waiting for approval`} />
         <Tile label="Revenue" value={`₦${n(p.revenueNaira)}`} sub="approved bank transfers" />
-        <Tile label="Finals active now" value={n(p.activeFinals.manual + p.activeFinals.comp)} sub={`${n(p.activeFinals.manual)} paid · ${n(p.activeFinals.comp)} free (comp)`} />
+        <Tile label="Finals active now" value={n(p.activeFinals.manual + p.activeFinals.comp + p.activeFinals.promo)} sub={`${n(p.activeFinals.manual)} paid · ${n(p.activeFinals.promo)} promo trial · ${n(p.activeFinals.comp)} comp`} />
         <Tile label="Students who hit a limit" value={n(Math.max(0, ...p.limits.map((l) => l.students)))} sub="most for any one limit" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">

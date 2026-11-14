@@ -81,7 +81,7 @@ async function Loaded() {
         user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
         resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
       />
-      {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} />}
+      {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} trial={state.welcome.trial} />}
     </>
   );
 }

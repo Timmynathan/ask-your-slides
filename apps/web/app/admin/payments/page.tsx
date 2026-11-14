@@ -27,7 +27,10 @@ async function Loaded() {
             <Logo size={24} />
           </Link>
           <span className="rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-ink">Admin</span>
-          <Link href="/admin" className="ml-auto rounded-full px-3 py-1.5 text-sm text-muted hover:bg-sunken hover:text-ink">
+          <Link href="/admin/promo" className="ml-auto rounded-full px-3 py-1.5 text-sm text-muted hover:bg-sunken hover:text-ink">
+            Promo codes
+          </Link>
+          <Link href="/admin" className="rounded-full px-3 py-1.5 text-sm text-muted hover:bg-sunken hover:text-ink">
             Dashboard
           </Link>
         </div>

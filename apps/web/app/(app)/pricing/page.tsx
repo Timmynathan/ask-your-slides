@@ -6,6 +6,7 @@ import { Logo } from "@/components/brand/logo";
 import { CompareTable } from "@/components/plans/compare-table";
 import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
+import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
 import { TIME_ZONE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
@@ -70,6 +71,11 @@ async function Loaded() {
             }
           />
           <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>
+          {state.plan === "free" && (
+            <div className="mt-4 flex justify-center">
+              <PromoCodeToCourses />
+            </div>
+          )}
         </div>
 
         <div className="mt-14">

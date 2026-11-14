@@ -101,7 +101,7 @@ async function Loaded({ params, searchParams }: Props) {
         past={past}
         initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}
       />
-      {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} />}
+      {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} trial={state.welcome.trial} />}
     </>
   );
 }

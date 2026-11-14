@@ -176,7 +176,7 @@ describe("welcome pop-up", () => {
     const db = (await import("@/lib/supabase/admin")).adminClient();
     await call({ id: REQ, action: "approve" });
     t.entitlements[0].created_at = "2026-11-20T10:00:00+01:00";
-    expect((await planState(db, "u1", new Date("2026-11-21T10:00:00+01:00"))).welcome).toEqual({ id: "ent_1", endsAt: PLAN_END_DATE.toISOString() });
+    expect((await planState(db, "u1", new Date("2026-11-21T10:00:00+01:00"))).welcome).toEqual({ id: "ent_1", endsAt: PLAN_END_DATE.toISOString(), trial: false });
     expect((await planState(db, "u1", new Date("2026-12-05T10:00:00+01:00"))).welcome).toBeNull();
   });
 });

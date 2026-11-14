@@ -44,6 +44,12 @@ export const WHATSAPP_NUMBER = "2348132265016";
 /** Pending payment requests a student can make in one Lagos day. */
 export const MAX_PENDING_REQUESTS_A_DAY = 3;
 
+// ── Promo codes (course reps) ───────────────────────────────────
+/** Days of Finals a promo code gives, unless the admin picks another length when generating. */
+export const PROMO_DAYS = 7;
+/** Most codes generated at once in /admin/promo. */
+export const PROMO_MAX_BATCH = 50;
+
 export type PlanId = "free" | "finals";
 
 export const PLAN_NAMES: Record<PlanId, string> = { free: "Free", finals: "Finals" };

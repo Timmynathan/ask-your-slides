@@ -10,7 +10,7 @@ export interface PlanStats {
   paid: number;
   revenueNaira: number;
   pending: number;
-  activeFinals: { manual: number; comp: number };
+  activeFinals: { manual: number; comp: number; promo: number };
   referrals: { code: string; paid: number; revenue: number; pending: number }[];
   limits: { feature: string; hits: number; students: number }[];
 }
@@ -25,7 +25,7 @@ export async function planStats(db: Db, from: string | null, now = new Date()): 
   ]);
   const pay = must(payments) as { status: string; amount_naira: number }[];
   const ok = pay.filter((p) => p.status === "approved");
-  const active = must(ents) as { source: "manual" | "comp" }[];
+  const active = must(ents) as { source: "manual" | "comp" | "promo" }[];
   const ev = must(events) as { feature: string; user_id: string }[];
   const byFeature = new Map<string, { hits: number; users: Set<string> }>();
   for (const e of ev) {
@@ -38,7 +38,7 @@ export async function planStats(db: Db, from: string | null, now = new Date()): 
     paid: ok.length,
     revenueNaira: ok.reduce((s, p) => s + p.amount_naira, 0),
     pending: pay.filter((p) => p.status === "pending").length,
-    activeFinals: { manual: active.filter((a) => a.source === "manual").length, comp: active.filter((a) => a.source === "comp").length },
+    activeFinals: { manual: active.filter((a) => a.source === "manual").length, comp: active.filter((a) => a.source === "comp").length, promo: active.filter((a) => a.source === "promo").length },
     referrals: (must(refs) as { referral_code: string; approved: number; revenue_naira: number; pending: number }[]).map((r) => ({
       code: r.referral_code,
       paid: Number(r.approved),
