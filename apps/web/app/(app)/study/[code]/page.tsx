@@ -6,6 +6,7 @@ import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
+import { paperLabel, type PaperType } from "@/lib/past/map";
 import { resolveCourse } from "@/lib/study/course-link";
 import { planState, usageNow } from "@/lib/plans/entitlement";
 import { FinalsWelcome } from "@/components/plans/finals-welcome";
@@ -30,7 +31,7 @@ async function Loaded({ params, searchParams }: Props) {
   const code = rawCode.toUpperCase();
   const { supabase, user } = await requireUser();
 
-  const [{ data: courses }, { data: profile, error: profileError }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }] = await Promise.all([
+  const [{ data: courses }, { data: profile, error: profileError }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }, { data: pastPapers }] = await Promise.all([
     supabase.from("courses").select("id, code, code_confirmed, programme, department, title, sort_order, elective, premium").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, department, programme").eq("id", user.id).single(),
     supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
@@ -41,8 +42,10 @@ async function Loaded({ params, searchParams }: Props) {
     supabase.from("pulse_responses").select("score").maybeSingle(),
     // Past questions (PRD F10): ids only, for the Topics entry and the topic chips; the questions
     // themselves load when the student opens them.
-    supabase.from("past_questions").select("id, parent_id, course_id, courses!inner(code)").eq("courses.code", code),
+    supabase.from("past_questions").select("id, parent_id, course_id, paper_id, courses!inner(code)").eq("courses.code", code),
     supabase.from("question_topics").select("question_id, topic_id"),
+    // The papers, by year, for the "Practise 2025/26 exam" buttons in the Topics panel.
+    supabase.from("past_papers").select("id, course_id, session, type, courses!inner(code)").eq("courses.code", code),
   ]);
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner) || !profile.programme) redirect("/welcome");
@@ -59,7 +62,7 @@ async function Loaded({ params, searchParams }: Props) {
   const chatList = (chats ?? []) as ChatItem[];
   const initialChat = sp.chat ? chatList.find((c) => c.id === sp.chat && c.course_id === course.id) ?? null : null;
   const topicFromUrl = sp.topic ? topics.find((t) => t.course_id === course.id && String(t.order) === sp.topic) ?? null : null;
-  const past = pastCounts(course.id, (pastRows ?? []) as { id: string; parent_id: string | null; course_id: string }[], pastTopics ?? []);
+  const past = pastCounts(course.id, (pastRows ?? []) as PastRow[], pastTopics ?? [], (pastPapers ?? []) as PaperRow[]);
   // Plan limits (PRD F12): what this student can still send in this course today.
   const db = adminClient();
   const now = new Date();
@@ -103,14 +106,25 @@ async function Loaded({ params, searchParams }: Props) {
   );
 }
 
-/** Practised past questions (those without parts) of one course, in total and per topic. */
-function pastCounts(courseId: string, rows: { id: string; parent_id: string | null; course_id: string }[], qt: { question_id: string; topic_id: string }[]) {
+type PastRow = { id: string; parent_id: string | null; course_id: string; paper_id: string | null };
+type PaperRow = { id: string; course_id: string; session: string; type: PaperType };
+
+/** Practised past questions (those without parts) of one course, in total, per topic and per paper
+ *  (newest paper first; only papers with questions). */
+function pastCounts(courseId: string, rows: PastRow[], qt: { question_id: string; topic_id: string }[], paperRows: PaperRow[]) {
   const mine = rows.filter((r) => r.course_id === courseId);
   const parents = new Set(mine.map((r) => r.parent_id).filter(Boolean));
-  const ids = new Set(mine.filter((r) => !parents.has(r.id)).map((r) => r.id));
+  const leaves = mine.filter((r) => !parents.has(r.id));
+  const ids = new Set(leaves.map((r) => r.id));
   const byTopic: Record<string, number> = {};
   for (const { question_id, topic_id } of qt) if (ids.has(question_id)) byTopic[topic_id] = (byTopic[topic_id] ?? 0) + 1;
-  return { total: ids.size, byTopic };
+  const perPaper = new Map<string, number>();
+  for (const r of leaves) if (r.paper_id) perPaper.set(r.paper_id, (perPaper.get(r.paper_id) ?? 0) + 1);
+  const papers = paperRows
+    .filter((p) => p.course_id === courseId && perPaper.has(p.id))
+    .sort((a, b) => b.session.localeCompare(a.session) || (a.type === "exam" ? -1 : b.type === "exam" ? 1 : a.type.localeCompare(b.type)))
+    .map((p) => ({ id: p.id, label: paperLabel(p), questions: perPaper.get(p.id)! }));
+  return { total: ids.size, byTopic, papers };
 }
 
 export default function StudyPage(props: Props) {

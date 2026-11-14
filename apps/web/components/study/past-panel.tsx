@@ -51,6 +51,8 @@ interface Props {
   topics: TopicItem[];
   /** Opened from a topic chat's chip: practise this topic, with a way back. */
   topicId: string | null;
+  /** Opened from a "Practise 2025/26 exam" button in the Topics panel: practise this paper. */
+  paperId?: string | null;
   onBack: (() => void) | null;
   onCite(slideKey: string): void;
   onRemaining(remaining: number): void;
@@ -74,11 +76,13 @@ function loadPast(courseId: string): Promise<PastData> {
   return cache.get(courseId)!;
 }
 
-export function PastPanel({ course, topics, topicId, onBack, onCite, onRemaining, onLimit, partnerName }: Props) {
+export function PastPanel({ course, topics, topicId, paperId = null, onBack, onCite, onRemaining, onLimit, partnerName }: Props) {
   const [data, setData] = useState<PastData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"map" | "practice">(topicId ? "practice" : "map");
-  const [selection, setSelection] = useState<Selection | null>(topicId ? { kind: "topic", id: topicId } : null);
+  const [tab, setTab] = useState<"map" | "practice">(topicId || paperId ? "practice" : "map");
+  const [selection, setSelection] = useState<Selection | null>(
+    paperId ? { kind: "paper", id: paperId } : topicId ? { kind: "topic", id: topicId } : null,
+  );
 
   useEffect(() => {
     let live = true;

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
-import { countMain, courseFullName, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
+import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
 import { courseHref, courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
@@ -42,6 +42,13 @@ export function Workspace(data: WorkspaceData) {
   // Past questions (PRD F10): "list" = opened from the Topics panel; "topic" = from a topic chat's
   // chip (practice for that topic, with a way back to the chat).
   const [past, setPast] = useState<null | "list" | "topic">(data.initialPast ? "list" : null);
+  // Opened from a "Practise 2025/26 exam" button in the Topics panel: practise that paper.
+  const [pastPaper, setPastPaper] = useState<string | null>(null);
+  const openPast = useCallback((paperId: string | null) => {
+    setPastPaper(paperId);
+    setPast("list");
+    setDrawerOpen(false);
+  }, []);
   // "Is this helping you study?" after the 10th question; "Not now" waits until the next visit.
   const [questions, setQuestions] = useState(data.pulse.questions);
   const [pulseClosed, setPulseClosed] = useState(data.pulse.answered);
@@ -160,7 +167,8 @@ export function Workspace(data: WorkspaceData) {
             onOpenScope={openScope}
             onOpenChat={openChat}
             pastActive={past === "list"}
-            courseLabel={courseFullName(course)}
+            past={PAST_QUESTIONS_LIVE ? data.past : null}
+            onOpenPast={openPast}
           />
         </aside>
 
@@ -179,12 +187,12 @@ export function Workspace(data: WorkspaceData) {
                 {topicPast} past question{topicPast === 1 ? "" : "s"}
               </button>
             )}
-            {/* The whole course's exam map and practice: small, in place of the old sidebar row. */}
+            {/* Phones: the Topics panel is a drawer, so the past questions get a bright button here too. */}
             {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
               <button
                 type="button"
-                onClick={() => setPast("list")}
-                className="shrink-0 rounded-full border border-line px-3 py-1 text-[12.5px] text-ink transition hover:bg-sunken active:scale-95"
+                onClick={() => openPast(null)}
+                className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 lg:hidden"
                 title={`Exam map and practice: ${data.past.total} past questions in ${courseName(course)}`}
               >
                 {topicPast > 0 ? "All past questions" : "Past questions"}
@@ -197,7 +205,7 @@ export function Workspace(data: WorkspaceData) {
           </div>
 
           {past && (
-            <div key={`past-${past}-${topicId ?? "course"}`} className="panel-in flex min-h-0 flex-1 flex-col">
+            <div key={`past-${past}-${topicId ?? "course"}-${pastPaper ?? "all"}`} className="panel-in flex min-h-0 flex-1 flex-col">
               {!PAST_QUESTIONS_LIVE ? (
                 <PastComingSoon />
               ) : (
@@ -205,6 +213,7 @@ export function Workspace(data: WorkspaceData) {
                 course={course}
                 topics={topics}
                 topicId={past === "topic" ? topicId : null}
+                paperId={past === "list" ? pastPaper : null}
                 onBack={() => setPast(null)}
                 onCite={setPreview}
                 onRemaining={onRemaining}

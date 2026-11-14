@@ -556,15 +556,15 @@ async function main() {
     check(true, "a source opens in the viewer and pages can be flipped");
     await shot(page, "1b-laptop-sources");
     await viewer.getByRole("button", { name: "Close preview" }).click();
-    // Search the web: a separate box that hands the question to the student's own chatbot.
-    await page.evaluate(() => { (window as any).__opened = null; window.open = ((u: string) => { (window as any).__opened = u; return null; }) as any; });
-    await page.getByRole("radio", { name: "Claude" }).click();
-    check(await page.getByRole("radio", { name: "Claude" }).getAttribute("aria-checked") === "true", "web search engine is a clear one-tap switch");
-    await page.getByRole("textbox", { name: "Search the web" }).fill("latest PostgreSQL version");
-    await page.keyboard.press("Enter");
-    const webUrl = await page.evaluate(() => (window as any).__opened as string | null);
-    check(!!webUrl && /^https:\/\/(chatgpt\.com|claude\.ai|www\.google\.com)\//.test(webUrl) && webUrl.includes("PostgreSQL"), "Search the web opens the student's own chatbot with the question", (webUrl ?? "").slice(0, 80));
-    check(!!webUrl && webUrl.startsWith("https://claude.ai/new?q="), "the chosen engine (Claude) gets the question");
+    // Past questions at the top of the Topics panel (replaced "Search the web"): one button per real paper.
+    const pastBox = page.getByRole("region", { name: "Past questions" }).locator("visible=true").first();
+    const practise = pastBox.getByRole("button", { name: /^Practise 20\d\d\/\d\d (exam|test|quiz)/ });
+    check((await practise.count()) > 0 && !(await page.getByRole("textbox", { name: "Search the web" }).count()), "the Topics panel opens with Past questions by year (no web search box)", (await practise.allInnerTexts()).join(" | "));
+    await shot(page, "1c-laptop-past-box");
+    await practise.first().click();
+    const onPaper = await page.locator("main span.tabular-nums:visible").filter({ hasText: /^\d+ of \d+$/ }).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+    check(onPaper, "'Practise <year> exam' opens practice on that paper");
+    await page.getByRole("button", { name: "← Back to chat" }).click();
     await topicsPanel.getByRole("button", { name: "Transactions and indexing", exact: true }).click();
     await page.getByRole("heading", { name: "Transactions and indexing" }).waitFor();
     const sidebarBox = await page.locator("aside:visible").first().boundingBox();
@@ -707,9 +707,9 @@ async function main() {
       await pq.context().addCookies(await page.context().cookies());
       pq.on("pageerror", (e) => consoleErrors.push(e.message));
       await pq.goto(`${BASE}/study/INS401`);
-      await pq.getByRole("button", { name: "Past questions", exact: true }).click();
+      await pq.getByRole("region", { name: "Past questions" }).getByRole("button", { name: /^Exam map/ }).click();
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
-      check(true, "the chat header's 'Past questions' button opens the exam map");
+      check(true, "the Past questions card's 'Exam map' button opens the exam map");
       await pq.getByRole("button", { name: "← Back to chat" }).click();
       await pq.goto(`${BASE}/study/INS401?past=1`);
       await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
@@ -719,7 +719,7 @@ async function main() {
       await shot(pq, "past-1-map");
 
       await pq.getByRole("tab", { name: "Practice" }).click();
-      await pq.getByRole("button", { name: /2025\/26 exam/ }).click();
+      await pq.locator("main").getByRole("button", { name: /^2025\/26 exam/ }).click();
       await pq.getByText("Describe the following forms of project development life cycle", { exact: false }).waitFor();
       check(!(await pq.getByText("Model answer").count()), "the model answer is not on the page before an attempt");
       check(await pq.getByText(/2025\/26 exam · Q1a · 9 marks|· Q1a/).first().isVisible(), "a question shows its paper, number and marks");
@@ -740,7 +740,7 @@ async function main() {
       check(await welcome.waitFor({ timeout: 10000 }).then(() => true, () => false), "the 'You're on Finals' celebration shows once the plan is on");
       await welcome.getByRole("button", { name: /Start studying/ }).click();
       await pq.getByRole("tab", { name: "Practice" }).click();
-      await pq.getByRole("button", { name: /2025\/26 exam/ }).click();
+      await pq.locator("main").getByRole("button", { name: /^2025\/26 exam/ }).click();
       await pq.getByRole("button", { name: "Next question →" }).click();
       await pq.getByPlaceholder(/Write your answer/).fill("Conflict sources: scarce resources, schedules, priorities, personalities, and technical opinions.");
       await pq.getByRole("button", { name: "Mark my answer" }).click();
@@ -755,7 +755,7 @@ async function main() {
 
       // Multiple choice: instant right/wrong.
       await pq.getByRole("button", { name: "← All" }).click();
-      await pq.getByRole("button", { name: /2025\/26 test/ }).click();
+      await pq.locator("main").getByRole("button", { name: /^2025\/26 test/ }).click();
       await pq.locator("article button:has-text('A.')").first().click();
       await pq.getByText(/^(Correct\.|Not quite: the answer is [A-Da-d]\.)$/).waitFor({ timeout: 15000 });
       check(true, "a multiple-choice question is checked instantly");

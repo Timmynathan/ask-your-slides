@@ -4,8 +4,8 @@
 // the course session manifest; empty topics are hidden upstream). The selected scope folds open to show its
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
 // badges or counts. Navy panel with white text; the selected scope is a white pill.
-import type { ChatItem, TopicItem } from "@/lib/study/types";
-import { WebSearchBox } from "./web-search-box";
+import type { ChatItem, TopicItem, WorkspaceData } from "@/lib/study/types";
+import { PastBox } from "./past-box";
 
 interface Props {
   topics: TopicItem[]; // this course's topics
@@ -14,22 +14,26 @@ interface Props {
   chatId: string | null;
   onOpenScope(topicId: string | null): void; // opens a new chat in that scope
   onOpenChat(chat: ChatItem): void;
-  courseLabel: string; // "CSC 420 Data Management II", for the web search box
-  /** The Past questions view is open (reached from a topic chat's chip once launched, PRD F10). */
+  /** The Past questions view is open (PRD F10). */
   pastActive: boolean;
+  /** This course's past questions, or null before launch (lib/past/feature.ts). */
+  past: WorkspaceData["past"] | null;
+  onOpenPast(paperId: string | null): void; // null = the Exam map / all questions
 }
 
-export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat, courseLabel, pastActive }: Props) {
+export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat, pastActive, past, onOpenPast }: Props) {
   const scopes: { id: string | null; label: string }[] = [
     { id: null, label: "Whole course" },
     ...topics.map((t) => ({ id: t.id, label: t.title })),
   ];
   return (
     <nav className="flex h-full flex-col" aria-label="Topics and chats">
-      {/* Kept apart from the slide chat: anything beyond the course goes to the student's own chatbot. */}
-      <div className="shrink-0 px-3 pt-3">
-        <WebSearchBox courseLabel={courseLabel} topicTitle={topics.find((t) => t.id === topicId)?.title ?? null} />
-      </div>
+      {/* Past questions first: real PAU papers by year (replaced "Search the web", owner 14 Nov 2026). */}
+      {past && (
+        <div className="shrink-0 px-3 pt-3">
+          <PastBox papers={past.papers} total={past.total} active={pastActive} onOpenPaper={onOpenPast} onOpenMap={() => onOpenPast(null)} />
+        </div>
+      )}
 
       <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-5">
         <h2 className="text-[13px] text-white/60">Topics</h2>
