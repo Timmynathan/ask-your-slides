@@ -34,7 +34,15 @@ export function PromoCodeForm({ onRedeemed }: { onRedeemed(): void }) {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-sm text-brand underline-offset-4 hover:underline">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-full bg-pau-50 px-4 py-2 text-[15px] font-medium text-brand ring-1 ring-pau-200 transition hover:bg-pau-100 active:scale-[0.98]"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M3.5 8.5V6a1.5 1.5 0 0 1 1.5-1.5h14A1.5 1.5 0 0 1 20.5 6v2.5a2.5 2.5 0 0 0 0 5V16a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 16v-2.5a2.5 2.5 0 0 0 0-5Z" />
+          <path d="M14 7v1.5M14 11.25v1.5M14 15.5V17" />
+        </svg>
         Have a promo code?
       </button>
     );
