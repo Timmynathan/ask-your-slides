@@ -448,7 +448,7 @@ function Practice(props: {
               <LockIcon /> Practise this with Finals
             </p>
             <p className="mx-auto mt-1 max-w-sm text-[13.5px] text-muted">
-              Finals unlocks every past question, with model answers and marking.
+              Finals unlocks every past question, with answers and marking.
             </p>
             <button type="button" onClick={() => props.onLimit("past", null)} className="cta-shine mt-4 rounded-full bg-brand px-6 py-2.5 text-sm font-medium text-brand-ink transition hover:opacity-95">
               Lock in Finals
