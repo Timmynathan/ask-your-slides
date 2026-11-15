@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
+import { pastPlan } from "@/lib/past/access";
 import { planState } from "@/lib/plans/entitlement";
 import { adminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 // GET /api/past/paper/<paper id> → the original paper's cleaned pages (PRD F10): signed image URLs,
-// in order. Finals only, like every past question. The paper row is read as the student, so RLS
+// in order. Finals only, like every past question (or a programme in FREE_PAST_PROGRAMMES). The paper row is read as the student, so RLS
 // decides whether they may see this course at all. Images: ingestion/past_pages.py.
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     planState(db, auth.user.id, new Date()),
   ]);
   if (!paper) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  if (state.plan !== "finals") return NextResponse.json({ locked: true, code: "past", pages: [] });
+  if ((await pastPlan(db, paper.course_id, state.plan)) !== "finals") return NextResponse.json({ locked: true, code: "past", pages: [] });
 
   const storage = db.storage.from("slides");
   const base = `${paper.course_id}/past/${paper.id}`;

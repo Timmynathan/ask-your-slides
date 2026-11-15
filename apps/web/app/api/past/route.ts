@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { createClient } from "@/lib/supabase/server";
-import { pastAccess } from "@/lib/past/access";
+import { pastAccess, pastPlan } from "@/lib/past/access";
 import { FREE_PRACTICE_PER_COURSE } from "@/lib/plans/config";
 import { logLimitEvent, planState } from "@/lib/plans/entitlement";
 import { adminClient } from "@/lib/supabase/admin";
@@ -22,9 +22,10 @@ export async function GET(request: Request) {
   const course = parsed.data.course;
 
   // Finals only (PRD F12, owner 14 Nov 2026): a Free student gets nothing from this route, so the
-  // questions never reach their browser. The UI shows the "Lock in Finals" card instead.
+  // questions never reach their browser. The UI shows the "Lock in Finals" card instead. Programmes
+  // with very few papers are open to everyone (FREE_PAST_PROGRAMMES).
   const db = adminClient();
-  const plan = (await planState(db, auth.user.id, new Date())).plan;
+  const plan = await pastPlan(db, course, (await planState(db, auth.user.id, new Date())).plan);
   if (plan !== "finals" && FREE_PRACTICE_PER_COURSE === 0) {
     await logLimitEvent(db, { userId: auth.user.id, feature: "past", plan, courseId: course });
     // 200, not 403: being on Free is a normal state (no console error), and no question is sent.

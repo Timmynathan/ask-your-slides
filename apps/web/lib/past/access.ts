@@ -4,7 +4,7 @@
 import "server-only";
 import type { adminClient } from "@/lib/supabase/admin";
 import { must } from "@/lib/supabase/admin";
-import { FREE_PRACTICE_PER_COURSE, type PlanId } from "@/lib/plans/config";
+import { FREE_PAST_PROGRAMMES, FREE_PRACTICE_PER_COURSE, type PlanId } from "@/lib/plans/config";
 
 type Db = ReturnType<typeof adminClient>;
 
@@ -39,4 +39,12 @@ export async function pastAccess(db: Db, userId: string, courseId: string, plan:
  *  one while the course's free allowance isn't used up. */
 export function canPractise(access: PastAccess, questionId: string): boolean {
   return access.plan === "finals" || access.freeQuestions.includes(questionId) || access.freeQuestions.length < access.freeLimit;
+}
+
+/** The plan that decides past-question access in this course: Finals for everyone in a programme
+ *  listed in FREE_PAST_PROGRAMMES (few papers, open to all), otherwise the student's own plan. */
+export async function pastPlan(db: Db, courseId: string, plan: PlanId): Promise<PlanId> {
+  if (plan === "finals" || FREE_PAST_PROGRAMMES.length === 0) return plan;
+  const { data } = await db.from("courses").select("programme").eq("id", courseId).maybeSingle();
+  return data && FREE_PAST_PROGRAMMES.includes(data.programme) ? "finals" : plan;
 }

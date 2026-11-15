@@ -19,6 +19,10 @@ export const FREE_SUMMARIES = 1;
 /** Past questions are Finals only (owner, 14 Nov 2026): Free gets none, not even the exam map or the
  *  original papers. Kept as a number so a free allowance can come back by changing it here. */
 export const FREE_PRACTICE_PER_COURSE = 0;
+/** Programmes whose past questions are open to everyone, Free included (owner, 15 Nov 2026): so few
+ *  papers that they aren't worth selling. Questions, model answers, marking and the original papers.
+ *  Remove a programme here once it has enough papers. */
+export const FREE_PAST_PROGRAMMES: readonly string[] = ["mass-communication", "mechanical-engineering"];
 
 // ── Finals (one-time payment) ───────────────────────────────────
 /** Messages a day. No premium-course limit, unlimited summaries, quiz mode. */

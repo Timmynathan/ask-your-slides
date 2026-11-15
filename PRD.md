@@ -343,6 +343,10 @@ searches `other` materials (student work is then labelled).
 **Zero past papers** (all ISMS courses for now): no Past questions entry, no Exam map, no chips;
 nothing is shown rather than an error.
 
+**Very few papers (owner, 15 Nov 2026):** programmes listed in `FREE_PAST_PROGRAMMES`
+(`lib/plans/config.ts`; Mass Communication, Mechanical Engineering) have past questions open to
+everyone, Free included: questions, answers, marking and the original papers. Elsewhere Finals only.
+
 **Ten programmes (Nov 2026).** Eight more final-year programmes were added as data, same layout:
 Software Engineering, Mechanical Engineering (SST); Mass Communication, Film and Multimedia Studies
 (SMC); Business Administration, Economics, Finance, Accounting (SMSS).
