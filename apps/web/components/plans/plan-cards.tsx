@@ -27,7 +27,7 @@ export function PlanCards({
   const finalsList = [
     `${offer.finals.daily} messages a day`,
     "All your courses, no limits",
-    ...(PAST_QUESTIONS_LIVE ? ["Real PAU past questions, with model answers and marking"] : []),
+    ...(PAST_QUESTIONS_LIVE ? ["Real PAU past questions, with answers and marking"] : []),
     "Unlimited summaries and quiz mode",
     "Valid until your last paper",
   ];
