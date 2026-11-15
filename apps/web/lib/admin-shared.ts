@@ -42,3 +42,12 @@ export interface Overview {
     questions: number; questions_all_time: number; cost_usd: number; last_active: string | null; thumbs_up: number; thumbs_down: number; helping: number | null;
   }[];
 }
+
+/** The /admin tabs (?tab=); Overview is the default. */
+export const TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "answers", label: "Answers" },
+  { id: "courses", label: "Courses" },
+  { id: "health", label: "Health" },
+] as const;
+export type Tab = (typeof TABS)[number]["id"];

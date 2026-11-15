@@ -1,16 +1,18 @@
 "use client";
 
-// /admin: the pilot at a glance, then the detail behind it. Sections: Overview (headline numbers +
-// daily charts), Feedback (every thumbs down with the question and answer), Answers (latest
-// answers with cost, speed, tools, citations, errors), Courses, Students, Health (slowest,
-// costliest, error codes). Read-only. Data: public.admin_overview() via the server.
+// /admin: the pilot at a glance, then the detail behind it, in tabs (owner, 15 Nov 2026):
+//   Overview: headline numbers, daily charts, plans, feedback (every thumbs down), students, resets.
+//   Answers: the latest answers with cost, speed, tools, citations, errors.
+//   Courses: every course with its students and questions, grouped by department.
+//   Health: error codes, slowest and most expensive answers.
+// Read-only. Data: public.admin_overview() via the server. The tab is kept in the URL (?tab=).
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { RANGES, type Overview, type Range } from "@/lib/admin-shared";
+import { RANGES, TABS, type Overview, type Range, type Tab } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
 import { ResetPassword } from "./reset-password";
 
@@ -54,21 +56,20 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
   URL.revokeObjectURL(url);
 }
 
-const SECTIONS = [
-  ["overview", "Overview"],
-  ["plans", "Plans"],
-  ["feedback", "Feedback"],
-  ["answers", "Answers"],
-  ["courses", "Courses"],
-  ["students", "Students"],
-  ["health", "Health"],
-] as const;
+export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, plans, range, email }: { data: Overview; plans: PlanStats; range: Range; email: string }) {
+export function AdminDashboard({ data, courses, plans, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
+  const [tab, setTab] = useState<Tab>(initialTab);
   const t = data.totals;
   const rated = t.thumbs_up + t.thumbs_down;
+  const href = (r: Range, x: Tab) => `/admin?range=${r}${x === "overview" ? "" : `&tab=${x}`}`;
+  function open(x: Tab) {
+    setTab(x);
+    window.history.replaceState(null, "", href(range, x));
+    window.scrollTo({ top: 0 });
+  }
 
   return (
     <div className="min-h-dvh bg-page text-ink">
@@ -78,19 +79,12 @@ export function AdminDashboard({ data, plans, range, email }: { data: Overview; 
             <Logo size={24} />
           </Link>
           <span className="rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-ink">Admin</span>
-          <nav className="ml-4 hidden items-center gap-1 lg:flex" aria-label="Sections">
-            {SECTIONS.map(([id, label]) => (
-              <a key={id} href={`#${id}`} className="rounded-full px-3 py-1.5 text-sm text-ink/80 hover:bg-sunken hover:text-ink">
-                {label}
-              </a>
-            ))}
-          </nav>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="Period">
               {RANGES.map((r) => (
                 <Link
                   key={r.id}
-                  href={`/admin?range=${r.id}`}
+                  href={href(r.id, tab)}
                   aria-current={range === r.id ? "page" : undefined}
                   className={`rounded-full px-3 py-1 text-[13px] transition ${range === r.id ? "bg-page font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
                 >
@@ -124,6 +118,30 @@ export function AdminDashboard({ data, plans, range, email }: { data: Overview; 
             {RANGES.find((r) => r.id === range)?.label} · from {when(data.from)} · updated {when(data.generated_at)} (WAT)
           </p>
         </div>
+
+        <div className="-mt-8 overflow-x-auto border-b border-line" role="tablist" aria-label="Dashboard sections">
+          <div className="flex min-w-max gap-1">
+            {TABS.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                role="tab"
+                id={`tab-${x.id}`}
+                aria-selected={tab === x.id}
+                aria-controls={`panel-${x.id}`}
+                onClick={() => open(x.id)}
+                className={`-mb-px border-b-2 px-4 py-2.5 text-[15px] transition ${tab === x.id ? "border-brand font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
+              >
+                {x.label}
+                {x.id === "answers" && <span className="ml-1.5 text-xs text-muted">{data.recent.length}</span>}
+                {x.id === "health" && t.answers_with_errors > 0 && <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 text-xs text-amber-900">{t.answers_with_errors}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tab === "overview" && (
+          <div role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" className="space-y-14">
 
         {/* Overview */}
         <section id="overview" className="scroll-mt-24 space-y-6">
@@ -169,29 +187,31 @@ export function AdminDashboard({ data, plans, range, email }: { data: Overview; 
 
         <Plans plans={plans} />
         <Feedback data={data} />
-        <Answers data={data} />
-
-        {/* Courses */}
-        <section id="courses" className="scroll-mt-24">
-          <SectionTitle title="Courses" />
-          <Table
-            head={["Course", "Students", "Questions", "Cost", "👍", "👎", "Thumbs up"]}
-            rows={data.courses.map((c) => [
-              <span key="c">
-                <span className="font-medium">{c.code.replace(/^([A-Z]+)/, "$1 ")}</span> <span className="text-muted">{c.title}</span>
-              </span>,
-              n(c.students),
-              n(c.questions),
-              usd(c.cost_usd),
-              n(c.thumbs_up),
-              n(c.thumbs_down),
-              pct(c.thumbs_up, c.thumbs_up + c.thumbs_down),
-            ])}
-          />
-        </section>
-
         <Students data={data} />
 
+        <section id="support" className="scroll-mt-24 space-y-4">
+          <SectionTitle title="Password resets" note="When a student presses “Escalate to admin”, you get an email at hello@. Set a temporary password here and reply with it." />
+          <Card title="Reset a student's password">
+            <ResetPassword />
+          </Card>
+        </section>
+          </div>
+        )}
+
+        {tab === "answers" && (
+          <div role="tabpanel" id="panel-answers" aria-labelledby="tab-answers">
+            <Answers data={data} />
+          </div>
+        )}
+
+        {tab === "courses" && (
+          <div role="tabpanel" id="panel-courses" aria-labelledby="tab-courses">
+            <Courses courses={courses} />
+          </div>
+        )}
+
+        {tab === "health" && (
+          <div role="tabpanel" id="panel-health" aria-labelledby="tab-health">
         {/* Health */}
         <section id="health" className="scroll-mt-24 space-y-4">
           <SectionTitle title="Health" note="Slow or expensive answers, and what went wrong." />
@@ -216,14 +236,72 @@ export function AdminDashboard({ data, plans, range, email }: { data: Overview; 
           </Card>
         </section>
 
-        <section id="support" className="scroll-mt-24 space-y-4">
-          <SectionTitle title="Password resets" note="When a student presses “Escalate to admin”, you get an email at hello@. Set a temporary password here and reply with it." />
-          <Card title="Reset a student's password">
-            <ResetPassword />
-          </Card>
-        </section>
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+/** Every course, grouped by department (busiest first), with who's asking and what it costs. */
+function Courses({ courses }: { courses: CourseRow[] }) {
+  const [active, setActive] = useState(false);
+  const groups = useMemo(() => {
+    const by = new Map<string, CourseRow[]>();
+    for (const c of courses) if (!active || c.questions > 0) by.set(c.department, [...(by.get(c.department) ?? []), c]);
+    return [...by.entries()]
+      .map(([department, rows]) => ({
+        department,
+        rows: [...rows].sort((a, b) => b.questions - a.questions),
+        questions: rows.reduce((s, c) => s + c.questions, 0),
+        cost: rows.reduce((s, c) => s + Number(c.cost_usd), 0),
+      }))
+      .sort((a, b) => b.questions - a.questions || a.department.localeCompare(b.department));
+  }, [courses, active]);
+  const asked = courses.filter((c) => c.questions > 0).length;
+  return (
+    <section className="space-y-6">
+      <SectionTitle
+        title="Courses"
+        note={`${asked} of ${courses.length} courses had questions in this period. Students are counted per course, so one student can appear in several.`}
+        action={
+          <div className="flex gap-1.5">
+            <Chip on={!active} onClick={() => setActive(false)}>
+              All courses
+            </Chip>
+            <Chip on={active} onClick={() => setActive(true)}>
+              With questions
+            </Chip>
+          </div>
+        }
+      />
+      {groups.length === 0 && <Empty>No questions in this period.</Empty>}
+      {groups.map((g) => (
+        <div key={g.department} className="rounded-[22px] bg-sunken/60 pt-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pb-1">
+            <h3 className="text-[17px] font-medium">{g.department}</h3>
+            <p className="text-xs tabular-nums text-muted">
+              {n(g.questions)} questions · {usd(g.cost)}
+            </p>
+          </div>
+          <Table
+            compact
+            head={["Course", "Students", "Questions", "Cost", "Up", "Down", "Thumbs up"]}
+            rows={g.rows.map((c) => [
+              <span key="c" className={c.questions ? "" : "text-muted"}>
+                <span className="font-medium">{c.code.replace(/^([A-Z]+)/, "$1 ")}</span> <span className="text-muted">{c.title}</span>
+              </span>,
+              n(c.students),
+              n(c.questions),
+              usd(c.cost_usd),
+              n(c.thumbs_up),
+              n(c.thumbs_down),
+              pct(c.thumbs_up, c.thumbs_up + c.thumbs_down),
+            ])}
+          />
+        </div>
+      ))}
+    </section>
   );
 }
 
