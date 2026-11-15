@@ -1,6 +1,7 @@
 // What the pricing page, the landing page and the pricing sheet show (PRD F12). Built only from
 // lib/plans/config.ts, the file the server enforces, so the screens can't drift from the rules.
 // Plain data: safe to pass from a server component to a client one.
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import {
   FINALS_DAILY,
   FINALS_PRICE,
@@ -74,13 +75,17 @@ export function timeLeft(until: string, now: number): string | null {
 
 /** One row per feature, Free vs Finals (landing comparison, pricing page). Only features that exist. */
 export function comparisonRows(o: PlanOffer): { label: string; free: string | boolean; finals: string | boolean }[] {
-  return [
+  const rows = [
     { label: "Daily messages", free: `${o.free.firstDay} on day one, then ${o.free.daily} a day`, finals: `${o.finals.daily} a day` },
     { label: "All your courses", free: true, finals: true },
     { label: "Premium courses", free: `${o.free.premiumDaily} questions a day`, finals: "Unlimited" },
     { label: "Answers cite your actual slides", free: true, finals: true },
     { label: "Summaries", free: String(o.free.summaries), finals: "Unlimited" },
     { label: "Quiz mode", free: false, finals: true },
+  ];
+  if (!PAST_QUESTIONS_LIVE) return rows;
+  return [
+    ...rows,
     {
       label: "Past questions",
       free: o.free.practicePerCourse > 0 ? `${o.free.practicePerCourse} practice question${o.free.practicePerCourse === 1 ? "" : "s"} per course` : false,

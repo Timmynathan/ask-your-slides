@@ -2,6 +2,7 @@
 // section and the in-app pricing page; the buttons are passed in because they differ (sign up
 // vs. pay). Every figure comes from the plan offer (lib/plans/offer.ts).
 import type { ReactNode } from "react";
+import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
 import { FinalsPrice } from "./finals-price";
 
@@ -26,6 +27,7 @@ export function PlanCards({
   const finalsList = [
     `${offer.finals.daily} messages a day`,
     "All your courses, no limits",
+    ...(PAST_QUESTIONS_LIVE ? ["Real PAU past questions, with model answers and marking"] : []),
     "Unlimited summaries and quiz mode",
     "Valid until your last paper",
   ];
