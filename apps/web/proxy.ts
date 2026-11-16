@@ -3,7 +3,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
-const PUBLIC_PATHS = ["/manifest.webmanifest", "/sign-in", "/sign-up", "/auth/microsoft", "/auth/callback", "/api/auth/otp", "/api/auth/verify", "/api/auth/password", "/api/auth/signup"];
+const PUBLIC_PATHS = ["/live", "/manifest.webmanifest", "/sign-in", "/sign-up", "/auth/microsoft", "/auth/callback", "/api/auth/otp", "/api/auth/verify", "/api/auth/password", "/api/auth/signup"];
 
 export async function proxy(request: NextRequest) {
   const { response, userId, email } = await updateSession(request);
@@ -12,6 +12,13 @@ export async function proxy(request: NextRequest) {
   // not). The page checks again on the server.
   if ((pathname === "/admin" || pathname.startsWith("/admin/")) && !isAdminEmail(email)) {
     return new NextResponse("Not found", { status: 404, headers: { "Content-Type": "text/plain" } });
+  }
+  // /live/<token> (ambassadors' count): a wrong or missing token is a plain 404 too. The page checks again.
+  if (pathname === "/live" || pathname.startsWith("/live/")) {
+    const want = process.env.LIVE_COUNT_TOKEN ?? "";
+    if (want.length < 16 || pathname !== `/live/${want}`) {
+      return new NextResponse("Not found", { status: 404, headers: { "Content-Type": "text/plain" } });
+    }
   }
   // "/" is the landing page for visitors; signed-in students go straight to their courses.
   const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
