@@ -113,10 +113,9 @@ async function main() {
     check((await sp.getByRole("tab", { name: "Create account" }).isVisible()) && (await sp.getByRole("tab", { name: "Log in" }).getAttribute("aria-selected")) === "true",
       "sign-in shows Create account / Log in tabs");
     await sp.getByRole("button", { name: "Create a free account" }).click();
-    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("link", { name: "Continue with Microsoft" }).isVisible() && !(await sp.locator("#new-password").count()),
-      "'Create a free account' switches to sign-up: Continue with Microsoft, no unverified password sign-up");
-    await sp.getByRole("button", { name: /Use an emailed code instead/ }).click();
-    check(await sp.getByRole("button", { name: "Get my code", exact: true }).isVisible(), "'Use an emailed code instead' shows the verified code sign-up");
+    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("link", { name: "Continue with Microsoft" }).isVisible()
+      && await sp.getByRole("button", { name: "Get my code", exact: true }).isVisible() && !(await sp.locator("#new-password").count()),
+      "'Create a free account' switches to sign-up: Continue with Microsoft or email + code, no unverified password sign-up");
     await anon.close();
 
     console.log("\nLanding page (signed out)");
@@ -465,7 +464,7 @@ async function main() {
     {
       const ectx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
       const ep = await ectx.newPage();
-      await ep.goto(`${BASE}/sign-up?code=1`);
+      await ep.goto(`${BASE}/sign-up`);
       await ep.locator("#email").fill(email);
       if (DIRECT) await ep.locator("#new-password").fill("another-password");
       const otp = ep.waitForResponse((r) => /\/api\/auth\/(otp|signup)$/.test(r.url()));
