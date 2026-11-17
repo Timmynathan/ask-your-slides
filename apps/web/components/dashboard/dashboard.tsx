@@ -97,7 +97,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
     <div className="min-h-dvh bg-page">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
-        <Link href="/dashboard" className="mr-1 shrink-0 rounded-full sm:mr-4" aria-label="Ask Your Slides, my courses">
+        <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4" aria-label="Ask Your Slides home">
           <Logo size={26} />
         </Link>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Filter courses">

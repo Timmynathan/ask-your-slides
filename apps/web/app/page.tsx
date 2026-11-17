@@ -6,6 +6,7 @@ import { ChatDemo } from "@/components/landing/chat-demo";
 import { FeatureDeck } from "@/components/landing/feature-deck";
 import { CoursePills } from "@/components/landing/course-pills";
 import { StretchNav } from "@/components/landing/stretch-nav";
+import { HeroActions, NavActions } from "@/components/landing/auth-actions";
 import { PlansSection } from "@/components/landing/plans-section";
 import { landingOffer } from "@/lib/plans/landing-offer";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
@@ -19,7 +20,8 @@ export const metadata: Metadata = {
   title: "Ask Your Slides: stop uploading slides to ChatGPT",
 };
 
-// Landing page for signed-out visitors (signed-in students are sent to their courses by proxy.ts).
+// Landing page, for visitors and signed-in students alike (owner, 17 Nov 2026: signed in, the
+// buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
 // Structure follows studyfetch.com: banner, nav, hero, PAU courses, why us, how it works (demo), steps, partners,
 // closing call to action, footer. Sections with no honest content for us (user counts, research
 // claims, testimonials, pricing) are left out.
@@ -43,14 +45,7 @@ export default async function Landing() {
           <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
           <a href="#plans" className="type-menu hover:opacity-70">Pricing</a>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/sign-in" className="type-menu hidden rounded-full border border-line-strong px-5 py-2.5 hover:bg-sunken sm:inline-flex">
-            Log in
-          </Link>
-          <Link href="/sign-up" className="type-menu rounded-full bg-brand px-5 py-2.5 !text-brand-ink hover:opacity-90">
-            Try for free
-          </Link>
-        </div>
+        <NavActions />
       </StretchNav>
 
       <main className="flex-1">
@@ -63,19 +58,7 @@ export default async function Landing() {
             All your course slides are already here, so there&apos;s nothing to upload. Ask a question and get the answer straight
             from your slides, with the exact slide shown.
           </p>
-          <Link
-            href="/sign-up"
-            className="mt-10 inline-flex items-center justify-center rounded-full bg-brand px-12 py-5 text-lg font-medium text-brand-ink hover:opacity-90"
-          >
-            Try for free
-          </Link>
-          <SeeHowItWorks />
-          <p className="mt-2 text-sm text-muted">
-            Already have an account?{" "}
-            <Link href="/sign-in" className="text-ink underline underline-offset-4">
-              Log in
-            </Link>
-          </p>
+          <HeroActions seeHow={<SeeHowItWorks />} />
           <ScrollCue />
           <BooksDoodle className="pointer-events-none absolute bottom-6 left-[4%] w-40 text-black sm:w-56 lg:left-[12%] lg:w-64 dark:text-[#faf9f5]" />
           <StudyDeskDoodle className="pointer-events-none absolute -right-6 bottom-4 w-56 text-black sm:right-0 sm:w-80 lg:right-[8%] lg:w-[400px] dark:text-[#faf9f5]" />

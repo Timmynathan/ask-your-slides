@@ -20,7 +20,8 @@ export async function proxy(request: NextRequest) {
       return new NextResponse("Not found", { status: 404, headers: { "Content-Type": "text/plain" } });
     }
   }
-  // "/" is the landing page for visitors; signed-in students go straight to their courses.
+  // "/" is the landing page, open to everyone (owner, 17 Nov 2026: signed-in students can go back to
+  // it from the dashboard logo; its buttons then lead to the dashboard).
   const isPublic = pathname === "/" || PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!userId && !isPublic) {
@@ -32,7 +33,7 @@ export async function proxy(request: NextRequest) {
     if (pathname !== "/dashboard") target.searchParams.set("next", pathname + request.nextUrl.search);
     return redirectKeepingCookies(target, response);
   }
-  if (userId && (pathname === "/sign-in" || pathname === "/sign-up" || pathname === "/")) {
+  if (userId && (pathname === "/sign-in" || pathname === "/sign-up")) {
     return redirectKeepingCookies(new URL("/dashboard", request.url), response);
   }
   return response;
