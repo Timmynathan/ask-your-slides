@@ -7,7 +7,8 @@ import { safeNext } from "@/lib/auth/next";
 import { passwordHelpMailto, SUPPORT_EMAIL } from "@/lib/auth/support";
 
 // Accounts (PRD F1). Two clear doors, as tabs at the top:
-//   Create account:  PAU email → emailed code (proves the address) → create a password   (steps 1–3)
+//   Create account:  Continue with Microsoft (proves the PAU address; owner, 17 Nov 2026), or as a
+//                    fallback: PAU email → emailed code (proves it too) → create a password (steps 1–3)
 //   Log in:          email + password; "Forgot password?" runs the same code flow to set a new one
 // "Try for free" opens Create account (/sign-up), so a new student never has to find a small link.
 type Mode = "signup" | "login" | "reset";
@@ -18,7 +19,8 @@ type Step =
   | { kind: "new-password"; email: string };
 
 const MIN_PASSWORD = 8;
-const MICROSOFT = process.env.NEXT_PUBLIC_MICROSOFT_LOGIN === "1";
+// On for everyone since PAU IT approved the app (owner, 17 Nov 2026). Kill switch: NEXT_PUBLIC_MICROSOFT_LOGIN=0.
+const MICROSOFT = process.env.NEXT_PUBLIC_MICROSOFT_LOGIN !== "0";
 
 /** One click with the PAU Microsoft 365 account (Outlook/Teams): no emailed code needed. */
 function MicrosoftButton({ next }: { next: string | null }) {
@@ -61,6 +63,9 @@ export function SignInForm({
   // ?code=1: the emailed-code sign-up even while direct sign-up is on (owner testing email delivery).
   const [forceCode, setForceCode] = useState(false);
   const directSignup = directSignupSetting && !forceCode;
+  // Create account offers Microsoft first: it proves the PAU email is theirs in one click. The
+  // emailed code stays as a small fallback ("Use an emailed code instead").
+  const [emailCode, setEmailCode] = useState(false);
   const [banner, setBanner] = useState<{ kind: "deleted" | "error"; text: string } | null>(null);
   // On for everyone with NEXT_PUBLIC_MICROSOFT_LOGIN=1; before that, ?ms=1 shows it for testing.
   const showMicrosoft = MICROSOFT || microsoft;
@@ -251,13 +256,16 @@ export function SignInForm({
   );
 
   const signupStep = step.kind === "code-email" ? 1 : step.kind === "code" ? 2 : 3;
+  const microsoftSignup = mode === "signup" && step.kind === "code-email" && showMicrosoft && !emailCode && !directSignup && !forceCode;
   const head =
     step.kind === "password"
       ? { title: "Welcome back", sub: "Log in with your PAU email and password." }
       : step.kind === "code-email"
         ? mode === "reset"
           ? { title: "Reset your password", sub: "We'll email a code to your PAU address, then you choose a new password." }
-          : directSignup
+          : microsoftSignup
+            ? { title: "Create your free account", sub: "Use your PAU Microsoft account, the one for Outlook and Teams. It confirms the email is yours, so there's no code to wait for." }
+            : directSignup
             ? { title: "Create your free account", sub: "Your PAU email and a password. That's it." }
             : { title: "Create your free account", sub: "Just your PAU email. We'll send you a code to confirm it's you." }
         : step.kind === "code"
@@ -306,7 +314,7 @@ export function SignInForm({
 
       <h1 className="mt-8 font-heading text-3xl font-semibold tracking-tight text-ink">{head.title}</h1>
       {head.sub && <p className="mt-2 text-[15px] text-muted">{head.sub}</p>}
-      {mode === "signup" && !directSignup && (
+      {mode === "signup" && !directSignup && !microsoftSignup && (
         <ol className="mt-4 flex items-center gap-2 text-xs text-muted" aria-label={`Step ${signupStep} of 3`}>
           {["Email", "Code", "Password"].map((l, i) => (
             <li key={l} className="flex items-center gap-2">
@@ -321,7 +329,21 @@ export function SignInForm({
       )}
 
       <div className="mt-6">
-      {showMicrosoft && (step.kind === "password" || (step.kind === "code-email" && mode !== "reset")) && (
+      {microsoftSignup && (
+        <div>
+          <MicrosoftButton next={next} />
+          <p className="mt-5 text-center text-sm text-muted">
+            Already have an account?{" "}
+            <button type="button" onClick={() => switchMode("login")} disabled={busy} className={link}>
+              Log in
+            </button>
+          </p>
+          <button type="button" onClick={() => setEmailCode(true)} disabled={busy} className={`${link} mt-6 block w-full text-center text-xs`}>
+            Can&apos;t use Microsoft? Use an emailed code instead
+          </button>
+        </div>
+      )}
+      {!microsoftSignup && showMicrosoft && (step.kind === "password" || (step.kind === "code-email" && mode !== "reset")) && (
         <div className="mb-6">
           <MicrosoftButton next={next} />
           <p className="mt-2 text-center text-xs text-muted">Your PAU Outlook / Teams account. No code needed.</p>
@@ -401,7 +423,7 @@ export function SignInForm({
         </form>
       )}
 
-      {step.kind === "code-email" && !(mode === "signup" && directSignup) && (
+      {step.kind === "code-email" && !microsoftSignup && !(mode === "signup" && directSignup) && (
         <form onSubmit={(e) => run(e, sendCode)} noValidate>
           {emailField}
           <button type="submit" disabled={busy} className={button}>

@@ -19,8 +19,8 @@ const ROOT_ENV = path.resolve(import.meta.dirname, "../../../.env");
 if (existsSync(ROOT_ENV)) process.loadEnvFile(ROOT_ENV);
 const PORT = 3900 + Math.floor(Math.random() * 90);
 const BASE = process.env.E2E_BASE_URL ?? `http://localhost:${PORT}`;
-// Temporary pilot mode: Create account is email + password (no code) when AUTH_DIRECT_SIGNUP=1.
-const DIRECT = process.env.AUTH_DIRECT_SIGNUP === "1";
+// The pilot's unverified email + password sign-up is off in code since 17 Nov 2026 (lib/auth/signup-mode.ts).
+const DIRECT = false;
 const SHOTS = process.env.UI_SMOKE_SHOTS ?? path.join(tmpdir(), "pau-ui-smoke");
 mkdirSync(SHOTS, { recursive: true });
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {
@@ -113,9 +113,10 @@ async function main() {
     check((await sp.getByRole("tab", { name: "Create account" }).isVisible()) && (await sp.getByRole("tab", { name: "Log in" }).getAttribute("aria-selected")) === "true",
       "sign-in shows Create account / Log in tabs");
     await sp.getByRole("button", { name: "Create a free account" }).click();
-    const signupButton = DIRECT ? "Create account" : "Get my code";
-    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("button", { name: signupButton, exact: true }).isVisible(),
-      `'Create a free account' switches to sign-up ('${signupButton}')`);
+    check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("link", { name: "Continue with Microsoft" }).isVisible() && !(await sp.locator("#new-password").count()),
+      "'Create a free account' switches to sign-up: Continue with Microsoft, no unverified password sign-up");
+    await sp.getByRole("button", { name: /Use an emailed code instead/ }).click();
+    check(await sp.getByRole("button", { name: "Get my code", exact: true }).isVisible(), "'Use an emailed code instead' shows the verified code sign-up");
     await anon.close();
 
     console.log("\nLanding page (signed out)");
@@ -258,8 +259,8 @@ async function main() {
         await cleanup(direct);
       }
     } else {
-      check(signUp && (await lp.getByRole("button", { name: "Get my code" }).isVisible()) && (await lp.locator("#password").count()) === 0,
-        "'Try for free' opens a clear sign-up page: email and 'Get my code', no password box");
+      check(signUp && (await lp.getByRole("link", { name: "Continue with Microsoft" }).isVisible()) && (await lp.locator("#password").count()) === 0,
+        "'Try for free' opens a clear sign-up page: Continue with Microsoft, no password box");
     }
     await visitor.close();
 
@@ -464,7 +465,7 @@ async function main() {
     {
       const ectx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
       const ep = await ectx.newPage();
-      await ep.goto(`${BASE}/sign-up`);
+      await ep.goto(`${BASE}/sign-up?code=1`);
       await ep.locator("#email").fill(email);
       if (DIRECT) await ep.locator("#new-password").fill("another-password");
       const otp = ep.waitForResponse((r) => /\/api\/auth\/(otp|signup)$/.test(r.url()));
