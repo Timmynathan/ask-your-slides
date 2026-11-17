@@ -16,7 +16,7 @@ export const PREMIUM_FREE_FIRST_DAY = 8;
 export const PREMIUM_FREE_DAILY = 2;
 /** Summaries in total, ever, in any course. */
 export const FREE_SUMMARIES = 1;
-/** Past questions are Finals only (owner, 14 Nov 2026): Free gets none, not even the exam map or the
+/** Past questions are Finals only (owner, 14 Nov 2026): Free gets none, not even the questions or the
  *  original papers. Kept as a number so a free allowance can come back by changing it here. */
 export const FREE_PRACTICE_PER_COURSE = 0;
 /** Programmes whose past questions are open to everyone, Free included (owner, 15 Nov 2026): so few

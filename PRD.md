@@ -234,7 +234,10 @@ course, §9.1); 8 are scanned (no text layer), so every page goes through vision
 
 **Where it lives**
 - Study workspace → Topics panel: a **Past questions** entry under *Whole course*. It opens a view
-  with two tabs, **Exam map** and **Practice**.
+  with two tabs, **Exam map** and **Practice**. *Owner, 17 Nov 2026: the Exam map tab is removed
+  from the UI (students found it confusing). The view is practice only: pick a topic or a paper, answer
+  (typed or spoken with the mic, browser voice typing), get marked, or tap "Show answer".
+  `buildExamMap` stays in lib/past/map.ts, unused, so it can come back.*
 - In a topic chat, a chip **"N past questions"** in the chat header opens practice for that topic
   inside the chat (C). Hidden when the topic has none.
 

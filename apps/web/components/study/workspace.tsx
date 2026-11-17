@@ -193,7 +193,7 @@ export function Workspace(data: WorkspaceData) {
                 type="button"
                 onClick={() => openPast(null)}
                 className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 lg:hidden"
-                title={`Exam map and practice: ${data.past.total} past questions in ${courseName(course)}`}
+                title={`Practise ${data.past.total} past questions in ${courseName(course)}`}
               >
                 {topicPast > 0 ? "All past questions" : "Past questions"}
               </button>

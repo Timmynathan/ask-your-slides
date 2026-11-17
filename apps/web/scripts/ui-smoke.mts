@@ -699,7 +699,7 @@ async function main() {
     await page.locator("main li[data-message]:visible").first().waitFor({ timeout: 15000 });
     check(await page.locator("main li[data-message='user']:visible").last().innerText().then((t) => t.includes("What does the D in ACID mean?")), "the edit survives a reload");
 
-    // Past questions (PRD F10): Exam map, practice, marking, the topic chip.
+    // Past questions (PRD F10): practice, answers, marking, the topic chip (no Exam map since 17 Nov 2026).
     console.log("\nPast questions");
     if (process.env.NEXT_PUBLIC_PAST_QUESTIONS !== "0") {
       const { data: me } = await admin.from("profiles").select("id").eq("email", email).single();
@@ -719,15 +719,15 @@ async function main() {
       const welcome = pq.getByRole("dialog", { name: /You're on Finals/ });
       check(await welcome.waitFor({ timeout: 10000 }).then(() => true, () => false), "the 'You're on Finals' celebration shows once the plan is on");
       await welcome.getByRole("button", { name: /Start studying/ }).click();
-      await pq.getByRole("region", { name: "Past questions" }).getByRole("button", { name: /^Exam map/ }).click();
-      await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
-      check(true, "the Past questions card's 'Exam map' button opens the exam map");
+      await pq.getByRole("region", { name: "Past questions" }).getByRole("button", { name: /^See all past questions/ }).click();
+      await pq.getByRole("heading", { name: "Whole paper" }).waitFor({ timeout: 15000 });
+      check(!(await pq.getByRole("tab", { name: /Exam map/ }).count()) && !(await pq.getByText(/Asked in \d+ of/).count()), "'See all past questions' opens the question list, with no Exam map");
       // The original paper beside the questions: the latest paper, cleaned page images, tap for full screen.
       const paperView = pq.getByRole("region", { name: /^Original paper: 2025\/26 exam/ });
       const pageImg = paperView.locator("img").first();
       const loaded = await pageImg.waitFor({ timeout: 15000 }).then(() => pageImg.evaluate((img: HTMLImageElement) => img.decode().then(() => img.naturalWidth > 500, () => false)), () => false);
       check(loaded,
-        "the latest original paper shows beside the exam map (cleaned page image)");
+        "the latest original paper shows beside the question list (cleaned page image)");
       await shot(pq, "past-1b-paper");
       await paperView.getByRole("button", { name: /^Page 1/ }).click();
       const full = pq.getByRole("dialog", { name: /page 1 of/ });
@@ -735,13 +735,11 @@ async function main() {
       await pq.keyboard.press("Escape");
       await pq.getByRole("button", { name: "← Back to chat" }).click();
       await pq.goto(`${BASE}/study/INS401?past=1`);
-      await pq.getByText("Based on past papers, not a prediction.").waitFor({ timeout: 15000 });
+      await pq.getByRole("heading", { name: "Whole paper" }).waitFor({ timeout: 15000 });
       check(new URL(pq.url()).searchParams.get("past") === "1", "Past questions opens from the Topics panel (URL ?past=1)");
-      check(await pq.getByText(/Asked in \d+ of 2/).first().isVisible(), "the Exam map says 'Asked in N of 2 papers', no percentages", "");
-      check(!(await pq.locator("main").innerText()).includes("%"), "the Exam map shows no percentages");
-      await shot(pq, "past-1-map");
+      check(!(await pq.locator("main").innerText()).includes("%"), "the past questions list shows no percentages");
+      await shot(pq, "past-1-list");
 
-      await pq.getByRole("tab", { name: "Practice" }).click();
       await pq.locator("main").getByRole("button", { name: /^2025\/26 exam/ }).click();
       await pq.getByText("Describe the following forms of project development life cycle", { exact: false }).waitFor();
       check(!(await pq.getByText("Model answer").count()), "the model answer is not on the page before an attempt");
@@ -752,6 +750,9 @@ async function main() {
       await shot(pq, "past-2-revealed");
 
       await pq.getByRole("button", { name: "Next question →" }).click();
+      // The mic sits on the answer box wherever the browser supports voice typing (Chromium does).
+      const speechOk = await pq.evaluate(() => "SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+      check(!speechOk || (await pq.getByRole("button", { name: "Speak your answer" }).isVisible()), "the answer box has a 'Speak your answer' mic", speechOk ? "" : "no speech API in this browser");
       await pq.getByPlaceholder(/Write your answer/).fill("Conflict sources: scarce resources, schedules, priorities, personalities, and technical opinions.");
       await pq.getByRole("button", { name: "Mark my answer" }).click();
       await pq.getByText("estimated score").waitFor({ timeout: 45000 });
@@ -811,7 +812,7 @@ async function main() {
         check(!(await nav.getByRole("button", { name: /Past questions/ }).count()), `${code}: no Past questions entry in the sidebar (owner: it took too much room)`);
         await pq.goto(`${BASE}/study/${code}?past=1`);
         await pq.getByText("Coming soon", { exact: true }).waitFor({ timeout: 10000 });
-        check(!(await pq.getByText(/Exam map|Mark my answer|Asked in/).count()), `${code}: the Past questions page still only says 'Coming soon'`);
+        check(!(await pq.getByText(/Whole paper|Mark my answer|Asked in/).count()), `${code}: the Past questions page still only says 'Coming soon'`);
         await shot(pq, `past-soon-${code}`);
       }
       await asProgramme("computer-science");

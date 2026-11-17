@@ -7,7 +7,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
 - Students sign in with an @pau.edu.ng email, pick their programme once, then chat per course and per topic.
   Answers come from the course's own lecture materials and past questions, cited to the slide/page.
 - Positioning: a quick companion to ChatGPT, not a replacement. Edge: slides already loaded, structured by
-  topic, kept current; answers cite the exact slide; past-question practice and exam map.
+  topic, kept current; answers cite the exact slide; past-question practice with answers.
 - Also the source of real user traces for Proofline (the owner's agent eval harness).
 
 ## Status (Nov 2026)

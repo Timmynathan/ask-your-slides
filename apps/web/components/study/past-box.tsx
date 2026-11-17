@@ -3,7 +3,7 @@
 // Past questions at the top of the Topics panel (PRD F10), where "Search the web" used to be (owner,
 // 14 Nov 2026: the web box only linked to chatbots students already have). A bright white card on the
 // navy panel, one button per real paper ("Practise 2025/26 exam") so students see exact years, and
-// the Exam map when there are at least two papers.
+// a link to all past questions.
 import type { WorkspaceData } from "@/lib/study/types";
 
 const SHOWN = 3;
@@ -66,7 +66,7 @@ export function PastBox({ papers, total, active, onOpenPaper, onOpenMap }: Props
         onClick={onOpenMap}
         className="mt-2 w-full rounded-full px-3 py-1.5 text-[12.5px] font-medium text-[#2a3591] transition hover:bg-[#0e1664]/5"
       >
-        {papers.length >= 2 ? "Exam map: which topics come up" : "See all past questions"}
+        See all past questions
         {papers.length > SHOWN ? ` · ${papers.length} papers` : ""}
       </button>
     </section>

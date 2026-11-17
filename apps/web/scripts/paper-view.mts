@@ -60,7 +60,6 @@ try {
     check(natural > 500 && !!box && box.height > 200, "the latest paper's first page is shown, readable size", `${natural}px image, shown ${Math.round(box?.width ?? 0)}×${Math.round(box?.height ?? 0)}`);
     await page.screenshot({ path: path.join(SHOTS, `paper-${label}-map.png`) });
     // Practising a paper shows that paper.
-    await page.getByRole("tab", { name: "Practice" }).click();
     await page.locator("main").getByRole("button", { name: /^2025\/26 test/ }).click();
     check(await page.getByRole("region", { name: /^Original paper: 2025\/26 test/ }).waitFor({ timeout: 10000 }).then(() => true, () => false), "practising the 2025/26 test shows that paper");
     await page.waitForFunction(() => { const imgs = [...document.querySelectorAll("section[aria-label^='Original paper'] img")] as HTMLImageElement[]; return imgs.length > 0 && imgs.slice(0, 2).every((i) => i.complete && i.naturalWidth > 0); }, null, { timeout: 15000 });

@@ -47,7 +47,7 @@ export function PricingSheet({
     quiz: { title: "Quiz mode comes with Finals", body: "Get quizzed on any topic, one question at a time, marked against your slides." },
     past: {
       title: "Past questions come with Finals",
-      body: "Every real PAU past paper for your courses, the exam map, model answers and marked practice.",
+      body: "Every real PAU past paper for your courses, with answers and marked practice.",
     },
   };
   const c = copy[code];

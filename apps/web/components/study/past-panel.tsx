@@ -1,15 +1,16 @@
 "use client";
 
-// Past questions (PRD F10): Exam map | Practice, in the study workspace's main area. Opened from
+// Past questions (PRD F10): practice, in the study workspace's main area (the Exam map tab was
+// removed, owner 17 Nov 2026: students found it confusing; questions + answers are enough). Opened from
 // "Past questions" in the Topics panel, or from a topic chat's "N past questions" chip (practice for
 // that topic, with a way back to the chat). Answers are fetched only after an attempt.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDictation } from "@/lib/ui/use-dictation";
 import "katex/dist/katex.min.css";
 import ReactMarkdown from "react-markdown";
 import { MATH_REHYPE, MATH_REMARK } from "@/lib/study/math";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  buildExamMap,
   effectiveMarks,
   GENERAL_NOTICE,
   GROUNDING_LABEL,
@@ -20,10 +21,8 @@ import {
   oldCode,
   paperLabel,
   paperQuestions,
-  practised,
   stems,
   topicQuestions,
-  TYPE_LABEL,
   type PastPaper,
   type PastQuestion,
   type QuestionTopic,
@@ -85,7 +84,6 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
   const [data, setData] = useState<PastData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [locked, setLocked] = useState(false); // Free: past questions are Finals only (server says 403 "past")
-  const [tab, setTab] = useState<"map" | "practice">(topicId || paperId ? "practice" : "map");
   const [selection, setSelection] = useState<Selection | null>(
     paperId ? { kind: "paper", id: paperId } : topicId ? { kind: "topic", id: topicId } : null,
   );
@@ -105,21 +103,18 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
     };
   }, [course.id]);
 
-  const practise = (s: Selection) => {
-    setSelection(s);
-    setTab("practice");
-  };
+  const practise = (s: Selection) => setSelection(s);
 
   // The original paper beside the questions: the paper being practised, the current question's
-  // paper (topic practice), or the latest paper (exam map, picker).
+  // paper (topic practice), or the latest paper (picker).
   const [questionPaper, setQuestionPaper] = useState<string | null>(null);
   const [hasPages, setHasPages] = useState(true);
   const onPaperReady = useCallback((ok: boolean) => setHasPages(ok), []);
   const latest = useMemo(() => (data ? newestFirst(data.papers)[0] ?? null : null), [data]);
   const viewing =
-    tab === "practice" && selection?.kind === "paper"
+    selection?.kind === "paper"
       ? selection.id
-      : tab === "practice" && selection?.kind === "topic"
+      : selection?.kind === "topic"
         ? questionPaper ?? latest?.id ?? null
         : latest?.id ?? null;
   const viewingPaper = data?.papers.find((p) => p.id === viewing) ?? null;
@@ -133,20 +128,6 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
             ← Back to chat
           </button>
         )}
-        <div className="inline-flex rounded-full bg-sunken p-1" role="tablist" aria-label="Past questions">
-          {(["map", "practice"] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={tab === t}
-              onClick={() => setTab(t)}
-              className={`rounded-full px-4 py-1.5 text-[13.5px] transition ${tab === t ? "bg-white text-ink shadow-sm dark:bg-white/10" : "text-muted hover:text-ink"}`}
-            >
-              {t === "map" ? "Exam map" : "Practice"}
-            </button>
-          ))}
-        </div>
         {data && data.papers.length > 0 && <p className="w-full text-[12.5px] text-muted sm:ml-2 sm:w-auto">{paperSummary(data.papers)}</p>}
       </div>
 
@@ -165,8 +146,6 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
           <div className="mt-16 grid place-items-center text-muted">
             <Spinner />
           </div>
-        ) : tab === "map" ? (
-          <ExamMapView course={course} topics={topics} data={data} onPractise={practise} />
         ) : selection ? (
           <Practice
             key={`${selection.kind}-${selection.id}`}
@@ -193,78 +172,6 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
 /** Newest session first; within a session the exam before tests. */
 function newestFirst(papers: PastPaper[]): PastPaper[] {
   return [...papers].sort((a, b) => b.session.localeCompare(a.session) || (a.type === "exam" ? -1 : b.type === "exam" ? 1 : 0));
-}
-
-// ── Exam map ───────────────────────────────────────────────
-function ExamMapView({ course, topics, data, onPractise }: { course: CourseItem; topics: TopicItem[]; data: PastData; onPractise(s: Selection): void }) {
-  const map = useMemo(() => buildExamMap(topics.map((t) => ({ id: t.id, title: t.title })), data.papers, data.questions, data.questionTopics), [topics, data]);
-  const total = practised(data.questions.filter((q) => q.origin === "past_paper")).length;
-
-  if (!total) {
-    return <p className="mx-auto mt-14 max-w-sm text-center text-[15px] text-muted">No past papers for {courseName(course)} yet.</p>;
-  }
-  if (map.few) {
-    return (
-      <div className="mx-auto mt-10 max-w-md text-center">
-        <p className="text-[17px] text-ink">Few past papers for this course.</p>
-        <p className="mt-2 text-sm text-muted">
-          We have {data.papers.map((p) => paperLabel(p)).join(", ")}: not enough to show which topics come up often. You can still practise every question.
-        </p>
-        <button type="button" onClick={() => onPractise({ kind: "paper", id: data.papers[0].id })} className="mt-5 rounded-full bg-navy px-5 py-2.5 text-sm text-white transition hover:opacity-90 active:scale-95">
-          Practise {paperLabel(data.papers[0])}
-        </button>
-      </div>
-    );
-  }
-  return (
-    <div className="mx-auto max-w-3xl">
-      <p className="mb-4 text-sm text-muted">
-        Which topics came up in {courseName(course)}&apos;s last {map.papers.length} papers ({map.papers.map((p) => paperLabel(p)).join(", ")}).
-      </p>
-      <ul className="space-y-2">
-        {map.rows.map((r) => (
-          <li key={r.topicId} className="rounded-2xl bg-sunken/60 px-4 py-3">
-            <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] text-ink">{r.title}</p>
-                <p className="mt-0.5 text-[13px] text-muted">
-                  {r.papers.length ? (
-                    <>
-                      Asked in <span className="font-medium text-ink">{r.papers.length} of {map.papers.length}</span> papers · {r.marks} marks
-                      {r.types.length ? ` · ${r.types.map((t) => TYPE_LABEL[t] ?? t).join(", ")}` : ""}
-                    </>
-                  ) : (
-                    "Not asked in these papers"
-                  )}
-                </p>
-                {r.repeats.length > 0 && (
-                  <p className="mt-1 text-[12.5px] text-ink/80">
-                    <span className="mr-1.5 rounded-full bg-pau-100 px-2 py-0.5 text-[11.5px] text-brand">Asked again</span>
-                    {r.repeats.join(" · ")}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 pt-1" aria-label={`Asked in ${r.papers.length} of ${map.papers.length} papers`}>
-                {map.papers.map((p) => (
-                  <span
-                    key={p.id}
-                    title={`${paperLabel(p)}: ${r.papers.includes(p.id) ? "asked" : "not asked"}`}
-                    className={`h-3 w-3 rounded-full ${r.papers.includes(p.id) ? "bg-navy dark:bg-[#5ea3ed]" : "border border-line-strong"}`}
-                  />
-                ))}
-              </div>
-              {r.questionCount > 0 && (
-                <button type="button" onClick={() => onPractise({ kind: "topic", id: r.topicId })} className="rounded-full px-3 py-1 text-[13px] text-brand transition hover:bg-pau-100">
-                  Practise {r.questionCount}
-                </button>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-5 text-center text-[13px] text-muted">Based on past papers, not a prediction.</p>
-    </div>
-  );
 }
 
 // ── Practice: pick a topic or a paper ──────────────────────
@@ -346,6 +253,14 @@ function Practice(props: {
   const [results, setResults] = useState<Record<string, Result>>({});
   const [busy, setBusy] = useState<"mark" | "reveal" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Speak the answer instead of typing it (owner, 17 Nov 2026): the same browser voice typing as
+  // the chat box. Words go into the current question's answer; stopped when moving on or marking.
+  const qid = list[i]?.id ?? null;
+  const dictation = useDictation((text) => qid && setDrafts((d) => ({ ...d, [qid]: text })));
+  const go = (n: number) => {
+    dictation.stop();
+    setI(n);
+  };
   const currentPaper = list[i]?.paper_id ?? null;
   const { onPaper } = props;
   useEffect(() => onPaper?.(currentPaper), [onPaper, currentPaper]);
@@ -480,24 +395,67 @@ function Practice(props: {
         ) : (
           !result && (
             <div className="mt-4">
-              <textarea
-                value={draft}
-                onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
-                placeholder="Write your answer as you would in the exam…"
-                rows={7}
-                className="w-full resize-y rounded-xl bg-sunken/60 px-4 py-3 text-[15px] text-ink outline-none ring-1 ring-transparent placeholder:text-muted focus:ring-navy/40"
-              />
+              <div className="relative">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
+                  placeholder={dictation.supported ? "Write or speak your answer as you would in the exam…" : "Write your answer as you would in the exam…"}
+                  aria-label="Your answer"
+                  rows={7}
+                  className="w-full resize-y rounded-xl bg-sunken/60 px-4 py-3 pr-14 text-[15px] text-ink outline-none ring-1 ring-transparent placeholder:text-muted focus:ring-navy/40"
+                />
+                {dictation.supported && (
+                  <button
+                    type="button"
+                    disabled={!!busy}
+                    onClick={() => (dictation.listening ? dictation.stop() : dictation.start(draft))}
+                    aria-label={dictation.listening ? "Stop voice typing" : "Speak your answer"}
+                    aria-pressed={dictation.listening}
+                    title={dictation.listening ? "Stop" : "Speak your answer"}
+                    className={`absolute right-2.5 top-2.5 grid h-9 w-9 place-items-center rounded-full transition active:scale-90 disabled:opacity-40 ${
+                      dictation.listening ? "mic-live bg-red-500 text-white" : "bg-card text-ink/70 ring-1 ring-line hover:text-ink"
+                    }`}
+                  >
+                    {dictation.listening ? (
+                      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+                        <rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor" />
+                      </svg>
+                    ) : (
+                      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+                        <rect x="7" y="2.5" width="6" height="10" rx="3" />
+                        <path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+              {dictation.error ? (
+                <p role="alert" className="mt-1.5 text-[12px] text-red-700 dark:text-red-400">{dictation.error}</p>
+              ) : dictation.listening ? (
+                <p role="status" className="mt-1.5 text-[12px] text-ink">Listening… tap the red button when you&apos;re done, then check your answer.</p>
+              ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   disabled={!draft.trim() || !!busy}
-                  onClick={() => send({ answer: draft })}
+                  onClick={() => {
+                    dictation.stop();
+                    void send({ answer: draft });
+                  }}
                   className="inline-flex items-center gap-2 rounded-full bg-navy px-5 py-2.5 text-sm text-white transition enabled:hover:opacity-90 enabled:active:scale-95 disabled:opacity-40"
                 >
                   {busy === "mark" && <Spinner />}
                   {busy === "mark" ? "Marking…" : "Mark my answer"}
                 </button>
-                <button type="button" disabled={!!busy} onClick={() => send({ reveal: true })} className="rounded-full px-4 py-2.5 text-sm text-muted transition hover:bg-sunken hover:text-ink disabled:opacity-40">
+                <button
+                  type="button"
+                  disabled={!!busy}
+                  onClick={() => {
+                    dictation.stop();
+                    void send({ reveal: true });
+                  }}
+                  className="rounded-full px-4 py-2.5 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken disabled:opacity-40"
+                >
                   {busy === "reveal" ? "Loading…" : "Show answer"}
                 </button>
               </div>
@@ -510,10 +468,10 @@ function Practice(props: {
       </article>
 
       <div className="mt-4 flex items-center justify-between">
-        <button type="button" disabled={i === 0} onClick={() => setI(i - 1)} className="rounded-full px-4 py-2 text-sm text-muted transition hover:bg-sunken hover:text-ink disabled:invisible">
+        <button type="button" disabled={i === 0} onClick={() => go(i - 1)} className="rounded-full px-4 py-2 text-sm text-muted transition hover:bg-sunken hover:text-ink disabled:invisible">
           ← Previous
         </button>
-        <button type="button" disabled={i >= list.length - 1} onClick={() => setI(i + 1)} className="rounded-full bg-sunken px-5 py-2 text-sm text-ink transition hover:bg-pau-100 disabled:invisible">
+        <button type="button" disabled={i >= list.length - 1} onClick={() => go(i + 1)} className="rounded-full bg-sunken px-5 py-2 text-sm text-ink transition hover:bg-pau-100 disabled:invisible">
           Next question →
         </button>
       </div>
@@ -601,7 +559,7 @@ function FinalsOnly({ course, onUnlock }: { course: CourseItem; onUnlock(): void
       </span>
       <h2 className="mt-4 font-heading text-2xl font-semibold tracking-tight text-ink">Past questions come with Finals</h2>
       <p className="mx-auto mt-2 max-w-sm text-[15px] text-muted">
-        The real PAU past papers for {courseName(course)}, the exam map of which topics come up, model answers and marked practice.
+        The real PAU past papers for {courseName(course)}, with answers and marked practice.
       </p>
       <button type="button" onClick={onUnlock} className="cta-shine mt-6 rounded-full bg-brand px-7 py-3 text-[15px] font-medium text-brand-ink transition hover:opacity-95 active:scale-[0.98]">
         Lock in Finals
