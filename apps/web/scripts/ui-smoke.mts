@@ -310,7 +310,11 @@ async function main() {
       const isms = (progs ?? []).find((p) => /isms|information-science/.test(p.id))!;
       await studying.selectOption(isms.id);
       check(await op.getByText((isms.name as string).replace(/^BSc\s+/, ""), { exact: true }).isVisible(), "the full programme name shows under a short label");
-      check((await op.getByRole("combobox", { name: "Level" }).inputValue()) === "400", "a programme with one level picks it for the student");
+      // ISMS had one level (picked for the student); since the 18 Nov 2026 ingestion it has 100-400,
+      // so the student picks 400 level.
+      const level = op.getByRole("combobox", { name: "Level" });
+      if ((await level.locator("option:not([disabled])").count()) > 1) await level.selectOption("400");
+      check((await level.inputValue()) === "400", "the student's level is set (picked for them when the programme has one level)");
       await op.getByRole("button", { name: "Continue" }).click();
       await op.getByRole("radiogroup", { name: "Study partners" }).waitFor();
       check(await op.getByText("Tolu, who do you want to study with?").isVisible(), "partner step greets the student by name");
@@ -339,8 +343,9 @@ async function main() {
       await op.getByRole("heading", { name: "My courses" }).waitFor();
       check(new URL(op.url()).pathname === "/dashboard", "after onboarding the student lands on their courses");
       // Isolation in the browser: only the programme's courses; another programme's course is not found.
-      const { data: theirs } = await admin.from("courses").select("code, materials(count)").eq("programme", isms.id);
-      const expectCodes = (theirs ?? []).filter((c: any) => (c.materials?.[0]?.count ?? 0) > 0).map((c) => c.code).sort();
+      // Their level only (other levels are added with "Add a course"); placeholder codes show as titles.
+      const { data: theirs } = await admin.from("courses").select("code, code_confirmed, materials(count)").eq("programme", isms.id).eq("level", 400);
+      const expectCodes = (theirs ?? []).filter((c: any) => (c.materials?.[0]?.count ?? 0) > 0 && c.code_confirmed !== false).map((c) => c.code).sort();
       const shownText = await op.getByRole("list", { name: "Courses" }).innerText();
       check(expectCodes.every((c) => shownText.includes(c.replace(/^([A-Z]+)/, "$1 "))) && !/CSC \d{3}|INS 401/.test(shownText),
         "My courses lists only the chosen programme's courses", expectCodes.join(","));
@@ -406,6 +411,8 @@ async function main() {
       await op.getByRole("button", { name: "Change programme" }).click();
       const dialog = op.getByRole("dialog", { name: "Change programme" });
       await dialog.getByRole("combobox", { name: "What do you study?" }).selectOption("computer-science");
+      const csLevel = dialog.getByRole("combobox", { name: "Level" });
+      if ((await csLevel.locator("option:not([disabled])").count()) > 1) await csLevel.selectOption("400"); // CS has 100-400
       await dialog.getByRole("button", { name: "Save" }).click();
       await op.getByText(/CSC \d{3}/).first().waitFor({ timeout: 15000 });
       const afterText = await op.getByRole("list", { name: "Courses" }).innerText();
@@ -539,6 +546,10 @@ async function main() {
     await page.getByRole("button", { name: "Speak your question" }).waitFor({ timeout: 3000 });
     check((await page.locator("textarea[aria-label='Your question']:visible").inputValue()) === "what is a B tree index", "voice typing writes the spoken question into the box (student still presses Send)");
     await page.locator("textarea[aria-label='Your question']:visible").fill("");
+    // Picking a topic opens its first slides beside the chat (owner, 18 Nov 2026), in Sources' place.
+    const autoSlide = page.getByRole("dialog", { name: "Slide preview" });
+    check(await autoSlide.isVisible(), "picking a topic opens its first slides beside the chat");
+    await autoSlide.getByRole("button", { name: "Close preview" }).click();
     // Sources: the materials behind this topic, on the right; a source opens in the slide viewer.
     const sources = page.getByRole("complementary", { name: "Sources" });
     const { data: topicMats } = await admin.from("materials").select("title, topics!inner(title), courses!inner(code)").eq("courses.code", "CSC420").eq("courses.programme", "computer-science").eq("topics.title", "Transactions and indexing");
@@ -583,7 +594,7 @@ async function main() {
       () => check(false, "shows 'Searching your slides…' while waiting"),
     );
     const chip = page.locator("li button[title^='Open ']:visible").first();
-    await chip.waitFor({ timeout: 30000 });
+    await chip.waitFor({ timeout: 30000 }).catch(async (e) => { await shot(page, "x-no-citation-chip"); throw e; });
     await page.getByRole("button", { name: "Send" }).waitFor({ timeout: 30000 }); // answer finished
     check(chatRequests === 1, "double-clicking Send asks the question once", `${chatRequests} requests`);
     const chipText = (await chip.textContent()) ?? "";

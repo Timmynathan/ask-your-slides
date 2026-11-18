@@ -76,11 +76,11 @@ export function Workspace(data: WorkspaceData) {
   }, [course, data.courses, topic, chatId, past]);
 
   // Picking a topic opens its first slides (owner, 18 Nov 2026): the topic's first slides or notes
-  // file at page 1, on wide laptops only (xl, where the slide sits beside the chat; below that it
-  // would cover the chat). Not for Whole course. Closing it keeps it closed until the next topic.
+  // file at page 1, on iPads and laptops (md and up, where the slide sits beside the chat; on phones
+  // it would cover the chat). Not for Whole course. Closing it keeps it closed until the next topic.
   const firstSlide = useCallback(
     (id: string | null): string | null => {
-      if (!id || !window.matchMedia("(min-width: 80rem)").matches) return null;
+      if (!id || !window.matchMedia("(min-width: 48rem)").matches) return null;
       const m = data.materials
         .filter((x) => x.topic_id === id && (x.kind === "slides" || x.kind === "notes"))
         .sort((x, y) => x.material_order - y.material_order)[0];
@@ -142,7 +142,7 @@ export function Workspace(data: WorkspaceData) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
       {/* Top bar: as quiet as My courses. */}
       <header className="flex h-16 shrink-0 items-center gap-1 px-3 sm:gap-2 sm:px-5">
-        <IconButton label="Open topics" onClick={() => setDrawerOpen(true)} className="lg:hidden">
+        <IconButton label="Open topics" onClick={() => setDrawerOpen(true)} className="xl:hidden">
           <path d="M4 7h16M4 12h16M4 17h16" />
         </IconButton>
         <Link href="/dashboard" aria-label="All courses" title="All courses" className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-sunken active:scale-95">
@@ -172,15 +172,16 @@ export function Workspace(data: WorkspaceData) {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-2 lg:px-3 lg:pb-3">
-        {/* Topics: a navy panel on laptops, a drawer below lg */}
+      <div className="flex min-h-0 flex-1 gap-2 md:px-3 md:pb-3">
+        {/* Topics: a navy panel on wide laptops, a drawer below xl (iPads and small laptops: the room
+            goes to the chat and the slide beside it). */}
         <div
-          className={`fixed inset-0 z-30 bg-black/20 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          className={`fixed inset-0 z-30 bg-black/20 transition-opacity xl:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
           onClick={() => setDrawerOpen(false)}
           aria-hidden
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-navy text-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] ${
+          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-navy text-white transition-transform duration-200 ease-out xl:static xl:z-auto xl:translate-x-0 xl:overflow-hidden xl:rounded-[28px] ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
@@ -212,12 +213,12 @@ export function Workspace(data: WorkspaceData) {
                 {topicPast} past question{topicPast === 1 ? "" : "s"}
               </button>
             )}
-            {/* Phones: the Topics panel is a drawer, so the past questions get a bright button here too. */}
+            {/* Below xl the Topics panel is a drawer, so the past questions get a bright button here too. */}
             {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
               <button
                 type="button"
                 onClick={() => openPast(null)}
-                className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 lg:hidden"
+                className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 xl:hidden"
                 title={`Practise ${data.past.total} past questions in ${courseName(course)}`}
               >
                 {topicPast > 0 ? "All past questions" : "Past questions"}
