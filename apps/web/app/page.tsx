@@ -58,7 +58,7 @@ export default async function Landing() {
             Stop uploading slides to ChatGPT.
           </h1>
           <p className="mt-6 max-w-4xl text-balance text-lg leading-relaxed text-muted sm:text-xl">
-            All your <strong className="font-semibold text-brand">PAU</strong> course slides are already here, so there&apos;s nothing to upload. Ask a question and get the answer straight
+            All your <strong className="whitespace-nowrap rounded-md bg-brand px-2 py-0.5 font-semibold text-brand-ink">PAU</strong> course slides are already here, so there&apos;s nothing to upload. Ask a question and get the answer straight
             from your slides, with the exact slide shown.
           </p>
           <HeroActions seeHow={<SeeHowItWorks />} />
