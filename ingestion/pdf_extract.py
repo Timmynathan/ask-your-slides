@@ -64,7 +64,14 @@ def read_pdf(pdf_path: Path, render: bool = True) -> list[PdfPage]:
         for page in doc:
             page_area = abs(page.rect.width * page.rect.height) or 1.0
             image_keys = []
-            for info in page.get_image_info(hashes=True):
+            try:
+                infos = page.get_image_info(hashes=True)
+            except Exception:  # an image MuPDF can't decode (e.g. some JPX): fall back to positions only
+                try:
+                    infos = page.get_image_info(hashes=False)
+                except Exception:
+                    infos = []
+            for info in infos:
                 x0, y0, x1, y1 = info["bbox"]
                 if abs((x1 - x0) * (y1 - y0)) / page_area >= MIN_IMAGE_AREA:
                     image_keys.append(info.get("digest", b"").hex() or f"p{page.number}-{len(image_keys)}")

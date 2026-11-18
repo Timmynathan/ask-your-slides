@@ -58,22 +58,28 @@ def title_case(s: str) -> str:
 
 def _is_list(p: Paragraph) -> bool:
     ppr = p._p.pPr
-    return (ppr is not None and ppr.numPr is not None) or p.style.name.lower().startswith("list")
+    return (ppr is not None and ppr.numPr is not None) or _style_name(p).startswith("list")
 
 
 def _all_bold(p: Paragraph) -> bool:
     runs = [r for r in p.runs if r.text.strip()]
     if not runs:
         return False
-    style_bold = bool(p.style.font.bold)
+    style_bold = bool(p.style.font.bold) if p.style is not None else False
     return all(r.bold or (r.bold is None and style_bold) for r in runs)
+
+
+def _style_name(p: Paragraph) -> str:
+    """Style name in lower case; '' when the paragraph has no resolvable style (some exported .docx files)."""
+    st = p.style
+    return (st.name or "").lower() if st is not None else ""
 
 
 def heading_level(p: Paragraph) -> int | None:
     t = p.text.strip()
     if not t:
         return None
-    name = p.style.name.lower()
+    name = _style_name(p)
     m = re.match(r"heading (\d)", name)
     if m:
         return min(3, int(m.group(1)))

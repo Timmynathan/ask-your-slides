@@ -494,10 +494,16 @@ def main() -> int:
         stats = Stats()
         t0 = time.time()
         report: list[tuple] = []
+        failed: list[str] = []
         for course in selected:
             before = (stats.pages, stats.vision_calls, stats.vision_cached, stats.vision_usd, stats.output_tokens,
                       embed.tokens_used, stats.embed_chars)
-            ingest_course(store, course, args, stats)
+            try:
+                ingest_course(store, course, args, stats)
+            except Exception as e:  # one unreadable file must not stop a 300-course run
+                failed.append(f"{course.key}: {type(e).__name__}: {str(e)[:160]}")
+                print(f"  ! FAILED {course.key}: {type(e).__name__}: {str(e)[:160]} (skipped; fix and re-run this course)")
+                continue
             d = [a - b for a, b in zip((stats.pages, stats.vision_calls, stats.vision_cached, stats.vision_usd,
                                         stats.output_tokens, embed.tokens_used, stats.embed_chars), before)]
             if args.dry_run:
@@ -520,6 +526,10 @@ def main() -> int:
         print(f"  OCR: {stats.transcribed} pages   vision: {stats.vision_calls} calls"
               + (f", {stats.vision_cached} already described (free)" if args.dry_run
                  else f", {stats.vision_cached} from cache, {stats.refusals} refused"))
+        if failed:
+            print(f"\n  {len(failed)} course(s) FAILED and are not in the totals above:")
+            for f in failed:
+                print(f"    - {f}")
         if args.dry_run:
             print_estimate(stats)
         if not args.dry_run:

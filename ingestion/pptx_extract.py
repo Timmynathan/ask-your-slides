@@ -28,6 +28,15 @@ class PptxSlide:
     has_object: bool = False  # embedded OLE object (e.g. a Visio diagram)
 
 
+def _has_image(shape) -> bool:
+    """True when the shape carries a picture. getattr(shape, "image", None) is not enough: a picture
+    placeholder whose image is linked rather than embedded raises ValueError ("no embedded image")."""
+    try:
+        return getattr(shape, "image", None) is not None
+    except (ValueError, KeyError):
+        return False
+
+
 def extract(path: Path) -> list[PptxSlide]:
     prs = Presentation(str(path))
     slides: list[PptxSlide] = []
@@ -41,7 +50,7 @@ def extract(path: Path) -> list[PptxSlide]:
         for shape in _walk(slide.shapes):
             if title_shape is not None and shape.shape_id == title_shape.shape_id:
                 continue
-            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE or getattr(shape, "image", None) is not None:
+            if shape.shape_type == MSO_SHAPE_TYPE.PICTURE or _has_image(shape):
                 try:
                     s.image_keys.append(shape.image.sha1)
                 except (AttributeError, ValueError, KeyError):
