@@ -51,9 +51,6 @@ export default async function Landing() {
       <main className="flex-1">
         {/* Hero: the value in one line (no more uploading slides to a chatbot), one button. */}
         <section className="relative flex min-h-[calc(100dvh-7.5rem)] flex-col items-center justify-center overflow-hidden px-5 pb-40 pt-16 text-center sm:pb-48">
-          <p className="mb-6 rounded-full px-4 py-1.5 text-sm font-medium text-ink ring-1 ring-line-strong">
-            For <strong className="font-semibold text-brand">Pan-Atlantic University</strong> students
-          </p>
           <h1 className="max-w-6xl font-heading text-[2.4rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-6xl lg:text-[4.25rem]">
             Stop uploading slides to ChatGPT.
           </h1>
