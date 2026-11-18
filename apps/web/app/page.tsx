@@ -91,7 +91,7 @@ export default async function Landing() {
                 <img src="/logos/gemini.svg" alt="Gemini" width={32} height={32} className="h-8 w-8" />
               </div>
               <ul className="mt-5 space-y-3 text-[16px] text-ink">
-                {["You upload your slides, every time", "Answers don't show which slide", "Not built for your courses"].map((t) => (
+                {["You upload your slides, every time", "Answers aren't from your slides", "Not built for your courses"].map((t) => (
                   <li key={t} className="flex gap-3">
                     <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-sunken text-xs text-muted" aria-hidden>✕</span>
                     {t}
