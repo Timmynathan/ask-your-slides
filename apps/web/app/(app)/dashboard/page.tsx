@@ -19,15 +19,18 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", t
 
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }] = await Promise.all([
-    supabase.from("courses").select("id, code, code_confirmed, programme, title, department, sort_order, elective, premium, materials(kind)").order("sort_order"),
-    supabase.from("profiles").select("display_name, onboarded, study_partner, programme").eq("id", user.id).single(),
+  const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }, { data: enrolments }] = await Promise.all([
+    supabase.from("courses").select("id, code, code_confirmed, programme, level, title, department, sort_order, elective, premium, materials(kind)").order("sort_order"),
+    supabase.from("profiles").select("display_name, onboarded, study_partner, programme, level").eq("id", user.id).single(),
     supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
+    // Extra courses the student added (retakes, extras). Missing before the migration: then none.
+    supabase.from("course_enrollments").select("course_id"),
   ]);
+  const added = new Set(((enrolments ?? []) as { course_id: string }[]).map((r) => r.course_id));
   // A failed read is an error, not "new student": never bounce an onboarded student back to Welcome.
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner) || !profile.programme) redirect("/welcome");
-  // RLS returns only the student's programme + level's courses (PRD F11): no filtering here.
+  // RLS returns only the student's programme + level's courses (PRD F11), plus the courses they added.
   const courses = allCourses ?? [];
 
   // PRD F12: free questions left today on premium courses (Free students only).
@@ -51,6 +54,8 @@ async function Loaded() {
   const list: DashboardCourse[] = (courses ?? [])
     .map((c) => {
       const mine = chatRows.filter((ch) => ch.course_id === c.id); // newest first
+      // An added course from another level: tagged with its level, listed after the student's own.
+      const extraLevel = added.has(c.id as string) && c.level !== profile.level ? (c.level as number) : null;
       return {
         id: c.id as string,
         code: c.code as string,
@@ -58,7 +63,8 @@ async function Loaded() {
         title: c.title as string,
         department: c.department as string,
         elective: !!c.elective,
-        sortOrder: c.sort_order as number,
+        sortOrder: (c.sort_order as number) + (extraLevel === null ? 0 : 1_000_000 + (900 - extraLevel) * 1000),
+        extraLevel,
         shownCode: shownCode(c as { code: string; code_confirmed: boolean }),
         materials: (c.materials as { kind: string }[]).length,
         limited: countMain(c.materials as { kind: string }[]) < LIMITED_MAIN_MATERIALS,

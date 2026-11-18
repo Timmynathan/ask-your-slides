@@ -4,12 +4,14 @@
 // opens the course's study workspace. Tabs (all / recently studied), search, sort, and a grid/list
 // toggle (remembered per browser). The course list is data: new courses and departments just appear.
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo } from "@/components/brand/logo";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
 import { CourseIcon } from "./course-icon";
+import { EnrollDialog } from "./enroll-dialog";
 import { useClickAway } from "@/lib/ui/use-click-away";
 
 export interface DashboardCourse {
@@ -22,6 +24,8 @@ export interface DashboardCourse {
   /** Shown with an "Elective" tag (course.yaml elective: true). */
   elective: boolean;
   sortOrder: number;
+  /** A course the student added from another level (retake or extra): its level, else null. */
+  extraLevel: number | null;
   /** "CSC 402", or null when the code is a placeholder (only the title is shown). */
   shownCode: string | null;
   materials: number;
@@ -58,6 +62,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("course");
   const [view, setView] = useState<View>("grid");
+  const [enrolling, setEnrolling] = useState(false);
 
   // Remembered view, read after hydration so server and browser first render the same thing.
   useEffect(() => {
@@ -185,6 +190,16 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
             <p className="mt-1 text-sm text-muted">
               {departments.join(", ")} · {courses.length} {courses.length === 1 ? "course" : "courses"}, all slides already here
             </p>
+            <button
+              type="button"
+              onClick={() => setEnrolling(true)}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3.5 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+                <path d="M8 3v10M3 8h10" />
+              </svg>
+              Add a course
+            </button>
           </div>
           {resume && (
             <Link
@@ -216,7 +231,19 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
           </ul>
         )}
       </main>
+      {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
     </div>
+  );
+}
+
+function LevelTag({ level, onDark = false }: { level: number; onDark?: boolean }) {
+  return (
+    <span
+      title="A course you added from another level"
+      className={`inline-block rounded-full px-2.5 py-0.5 align-middle text-[12px] font-medium ${onDark ? "mb-2 mr-1 bg-white/15 text-white" : "ml-2 bg-sunken text-ink"}`}
+    >
+      {level} level
+    </span>
   );
 }
 
@@ -274,6 +301,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
         <CardMenu course={c} onDark />
       </div>
       <div className="mt-auto">
+        {c.extraLevel !== null && <LevelTag level={c.extraLevel} onDark />}
         {c.elective && <ElectiveTag onDark />}
         {c.limited && <LimitedTag onDark />}
         {c.premiumLeft !== null && <PremiumTag onDark />}
@@ -297,6 +325,7 @@ function CourseRow({ course: c }: { course: DashboardCourse }) {
       <CourseIcon title={c.title} size={22} />
       <span className="min-w-0 flex-1 truncate text-[16px] text-ink">
         {c.title}
+        {c.extraLevel !== null && <LevelTag level={c.extraLevel} />}
         {c.elective && <ElectiveTag />}
         {c.limited && <LimitedTag />}
         {c.premiumLeft !== null && <PremiumTag />}
@@ -316,8 +345,23 @@ function CourseRow({ course: c }: { course: DashboardCourse }) {
 function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDark?: boolean }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   useClickAway(root, open, () => setOpen(false));
+
+  // Only for a course the student added: take it off My courses (its chats are kept).
+  const remove = async () => {
+    if (removing) return;
+    setRemoving(true);
+    try {
+      await fetch("/api/enrollments", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course: c.id }) });
+      router.refresh();
+    } finally {
+      setRemoving(false);
+      setOpen(false);
+    }
+  };
 
   const copy = async () => {
     try {
@@ -354,6 +398,11 @@ function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDa
           <button role="menuitem" onClick={copy} className="block w-full px-4 py-2.5 text-left text-ink hover:bg-sunken">
             {copied ? "Link copied ✓" : "Copy link for coursemates"}
           </button>
+          {c.extraLevel !== null && (
+            <button role="menuitem" onClick={remove} disabled={removing} className="block w-full px-4 py-2.5 text-left text-ink hover:bg-sunken disabled:opacity-50">
+              {removing ? "Removing…" : "Remove from my courses"}
+            </button>
+          )}
         </div>
       )}
     </div>
