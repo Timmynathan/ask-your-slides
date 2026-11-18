@@ -78,7 +78,7 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
       <aside
         role="dialog"
         aria-label="Slide preview"
-        className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-line bg-card shadow-xl md:static md:z-auto md:h-auto md:w-[45%] md:shrink-0 md:overflow-hidden md:rounded-[28px] md:border-0 md:bg-sunken/60 md:shadow-none xl:w-[520px]"
+        className="fixed inset-x-0 bottom-0 z-40 flex h-[75dvh] flex-col rounded-t-2xl border-t border-line bg-card shadow-xl md:static md:z-auto md:h-auto md:w-[45%] md:shrink-0 lg:w-[38%] md:overflow-hidden md:rounded-[28px] md:border-0 md:bg-sunken/60 md:shadow-none xl:w-[520px]"
       >
         <div className="flex h-16 shrink-0 items-center justify-between gap-3 px-5">
           <div className="min-w-0">

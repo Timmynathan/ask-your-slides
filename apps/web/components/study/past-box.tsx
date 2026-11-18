@@ -31,7 +31,7 @@ export function PastBox({ papers, total, active, onOpenPaper, onOpenMap }: Props
   return (
     <section
       aria-label="Past questions"
-      className={`rounded-[22px] bg-white p-3.5 text-[#0e1664] shadow-lg shadow-black/20 ring-2 transition ${active ? "ring-[#5ea3ed]" : "ring-transparent"}`}
+      className={`rounded-[22px] bg-white p-3 text-[#0e1664] xl:p-3.5 shadow-lg shadow-black/20 ring-2 transition ${active ? "ring-[#5ea3ed]" : "ring-transparent"}`}
     >
       <div className="flex items-center gap-2.5 px-0.5">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#0e1664] text-white">
@@ -50,7 +50,7 @@ export function PastBox({ papers, total, active, onOpenPaper, onOpenMap }: Props
             <button
               type="button"
               onClick={() => onOpenPaper(p.id)}
-              className={`group flex w-full items-center justify-between gap-2 rounded-full bg-[#0e1664] px-4 py-2.5 text-left text-[13.5px] font-medium text-white transition hover:bg-[#2a3591] active:scale-[0.98] ${i === 0 ? "cta-shine" : ""}`}
+              className={`group flex w-full items-center justify-between gap-2 rounded-full bg-[#0e1664] px-3.5 py-2.5 text-left text-[13px] font-medium xl:px-4 xl:text-[13.5px] text-white transition hover:bg-[#2a3591] active:scale-[0.98] ${i === 0 ? "cta-shine" : ""}`}
               title={`${p.questions} question${p.questions === 1 ? "" : "s"}`}
             >
               <span className="truncate">Practise {p.label}</span>
