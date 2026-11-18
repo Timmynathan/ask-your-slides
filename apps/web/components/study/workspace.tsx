@@ -75,14 +75,39 @@ export function Workspace(data: WorkspaceData) {
     document.title = `${courseName(course)}${past === "list" ? " · Past questions" : topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
   }, [course, data.courses, topic, chatId, past]);
 
+  // Picking a topic opens its first slides (owner, 18 Nov 2026): the topic's first slides or notes
+  // file at page 1, on wide laptops only (xl, where the slide sits beside the chat; below that it
+  // would cover the chat). Not for Whole course. Closing it keeps it closed until the next topic.
+  const firstSlide = useCallback(
+    (id: string | null): string | null => {
+      if (!id || !window.matchMedia("(min-width: 80rem)").matches) return null;
+      const m = data.materials
+        .filter((x) => x.topic_id === id && (x.kind === "slides" || x.kind === "notes"))
+        .sort((x, y) => x.material_order - y.material_order)[0];
+      return m ? `${course.code}-${String(m.material_order).padStart(2, "0")}-1` : null;
+    },
+    [data.materials, course.code],
+  );
+
+  // Arriving on a topic (shared link, reload, Continue studying): same, unless past questions are open.
+  useEffect(() => {
+    if (data.initialPast) return;
+    const key = firstSlide(data.initialTopicId);
+    if (!key) return;
+    const t = setTimeout(() => setPreview((cur) => cur ?? key), 0);
+    return () => clearTimeout(t);
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {
     setTopicId(next.topicId);
     setChatId(next.chatId);
     setPanelKey(next.chatId ?? `new-${next.courseId}-${next.topicId ?? "course"}-${Date.now()}`);
-    setPreview(null);
+    setPreview(firstSlide(next.topicId));
     setDrawerOpen(false);
     setPast(null);
-  }, []);
+  }, [firstSlide]);
 
   const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
   const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
