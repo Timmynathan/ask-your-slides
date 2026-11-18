@@ -159,7 +159,7 @@ export default async function Landing() {
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">
             Pick the style you enjoy and switch any time. Every partner answers from your school slides and cites every point.
           </p>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-2">
             {PARTNER_IDS.map((id) => {
               const p = PARTNERS[id];
               return (

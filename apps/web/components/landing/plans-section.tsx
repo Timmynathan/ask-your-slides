@@ -1,7 +1,7 @@
-// Landing page "Plans" (PRD F12): Free and Finals, a comparison, one line on premium courses.
+// Landing page "Plans" (PRD F12): the Free and Finals cards, one line on premium courses. The
+// feature table was dropped here (owner, 18 Nov 2026): it repeated the cards. It stays on /pricing.
 // Every price, limit and date comes from the plans config the server enforces.
 import Link from "next/link";
-import { CompareTable } from "@/components/plans/compare-table";
 import { FinalsCta } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import type { PlanOffer } from "@/lib/plans/offer";
@@ -31,12 +31,7 @@ export function PlansSection({ offer }: { offer: PlanOffer }) {
             }
           />
           <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>
-        </Reveal>
-
-        <Reveal className="mt-14" delay={80}>
-          <h3 className="sr-only">Compare the plans</h3>
-          <CompareTable offer={offer} />
-          <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
+          <p className="mt-1 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
         </Reveal>
       </div>
     </section>
