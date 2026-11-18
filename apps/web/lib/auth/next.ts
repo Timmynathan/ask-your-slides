@@ -3,6 +3,6 @@
 export function safeNext(raw: unknown): string | null {
   if (typeof raw !== "string" || raw.length > 300) return null;
   if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
-  if (/^\/(sign-in|welcome|api)(\/|\?|$)/.test(raw)) return null;
+  if (/^\/(sign-in|sign-up|welcome|api)(\/|\?|$)/.test(raw)) return null;
   return raw;
 }

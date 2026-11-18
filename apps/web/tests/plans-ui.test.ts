@@ -90,11 +90,12 @@ describe("landing Plans section", () => {
     expect(landing(BEFORE)).toContain(`href="/sign-up?next=${encodeURIComponent("/pay")}"`);
   });
 
-  it("is accessible: a real heading, labelled icons", () => {
+  it("is accessible: a real heading, one comparison (the cards, no repeated feature table)", () => {
     const html = landing(BEFORE);
     expect(html).toMatch(/<h2[^>]*id="plans-title"[^>]*>Plans<\/h2>/);
-    expect(html).toContain('aria-label="Not on Free"'); // quiz mode lock
-    expect(html).toContain('aria-label="Included on Finals"');
+    expect(html).toContain('aria-labelledby="plan-finals"');
+    expect(html).toContain('aria-labelledby="plan-free"');
+    expect(html).not.toContain("<table");
   });
 });
 

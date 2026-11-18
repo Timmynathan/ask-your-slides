@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdminEmail } from "@/lib/admin";
+import { safeNext } from "@/lib/auth/next";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
@@ -33,8 +34,11 @@ export async function proxy(request: NextRequest) {
     if (pathname !== "/dashboard") target.searchParams.set("next", pathname + request.nextUrl.search);
     return redirectKeepingCookies(target, response);
   }
+  // Already signed in: skip the form, but keep where they were going (e.g. the landing page's
+  // "Lock in Finals" is /sign-up?next=/pay, and the landing page is open to signed-in students).
   if (userId && (pathname === "/sign-in" || pathname === "/sign-up")) {
-    return redirectKeepingCookies(new URL("/dashboard", request.url), response);
+    const next = safeNext(request.nextUrl.searchParams.get("next")) ?? "/dashboard";
+    return redirectKeepingCookies(new URL(next, request.url), response);
   }
   return response;
 }
