@@ -203,8 +203,8 @@ export default async function Landing() {
         </section>
       </main>
 
-      {/* Footer: PAU navy, white text (owner, 18 Nov 2026). */}
-      <footer className="bg-navy text-white">
+      {/* Footer: the darker PAU navy (#0a0f47, as the "Exams are coming" heading), white text (owner, 18 Nov 2026). */}
+      <footer className="bg-pau-900 text-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <Logo light />
