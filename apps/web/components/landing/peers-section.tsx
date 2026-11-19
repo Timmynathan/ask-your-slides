@@ -5,8 +5,9 @@
 // Quotes: short lines approved by the owner for these students (19 Nov 2026). A bubble with an
 // empty quote is not shown. Videos live in public/social/ (H.264 MP4, ~6 MB, with a WebP poster), and nothing
 // downloads until a visitor presses play.
+import { PeerVideo } from "./peer-video";
 
-interface PeerVideo {
+interface PeerVideoItem {
   src: string;
   poster: string;
   /** Read out by screen readers. */
@@ -19,7 +20,7 @@ interface PeerQuote {
   quote: string;
 }
 
-export const PEER_VIDEOS: PeerVideo[] = [
+export const PEER_VIDEOS: PeerVideoItem[] = [
   { src: "/social/peer-1.mp4", poster: "/social/peer-1-poster.webp", label: "A PAU student revising with Ask Your Slides" },
 ];
 
@@ -59,16 +60,7 @@ export function PeersSection() {
   const videos = (
     <div className="flex flex-wrap justify-center gap-5">
       {PEER_VIDEOS.map((v) => (
-        <video
-          key={v.src}
-          src={v.src}
-          poster={v.poster}
-          aria-label={v.label}
-          controls
-          playsInline
-          preload="none"
-          className="aspect-[9/16] w-[260px] rounded-[25px] bg-black object-cover ring-1 ring-line sm:w-[290px]"
-        />
+        <PeerVideo key={v.src} {...v} />
       ))}
     </div>
   );
