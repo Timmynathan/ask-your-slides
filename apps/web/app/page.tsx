@@ -8,6 +8,7 @@ import { CoursePills } from "@/components/landing/course-pills";
 import { StretchNav } from "@/components/landing/stretch-nav";
 import { HeroActions, NavActions } from "@/components/landing/auth-actions";
 import { PlansSection } from "@/components/landing/plans-section";
+import { PeersSection } from "@/components/landing/peers-section";
 import { landingOffer } from "@/lib/plans/landing-offer";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
@@ -23,8 +24,8 @@ export const metadata: Metadata = {
 // Landing page, for visitors and signed-in students alike (owner, 17 Nov 2026: signed in, the
 // buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
 // Structure follows studyfetch.com: banner, nav, hero, PAU courses, why us, how it works (demo), steps, partners,
-// closing call to action, footer. Sections with no honest content for us (user counts, research
-// claims, testimonials, pricing) are left out.
+// what your peers are seeing (social proof), pricing, closing call to action, footer. Sections with
+// no honest content for us (user counts, research claims) are left out.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
 
@@ -176,6 +177,9 @@ export default async function Landing() {
             })}
           </div>
         </section>
+
+        {/* Social proof: a student's video and students' own words (owner, 19 Nov 2026). */}
+        <PeersSection />
 
         {/* Plans (PRD F12): figures from the plans config the server enforces. */}
         <PlansSection offer={offer} />
