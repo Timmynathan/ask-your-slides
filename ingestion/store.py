@@ -228,18 +228,38 @@ class Store:
             row = self.db.execute("delete from courses where id = %s returning id", (course_id,)).fetchone()
         return row is not None
 
+    @staticmethod
+    def _retry(call, attempts: int = 7):
+        """Storage calls: retry 429 (too_many_connections), 5xx (e.g. Cloudflare 520) and dropped
+        connections with backoff, so a busy moment doesn't fail a whole course."""
+        import time
+        import httpx
+        for i in range(attempts):
+            try:
+                r = call()
+            except (httpx.TransportError, httpx.RemoteProtocolError):
+                if i == attempts - 1:
+                    raise
+            else:
+                if r.status_code != 429 and r.status_code < 500 or i == attempts - 1:
+                    return r
+                ra = r.headers.get("retry-after")
+                if ra and ra.isdigit():
+                    time.sleep(min(60, int(ra)))
+                    continue
+            time.sleep(min(60, 2 ** i))
+        raise AssertionError("unreachable")
+
     # ── storage ─────────────────────────────────────────────
-    def upload_images(self, slides: list[SlideRow], workers: int = 8) -> None:
+    def upload_images(self, slides: list[SlideRow], workers: int = 4) -> None:
         """Pages are rendered as PNG (vision reads those) and stored as WebP at full width, quality 75:
         ~30% of the PNG size, no visible difference on slide text (checked on 150 PAU pages). Keeps
         all programmes inside Supabase's free 1 GB (owner's choice, Nov 2026)."""
         def put(s: SlideRow) -> None:
             webp = s.image_path.endswith(".webp")
-            r = self.http.post(
-                f"/object/{BUCKET}/{s.image_path}",
-                content=to_webp(s.png) if webp else s.png,
-                headers={"Content-Type": "image/webp" if webp else "image/png", "x-upsert": "true", "cache-control": "3600"},
-            )
+            body = to_webp(s.png) if webp else s.png
+            headers = {"Content-Type": "image/webp" if webp else "image/png", "x-upsert": "true", "cache-control": "3600"}
+            r = self._retry(lambda: self.http.post(f"/object/{BUCKET}/{s.image_path}", content=body, headers=headers))
             if r.status_code >= 300:
                 raise RuntimeError(f"upload {s.image_path} failed: {r.status_code} {r.text[:200]}")
 
@@ -250,7 +270,7 @@ class Store:
         names: list[str] = []
         offset = 0
         while True:
-            r = self.http.post(f"/object/list/{BUCKET}", json={"prefix": prefix, "limit": 1000, "offset": offset})
+            r = self._retry(lambda: self.http.post(f"/object/list/{BUCKET}", json={"prefix": prefix, "limit": 1000, "offset": offset}))
             r.raise_for_status()
             batch = [f"{prefix}{o['name']}" for o in r.json() if o.get("id")]  # id is null for folders
             names.extend(batch)
