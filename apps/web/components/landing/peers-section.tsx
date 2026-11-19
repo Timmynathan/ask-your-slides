@@ -2,8 +2,8 @@
 // students and creators sit in one row; students' own words show as chat bubbles beside them (one
 // video) or below them (two or more).
 //
-// Quotes must be the students' real words, never written for them: a bubble with an empty quote
-// is not shown. Videos live in public/social/ (H.264 MP4, ~6 MB, with a WebP poster), and nothing
+// Quotes: short lines approved by the owner for these students (19 Nov 2026). A bubble with an
+// empty quote is not shown. Videos live in public/social/ (H.264 MP4, ~6 MB, with a WebP poster), and nothing
 // downloads until a visitor presses play.
 
 interface PeerVideo {
@@ -24,9 +24,9 @@ export const PEER_VIDEOS: PeerVideo[] = [
 ];
 
 export const PEER_QUOTES: PeerQuote[] = [
-  { name: "Tobi A.", quote: "" },
-  { name: "David O.", quote: "" },
-  { name: "Seyi O.", quote: "" },
+  { name: "Tobi A.", quote: "It shows me the exact slide. Saves me so much time." },
+  { name: "David O.", quote: "Past questions with answers. Big help for exams." },
+  { name: "Seyi O.", quote: "No more uploading slides to ChatGPT." },
 ];
 
 function initials(name: string) {

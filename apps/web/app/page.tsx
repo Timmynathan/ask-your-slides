@@ -23,8 +23,8 @@ export const metadata: Metadata = {
 
 // Landing page, for visitors and signed-in students alike (owner, 17 Nov 2026: signed in, the
 // buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
-// Structure follows studyfetch.com: banner, nav, hero, PAU courses, why us, how it works (demo), steps, partners,
-// what your peers are saying (social proof), pricing, closing call to action, footer. Sections with
+// Structure follows studyfetch.com: banner, nav, hero, PAU courses, what your peers are saying
+// (social proof), why us, how it works (demo), steps, partners, pricing, closing call to action, footer. Sections with
 // no honest content for us (user counts, research claims) are left out.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
@@ -75,6 +75,9 @@ export default async function Landing() {
             <CoursePills codes={catalog.courseCodes} />
           </div>
         </section>
+
+        {/* Social proof, high on the page so students see it (owner, 19 Nov 2026). */}
+        <PeersSection />
 
         {/* Why not a general chatbot? Kept to the one point that matters. */}
         <section id="why" className="mx-auto max-w-5xl scroll-mt-20 px-5 py-20">
@@ -177,9 +180,6 @@ export default async function Landing() {
             })}
           </div>
         </section>
-
-        {/* Social proof: a student's video and students' own words (owner, 19 Nov 2026). */}
-        <PeersSection />
 
         {/* Plans (PRD F12): figures from the plans config the server enforces. */}
         <PlansSection offer={offer} />
