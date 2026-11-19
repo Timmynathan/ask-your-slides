@@ -345,3 +345,85 @@ def test_restarted_section_numbering_and_arabic_subparts():
     assert [x["number"] for x in c.questions] == ["Q1", "Q2", "Q3", "Q3a", "Q4", "Q5", "Q5a", "Q5b", "Q5b(i)", "Q5b(ii)"]
     assert [x["section"] for x in c.questions][-1] == "B"
     assert not [p for p in c.problems if p.code in ("duplicate_number", "numbering_format", "wrong_parent")]
+
+
+# ── dedupe and hand-made extractions (owner, Nov 2026) ──────────────────────────
+def _extraction(**paper):
+    return {
+        "paper": {"code_on_paper": "CSC 101", "title_on_paper": "Intro", "session_on_paper": None, "total_marks": 10,
+                  "duration": None, "instructions": None, "answer_total": None, "compulsory": [], "sections": [], **paper},
+        "questions": [q("Q1", marks=10)],
+        "page_notes": [],
+    }
+
+
+def test_schema_errors_accepts_a_model_shaped_reply_and_names_each_problem():
+    from past_papers import EXTRACT_SCHEMA, schema_errors
+
+    assert schema_errors(_extraction(), EXTRACT_SCHEMA) == []
+    bad = _extraction(total_marks="ten", extra=1)
+    bad["questions"][0]["type"] = "essay-ish"
+    del bad["questions"][0]["confidence"]
+    errs = schema_errors(bad, EXTRACT_SCHEMA)
+    assert any("$.paper.total_marks: expected number or null" in e for e in errs)
+    assert any("unknown field 'extra'" in e for e in errs)
+    assert any("$.questions[0].type" in e and "not one of" in e for e in errs)
+    assert any("$.questions[0]: missing 'confidence'" in e for e in errs)
+    # bool is not a number, and a float is not an integer
+    assert schema_errors(True, {"type": "number"}) and schema_errors(1.5, {"type": "integer"}) and not schema_errors(2, {"type": "number"})
+
+
+def test_load_manual_reads_valid_file_and_rejects_bad_ones(tmp_path: Path):
+    import json
+    from manifest import PastPaper
+    from past_papers import load_manual
+
+    pdf = tmp_path / "2024_exam.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+    pp = PastPaper(file=pdf, rel_file="x/2024_exam.pdf", session="2024/2025", type="exam", code_on_paper=None, scanned=True)
+    assert load_manual(pp) == (None, "", None)
+    side = tmp_path / "2024_exam.extraction.json"
+    side.write_text(json.dumps(_extraction()))
+    data, digest, err = load_manual(pp)
+    assert err is None and data["questions"][0]["number"] == "Q1" and len(digest) == 64
+    side.write_text("{not json")
+    assert "not valid JSON" in load_manual(pp)[2]
+    side.write_text(json.dumps({"paper": {}, "questions": []}))
+    assert "doesn't match EXTRACT_SCHEMA" in load_manual(pp)[2]
+
+
+def _job(code, file_hash, review=None, manual=None):
+    from past_papers import Job
+
+    class C:
+        pass
+
+    c = C()
+    c.code, c.programme, c.key = code, "p-" + code, "pau/p/" + code
+
+    class P:
+        rel_file = f"{code}/paper.pdf"
+
+    return Job(course=c, paper=P(), file_hash=file_hash, review=review, review_hash="", params={}, pages=2, manual=manual)
+
+
+def test_group_identical_sends_each_file_once_and_copies_take_its_model_and_review():
+    from past_papers import PAST_Q_MODEL, group_identical
+
+    a, b, c, d = _job("CSC101", "h1", review={"accept": ["total_marks"]}), _job("SEN101", "h1"), _job("DTS101", "h1", review={"drop": ["Q9"]}), _job("ECO101", "h2")
+    copies = group_identical([a, b, c, d])
+    assert copies == [b, c] and a.copy_of is None and d.copy_of is None
+    assert b.copy_of is a and b.reuse_from == "CSC101" and b.review == {"accept": ["total_marks"]}
+    assert c.review == {"drop": ["Q9"]}  # its own review file wins
+    assert b.model == PAST_Q_MODEL and d.model == PAST_Q_MODEL
+
+
+def test_group_identical_prefers_a_hand_made_extraction_and_manual_changes_the_fingerprint():
+    from past_papers import group_identical
+
+    model, hand = _job("CSC101", "h1"), _job("SEN101", "h1", manual=_extraction())
+    hand.manual_hash = "abc"
+    assert group_identical([model, hand]) == [model]
+    assert model.copy_of is hand and model.model == "manual" and hand.model == "manual"
+    plain = _job("SEN101", "h1")
+    assert hand.fingerprint != plain.fingerprint

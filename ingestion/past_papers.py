@@ -11,7 +11,13 @@ paper's printed code and title against the course) → write the review report a
 report → store (status ok | needs_review; only ok is shown to students).
 
 A paper whose file is byte-identical to one already extracted for another course (Software
-Engineering's copies of the CS papers) reuses that extraction: no model call.
+Engineering's copies of the CS papers) reuses that extraction: no model call. Identical files in
+the same run are sent once: the first copy goes to the model, the others reuse its reply.
+
+Hand-made extraction (optional, owner, Nov 2026), next to the paper: past_papers/<name>.extraction.json,
+a JSON object matching EXTRACT_SCHEMA. When present it replaces the model (no API call): it is checked
+against the schema, then reviewed, validated and stored like a model reply, with extraction_model
+"manual". Identical copies of the paper in other programmes reuse it.
 
 Idempotent: a paper whose file, model, prompt and review file are unchanged is skipped; every model
 reply is cached in data/.cache/batches, so re-running after a fix only pays for what changed.
@@ -178,13 +184,29 @@ class Job:
     orientation: tuple[str, ...] = ()  # per page: "upright", "turned 90° (…)", …
     reuse: dict | None = None  # the stored extraction of a byte-identical paper (no model call)
     reuse_from: str | None = None  # that paper's course code
+    reuse_model: str | None = None  # the model (or "manual") that extracted it
+    copy_of: Job | None = None  # an identical file in this run that goes to the model instead
+    manual: dict | None = None  # the paper's .extraction.json (replaces the model)
+    manual_hash: str = ""
+    manual_error: str | None = None  # the .extraction.json exists but doesn't match EXTRACT_SCHEMA
 
     @property
     def custom_id(self) -> str:
         return hashlib.sha256(self.paper.rel_file.encode()).hexdigest()[:40]
 
     @property
+    def model(self) -> str:
+        """What extracted this paper, as stored in past_papers.extraction_model."""
+        if self.manual is not None:
+            return "manual"
+        if self.copy_of is not None:
+            return self.copy_of.model
+        return self.reuse_model or PAST_Q_MODEL
+
+    @property
     def fingerprint(self) -> str:
+        if self.manual is not None:
+            return hashlib.sha256(f"{self.file_hash}|manual|{self.manual_hash}|{self.review_hash}".encode()).hexdigest()
         return hashlib.sha256(f"{self.file_hash}|{PAST_Q_MODEL}|{PROMPT_VERSION}|{self.review_hash}".encode()).hexdigest()
 
     @property
@@ -270,6 +292,61 @@ def review_path(paper: PastPaper) -> Path:
     return paper.file.with_name(paper.file.stem + ".review.yaml")
 
 
+def extraction_path(paper: PastPaper) -> Path:
+    return paper.file.with_name(paper.file.stem + ".extraction.json")
+
+
+_JSON_TYPES = {"object": dict, "array": list, "string": str, "boolean": bool, "null": type(None)}
+
+
+def schema_errors(value, schema: dict, path: str = "$") -> list[str]:
+    """Where `value` breaks `schema` (the subset EXTRACT_SCHEMA uses: type, enum, required,
+    properties, additionalProperties: false, items). Empty = valid."""
+    types = schema.get("type") or []
+    types = [types] if isinstance(types, str) else types
+
+    def is_type(t: str) -> bool:
+        if t in ("integer", "number"):
+            return isinstance(value, (int, float) if t == "number" else int) and not isinstance(value, bool)
+        return isinstance(value, _JSON_TYPES[t])
+
+    if types and not any(is_type(t) for t in types):
+        return [f"{path}: expected {' or '.join(types)}, got {json.dumps(value)[:40]}"]
+    errs = []
+    if "enum" in schema and value not in schema["enum"]:
+        errs.append(f"{path}: {value!r} is not one of {', '.join(schema['enum'])}")
+    if isinstance(value, dict):
+        props = schema.get("properties", {})
+        errs += [f"{path}: missing {k!r}" for k in schema.get("required", []) if k not in value]
+        if schema.get("additionalProperties") is False:
+            errs += [f"{path}: unknown field {k!r}" for k in value if k not in props]
+        for k, v in value.items():
+            if k in props:
+                errs += schema_errors(v, props[k], f"{path}.{k}")
+    if isinstance(value, list) and "items" in schema:
+        for i, v in enumerate(value):
+            errs += schema_errors(v, schema["items"], f"{path}[{i}]")
+    return errs
+
+
+def load_manual(paper: PastPaper) -> tuple[dict | None, str, str | None]:
+    """The paper's hand-made .extraction.json → (extraction, file hash, error). (None, "", None) if there is none."""
+    path = extraction_path(paper)
+    if not path.is_file():
+        return None, "", None
+    raw = path.read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return None, digest, f"{path.name} is not valid JSON: {e}"
+    errs = schema_errors(data, EXTRACT_SCHEMA)
+    if errs:
+        more = f" (+{len(errs) - 5} more)" if len(errs) > 5 else ""
+        return None, digest, f"{path.name} doesn't match EXTRACT_SCHEMA: {'; '.join(errs[:5])}{more}"
+    return data, digest, None
+
+
 def make_job(course: Course, paper: PastPaper) -> Job:
     if paper.file.suffix.lower() != ".pdf":
         raise SystemExit(f"{paper.rel_file}: only PDF past papers are supported")
@@ -278,17 +355,36 @@ def make_job(course: Course, paper: PastPaper) -> Job:
     review_bytes = rpath.read_bytes() if rpath.is_file() else b""
     review = yaml.safe_load(review_bytes) if review_bytes else None
     pages = render_pages(paper.file)
+    manual, manual_hash, manual_error = load_manual(paper)
     return Job(course, paper, hashlib.sha256(raw).hexdigest(), review, hashlib.sha256(review_bytes).hexdigest(),
-               build_params(course, paper, pages), len(pages), orientation=tuple(p[2] for p in pages))
+               build_params(course, paper, pages), len(pages), orientation=tuple(p[2] for p in pages),
+               manual=manual, manual_hash=manual_hash, manual_error=manual_error)
 
 
-def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str, dict | None] | None:
-    """(raw extraction, source course code, source review file) of a byte-identical paper already
-    extracted for another course with the same model; None if there is none. Its saved reply is
-    reused as is, with its review file when this copy has none of its own."""
+def group_identical(jobs: list[Job]) -> list[Job]:
+    """One model request per file: marks every later job with the same file_hash as a copy of the
+    first (a hand-made extraction wins over a model request). Returns the copies; each has copy_of
+    set, reuse_from = the first's course code, and the first's review file if it has none."""
+    first: dict[str, Job] = {}
+    for j in sorted(jobs, key=lambda j: j.manual is None):  # stable: hand-made first, then run order
+        if j.file_hash in first:
+            src = j.copy_of = first[j.file_hash]
+            j.reuse_from = src.course.code
+            if j.review is None and src.review:
+                j.review = src.review
+        else:
+            first[j.file_hash] = j
+    return [j for j in jobs if j.copy_of is not None]
+
+
+def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str, dict | None, str] | None:
+    """(raw extraction, source course code, source review file, source model) of a byte-identical
+    paper already extracted for another course by hand or with the same model; None if there is
+    none. Its saved reply is reused as is, with its review file when this copy has none of its own."""
     rows = store.db.execute(
-        """select p.source_file, c.code from past_papers p join courses c on c.id = p.course_id
-           where p.file_hash = %s and p.course_id <> %s and p.extraction_model = %s order by p.created_at""",
+        """select p.source_file, p.extraction_model, c.code from past_papers p join courses c on c.id = p.course_id
+           where p.file_hash = %s and p.course_id <> %s and p.extraction_model in (%s, 'manual')
+           order by p.extraction_model = 'manual' desc, p.created_at""",
         (job.file_hash, course_id, PAST_Q_MODEL),
     ).fetchall()
     for r in rows:
@@ -296,7 +392,7 @@ def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str, dict | None]
         if dump.is_file():
             src_review = (DATA / r["source_file"]).with_name(Path(r["source_file"]).stem + ".review.yaml")
             review = yaml.safe_load(src_review.read_text()) if src_review.is_file() else None
-            return json.loads(dump.read_text())["raw"], r["code"], review
+            return json.loads(dump.read_text())["raw"], r["code"], review, r["extraction_model"]
     return None
 
 
@@ -318,7 +414,7 @@ def save_paper(store, course_id: str, job: Job, extraction: dict, checked: Check
             (course_id, job.paper.session, job.paper.type, job.paper.code_on_paper or paper.get("code_on_paper"),
              job.paper.instructions or paper.get("instructions"), json.dumps(rules), job.paper.duration or paper.get("duration"),
              paper.get("total_marks"), job.pages, job.paper.scanned, job.paper.rel_file, job.file_hash, checked.status,
-             json.dumps([p.as_dict() for p in checked.problems]), PAST_Q_MODEL, job.fingerprint),
+             json.dumps([p.as_dict() for p in checked.problems]), job.model, job.fingerprint),
         ).fetchone()["id"]
         ids: dict[str, str] = {}
         for order, q in enumerate(checked.questions, 1):
@@ -345,7 +441,9 @@ def report_section(job: Job, extraction: dict | None, checked: Checked | None, e
     turned = [f"p{i} {o}" for i, o in enumerate(job.orientation, 1) if o != "upright"]
     if turned:
         lines.append(f"- Orientation: {'; '.join(turned)}")
-    if job.reuse is not None:
+    if job.manual is not None or job.manual_error:
+        lines.append(f"- Hand-made extraction: `{extraction_path(job.paper).name}` (no model call)")
+    if job.reuse is not None or job.copy_of is not None:
         lines.append(f"- Reused the extraction of the identical {job.reuse_from} paper (no model call)")
     if error:
         return "\n".join([*lines, f"- **Status: not extracted** — {error}", ""])
@@ -462,18 +560,31 @@ def main(argv: list[str] | None = None) -> int:
     if not jobs:
         print("Nothing to do.")
         return 0
+    for j in jobs:
+        if j.manual is not None:
+            print(f"  hand-made extraction (no model call): {j.name}")
+        elif j.manual_error:
+            print(f"  hand-made extraction rejected: {j.name}: {j.manual_error}")
     if store:
         for j in jobs:
+            if j.manual is not None or j.manual_error:
+                continue
             found = find_reuse(store, j, course_ids[j.course.key])
             if found:
-                j.reuse, j.reuse_from, src_review = found
+                j.reuse, j.reuse_from, src_review, j.reuse_model = found
                 if j.review is None and src_review:
                     j.review = src_review
                 print(f"  identical to the {j.reuse_from} paper, reused (no model call): {j.name}")
 
-    model_jobs = [j for j in jobs if j.reuse is None]
+    # Identical files in this run (one paper filed under several programmes): one request per file.
+    copies = group_identical([j for j in jobs if j.reuse is None and not j.manual_error])
+    if copies:
+        print(f"  {len(copies)} identical cop{'y' if len(copies) == 1 else 'ies'} of a paper in this run: "
+              "sent once, the copies reuse that reply")
+    model_jobs = [j for j in jobs if j.reuse is None and j.manual is None and not j.manual_error and j.copy_of is None]
     uncached = [j for j in model_jobs if batch.cached(j.params) is None]
-    print(f"{len(jobs)} paper(s) to process, {len(uncached)} need the model ({PAST_Q_MODEL}).")
+    print(f"{len(jobs)} paper(s) to process, {len(model_jobs)} distinct file(s) for the model, "
+          f"{len(uncached)} not cached ({PAST_Q_MODEL}).")
     if uncached:
         estimate(uncached)
         if args.estimate:
@@ -492,11 +603,16 @@ def main(argv: list[str] | None = None) -> int:
     spent = 0.0
     stored = needs_review = failed = 0
     for j in jobs:
-        if j.reuse is not None:
+        src = j.copy_of or j
+        if j.manual_error:
+            text, error = None, j.manual_error
+        elif j.reuse is not None:
             text, error = json.dumps(j.reuse), None
+        elif src.manual is not None:
+            text, error = json.dumps(src.manual), None
         else:
-            r = replies[j.custom_id]
-            if not r.cached:
+            r = replies[src.custom_id]
+            if not r.cached and j.copy_of is None:  # a copy's request was paid for by the first
                 spent += batch.batch_cost(PAST_Q_MODEL, r.input_tokens, r.output_tokens)
             text, error = r.text, r.error
         if error or not text:
@@ -518,7 +634,7 @@ def main(argv: list[str] | None = None) -> int:
         matches.append((j, verdict, detail, checked.status))
         dump = REPORTS / "past_papers" / f"{j.course.code}-{Path(j.paper.rel_file).stem}.json"
         dump.parent.mkdir(parents=True, exist_ok=True)
-        dump.write_text(json.dumps({"model": PAST_Q_MODEL, "raw": raw, "checked": checked.questions,
+        dump.write_text(json.dumps({"model": j.model, "raw": raw, "checked": checked.questions,
                                     "problems": [p.as_dict() for p in checked.problems]}, indent=1, ensure_ascii=False))
         sections.append(report_section(j, extraction, checked, None))
         if store:

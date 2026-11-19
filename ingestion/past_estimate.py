@@ -2,11 +2,13 @@
 
     npm run ingest:past:estimate
 
-- Extraction (PAST_Q_MODEL): exact input tokens (count_tokens) for papers not stored yet; papers
-  byte-identical to one already extracted for another course are reused for $0.
+- Extraction (PAST_Q_MODEL): exact input tokens (count_tokens) for papers not stored yet, counted
+  once per file: papers byte-identical to one already extracted for another course, or to another
+  pending paper (the same file under several programmes), reuse that extraction for $0, as do papers
+  with a hand-made .extraction.json.
 - Analysis (PAST_ANSWER_MODEL): exact input tokens for questions already extracted; for papers not extracted yet, the
-  question count is projected from the extracted papers' questions per page, and the tokens per
-  question from their real requests.
+  question count is projected from the extracted papers' questions per page (4 per page until at
+  least MIN_MEASURED_PAGES pages are measured), and the tokens per question from their real requests.
 Output tokens are a guess (structured JSON + thinking at medium effort).
 """
 
@@ -21,6 +23,9 @@ from config import DATA, PAST_ANSWER_MODEL, PAST_Q_MODEL
 from manifest import load
 from store import Store
 
+MIN_MEASURED_PAGES = 20  # below this the measured questions/page is noise: assume FALLBACK_Q_PER_PAGE
+FALLBACK_Q_PER_PAGE = 4
+
 
 def main() -> int:
     store = Store()
@@ -31,7 +36,8 @@ def main() -> int:
     per_q_in: list[int] = []
     rows = []
     pending_pages = 0
-    reused = 0
+    reused = copies = manual = 0
+    first: dict[str, str] = {}  # file_hash → the pending paper that will be extracted
     for c in courses:
         cid = store.course_id(c)
         if cid is None:
@@ -54,6 +60,17 @@ def main() -> int:
             if pp.stored_fingerprint(store, cid, p.rel_file) is not None:
                 continue
             job = pp.make_job(c, p)
+            if job.manual is not None:
+                manual += 1
+                pending_pages += job.pages
+                rows.append((f"{c.code} {p.file.name}", "manual", job.pages, 0, 0))
+                continue
+            if job.file_hash in first:
+                copies += 1
+                pending_pages += job.pages
+                rows.append((f"{c.code} {p.file.name} = {first[job.file_hash]}", "copy", job.pages, 0, 0))
+                continue
+            first[job.file_hash] = f"{c.programme}/{c.code}"
             if pp.find_reuse(store, job, cid):
                 reused += 1
                 pending_pages += job.pages  # its questions still get analysed for this course
@@ -66,24 +83,27 @@ def main() -> int:
             pending_pages += job.pages
             rows.append((f"{c.code} {p.file.name}", "extraction", job.pages, tin, tout))
 
-    q_per_page = measured_q / measured_pages if measured_pages else 5
+    q_per_page = measured_q / measured_pages if measured_pages >= MIN_MEASURED_PAGES else FALLBACK_Q_PER_PAGE
     avg_in = sum(per_q_in) / len(per_q_in) if per_q_in else 6000
     proj_q = round(pending_pages * q_per_page)
     proj_in = int(proj_q * avg_in)
     proj_out = proj_q * (900 + 120 * 7 + 1500)
 
-    model = {"extraction": PAST_Q_MODEL, "reused": PAST_Q_MODEL, "analysis": PAST_ANSWER_MODEL}
+    model = {"extraction": PAST_Q_MODEL, "reused": PAST_Q_MODEL, "copy": PAST_Q_MODEL, "manual": PAST_Q_MODEL, "analysis": PAST_ANSWER_MODEL}
     for m in sorted({PAST_Q_MODEL, PAST_ANSWER_MODEL}):
         pin, pout = batch.price(m)
         print(f"{m}: Batches API, ${pin / 2:.2f} / ${pout / 2:.2f} per M in/out")
-    print(f"\n{'':<46}{'step':<12}{'n':>5}{'in':>10}{'out (est)':>11}{'$':>8}")
+    print(f"\n{'':<70}{'step':<12}{'n':>5}{'in':>10}{'out (est)':>11}{'$':>8}")
     for name, step, n, tin, tout in rows:
-        print(f"{name:<46}{step:<12}{n:>5}{tin:>10,}{tout:>11,}{batch.batch_cost(model[step], tin, tout):>8.3f}")
-    print(f"{f'Analysis of the other papers (~{q_per_page:.1f} questions/page × {pending_pages} pages)':<46}{'projected':<12}{proj_q:>5}"
+        print(f"{name:<70}{step:<12}{n:>5}{tin:>10,}{tout:>11,}{batch.batch_cost(model[step], tin, tout):>8.3f}")
+    basis = "measured" if measured_pages >= MIN_MEASURED_PAGES else f"assumed, only {measured_pages} pages measured"
+    print(f"{f'Analysis of the other papers (~{q_per_page:.1f} questions/page, {basis}; {pending_pages} pages)':<70}{'projected':<12}{proj_q:>5}"
           f"{proj_in:>10,}{proj_out:>11,}{batch.batch_cost(PAST_ANSWER_MODEL, proj_in, proj_out):>8.3f}")
     ext = batch.batch_cost(PAST_Q_MODEL, ext_in, ext_out)
     ana = batch.batch_cost(PAST_ANSWER_MODEL, ana_in + proj_in, ana_out + proj_out)
-    print(f"\nStep 1, extraction ({PAST_Q_MODEL}): ≈ ${ext:.2f}   ({reused} identical paper(s) reused for $0)")
+    n_ext = sum(r[1] == "extraction" for r in rows)
+    print(f"\nStep 1, extraction ({PAST_Q_MODEL}): ≈ ${ext:.2f}   ({n_ext} distinct file(s) sent; {copies} copies of a pending file "
+          f"reuse its extraction, {reused} reuse one already stored, {manual} hand-made: all $0)")
     print(f"Step 2, answers ({PAST_ANSWER_MODEL}): ≈ ${ana:.2f}   (rough until step 1 has run: projected from questions per page)")
     print(f"Total ≈ ${ext + ana:.2f}")
     print("Plus Voyage embeddings for ~1 query and 1 document per question: well under $0.01.")
