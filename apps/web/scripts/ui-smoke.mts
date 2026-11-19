@@ -933,6 +933,10 @@ async function main() {
     p2.on("pageerror", (e) => consoleErrors.push(e.message));
     await p2.goto(chatUrl);
     await p2.locator("li button[title^='Open ']:visible").first().waitFor({ timeout: 15000 });
+    // First visit on a phone: the course tour starts at the ☰ button (study-tour.tsx); skip it here.
+    const tourTip = p2.getByRole("dialog", { name: "Start here" });
+    check(await tourTip.waitFor({ timeout: 5000 }).then(() => true, () => false), "first visit on a phone starts the tour at the menu button");
+    await tourTip.getByRole("button", { name: "Skip tour" }).click().catch(() => {});
     const overflow = await p2.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     check(overflow <= 0, "no sideways scrolling at 375px", `${overflow}px`);
     const drawer = await p2.locator("aside").first().boundingBox();

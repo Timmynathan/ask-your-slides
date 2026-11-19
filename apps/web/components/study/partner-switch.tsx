@@ -37,8 +37,10 @@ function markSeen(account: string) {
   window.dispatchEvent(new Event(HINT_EVENT));
 }
 
-export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account }: {
+export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account, quiet = false }: {
   partner: PartnerId;
+  /** Hold the first-time hint back (the course page's tour is showing). */
+  quiet?: boolean;
   /** The signed-in account's id: the hint is shown once per account. */
   account: string;
   onChanged(id: PartnerId): void;
@@ -49,7 +51,7 @@ export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account 
   const p = PARTNERS[partner];
   // Seen before? Read from this browser; the server (no storage) renders no hint.
   const seen = useSyncExternalStore(subscribe, () => readSeen(account), () => true);
-  const hint = !seen;
+  const hint = !seen && !quiet;
   const dismissHint = () => markSeen(account);
 
   return (

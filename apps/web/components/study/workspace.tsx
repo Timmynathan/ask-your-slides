@@ -15,6 +15,7 @@ import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 import { SourcesPanel } from "./sources-panel";
+import { StudyTour, useStudyTour } from "./study-tour";
 import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
 
 // Inside one course, laid out like a notebook: a top bar (logo back to My courses, the course name,
@@ -35,6 +36,25 @@ export function Workspace(data: WorkspaceData) {
   const [preview, setPreview] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false); // below xl; on wide screens Sources is always shown
+  // First visit on a phone or iPad in portrait: a short tour of ☰ (topics) and Sources (study-tour.tsx).
+  const tour = useStudyTour(data.user.id, !data.initialPast);
+  const { advance } = tour;
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    advance("menu");
+  };
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    advance("drawer");
+  }, [advance]);
+  const openSources = () => {
+    setSourcesOpen(true);
+    advance("sources");
+  };
+  const closeSources = useCallback(() => {
+    setSourcesOpen(false);
+    advance("files");
+  }, [advance]);
   const [used, setUsed] = useState(data.usage.used);
   const [prefill, setPrefill] = useState<{ text: string; n: number; slideKey?: string } | null>(null);
   const [partner, setPartner] = useState<PartnerId>(data.partner);
@@ -47,8 +67,8 @@ export function Workspace(data: WorkspaceData) {
   const openPast = useCallback((paperId: string | null) => {
     setPastPaper(paperId);
     setPast("list");
-    setDrawerOpen(false);
-  }, []);
+    closeDrawer();
+  }, [closeDrawer]);
   // "Is this helping you study?" after the 10th question; "Not now" waits until the next visit.
   const [questions, setQuestions] = useState(data.pulse.questions);
   const [pulseClosed, setPulseClosed] = useState(data.pulse.answered);
@@ -105,9 +125,9 @@ export function Workspace(data: WorkspaceData) {
     setChatId(next.chatId);
     setPanelKey(next.chatId ?? `new-${next.courseId}-${next.topicId ?? "course"}-${Date.now()}`);
     setPreview(firstSlide(next.topicId));
-    setDrawerOpen(false);
+    closeDrawer();
     setPast(null);
-  }, [firstSlide]);
+  }, [firstSlide, closeDrawer]);
 
   const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
   const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
@@ -142,7 +162,7 @@ export function Workspace(data: WorkspaceData) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
       {/* Top bar: as quiet as My courses. */}
       <header className="flex h-16 shrink-0 items-center gap-1 px-3 sm:gap-2 sm:px-5">
-        <IconButton label="Open topics" onClick={() => setDrawerOpen(true)} className="lg:hidden">
+        <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="lg:hidden">
           <path d="M4 7h16M4 12h16M4 17h16" />
         </IconButton>
         <Link href="/dashboard" aria-label="All courses" title="All courses" className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-sunken active:scale-95">
@@ -167,7 +187,7 @@ export function Workspace(data: WorkspaceData) {
           <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
             <path d="M15 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 4 17.5V19M9.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18.5 8v6M21.5 11h-6" />
           </IconButton>
-          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} />
+          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} quiet={tour.step !== null} />
           <AccountMenu user={data.user} onChangePartner={() => setPickingPartner(true)} />
         </div>
       </header>
@@ -177,7 +197,7 @@ export function Workspace(data: WorkspaceData) {
             chat and slide side by side), a drawer below lg (phones, iPads in portrait). */}
         <div
           className={`fixed inset-0 z-30 bg-black/20 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
-          onClick={() => setDrawerOpen(false)}
+          onClick={closeDrawer}
           aria-hidden
         />
         <aside
@@ -224,7 +244,7 @@ export function Workspace(data: WorkspaceData) {
                 {topicPast > 0 ? "All past questions" : "Past questions"}
               </button>
             )}
-            <IconButton label="Sources" onClick={() => setSourcesOpen(true)} className="xl:hidden">
+            <IconButton label="Sources" onClick={openSources} tour="sources" className="xl:hidden">
               <path d="M7 3.5h7l4 4V20.5H7z" />
               <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
             </IconButton>
@@ -285,9 +305,9 @@ export function Workspace(data: WorkspaceData) {
             materials={data.materials}
             topic={topic}
             open={sourcesOpen}
-            onClose={() => setSourcesOpen(false)}
+            onClose={closeSources}
             onOpenSource={(key) => {
-              setSourcesOpen(false);
+              closeSources();
               setPreview(key);
             }}
           />
@@ -310,16 +330,18 @@ export function Workspace(data: WorkspaceData) {
       </div>
 
 
+      <StudyTour step={tour.step} onSkip={tour.skip} onGotIt={(step) => (step === "drawer" ? closeDrawer() : closeSources())} />
       {sheet && <PricingSheet code={sheet.code} resetsAt={sheet.resetsAt} offer={data.plan.offer} onClose={closeSheet} />}
     </div>
   );
 }
 
 /** Round, borderless icon button with a line icon (24px grid), as on My courses. */
-function IconButton({ label, onClick, className = "", children }: { label: string; onClick(): void; className?: string; children: React.ReactNode }) {
+function IconButton({ label, onClick, className = "", tour, children }: { label: string; onClick(): void; className?: string; tour?: string; children: React.ReactNode }) {
   return (
     <button
       type="button"
+      data-tour={tour}
       onClick={onClick}
       aria-label={label}
       title={label}

@@ -350,3 +350,10 @@ html { scroll-behavior: smooth; }
   .welcome-backdrop, .welcome-card, .welcome-badge, .welcome-rise, .welcome-perk, .welcome-spark { animation: none; }
   .confetti-piece { display: none; }
 }
+
+/* First-visit tour (study-tour.tsx): the arrow nudges up at the button; the ring pulses. */
+@keyframes tour-arrow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.tour-arrow { animation: tour-arrow 1.1s ease-in-out infinite; }
+@keyframes tour-ring { 0% { box-shadow: 0 0 0 0 rgb(94 163 237 / 0.55); } 100% { box-shadow: 0 0 0 12px rgb(94 163 237 / 0); } }
+.tour-ring { animation: tour-ring 1.4s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .tour-arrow, .tour-ring { animation: none; } }
