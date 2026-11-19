@@ -69,7 +69,7 @@ export function PeersSection() {
     <section id="peers" className="scroll-mt-20 py-20">
       <div className="mx-auto max-w-6xl px-5">
         <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">What your peers are saying</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-muted">PAU students revising for their exams with their own course slides.</p>
+        <p className="mx-auto mt-3 max-w-xl text-center text-muted">PAU students revising for their exams with Ask Your Slides.</p>
         {oneVideo && quotes.length > 0 ? (
           <div className="mx-auto mt-12 flex max-w-4xl flex-col items-center gap-10 md:flex-row md:items-center md:justify-center md:gap-14">
             {videos}
