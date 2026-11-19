@@ -433,6 +433,10 @@ INS401; software-engineering CSC409, INS401; information-science-and-media-studi
 mass-communication CMS401, MCM409; film-and-multimedia-studies FMM405, CMS401;
 business-administration BUA402, BUA-COMPANY-LAW; economics ECO-ADV-ECONOMETRICS, ECO401; finance
 FIN411, FIN413; accounting ACC407, ACC401; mechanical-engineering GET501, MEE521.
+Lower levels (owner, 19 Nov 2026; every level sits exams at the same time, so the same Finals plan
+and dates apply): the 2 heaviest courses of each programme and level from 100 to 300 (most pages of
+lecturer slides and notes; general studies IOH courses and electives left out), 80 courses. The list
+with each programme's ranking is data/premium_review_lower_levels.tsv; course.yaml holds the flag.
 Free students see a "Premium" badge and "N free questions left today" on these.
 
 **Limits in the UI**: when a limit is hit (daily cap, premium-course cap, summary used, quiz
