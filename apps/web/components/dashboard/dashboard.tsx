@@ -350,7 +350,8 @@ function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDa
   const root = useRef<HTMLDivElement>(null);
   useClickAway(root, open, () => setOpen(false));
 
-  // Only for a course the student added: take it off My courses (its chats are kept).
+  // Take any course off My courses (owner, 19 Nov 2026: carryovers who don't take it). Chats are
+  // kept; "Add a course" brings it back.
   const remove = async () => {
     if (removing) return;
     setRemoving(true);
@@ -398,11 +399,9 @@ function CardMenu({ course: c, onDark = false }: { course: DashboardCourse; onDa
           <button role="menuitem" onClick={copy} className="block w-full px-4 py-2.5 text-left text-ink hover:bg-sunken">
             {copied ? "Link copied ✓" : "Copy link for coursemates"}
           </button>
-          {c.extraLevel !== null && (
-            <button role="menuitem" onClick={remove} disabled={removing} className="block w-full px-4 py-2.5 text-left text-ink hover:bg-sunken disabled:opacity-50">
-              {removing ? "Removing…" : "Remove from my courses"}
-            </button>
-          )}
+          <button role="menuitem" onClick={remove} disabled={removing} className="block w-full px-4 py-2.5 text-left text-ink hover:bg-sunken disabled:opacity-50">
+            {removing ? "Removing…" : "Remove course"}
+          </button>
         </div>
       )}
     </div>
@@ -476,7 +475,7 @@ function Empty({ tab, query, onAll }: { tab: Tab; query: string; onAll(): void }
           </button>
         </>
       ) : (
-        <p className="text-ink">No courses are available yet.</p>
+        <p className="text-ink">No courses in My courses. Use Add a course to add one.</p>
       )}
     </div>
   );

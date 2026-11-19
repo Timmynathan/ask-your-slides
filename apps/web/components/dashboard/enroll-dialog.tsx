@@ -1,7 +1,8 @@
 "use client";
 
-// "Add a course" (owner, 18 Nov 2026): for students retaking a course or taking an extra one. Lists
-// the courses of the student's own programme at other levels (highest level first), with a search.
+// "Add a course" (owner, 18 Nov 2026): for students retaking a course or taking an extra one, or
+// bringing back one they removed. Lists every level of the student's own programme (highest level
+// first), with a search.
 // Adding or removing re-reads My courses from the server; the dialog stays open to add several.
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -73,7 +74,7 @@ export function EnrollDialog({ onClose }: { onClose(): void }) {
         className="pop-in flex max-h-[min(640px,85dvh)] w-full max-w-lg flex-col rounded-[28px] bg-page p-6 text-left shadow-xl ring-1 ring-line"
       >
         <h2 id="enroll-title" className="text-[20px] text-ink">Add a course</h2>
-        <p className="mt-2 text-[15px] leading-relaxed text-muted">Retaking a course or taking an extra one? Add it from any level of your programme.</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">Retaking a course, taking an extra one, or bringing back one you removed? Add it from any level of your programme.</p>
         <label className="relative mt-5 block">
           <span className="sr-only">Search courses</span>
           <svg className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -92,7 +93,7 @@ export function EnrollDialog({ onClose }: { onClose(): void }) {
 
         <div className="-mx-2 mt-4 min-h-0 flex-1 overflow-y-auto px-2">
           {!courses && !error && <div className="h-40 animate-pulse rounded-2xl bg-sunken" />}
-          {courses && courses.length === 0 && <p className="py-8 text-center text-[15px] text-muted">No other levels of your programme are available yet.</p>}
+          {courses && courses.length === 0 && <p className="py-8 text-center text-[15px] text-muted">No courses of your programme are available yet.</p>}
           {courses && courses.length > 0 && groups.length === 0 && <p className="py-8 text-center text-[15px] text-muted">No courses match “{query.trim()}”.</p>}
           {groups.map((g) => (
             <section key={g.level} className="mb-4 last:mb-0">

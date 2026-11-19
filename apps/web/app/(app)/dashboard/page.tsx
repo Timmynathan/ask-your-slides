@@ -19,13 +19,16 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", t
 
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }, { data: enrolments }] = await Promise.all([
+  const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }, { data: enrolments }, { data: removals }] = await Promise.all([
     supabase.from("courses").select("id, code, code_confirmed, programme, level, title, department, sort_order, elective, premium, materials(kind)").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, programme, level").eq("id", user.id).single(),
     supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
     // Extra courses the student added (retakes, extras). Missing before the migration: then none.
     supabase.from("course_enrollments").select("course_id"),
+    // Own-level courses the student removed (carryovers). Missing before the migration: then none.
+    supabase.from("course_removals").select("course_id"),
   ]);
+  const removed = new Set(((removals ?? []) as { course_id: string }[]).map((r) => r.course_id));
   const added = new Set(((enrolments ?? []) as { course_id: string }[]).map((r) => r.course_id));
   // A failed read is an error, not "new student": never bounce an onboarded student back to Welcome.
   if (profileError) throw new Error(`Couldn't load your profile: ${profileError.message}`);
@@ -74,7 +77,8 @@ async function Loaded() {
         lastStudied: mine[0] ? day.format(new Date(mine[0].updated_at)) : null,
       };
     })
-    .filter((c) => c.materials > 0); // a course with no material yet has nothing to study
+    .filter((c) => c.materials > 0) // a course with no material yet has nothing to study
+    .filter((c) => c.extraLevel !== null || !removed.has(c.id)); // removed from My courses
 
   const last = chatRows[0];
   const lastCourse = last ? list.find((c) => c.id === last.course_id) : undefined;
