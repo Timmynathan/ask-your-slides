@@ -25,6 +25,8 @@ from store import Store
 
 MIN_MEASURED_PAGES = 20  # below this the measured questions/page is noise: assume FALLBACK_Q_PER_PAGE
 FALLBACK_Q_PER_PAGE = 4
+# Output tokens per answered question: 795 on average over the 1,319 Haiku answers so far (Nov 2026), rounded up.
+OUT_PER_Q = 1000
 
 
 def main() -> int:
@@ -32,7 +34,6 @@ def main() -> int:
     courses = load(DATA)
     ext_in = ext_out = 0
     ana_in = ana_out = 0
-    measured_q = measured_pages = 0
     per_q_in: list[int] = []
     rows = []
     pending_pages = 0
@@ -52,9 +53,6 @@ def main() -> int:
             ana_in += tin
             ana_out += tout
             per_q_in += [tin // len(jobs)] * len(jobs)
-            pages = store.db.execute("select coalesce(sum(pages), 0) as n from past_papers where course_id = %s and status = 'ok'", (cid,)).fetchone()["n"]
-            measured_q += len(jobs)
-            measured_pages += pages
             rows.append((f"{c.code} (extracted)", "analysis", len(jobs), tin, tout))
         for p in c.past_papers:
             if pp.stored_fingerprint(store, cid, p.rel_file) is not None:
@@ -83,11 +81,19 @@ def main() -> int:
             pending_pages += job.pages
             rows.append((f"{c.code} {p.file.name}", "extraction", job.pages, tin, tout))
 
+    # Questions per page over every stored paper: the entries that get an answer (no sub-parts) of
+    # each ok paper, over its pages. (Not the pending questions: most of those courses are done.)
+    m = store.db.execute(
+        """select (select count(*) from past_questions q join past_papers p on p.id = q.paper_id
+                   where p.status = 'ok' and not exists (select 1 from past_questions c where c.parent_id = q.id)) as q,
+                  (select coalesce(sum(pages), 0) from past_papers where status = 'ok') as pages"""
+    ).fetchone()
+    measured_q, measured_pages = m["q"], m["pages"]
     q_per_page = measured_q / measured_pages if measured_pages >= MIN_MEASURED_PAGES else FALLBACK_Q_PER_PAGE
     avg_in = sum(per_q_in) / len(per_q_in) if per_q_in else 6000
     proj_q = round(pending_pages * q_per_page)
     proj_in = int(proj_q * avg_in)
-    proj_out = proj_q * (900 + 120 * 7 + 1500)
+    proj_out = proj_q * OUT_PER_Q
 
     model = {"extraction": PAST_Q_MODEL, "reused": PAST_Q_MODEL, "copy": PAST_Q_MODEL, "manual": PAST_Q_MODEL, "analysis": PAST_ANSWER_MODEL}
     for m in sorted({PAST_Q_MODEL, PAST_ANSWER_MODEL}):
