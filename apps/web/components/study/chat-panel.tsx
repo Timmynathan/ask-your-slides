@@ -15,6 +15,7 @@ import { PulseCard } from "./pulse-card";
 import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
+import { capReply } from "@/lib/plans/offer";
 
 type Meta = {
   citations?: CitationInfo[];
@@ -250,6 +251,9 @@ export function ChatPanel({
     lastTop.current = el.scrollTop;
   }, [messages, status]);
 
+  // Questions sent after today's limit (owner, 19 Nov 2026): the box stays open; each one gets a
+  // short reply naming the reset time instead of an answer. Shown here only, never sent or saved.
+  const [capNotes, setCapNotes] = useState<{ id: string; text: string; reply: string }[]>([]);
   const busy = sending || status === "submitted" || status === "streaming";
   const errText = errorText(error);
   const limit = limitOf(error);
@@ -275,7 +279,14 @@ export function ChatPanel({
 
   async function submit(raw: string) {
     const text = raw.trim();
-    if (!text || busy || capped) return;
+    if (!text || busy) return;
+    if (capped) {
+      setCapNotes((n) => [...n, { id: `cap-${Date.now()}`, text, reply: capReply(lastCap.code, lastCap.resetsAt, Date.now()) }]);
+      setInput("");
+      following.current = true;
+      setAwayFromBottom(false);
+      return;
+    }
     setSending(true);
     try {
       clearError();
@@ -381,7 +392,7 @@ export function ChatPanel({
                   <button
                     key={s.label}
                     onClick={() => (s.send ? submit(s.send) : inputRef.current?.focus())}
-                    disabled={capped || busy}
+                    disabled={busy}
                     className="rounded-full bg-sunken/70 px-4 py-2 text-sm text-ink transition hover:bg-sunken active:scale-95 disabled:opacity-50"
                   >
                     {s.label}
@@ -418,6 +429,33 @@ export function ChatPanel({
               ),
             )}
           </ol>
+
+          {capNotes.length > 0 && (
+            <ol className="mt-6 space-y-6">
+              {capNotes.map((n) => (
+                <li key={n.id} className="space-y-6">
+                  <div className="flex justify-end">
+                    <UserMessage text={n.text} canEdit={false} onEdit={() => {}} />
+                  </div>
+                  <div className="flex gap-3" data-message="limit">
+                    <Mascot partner={partner} size={28} animated={false} className="mt-0.5 hidden sm:block" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] leading-relaxed text-ink">{n.reply}</p>
+                      {plan === "free" && (
+                        <button
+                          type="button"
+                          onClick={() => onLimit(lastCap.code, lastCap.resetsAt)}
+                          className="mt-3 rounded-full bg-brand px-4 py-2 text-[13px] font-medium text-brand-ink transition hover:opacity-90 active:scale-95"
+                        >
+                          Get Finals
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
 
           {pulseDue && !busy && messages.length > 0 && (
             <PulseCard partner={partner} name={studentName} onDone={() => onPulseDone(true)} onLater={() => onPulseDone(false)} />
@@ -467,24 +505,6 @@ export function ChatPanel({
             submit(input);
           }}
         >
-          {capped ? (
-            <div className="flex items-center gap-3 rounded-[28px] bg-sunken/70 px-4 py-3 text-sm text-ink">
-              <Mascot partner={partner} size={36} />
-              <p className="min-w-0 flex-1">
-                {fill(p.capped, studentName)}
-                <span className="sr-only"> {DAILY_LIMIT}</span>
-              </p>
-              {plan === "free" && (
-                <button
-                  type="button"
-                  onClick={() => onLimit(lastCap.code, lastCap.resetsAt)}
-                  className="shrink-0 rounded-full bg-brand px-4 py-2 text-[13px] font-medium text-brand-ink transition hover:opacity-90 active:scale-95"
-                >
-                  Get Finals
-                </button>
-              )}
-            </div>
-          ) : (
             <div className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-5 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
               <textarea
                 ref={inputRef}
@@ -569,7 +589,6 @@ export function ChatPanel({
                 </button>
               )}
             </div>
-          )}
           <p className="mt-1.5 flex min-h-[16px] justify-between px-5 text-[11px] text-muted">
             {dictation.error ? (
               <span role="alert" className="text-red-700 dark:text-red-400">{dictation.error}</span>
@@ -578,6 +597,7 @@ export function ChatPanel({
             ) : (
               <span />
             )}
+            {capped && <span>{lastCap.code === "premium_cap" ? "Premium limit reached" : "Daily limit reached"} · resets at midnight</span>}
             {!capped && (premiumLimited || left < 10) && (
               <span>
                 {premiumLimited ? `${left} free question${left === 1 ? "" : "s"} left today` : `${left} message${left === 1 ? "" : "s"} left today`}

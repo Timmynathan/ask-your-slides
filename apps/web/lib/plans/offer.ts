@@ -94,3 +94,21 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     { label: "Model answers and marked practice", free: false, finals: true },
   ];
 }
+
+/**
+ * The chat's reply when a student sends a question after today's limit (owner, 19 Nov 2026): the
+ * box stays open, and each question gets this instead of an answer. Names the exact reset time
+ * (Lagos), and how long until then.
+ */
+export function capReply(code: string, resetsAt: string | null, now: number): string {
+  const which = code === "premium_cap" ? "Your premium limit is reached." : "Your daily limit is reached.";
+  if (!resetsAt) return `${which} That's it for today. It resets at midnight (WAT).`;
+  const at = new Date(resetsAt);
+  const time = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, hour: "numeric", minute: "2-digit", hour12: true })
+    .format(at)
+    .replace(/\s/g, " ")
+    .replace(/^0:/, "12:");
+  const day = new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, weekday: "short", day: "numeric", month: "short" }).format(at);
+  const left = timeLeft(resetsAt, now);
+  return `${which} That's it for today. It resets at ${time} WAT on ${day}${left ? ` (in ${left})` : ""}.`;
+}
