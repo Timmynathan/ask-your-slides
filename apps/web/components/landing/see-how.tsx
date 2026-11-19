@@ -18,10 +18,10 @@ export function SeeHowItWorks() {
     <a
       href="#demo"
       onClick={go}
-      className="cue-ring group mt-5 inline-flex items-center gap-2.5 rounded-full bg-pau-50 py-1.5 pl-1.5 pr-5 text-[15px] font-semibold text-brand ring-1 ring-brand/15 transition hover:bg-pau-100 active:scale-[0.97]"
+      className="cue-ring group mt-4 inline-flex items-center gap-2 rounded-full bg-pau-50 py-1 pl-1 pr-4 text-[14px] font-semibold text-brand ring-1 ring-brand/15 transition hover:bg-pau-100 active:scale-[0.97]"
     >
-      <span className="grid h-8 w-8 place-items-center rounded-full bg-brand text-brand-ink transition group-hover:scale-110">
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+      <span className="grid h-7 w-7 place-items-center rounded-full bg-brand text-brand-ink transition group-hover:scale-110">
+        <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden>
           <path d="M3 1.8v8.4L10 6z" fill="currentColor" />
         </svg>
       </span>

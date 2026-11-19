@@ -49,7 +49,7 @@ export function NavActions() {
   );
 }
 
-const heroButton = "mt-10 inline-flex items-center justify-center rounded-full bg-brand px-12 py-5 text-lg font-medium text-brand-ink hover:opacity-90";
+const heroButton = "mt-8 inline-flex items-center justify-center rounded-full bg-brand px-8 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 sm:mt-10 sm:px-10 sm:py-4";
 
 function HeroSignedOut({ seeHow }: { seeHow: React.ReactNode }) {
   return (

@@ -55,7 +55,7 @@ export default async function Landing() {
           <h1 className="max-w-6xl font-heading text-[2.4rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-6xl lg:text-[4.25rem]">
             Stop uploading slides to ChatGPT.
           </h1>
-          <p className="mt-6 max-w-4xl text-balance text-lg leading-relaxed text-muted sm:text-xl">
+          <p className="mt-5 max-w-2xl text-balance text-[15px] leading-relaxed text-muted sm:mt-6 sm:text-[17px]">
             All your <strong className="font-bold text-brand underline decoration-pau-400 decoration-2 underline-offset-[5px] dark:text-pau-400">PAU</strong> course slides are already here, so there&apos;s nothing to upload. Ask a question and get the answer straight
             from your slides, with the exact slide shown.
           </p>
@@ -69,9 +69,9 @@ export default async function Landing() {
         <section className="relative overflow-hidden bg-navy text-white">
           <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-pau-400/30 blur-3xl" aria-hidden />
           <div className="pointer-events-none absolute -bottom-28 right-0 h-80 w-80 rounded-full bg-[#2a3591] blur-3xl" aria-hidden />
-          <div className="relative mx-auto max-w-6xl px-5 py-12 text-center">
-            <p className="font-heading text-2xl font-semibold sm:text-3xl">Your PAU courses are already here</p>
-            <p className="mt-2 text-white/75">Same slides as on the e-learning portal. No downloading.</p>
+          <div className="relative mx-auto max-w-6xl px-5 py-8 text-center sm:py-12">
+            <p className="font-heading text-xl font-semibold sm:text-3xl">Your PAU courses are already here</p>
+            <p className="mt-1.5 text-sm text-white/75 sm:mt-2 sm:text-base">Same slides as on the e-learning portal. No downloading.</p>
             <CoursePills codes={catalog.courseCodes} />
           </div>
         </section>

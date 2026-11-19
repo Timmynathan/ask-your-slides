@@ -48,16 +48,16 @@ export function CoursePills({ codes }: { codes: string[] }) {
   }, [queue]);
 
   return (
-    <div ref={band} className="mt-7 flex flex-wrap justify-center gap-3" data-course-count={queue.length}>
+    <div ref={band} className="mx-auto mt-5 grid max-w-sm grid-cols-3 gap-2 sm:mt-7 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center sm:gap-3" data-course-count={queue.length}>
       {st.showing.map((code, i) => (
         <span
           key={i}
-          className="pop-in inline-flex min-w-[118px] items-center justify-center overflow-hidden rounded-full bg-white px-4 py-2 text-[15px] font-semibold text-[#0e1664] shadow-lg shadow-black/20"
+          className="pop-in inline-flex items-center justify-center overflow-hidden rounded-full bg-white px-2 py-1.5 text-[13px] font-semibold text-[#0e1664] shadow-md shadow-black/20 sm:min-w-[118px] sm:px-4 sm:py-2 sm:text-[15px] sm:shadow-lg"
           style={{ animationDelay: `${i * 70}ms` }}
         >
           {/* Keyed by code: a new code re-mounts this span and plays the swap animation. */}
-          <span key={code} className="pill-swap inline-flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 rounded-full ${courseDot(queue.indexOf(code) + 1)}`} aria-hidden />
+          <span key={code} className="pill-swap inline-flex items-center gap-1.5 whitespace-nowrap sm:gap-2">
+            <span className={`h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5 ${courseDot(queue.indexOf(code) + 1)}`} aria-hidden />
             {displayCode(code)}
           </span>
         </span>
