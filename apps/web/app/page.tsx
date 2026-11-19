@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 // Landing page, for visitors and signed-in students alike (owner, 17 Nov 2026: signed in, the
 // buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
 // Structure follows studyfetch.com: banner, nav, hero, PAU courses, why us, how it works (demo), steps, partners,
-// what your peers are seeing (social proof), pricing, closing call to action, footer. Sections with
+// what your peers are saying (social proof), pricing, closing call to action, footer. Sections with
 // no honest content for us (user counts, research claims) are left out.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
