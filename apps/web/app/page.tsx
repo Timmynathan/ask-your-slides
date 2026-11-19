@@ -55,10 +55,10 @@ export default async function Landing() {
           <h1 className="max-w-6xl font-heading text-[2.4rem] font-semibold leading-[1.08] tracking-tight text-ink sm:text-6xl lg:text-[4.25rem]">
             Stop uploading slides to ChatGPT.
           </h1>
-          {/* Phones get a shorter line (owner, 19 Nov 2026: at most three lines under the headline). */}
-          <p className="mt-4 max-w-2xl text-balance text-[15px] leading-relaxed text-muted sm:mt-6 sm:text-[17px]">
+          {/* Phones get a shorter line (owner, 19 Nov 2026: two lines under the headline from 360px). */}
+          <p className="mt-4 max-w-2xl text-balance text-[14px] leading-relaxed text-muted sm:mt-6 sm:text-[17px]">
             All your <strong className="font-bold text-brand underline decoration-pau-400 decoration-2 underline-offset-[5px] dark:text-pau-400">PAU</strong> course slides are already here
-            <span className="sm:hidden">. Ask anything and see the exact slide the answer comes from.</span>
+            <span className="sm:hidden">. Ask anything and see the exact slide it comes from.</span>
             <span className="hidden sm:inline">
               , so there&apos;s nothing to upload. Ask a question and get the answer straight from your slides, with the exact slide shown.
             </span>
