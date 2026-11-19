@@ -658,6 +658,7 @@ def main(argv: list[str] | None = None) -> int:
         for j, verdict, detail, status in bad:
             print(f"  {verdict:<12} {j.course.programme}/{j.name}: {detail} ({'guessed, ' if j.paper.review else ''}{status})")
     print(f"Stored {stored} paper(s) ({needs_review} need review), {failed} failed. Spent ≈ ${spent:.3f}.")
+    batch.log_spend("extract", {PAST_Q_MODEL: spent})
     if store:
         store.close()
     return 1 if failed else 0
@@ -775,6 +776,7 @@ def analyse(courses: list[Course], args) -> int:
     lines.insert(3, f"Spent ≈ ${spent:.3f} · {len(all_jobs)} questions · {flagged} with problems · {failed} failed · "
                     f"grounding: {grounded['slides']} slides, {grounded['partial']} partial, {grounded['general']} general · {reused} reused\n")
     report.write_text("\n".join(lines))
+    batch.log_spend("analyse", {PAST_ANSWER_MODEL: spent})
     print(f"Report: {report}\nAnalysed {len(all_jobs) - failed} question(s), {flagged} with problems, {failed} failed. Spent ≈ ${spent:.3f}.")
     store.close()
     return 1 if failed else 0

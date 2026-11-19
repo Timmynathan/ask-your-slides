@@ -31,6 +31,20 @@ PRICES = {
 BATCH_DISCOUNT = 0.5
 
 
+SPEND_LOG = CACHE.parent / ".reports" / "past-spend.jsonl"
+
+
+def log_spend(label: str, by_model: dict[str, float]) -> None:
+    """Append what a run really spent (new requests only; cached replies are free) to
+    data/.reports/past-spend.jsonl, one line per run, so every phase's real cost can be added up."""
+    from datetime import datetime
+
+    SPEND_LOG.parent.mkdir(parents=True, exist_ok=True)
+    with SPEND_LOG.open("a") as f:
+        f.write(json.dumps({"at": datetime.now().isoformat(timespec="seconds"), "run": label,
+                            "usd": {m: round(v, 4) for m, v in by_model.items()}, "total": round(sum(by_model.values()), 4)}) + "\n")
+
+
 def price(model: str) -> tuple[float, float]:
     if model not in PRICES:
         raise SystemExit(f"No price for {model}. Add it to PRICES in ingestion/batch.py.")
