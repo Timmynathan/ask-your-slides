@@ -1,11 +1,13 @@
 "use client";
 
 // The app's sidebar (owner, 20 Nov 2026), shared by the dashboard, Past questions and Chat, from
-// tablets up (phones keep each page's own top bar). A dark navy rail (logo, search, chat, past
-// questions, open/close, account) beside a panel that is open by default: Dashboard, Chat, Past
-// questions, Upload, and the student's courses. The panel can be closed with its button, or dragged
-// narrower by its right edge; dragging it far enough closes it. Width and open/closed are remembered
-// in this browser.
+// tablets up (phones keep each page's own top bar). A dark navy rail (logo, the sidebar button,
+// search, chat, past questions, account) beside a panel: Dashboard, Chat, Past questions, Upload,
+// and the student's courses. No pill shapes: the current page is simply brighter.
+// The sidebar button stays in the rail: clicking it keeps the panel open (pinned) or closes it; while
+// it's closed, hovering the button slides the panel out over the page until the pointer leaves. A
+// small label says what a click will do. A pinned panel can be dragged narrower by its right edge;
+// far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LogoMark } from "@/components/brand/logo";
@@ -58,35 +60,35 @@ const ICONS = {
   upload: <path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 19h14" />,
 };
 
+const railCls = (active: boolean) => `grid h-11 w-11 place-items-center transition active:scale-90 ${active ? "text-white" : "text-white/55 hover:text-white"}`;
+
 function RailButton({ label, active = false, href, onClick, children }: { label: string; active?: boolean; href?: string; onClick?(): void; children: ReactNode }) {
-  const cls = `grid h-11 w-11 place-items-center rounded-xl transition active:scale-90 ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
   return href ? (
-    <Link href={href} aria-label={label} title={label} className={cls}>
+    <Link href={href} aria-label={label} title={label} className={railCls(active)}>
       <Icon>{children}</Icon>
     </Link>
   ) : (
-    <button type="button" onClick={onClick} aria-label={label} title={label} className={cls}>
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={railCls(active)}>
       <Icon>{children}</Icon>
     </button>
   );
 }
 
+const rowCls = (active: boolean) =>
+  `flex w-full items-center gap-3 px-3 py-2 text-left text-[14.5px] transition ${active ? "font-medium text-white" : "text-white/65 hover:text-white"}`;
+
 function NavItem({ label, href, active, icon, soon = false }: { label: string; href: string; active: boolean; icon: ReactNode; soon?: boolean }) {
   if (soon) {
     return (
-      <span className="flex cursor-default items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] text-white/45" title={`${label}: coming soon`}>
+      <span className="flex cursor-default items-center gap-3 px-3 py-2 text-[14.5px] text-white/40" title={`${label}: coming soon`}>
         <Icon size={18}>{icon}</Icon>
         <span className="flex-1 truncate">{label}</span>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10.5px] text-white/70">Soon</span>
+        <span className="text-[11px] text-white/50">Soon</span>
       </span>
     );
   }
   return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] transition ${active ? "bg-white/12 text-white" : "text-white/75 hover:bg-white/8 hover:text-white"}`}
-    >
+    <Link href={href} aria-current={active ? "page" : undefined} className={rowCls(active)}>
       <Icon size={18}>{icon}</Icon>
       <span className="flex-1 truncate">{label}</span>
     </Link>
@@ -114,7 +116,8 @@ export function AppShell({
   chatReady?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
+  const [pinned, setPinned] = useState(true);
+  const [peek, setPeek] = useState(false);
   const [width, setWidth] = useState(DEFAULT_W);
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ x: number; w: number } | null>(null);
@@ -126,7 +129,7 @@ export function AppShell({
       if (saved) {
         const id = setTimeout(() => {
           if (typeof saved.width === "number") setWidth(Math.min(MAX_W, Math.max(MIN_W, saved.width)));
-          if (saved.open === false) setOpen(false);
+          if (saved.open === false) setPinned(false);
         }, 0);
         return () => clearTimeout(id);
       }
@@ -137,14 +140,15 @@ export function AppShell({
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {}
   }, []);
-  const toggle = () => {
-    setOpen((o) => {
-      remember({ open: !o, width });
-      return !o;
-    });
+  const togglePin = () => {
+    const next = !pinned;
+    setPinned(next);
+    setPeek(false);
+    remember({ open: next, width });
   };
 
   function onDragStart(e: React.PointerEvent<HTMLDivElement>) {
+    if (!pinned) return;
     start.current = { x: e.clientX, w: width };
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
@@ -158,7 +162,7 @@ export function AppShell({
     start.current = null;
     setDragging(false);
     if (width < CLOSE_BELOW) {
-      setOpen(false);
+      setPinned(false);
       setWidth(DEFAULT_W);
       remember({ open: false, width: DEFAULT_W });
     } else {
@@ -168,15 +172,26 @@ export function AppShell({
     }
   }
 
-  const panelW = open ? Math.max(MIN_W, width) : 0;
+  const shown = pinned || peek;
+  const panelW = Math.max(MIN_W, width);
   return (
-    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (open ? panelW + 8 : 0)}px` }}>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden md:flex" aria-label="Main">
+    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (pinned ? panelW + 8 : 0)}px` }}>
+      {/* Leaving the whole sidebar (rail and panel) ends a hover peek. */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main" onMouseLeave={() => setPeek(false)}>
         {/* Rail */}
-        <div className="flex w-16 flex-col items-center gap-2 bg-pau-900 py-4">
-          <Link href="/dashboard" aria-label="My courses" title="My courses" className="mb-3 grid h-11 w-11 place-items-center rounded-xl transition hover:bg-white/10">
+        <div className="flex w-16 flex-col items-center gap-1.5 bg-pau-900 py-4">
+          <Link href="/dashboard" aria-label="My courses" title="My courses" className="mb-2 grid h-11 w-11 place-items-center">
             <LogoMark size={26} light />
           </Link>
+          {/* The sidebar button: hover to peek, click to keep open or close. */}
+          <div className="group relative" onMouseEnter={() => !pinned && setPeek(true)}>
+            <button type="button" onClick={togglePin} aria-label={pinned ? "Close sidebar" : "Keep sidebar open"} aria-pressed={pinned} className={railCls(pinned)}>
+              <Icon>{ICONS.panel}</Icon>
+            </button>
+            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg transition-opacity delay-300 group-hover:opacity-100">
+              {pinned ? "Close sidebar" : "Keep sidebar open"}
+            </span>
+          </div>
           {onSearch ? (
             <RailButton label="Search courses" onClick={onSearch}>
               {ICONS.search}
@@ -194,44 +209,33 @@ export function AppShell({
           <RailButton label="Past questions" href="/past-questions" active={page === "past"}>
             {ICONS.past}
           </RailButton>
-          <div className="mt-auto flex flex-col items-center gap-3">
-            <RailButton label={open ? "Close sidebar" : "Open sidebar"} onClick={toggle}>
-              {ICONS.panel}
-            </RailButton>
+          <div className="mt-auto">
             <AccountMenu user={user} onChangePartner={onChangePartner} side />
           </div>
         </div>
 
-        {/* Panel */}
-        {open && (
-          <div className="relative my-2 flex flex-col rounded-2xl bg-navy py-3 text-white" style={{ width: panelW }}>
-            <div className="flex items-center gap-2 px-4 pb-3">
-              <span className="flex-1 truncate text-[15px] font-medium">Ask Your Slides</span>
-              <button type="button" onClick={toggle} aria-label="Close sidebar" title="Close sidebar" className="grid h-8 w-8 place-items-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white">
-                <Icon size={18}>{ICONS.panel}</Icon>
-              </button>
-            </div>
-            <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
+        {/* Panel: beside the page when pinned, over it while peeking */}
+        {shown && (
+          <div
+            className={`relative my-2 flex flex-col rounded-2xl bg-navy py-4 text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
+            style={{ width: panelW }}
+          >
+            <p className="truncate px-5 pb-3 text-[15px] font-medium">Ask Your Slides</p>
+            <nav className="flex flex-col px-2" aria-label="Pages">
               <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
               <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />
               <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />
-            </nav>
-            <div className="px-3 pt-3">
-              <button
-                type="button"
-                onClick={onUpload}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-white/12 py-2 text-[14px] font-medium text-white transition hover:bg-white/20 active:scale-[0.98]"
-              >
-                <Icon size={17}>{ICONS.upload}</Icon>
-                Upload
+              <button type="button" onClick={onUpload} className={rowCls(false)}>
+                <Icon size={18}>{ICONS.upload}</Icon>
+                <span className="flex-1 truncate">Upload</span>
               </button>
-            </div>
-            <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/55">Courses</p>
+            </nav>
+            <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Courses</p>
             <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
               {courses.map((c) => (
                 <li key={c.id}>
-                  <Link href={c.href} title={c.title} className="flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] text-white/75 transition hover:bg-white/8 hover:text-white">
-                    <span className="shrink-0 text-white/55">
+                  <Link href={c.href} title={c.title} className={rowCls(false)}>
+                    <span className="shrink-0 text-white/45">
                       <Icon size={16}>{ICONS.book}</Icon>
                     </span>
                     <span className="truncate">{c.title}</span>
@@ -240,16 +244,18 @@ export function AppShell({
               ))}
             </ul>
             {/* Drag the right edge to resize; far enough left closes the panel. */}
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize sidebar"
-              onPointerDown={onDragStart}
-              onPointerMove={onDragMove}
-              onPointerUp={onDragEnd}
-              onPointerCancel={onDragEnd}
-              className={`absolute -right-1.5 top-0 h-full w-3 cursor-col-resize touch-none rounded-full transition-colors ${dragging ? "bg-white/25" : "hover:bg-white/15"}`}
-            />
+            {pinned && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize sidebar"
+                onPointerDown={onDragStart}
+                onPointerMove={onDragMove}
+                onPointerUp={onDragEnd}
+                onPointerCancel={onDragEnd}
+                className={`absolute -right-1.5 top-0 h-full w-3 cursor-col-resize touch-none rounded-full transition-colors ${dragging ? "bg-white/25" : "hover:bg-white/15"}`}
+              />
+            )}
           </div>
         )}
       </aside>
