@@ -161,7 +161,7 @@ export function Workspace(data: WorkspaceData) {
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
       {/* Top bar: as quiet as My courses. Back on the left, the course name centred (owner, 20 Nov 2026:
           "this is the course we're on"), actions on the right. Phones: the name gets its own centred line below. */}
-      <header className="flex shrink-0 flex-wrap items-center gap-x-1 px-3 pt-2 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:px-5 sm:pt-0">
+      <header className="flex shrink-0 flex-wrap items-center gap-x-1 border-b border-line px-3 pt-1 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:border-0 sm:px-5 sm:pt-0">
         <div className="flex shrink-0 items-center gap-1 sm:justify-self-start">
           <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="lg:hidden">
             <path d="M4 7h16M4 12h16M4 17h16" />
@@ -179,20 +179,25 @@ export function Workspace(data: WorkspaceData) {
             <span className="hidden text-[14px] sm:inline">My courses</span>
           </Link>
         </div>
-        <h1 className="order-last min-w-0 basis-full truncate pb-1 pt-0.5 text-center text-[17px] text-ink sm:order-none sm:max-w-[min(60vw,720px)] sm:basis-auto sm:p-0 sm:text-[19px]">
-          {course.title}
-          {shownCode(course) && <span className="ml-2 hidden text-sm text-muted sm:inline">{shownCode(course)}</span>}
-          {course.elective && <span className="ml-2 rounded-full bg-pau-100 px-2.5 py-0.5 align-middle text-[12px] font-medium text-brand">Elective</span>}
-          {countMain(data.materials) < LIMITED_MAIN_MATERIALS && (
-            <span
-              title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
-              className="ml-2 hidden rounded-full bg-amber-50 px-2.5 py-0.5 align-middle text-[12px] font-medium text-amber-800 sm:inline"
-            >
-              Limited materials
-            </span>
+        {/* The course: name over a quiet line of code and tags, centred. Phones: its own row under the buttons. */}
+        <div className="order-last min-w-0 basis-full pb-2.5 pt-0.5 text-center sm:order-none sm:max-w-[min(56vw,680px)] sm:basis-auto sm:p-0">
+          <h1 className="truncate text-[16px] font-medium leading-snug text-ink sm:text-[17px]">{course.title}</h1>
+          {(shownCode(course) || course.elective || data.plan.premiumLimited || countMain(data.materials) < LIMITED_MAIN_MATERIALS) && (
+            <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[12px] leading-5 text-muted">
+              {shownCode(course) && <span>{shownCode(course)}</span>}
+              {course.elective && <span className="rounded-full bg-pau-100 px-2 text-[11.5px] font-medium text-brand">Elective</span>}
+              {countMain(data.materials) < LIMITED_MAIN_MATERIALS && (
+                <span
+                  title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
+                  className="hidden rounded-full bg-amber-50 px-2 text-[11.5px] font-medium text-amber-800 sm:inline"
+                >
+                  Limited materials
+                </span>
+              )}
+              {data.plan.premiumLimited && <PremiumTag left={remaining} />}
+            </div>
           )}
-          {data.plan.premiumLimited && <PremiumTag left={remaining} />}
-        </h1>
+        </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:justify-self-end sm:gap-2">
           <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
@@ -384,12 +389,12 @@ function PremiumTag({ left }: { left: number }) {
     <>
       <span
         title="Premium courses are the heaviest courses in your programme. Free gives a few questions a day; Finals has no limit."
-        className="ml-2 rounded-full bg-pau-100 px-2.5 py-0.5 align-middle text-[12px] font-semibold text-pau-800 dark:text-pau-400"
+        className="rounded-full bg-pau-100 px-2 text-[11.5px] font-semibold text-pau-800 dark:text-pau-400"
       >
         Premium
       </span>
-      <span className="ml-2 hidden align-middle text-[13px] text-muted sm:inline">
-        {left} free question{left === 1 ? "" : "s"} left today
+      <span>
+        · {left} free question{left === 1 ? "" : "s"} left today
       </span>
     </>
   );
