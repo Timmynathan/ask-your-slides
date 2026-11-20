@@ -7,8 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
-import { AppShell, type ShellChat } from "@/components/nav/app-shell";
-import { UploadSoon } from "@/components/nav/upload-soon";
+import { AppShell, type ShellChat, type ShellFile } from "@/components/nav/app-shell";
 import { GeneralChatPanel } from "@/components/chat/general-chat-panel";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -62,9 +61,11 @@ interface Props {
   programmeTitle: string;
   /** The sidebar's Recent chats. */
   recent: ShellChat[];
+  /** The sidebar's My files. */
+  files: ShellFile[];
 }
 
-export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals, programmeTitle, recent }: Props) {
+export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals, programmeTitle, recent, files }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -72,7 +73,6 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const [sort, setSort] = useState<Sort>("course");
   const [view, setView] = useState<View>("grid");
   const [enrolling, setEnrolling] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const searchBox = useRef<HTMLInputElement>(null);
 
   // Remembered view, read after hydration so server and browser first render the same thing.
@@ -110,7 +110,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const departments = [...new Set(courses.map((c) => c.department))];
 
   return (
-    <AppShell page="dashboard" title={programmeTitle} courses={courses} recent={recent} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
+    <AppShell page="dashboard" title={programmeTitle} courses={courses} recent={recent} files={files} user={user} onSearch={() => searchBox.current?.focus()} onChangePartner={() => setPickingPartner(true)}>
       <div className="xl:pr-[380px]">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
@@ -271,7 +271,6 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
       </main>
       </div>
       {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
-      {uploading && <UploadSoon onClose={() => setUploading(false)} />}
       {/* The general chat on the right, on wide screens (owner, 20 Nov 2026). */}
       <GeneralChatPanel partner={partner} firstName={user.displayName?.trim().split(/\s+/)[0] ?? null} onChangePartner={() => setPickingPartner(true)} />
     </AppShell>

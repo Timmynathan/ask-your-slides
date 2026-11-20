@@ -57,3 +57,13 @@ export const PROMO_MAX_BATCH = 50;
 export type PlanId = "free" | "finals";
 
 export const PLAN_NAMES: Record<PlanId, string> = { free: "Free", finals: "Finals" };
+
+// ── Own uploads (owner, 20 Nov 2026): photos of tests/notes or a PDF, read into the student's chats ──
+/** How many uploads a student can have at once, per plan. */
+export const UPLOADS_ALLOWED: Record<PlanId, number> = { free: 2, finals: 30 };
+/** Photos per upload (a whole test). */
+export const MAX_UPLOAD_PHOTOS = 10;
+/** Pages read from one PDF (longer PDFs are refused). */
+export const MAX_UPLOAD_PDF_PAGES = 20;
+/** One file, in MB (photos are shrunk on the phone first, so this mostly limits PDFs). */
+export const MAX_UPLOAD_MB = 15;

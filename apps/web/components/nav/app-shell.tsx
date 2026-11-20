@@ -9,15 +9,25 @@
 // the page until the pointer leaves. A small label says what a click will do. Full height, square edges. A pinned panel can be dragged narrower by its right edge;
 // far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
+import { UploadDialog } from "./upload-dialog";
 
 export type ShellPage = "dashboard" | "chat" | "past";
 export interface ShellCourse {
   id: string;
   title: string;
   href: string;
+}
+/** One of the student's own uploads (My files). */
+export interface ShellFile {
+  id: string;
+  title: string;
+  status: "uploading" | "reading" | "ready" | "failed";
+  pages: number;
+  course: string;
 }
 /** A recent chat: its title, and the link into its course with the chat open. */
 export interface ShellChat {
@@ -106,6 +116,7 @@ export function AppShell({
   title,
   courses,
   recent = [],
+  files = [],
   user,
   onSearch,
   onUpload,
@@ -119,15 +130,32 @@ export function AppShell({
   courses: ShellCourse[];
   /** The student's latest chats, newest first. */
   recent?: ShellChat[];
+  /** The student's own uploads, newest first. */
+  files?: ShellFile[];
   user: { email: string; displayName: string | null };
   /** Search button: the page's own search (dashboard), else it opens the dashboard. */
   onSearch?(): void;
-  onUpload(): void;
+  /** Deprecated: the shell opens its own Upload dialog. */
+  onUpload?(): void;
   onChangePartner?(): void;
   /** The general chat is built (step 2 of the owner's plan); until then it shows "Soon". */
   chatReady?: boolean;
   children: ReactNode;
 }) {
+  const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  // While a file is being read, refresh every few seconds so My files shows when it's ready.
+  const pending = files.some((f) => f.status === "uploading" || f.status === "reading");
+  useEffect(() => {
+    if (!pending) return;
+    const t = setInterval(() => router.refresh(), 5000);
+    return () => clearInterval(t);
+  }, [pending, router]);
+  const removeFile = async (f: ShellFile) => {
+    if (!window.confirm(`Delete "${f.title}"? Your study partner won't use it any more.`)) return;
+    await fetch(`/api/uploads/${f.id}`, { method: "DELETE" });
+    router.refresh();
+  };
   const [pinned, setPinned] = useState(true);
   const [peek, setPeek] = useState(false);
   const [width, setWidth] = useState(DEFAULT_W);
@@ -234,7 +262,7 @@ export function AppShell({
             <div className="px-3 pt-3">
               <button
                 type="button"
-                onClick={onUpload}
+                onClick={() => setUploading(true)}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-white/12 py-2 text-[14px] font-medium text-white transition hover:bg-white/20 active:scale-[0.98]"
               >
                 <Icon size={17}>{ICONS.upload}</Icon>
@@ -260,9 +288,44 @@ export function AppShell({
             )}
             {/* The student's own uploads (owner, 20 Nov 2026): empty until uploading is built. */}
             <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">My files</p>
-            <div className="min-h-0 flex-1 px-5 pt-1">
-              <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet. Notes you upload will appear here.</p>
-            </div>
+            {files.length === 0 ? (
+              <div className="min-h-0 flex-1 px-5 pt-1">
+                <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet. Photos of tests or notes you upload will appear here.</p>
+              </div>
+            ) : (
+              <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
+                {files.map((f) => (
+                  <li key={f.id} className="group flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] text-white/75 hover:bg-white/8">
+                    <span className="shrink-0 text-white/45">
+                      <Icon size={16}>{ICONS.past}</Icon>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate" title={f.title}>
+                        {f.title}
+                      </span>
+                      <span className={`block truncate text-[11.5px] ${f.status === "failed" ? "text-red-300" : "text-white/45"}`}>
+                        {f.status === "ready"
+                          ? `${f.course} · ${f.pages} ${f.pages === 1 ? "page" : "pages"}`
+                          : f.status === "failed"
+                            ? "Couldn't read it: delete and try again"
+                            : "Reading your pages…"}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(f)}
+                      aria-label={`Delete ${f.title}`}
+                      title="Delete"
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/50 opacity-0 transition hover:bg-white/10 hover:text-white focus:opacity-100 group-hover:opacity-100"
+                    >
+                      <Icon size={15}>
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </Icon>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
             {/* Drag the right edge to resize; far enough left closes the panel. */}
             {pinned && (
               <div
@@ -295,6 +358,7 @@ export function AppShell({
           </span>
         </div>
       </aside>
+      {uploading && <UploadDialog courses={courses} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
       <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
     </div>
   );

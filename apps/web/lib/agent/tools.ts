@@ -40,6 +40,8 @@ export interface ToolLogEntry {
 export interface AgentContext {
   db: SupabaseClient; // service role: RLS is bypassed, so every query below filters by courseId
   courseId: string;
+  /** The student: their own uploads for this course are searched too (match_user_notes). */
+  userId?: string;
   courseCode: string;
   courseTitle: string;
   topicId: string | null;
@@ -180,6 +182,14 @@ export const searchSlides = defineTool({
     const kinds = [...DEFAULT_KINDS, ...include];
     const base = { courseId: ctx.courseId, embedding, query, k, kinds };
 
+    // The student's own uploads for this course (photos of tests, notes): searched alongside, shown
+    // apart from the slides (never citable as slides).
+    const notesPromise: Promise<{ title: string; kind: string; page: number; chunk_text: string; similarity: number }[]> = ctx.userId
+      ? Promise.resolve(
+          ctx.db.rpc("match_user_notes", { p_user_id: ctx.userId, p_course_id: ctx.courseId, p_query_embedding: JSON.stringify(embedding), p_k: 3 }),
+        ).then((r) => (r.data ?? []) as { title: string; kind: string; page: number; chunk_text: string; similarity: number }[], () => [])
+      : Promise.resolve([]);
+
     let hits: SlideHit[];
     let fellBack = false;
     let detail: Record<string, unknown> = { scope_used: "course" };
@@ -198,6 +208,8 @@ export const searchSlides = defineTool({
     }
 
     hits.forEach((h) => remember(ctx, h));
+    const notes = (await notesPromise).filter((n) => n.similarity >= NO_MATCH_SIMILARITY);
+    const yourNotes = notes.map((n) => ({ upload: n.title, kind: n.kind === "pdf" ? "uploaded PDF" : "uploaded photos", page: n.page, content: n.chunk_text }));
     const results = hits.map((h) => ({
       slide_key: h.slide_key,
       material: h.material_title,
@@ -211,9 +223,9 @@ export const searchSlides = defineTool({
       neighbours: { previous: h.prev_title, next: h.next_title },
     }));
     return {
-      status: hits.length ? "ok" : "not_found",
+      status: hits.length || notes.length ? "ok" : "not_found",
       slideKeys: hits.map((h) => h.slide_key),
-      detail: { ...detail, similarities: hits.map((h) => h.similarity) },
+      detail: { ...detail, similarities: hits.map((h) => h.similarity), own_notes: notes.map((n) => n.similarity) },
       result: {
         ok: true,
         scope_used: detail.scope_used,
@@ -223,6 +235,7 @@ export const searchSlides = defineTool({
           ? { coverage: "none" }
           : {}),
         results,
+        ...(yourNotes.length ? { your_notes: yourNotes } : {}),
       },
     };
   },

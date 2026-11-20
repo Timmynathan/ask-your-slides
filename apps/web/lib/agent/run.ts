@@ -107,6 +107,7 @@ export async function runChatTurn(turn: ChatTurn) {
   const ctx: AgentContext = newContext({
     db,
     courseId: turn.courseId,
+    userId: turn.userId,
     courseCode: turn.courseCode,
     courseTitle: turn.courseTitle,
     topicId: turn.topicId,

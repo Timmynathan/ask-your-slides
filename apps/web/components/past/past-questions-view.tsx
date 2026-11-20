@@ -3,10 +3,8 @@
 // /past-questions (owner, 20 Nov 2026): every course the student takes, with its past papers or a
 // clear "No past papers yet". Opening one goes straight to that course's past questions.
 import Link from "next/link";
-import { useState } from "react";
 import { LogoMark } from "@/components/brand/logo";
-import { AppShell, type ShellChat, type ShellCourse } from "@/components/nav/app-shell";
-import { UploadSoon } from "@/components/nav/upload-soon";
+import { AppShell, type ShellChat, type ShellCourse, type ShellFile } from "@/components/nav/app-shell";
 import { AccountMenu } from "@/components/ui/account-menu";
 
 export interface PastCourseRow {
@@ -60,12 +58,11 @@ function Row({ r }: { r: PastCourseRow }) {
   );
 }
 
-export function PastQuestionsView({ title, rows, courses, recent, user }: { title: string; rows: PastCourseRow[]; courses: ShellCourse[]; recent: ShellChat[]; user: { email: string; displayName: string | null } }) {
-  const [uploading, setUploading] = useState(false);
+export function PastQuestionsView({ title, rows, courses, recent, files, user }: { title: string; rows: PastCourseRow[]; courses: ShellCourse[]; recent: ShellChat[]; files: ShellFile[]; user: { email: string; displayName: string | null } }) {
   const available = rows.filter((r) => r.papers > 0);
   const none = rows.filter((r) => r.papers === 0);
   return (
-    <AppShell page="past" title={title} courses={courses} recent={recent} user={user} onUpload={() => setUploading(true)}>
+    <AppShell page="past" title={title} courses={courses} recent={recent} files={files} user={user}>
       {/* Phones: no sidebar, so a small top bar with the way back. */}
       <header className="flex h-16 items-center gap-3 px-4 md:hidden">
         <Link href="/dashboard" aria-label="My courses" className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-sunken">
@@ -105,7 +102,6 @@ export function PastQuestionsView({ title, rows, courses, recent, user }: { titl
           </>
         )}
       </main>
-      {uploading && <UploadSoon onClose={() => setUploading(false)} />}
     </AppShell>
   );
 }
