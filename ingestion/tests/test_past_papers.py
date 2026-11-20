@@ -455,3 +455,12 @@ def test_bundled_note_detection():
     assert BUNDLED_RE.search("Pages 3 and 4 contain a separate GST 212 test (Department of Economics 2025/2026)")
     assert not BUNDLED_RE.search("Handwritten student or marker annotations were ignored on all pages.")
     assert not BUNDLED_RE.search("No marking guide, handwriting or stamps appear on either page.")
+
+
+def test_fingerprint_for_keeps_a_paper_read_by_another_model():
+    from past_papers import PAST_Q_MODEL
+
+    j = _job("CSC101", "h1")
+    assert j.fingerprint == j.fingerprint_for(PAST_Q_MODEL)
+    assert j.fingerprint_for("claude-sonnet-5-5") != j.fingerprint_for("claude-haiku-5-5")
+    assert PAST_Q_MODEL == "claude-haiku-5-5"  # the default since the bake-off (owner, 20 Nov 2026)

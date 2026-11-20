@@ -19,8 +19,9 @@ a JSON object matching EXTRACT_SCHEMA. When present it replaces the model (no AP
 against the schema, then reviewed, validated and stored like a model reply, with extraction_model
 "manual". Identical copies of the paper in other programmes reuse it.
 
-Idempotent: a paper whose file, model, prompt and review file are unchanged is skipped; every model
-reply is cached in data/.cache/batches, so re-running after a fix only pays for what changed.
+Idempotent: a paper whose file, prompt and review file are unchanged is skipped, whichever model
+read it (switching PAST_Q_MODEL doesn't re-read stored papers; --force does). Every model reply is
+cached in data/.cache/batches, so re-running after a fix only pays for what changed.
 
 Review file (optional), next to the paper: past_papers/<name>.review.yaml
 
@@ -207,9 +208,13 @@ class Job:
 
     @property
     def fingerprint(self) -> str:
+        return self.fingerprint_for(PAST_Q_MODEL)
+
+    def fingerprint_for(self, model: str) -> str:
+        """The fingerprint this paper would have if `model` had read it (file, prompt and review unchanged)."""
         if self.manual is not None:
             return hashlib.sha256(f"{self.file_hash}|manual|{self.manual_hash}|{self.review_hash}".encode()).hexdigest()
-        return hashlib.sha256(f"{self.file_hash}|{PAST_Q_MODEL}|{PROMPT_VERSION}|{self.review_hash}".encode()).hexdigest()
+        return hashlib.sha256(f"{self.file_hash}|{model}|{PROMPT_VERSION}|{self.review_hash}".encode()).hexdigest()
 
     @property
     def name(self) -> str:
@@ -379,15 +384,17 @@ def group_identical(jobs: list[Job]) -> list[Job]:
     return [j for j in jobs if j.copy_of is not None]
 
 
-def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str, dict | None, str] | None:
+def find_reuse(store, job: Job, course_id: str, manual_only: bool = False) -> tuple[dict, str, dict | None, str] | None:
     """(raw extraction, source course code, source review file, source model) of a byte-identical
-    paper already extracted for another course by hand or with the same model; None if there is
-    none. Its saved reply is reused as is, with its review file when this copy has none of its own."""
+    paper already extracted for another course: a hand-made one first, else the newest reading (a
+    Sonnet re-read beats the Haiku one it replaced); None if there is none. Its saved reply is
+    reused as is, with its review file when this copy has none of its own. manual_only (--force, a
+    re-read): only a hand-made one, so the copies get the new reading instead of the old one."""
     rows = store.db.execute(
         """select p.source_file, p.extraction_model, c.code from past_papers p join courses c on c.id = p.course_id
-           where p.file_hash = %s and p.course_id <> %s and p.extraction_model in (%s, 'manual')
-           order by p.extraction_model = 'manual' desc, p.created_at""",
-        (job.file_hash, course_id, PAST_Q_MODEL),
+           where p.file_hash = %s and p.course_id <> %s and (not %s or p.extraction_model = 'manual')
+           order by p.extraction_model = 'manual' desc, p.created_at desc""",
+        (job.file_hash, course_id, manual_only),
     ).fetchall()
     for r in rows:
         dump = REPORTS / "past_papers" / f"{r['code']}-{Path(r['source_file']).stem}.json"
@@ -402,6 +409,15 @@ def find_reuse(store, job: Job, course_id: str) -> tuple[dict, str, dict | None,
 def stored_fingerprint(store, course_id: str, rel_file: str) -> str | None:
     row = store.db.execute("select fingerprint from past_papers where course_id = %s and source_file = %s", (course_id, rel_file)).fetchone()
     return row["fingerprint"] if row else None
+
+
+def is_unchanged(store, course_id: str, job: Job) -> bool:
+    """Stored, and its file, prompt and review file haven't changed since, whichever model read it: a
+    different PAST_Q_MODEL alone doesn't re-read a paper (a Sonnet re-read isn't overwritten by a later
+    Haiku run, nor the Haiku papers re-read by Sonnet); --force does."""
+    row = store.db.execute("select fingerprint, extraction_model from past_papers where course_id = %s and source_file = %s",
+                           (course_id, job.paper.rel_file)).fetchone()
+    return bool(row) and row["fingerprint"] == job.fingerprint_for(row["extraction_model"])
 
 
 def save_paper(store, course_id: str, job: Job, extraction: dict, checked: Checked) -> None:
@@ -531,7 +547,7 @@ def write_flagged(store) -> str:
 
     def rerun(copies):
         name = Path(copies[0]["source_file"]).name
-        return ("`PAST_Q_MODEL=claude-sonnet-5-5 npm run ingest:past -- "
+        return ("`PAST_Q_MODEL=claude-sonnet-5-5 npm run ingest:past -- --force "
                 + " ".join(f"--course {c['programme']}/{c['code']}" for c in copies) + f" --paper {name}`")
 
     blocking = sum(r["status"] == "needs_review" for r, *_ in flagged)
@@ -635,7 +651,7 @@ def main(argv: list[str] | None = None) -> int:
         # A hand-made extraction of a file replaces every stored copy of it, even an unchanged one.
         hand = {j.file_hash for j in jobs if j.manual is not None} | {
             r["file_hash"] for r in store.db.execute("select file_hash from past_papers where extraction_model = 'manual'").fetchall()}
-        unchanged = [j for j in jobs if stored_fingerprint(store, course_ids[j.course.key], j.paper.rel_file) == j.fingerprint
+        unchanged = [j for j in jobs if is_unchanged(store, course_ids[j.course.key], j)
                      and not (j.file_hash in hand and j.manual is None)]
         for j in unchanged:
             print(f"  unchanged: {j.name}")
@@ -652,7 +668,7 @@ def main(argv: list[str] | None = None) -> int:
         for j in jobs:
             if j.manual is not None or j.manual_error:
                 continue
-            found = find_reuse(store, j, course_ids[j.course.key])
+            found = find_reuse(store, j, course_ids[j.course.key], manual_only=args.force)
             if found:
                 j.reuse, j.reuse_from, src_review, j.reuse_model = found
                 if j.review is None and src_review:
