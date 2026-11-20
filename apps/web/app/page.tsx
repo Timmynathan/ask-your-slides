@@ -122,6 +122,17 @@ export default async function Landing() {
           </div>
         </section>
 
+        {/* A heading for the demo (owner, 20 Nov 2026). "See how it works" still scrolls to the demo itself. */}
+        <div className="mx-auto max-w-5xl px-5 pt-12 text-center sm:pt-16">
+          <h2 className="font-heading text-4xl font-normal tracking-tight text-ink sm:text-6xl">
+            Start <em className="italic">really</em> learning in seconds
+          </h2>
+          <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-muted sm:text-base">
+            No more scrolling through 80-slide decks the night before. Watch a student ask a question and get the answer straight
+            from their PAU slides, with the slide it came from.
+          </p>
+        </div>
+
         {/* The demo, framed as a full-screen video player. "See how it works" brings it here and plays it. */}
         <ChatDemo />
 
