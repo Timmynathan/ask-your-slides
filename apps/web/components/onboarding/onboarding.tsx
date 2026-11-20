@@ -12,13 +12,14 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
-import { HEARD_FROM, type HeardFrom } from "@/lib/heard-from";
+import type { HeardFrom } from "@/lib/heard-from";
+import { HeardFromStep } from "./heard-from-step";
 
 const DEFAULT_PARTNER: PartnerId = "zara";
 // The default first, so it is the first card a student sees (also on a phone).
 const ORDER: PartnerId[] = [DEFAULT_PARTNER, ...PARTNER_IDS.filter((id) => id !== DEFAULT_PARTNER)];
 
-type Step = "name" | "partner" | "hello" | "plan";
+type Step = "name" | "heard" | "partner" | "hello" | "plan";
 
 // First words from the chosen partner. {department} comes from the courses' data, never hard-coded.
 const HELLO: Record<PartnerId, string> = {
@@ -27,7 +28,7 @@ const HELLO: Record<PartnerId, string> = {
   musa: "Welcome, {name}. I'm Dr. Musa. I know {department} can be demanding, and the exams reward clear, well-structured answers. I'll show you how, straight from your school slides.",
   zara: "Hey {name}, I'm Zara! I know {department} can be hard, but I've got you. Quick answer or deep dive, straight from your school slides, with an exam tip when it helps.",
 };
-const STEPS: Step[] = ["name", "partner", "hello", "plan"];
+const STEPS: Step[] = ["name", "heard", "partner", "hello", "plan"];
 
 interface Props {
   /** Programmes + levels in the catalog ("What do you study?"). */
@@ -49,7 +50,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
   // The partner names the chosen programme's department (from the data, never hard-coded).
   const department = choices.find((c) => c.programme === studying.programme)?.department ?? null;
   const [heardFrom, setHeardFrom] = useState<HeardFrom | null>(null);
-  const ready = !!studying.programme && !!studying.level && !!heardFrom;
+  const ready = !!studying.programme && !!studying.level;
   // Zara (the all-rounder) is pre-selected so a student can just continue: least friction.
   const [partner, setPartner] = useState<PartnerId | null>(initialPartner ?? DEFAULT_PARTNER);
   const [busy, setBusy] = useState(false);
@@ -77,11 +78,14 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
   async function submitName(e: FormEvent) {
     e.preventDefault();
     if (!ready) return;
-    if (await save({ display_name: name.trim() || null, programme: studying.programme, level: studying.level })) {
-      // Saved on its own and never awaited: a failure here must not stop anyone signing up.
-      fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ heard_from: heardFrom }) }).catch(() => {});
-      setStep("partner");
-    }
+    if (await save({ display_name: name.trim() || null, programme: studying.programme, level: studying.level })) setStep("heard");
+  }
+
+  function pickHeardFrom(id: HeardFrom) {
+    setHeardFrom(id);
+    // Saved on its own and never awaited: a failure here must not stop anyone signing up.
+    fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ heard_from: id }) }).catch(() => {});
+    setTimeout(() => setStep("partner"), 180); // the tap shows before the next step slides in
   }
 
   async function submitPartner() {
@@ -104,7 +108,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
       <header className="flex items-center justify-between px-5 py-5 sm:px-8">
         <Logo />
         <div className="flex items-center gap-3 text-xs text-muted">
-          <span>
+          <span className="hidden sm:inline">
             Step {index + 1} of {steps.length}
           </span>
           <div className="flex gap-1.5" aria-hidden>
@@ -139,29 +143,13 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               <ProgrammePicker choices={choices} value={studying} onChange={setStudying} />
             </div>
             <p className="mt-2 text-xs text-muted">You can change this later from your account menu.</p>
-            <fieldset className="mt-7">
-              <legend className="mx-auto text-sm font-medium text-ink">How did you hear about us?</legend>
-              <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {HEARD_FROM.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    aria-pressed={heardFrom === h.id}
-                    onClick={() => setHeardFrom(h.id)}
-                    className={`rounded-full border px-4 py-2 text-sm transition active:scale-95 ${
-                      heardFrom === h.id ? "border-brand bg-brand font-medium text-brand-ink" : "border-line-strong bg-card text-ink hover:border-brand"
-                    }`}
-                  >
-                    {h.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
             <button type="submit" disabled={busy || !ready} className="mt-5 w-full rounded-full bg-brand px-4 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60">
               <BusyLabel busy={busy} label="Continue" busyLabel="Saving…" />
             </button>
           </form>
         )}
+
+        {step === "heard" && <HeardFromStep value={heardFrom} onPick={pickHeardFrom} onBack={() => setStep("name")} />}
 
         {step === "partner" && (
           <div key="partner" className="panel-in w-full max-w-5xl text-center">
