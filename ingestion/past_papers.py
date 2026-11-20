@@ -37,6 +37,7 @@ import argparse
 import base64
 import hashlib
 import json
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -50,11 +51,12 @@ import pymupdf
 import yaml
 from config import CACHE, DATA, PAST_ANSWER_MODEL, PAST_Q_MODEL, ROOT
 from manifest import Course, ManifestError, PastPaper, load
-from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check, course_match
+from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check, course_match, flag_reasons
 
 PROMPT_VERSION = "2"  # bump only to re-extract every paper (a re-store replaces its questions)
 LONG_EDGE = 1568  # Claude's vision input is downscaled beyond this; render at it so nothing is wasted
 REPORTS = ROOT / "data" / ".reports"
+FLAGGED = ROOT / "data" / "_reports" / "past-flagged.md"
 INSTITUTION_NAMES = {"pau": "Pan-Atlantic University"}
 
 EXTRACT_SCHEMA = {
@@ -487,6 +489,76 @@ def course_match_report(matches: list[tuple[Job, str, str, str]]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# Page notes that say the PDF holds more than one test (a CA and the exam, Part A and Part B).
+BUNDLED_RE = re.compile(r"\b(two|three|four|several|separate|different|another|multiple)\b[^.]{0,60}\b(papers?|tests?|assessments?|exams?|examinations?|CAs?)\b"
+                        r"|\bpages? \d+(-| to )\d+ (is|are) (the )?[^.]{0,40}\b(CA|test|assessment|exam)", re.I)
+
+
+def write_flagged(store) -> str:
+    """data/_reports/past-flagged.md: every stored paper that waits (flag_reasons), one row per file
+    (copies in other programmes listed with it), plus ok papers whose PDF seems to hold several tests.
+    Papers whose questions are all answered already are left out: nothing waits for them."""
+    rows = store.db.execute(
+        """select p.source_file, p.file_hash, p.status, p.problems, p.extraction_model, p.session, p.type, p.pages,
+                  c.programme, c.level, c.code,
+                  exists (select 1 from past_questions q where q.paper_id = p.id and q.model_answer is null
+                          and not exists (select 1 from past_questions k where k.parent_id = q.id)) as unanswered
+           from past_papers p join courses c on c.id = p.course_id order by c.programme, c.level, c.code, p.source_file"""
+    ).fetchall()
+    by_file: dict[str, list[dict]] = {}
+    for r in rows:
+        by_file.setdefault(r["file_hash"], []).append(r)
+    flagged, bundled = [], []
+    for copies in by_file.values():
+        r = copies[0]
+        # Papers already answered (live, e.g. the final-year ones) aren't waiting for anything.
+        reasons = flag_reasons(r["problems"]) if r["status"] != "ok" or any(c["unanswered"] for c in copies) else []
+        dump = REPORTS / "past_papers" / f"{r['code']}-{Path(r['source_file']).stem}.json"
+        notes = (json.loads(dump.read_text())["raw"].get("page_notes") or []) if dump.is_file() else []
+        multi = next((n for n in notes if BUNDLED_RE.search(n)), None)
+        if reasons:
+            detail = []
+            for code in reasons:
+                qs = sorted({p["question"] for p in r["problems"] if p["code"] == code and p.get("question")})
+                text = next((p["detail"] for p in r["problems"] if p["code"] == code), "")
+                detail.append(f"**{code}**" + (f" ({', '.join(qs[:6])}{'…' if len(qs) > 6 else ''})" if qs else f": {text[:90]}"))
+            flagged.append((r, copies, detail, multi))
+        elif multi:
+            bundled.append((r, copies, multi))
+
+    def where(copies):
+        return "<br>".join(f"{c['programme']} {c['level']} {c['code']}" for c in copies)
+
+    def rerun(copies):
+        name = Path(copies[0]["source_file"]).name
+        return ("`PAST_Q_MODEL=claude-sonnet-5-5 npm run ingest:past -- "
+                + " ".join(f"--course {c['programme']}/{c['code']}" for c in copies) + f" --paper {name}`")
+
+    blocking = sum(r["status"] == "needs_review" for r, *_ in flagged)
+    lines = [f"# Past papers waiting for you — {datetime.now():%Y-%m-%d %H:%M}", "",
+             f"{len(by_file)} distinct files stored ({len(rows)} with copies). **{len(flagged)} flagged**: {blocking} hidden from "
+             f"students (a blocking problem), {len(flagged) - blocking} shown but not answered yet (a marks warning). "
+             f"Flagged papers are not answered until fixed.", "",
+             "Fix one by (a) a review file next to the paper (`<name>.review.yaml`: accept / paper / questions / drop / add), "
+             "(b) typing it yourself (`<name>.extraction.json`, EXTRACT_SCHEMA; replaces every copy, no API call), or "
+             "(c) a Sonnet re-read (≈ $0.05/paper, command below). Then run `npm run ingest:past` again. "
+             "medium_confidence alone is not a flag (see the bake-off, Nov 2026).", "",
+             f"## Flagged ({len(flagged)})", "",
+             "| Filed under | Paper | Pages | Status | Problems | Model | Several tests in the PDF? |", "|---|---|---|---|---|---|---|"]
+    for r, copies, detail, multi in flagged:
+        lines.append(f"| {where(copies)} | `{r['source_file']}` | {r['pages']} | {r['status']} | {'; '.join(detail).replace('|', '/')} | "
+                     f"{r['extraction_model']} | {(multi or '').replace('|', '/')[:140]} |")
+    lines += ["", "### Sonnet re-read commands", "", *[f"- {rerun(copies)}" for _, copies, _, _ in flagged], "",
+              f"## Not flagged, but the PDF seems to hold several tests ({len(bundled)})", "",
+              "Shown to students. Only the listed type may have been transcribed; split the PDF if the other tests are worth having.", "",
+              "| Filed under | Paper | Model's note |", "|---|---|---|"]
+    for r, copies, multi in bundled:
+        lines.append(f"| {where(copies)} | `{r['source_file']}` | {multi.replace('|', '/')[:200]} |")
+    FLAGGED.parent.mkdir(parents=True, exist_ok=True)
+    FLAGGED.write_text("\n".join(lines) + "\n")
+    return f"Flagged: {len(flagged)} of {len(by_file)} distinct files ({blocking} hidden), {len(bundled)} more hold several tests → {FLAGGED}"
+
+
 # ── main ───────────────────────────────────────────────────
 def select(courses: list[Course], course_sel: list[str], paper_sel: list[str]) -> list[tuple[Course, PastPaper]]:
     out = []
@@ -523,6 +595,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--yes", action="store_true", help="don't ask before submitting")
     ap.add_argument("--no-store", action="store_true", help="extract and report only; don't write the database")
     ap.add_argument("--force", action="store_true", help="re-store papers even if unchanged (with --analyse: re-answer questions)")
+    ap.add_argument("--flagged", action="store_true", help=f"rewrite {FLAGGED.relative_to(ROOT)} from the database and stop")
     ap.add_argument("--analyse", action="store_true", help="step 2: slides, topics, relevance, model answers for stored papers")
     ap.add_argument("--recheck", action="store_true", help="with --analyse: redo partial/general answers whose search now finds new slides")
     args = ap.parse_args(argv)
@@ -532,6 +605,12 @@ def main(argv: list[str] | None = None) -> int:
     except ManifestError as e:
         print(f"Data problems:\n{e}", file=sys.stderr)
         return 2
+    if args.flagged:
+        from store import Store
+        store = Store()
+        print(write_flagged(store))
+        store.close()
+        return 0
     if args.analyse:
         return analyse(courses, args)
     picked = select(courses, args.course, args.paper)
@@ -553,7 +632,11 @@ def main(argv: list[str] | None = None) -> int:
 
     jobs = [make_job(c, p) for c, p in picked]
     if store and not args.force:
-        unchanged = [j for j in jobs if stored_fingerprint(store, course_ids[j.course.key], j.paper.rel_file) == j.fingerprint]
+        # A hand-made extraction of a file replaces every stored copy of it, even an unchanged one.
+        hand = {j.file_hash for j in jobs if j.manual is not None} | {
+            r["file_hash"] for r in store.db.execute("select file_hash from past_papers where extraction_model = 'manual'").fetchall()}
+        unchanged = [j for j in jobs if stored_fingerprint(store, course_ids[j.course.key], j.paper.rel_file) == j.fingerprint
+                     and not (j.file_hash in hand and j.manual is None)]
         for j in unchanged:
             print(f"  unchanged: {j.name}")
         jobs = [j for j in jobs if j not in unchanged]
@@ -660,6 +743,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Stored {stored} paper(s) ({needs_review} need review), {failed} failed. Spent ≈ ${spent:.3f}.")
     batch.log_spend("extract", {PAST_Q_MODEL: spent})
     if store:
+        print(write_flagged(store))
         store.close()
     return 1 if failed else 0
 

@@ -72,11 +72,11 @@ def test_parts_that_do_not_add_up():
 
 def test_gaps_bad_numbers_and_missing_parents_block():
     ex = {"paper": paper(), "questions": [q("Q1", marks=5), q("Q3", marks=5), q("Q3b", marks=2, parent="Q3"),
-                                          q("Question 4", marks=5, parent=None), q("Q5a", marks=1, parent="Q5")]}
+                                          q("Part 4", marks=5, parent=None), q("Q5a", marks=1, parent="Q5")]}
     c = check(ex, course_code="CSC420")
     assert c.status == "needs_review"
     blocking = codes(c, "blocking")
-    assert "numbering_format:Question 4" in blocking
+    assert "numbering_format:Part 4" in blocking
     assert "missing_parent:Q5a" in blocking
     assert "numbering_gap" in blocking  # Q2, Q4 missing
     assert "numbering_gap:Q3" in blocking  # Q3a missing
@@ -427,3 +427,31 @@ def test_group_identical_prefers_a_hand_made_extraction_and_manual_changes_the_f
     assert model.copy_of is hand and model.model == "manual" and hand.model == "manual"
     plain = _job("SEN101", "h1")
     assert hand.fingerprint != plain.fingerprint
+
+
+def test_numbers_without_q_are_fixed_and_parents_follow():
+    from past_validate import normalize_numbers
+
+    qs = normalize_numbers([q("11", parent=None), q("11b", parent="11"), q("Question 12", parent=None), q("12 (ii)", parent="Question 12"), q("Theory", parent=None)])
+    assert [x["number"] for x in qs] == ["Q11", "Q11b", "Q12", "Q12(ii)", "Theory"]
+    assert qs[1]["parent"] == "Q11" and qs[3]["parent"] == "Q12"
+
+
+def test_flag_reasons_ignores_medium_confidence_and_accepted_problems():
+    from past_validate import flag_reasons
+
+    p = lambda code, sev: {"code": code, "severity": sev, "detail": "", "question": None}
+    assert flag_reasons([p("medium_confidence", "warning"), p("model_note", "info")]) == []
+    assert flag_reasons([p("missing_marks", "warning"), p("medium_confidence", "warning")]) == ["missing_marks"]
+    assert flag_reasons([p("title_mismatch", "blocking"), p("total_marks", "info")]) == ["title_mismatch"]  # info = accepted
+    assert flag_reasons(None) == []
+
+
+def test_bundled_note_detection():
+    from past_papers import BUNDLED_RE
+
+    assert BUNDLED_RE.search("The PDF contains three papers: pages 1-2 are the 1st Continuous Assessment and page 3 is the 2nd")
+    assert BUNDLED_RE.search("The pages come from different assessments and are listed as separate sections.")
+    assert BUNDLED_RE.search("Pages 3 and 4 contain a separate GST 212 test (Department of Economics 2025/2026)")
+    assert not BUNDLED_RE.search("Handwritten student or marker annotations were ignored on all pages.")
+    assert not BUNDLED_RE.search("No marking guide, handwriting or stamps appear on either page.")

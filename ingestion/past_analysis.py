@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 
 import batch
 from config import PAST_ANSWER_MODEL
+from past_validate import flag_reasons
 from embed import embed_documents, embed_query
 from store import vector_literal
 
@@ -110,7 +111,7 @@ def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False)
     """Questions to answer: unanswered ones (all with force). recheck: only partial/general answers."""
     rows = store.db.execute(
         """select q.id, q.course_id, q.number, q.parent_id, q.text, q.marks, q.type, q.options, q.model_answer,
-                  q.relevance, p.session, p.type as paper_type, p.status
+                  q.relevance, p.session, p.type as paper_type, p.status, p.problems
            from past_questions q join past_papers p on p.id = q.paper_id
            where q.course_id = %s order by p.session, p.source_file, q.sort_order""",
         (course_id,),
@@ -126,6 +127,8 @@ def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False)
                 continue
         elif r["model_answer"] and not force:
             continue
+        elif not r["model_answer"] and flag_reasons(r["problems"]):
+            continue  # a flagged paper waits for the owner (data/_reports/past-flagged.md)
         context, p = [], r["parent_id"]
         while p:
             parent = by_id[str(p)]

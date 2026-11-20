@@ -55,6 +55,17 @@ class Checked:
         return "needs_review" if self.blocking else "ok"
 
 
+# A paper waits (listed in data/_reports/past-flagged.md, not answered) for any blocking problem or
+# one of these warnings. medium_confidence alone doesn't count: it fired on 16 of 20 papers in the
+# Haiku/Sonnet bake-off (Nov 2026) and didn't separate good reads from bad ones.
+FLAG_WARNINGS = ("total_marks", "subparts_sum", "missing_marks")
+
+
+def flag_reasons(problems: list[dict]) -> list[str]:
+    """The stored problems (Problem.as_dict, accepted ones already downgraded) that make a paper wait."""
+    return sorted({p["code"] for p in problems or [] if p["severity"] == "blocking" or (p["severity"] == "warning" and p["code"] in FLAG_WARNINGS)})
+
+
 def parse_number(number: str) -> tuple[int, int | None, int | None] | None:
     """'Q2b(iii)' → (2, 2, 3); 'Q2(iii)' → (2, None, 3); 'Q2b' → (2, 2, None); 'Q2' → (2, None, None)."""
     m = NUMBER_RE.match(number or "")
@@ -151,6 +162,8 @@ def course_match(paper: dict, *, course_code: str, aliases: tuple[str, ...] = ()
 
 
 _ARABIC_SUB = re.compile(r"^Q(\d+)([a-z])?\((\d{1,2})\)$")
+# '11', '11b', 'Question 11', 'q11.', '11 (ii)' → 'Q11', 'Q11b', ... (Haiku sometimes drops the Q, bake-off Nov 2026)
+_NO_Q = re.compile(r"^(?:q(?:uestion)?\s*)?(\d+)\s*\.?\s*([a-z]?)\s*(\([ivx]+\)|\(\d{1,2}\))?\.?$", re.I)
 _TOP = re.compile(r"^Q(\d+)")
 
 
@@ -184,6 +197,12 @@ def normalize_numbers(questions: list[dict]) -> list[dict]:
     """Make the model's numbering fit Q1 / Q1a / Q1a(ii) / Q1(ii): restarted sections continue
     their numbering; 'Q3b(1)' → 'Q3b(i)'; 'Q1ii' → 'Q1(ii)' (parents too). A one-letter numeral
     ('Q1i', 'Q1v', 'Q1x') is renamed only when 'Q1ii' is also there: alone it may be a lettered part."""
+    for q in questions:
+        for field in ("number", "parent"):
+            n = (q.get(field) or "").strip()
+            m = _NO_Q.match(n)
+            if n and m and not NUMBER_RE.match(n):
+                q[field] = f"Q{m.group(1)}{m.group(2).lower()}{(m.group(3) or '').lower()}"
     _restart_sections(questions)
     numbers = {q.get("number") or "" for q in questions}
     rename: dict[str, str] = {}
