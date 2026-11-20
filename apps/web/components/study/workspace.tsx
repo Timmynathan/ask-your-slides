@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
 import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
@@ -18,7 +17,7 @@ import { SourcesPanel } from "./sources-panel";
 import { StudyTour, useStudyTour } from "./study-tour";
 import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
 
-// Inside one course, laid out like a notebook: a top bar (logo back to My courses, the course name,
+// Inside one course, laid out like a notebook: a top bar (back arrow to My courses, the course name,
 // invite, study partner, account), then three panels on a soft background: Topics | chat | the
 // cited slide (when open). Laptop first; below lg the Topics panel is a drawer and the slide a
 // bottom sheet. Other courses are reached from My courses, not listed here.
@@ -165,8 +164,17 @@ export function Workspace(data: WorkspaceData) {
         <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="lg:hidden">
           <path d="M4 7h16M4 12h16M4 17h16" />
         </IconButton>
-        <Link href="/dashboard" aria-label="All courses" title="All courses" className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition hover:bg-sunken active:scale-95">
-          <LogoMark size={22} />
+        {/* Back to My courses: an arrow, not the logo (owner, 20 Nov 2026: a student couldn't find the way back). */}
+        <Link
+          href="/dashboard"
+          aria-label="Back to My courses"
+          title="Back to My courses"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-ink transition hover:bg-sunken active:scale-95 sm:pr-3.5"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M19 12H5M11 18l-6-6 6-6" />
+          </svg>
+          <span className="hidden text-[14px] sm:inline">My courses</span>
         </Link>
         <h1 className="min-w-0 truncate text-[17px] text-ink sm:ml-1 sm:text-[19px]">
           {course.title}
