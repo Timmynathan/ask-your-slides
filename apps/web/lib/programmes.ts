@@ -42,3 +42,12 @@ export function programmeLabel(p: Pick<ProgrammeChoice, "name" | "shortName">): 
 export function programmeFullName(p: Pick<ProgrammeChoice, "name" | "shortName">): string | null {
   return p.shortName ? p.name.replace(/^(BSc|BA|BEng|BTech|MSc|MA|MBA|PhD)\s+/, "") : null;
 }
+
+/** The sidebar title (owner, 20 Nov 2026): the programme without its degree ("Computer Science"), or
+ *  its short name when the full name is too long for the sidebar ("ISMS"). */
+export function sidebarTitle(choices: ProgrammeChoice[], programme: string | null | undefined): string {
+  const p = choices.find((c) => c.programme === programme);
+  if (!p) return "My courses";
+  const full = p.name.replace(/^(BSc|BA|BEng|BTech|MSc|MA|MBA|PhD)\s+/, "");
+  return full.length > 22 && p.shortName ? p.shortName : full;
+}

@@ -4,8 +4,8 @@
 // tablets up (phones keep each page's own top bar). A dark navy rail (logo, the sidebar button,
 // search, chat, past questions, account) beside a panel: Dashboard, Chat, Past questions, Upload,
 // and the student's courses.
-// The sidebar button sits beside the title and stays in that spot when the panel is closed: clicking
-// it keeps the panel open (pinned) or closes it; while closed, hovering it slides the panel out over
+// The panel's title is the student's programme. The sidebar button sits at the right of the title, and
+// beside the rail when the panel is closed: clicking it keeps the panel open (pinned) or closes it; while closed, hovering it slides the panel out over
 // the page until the pointer leaves. A small label says what a click will do. Full height, square edges. A pinned panel can be dragged narrower by its right edge;
 // far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
@@ -97,6 +97,7 @@ function NavItem({ label, href, active, icon, soon = false }: { label: string; h
 
 export function AppShell({
   page,
+  title,
   courses,
   user,
   onSearch,
@@ -106,6 +107,8 @@ export function AppShell({
   children,
 }: {
   page: ShellPage;
+  /** The student's programme, e.g. "Computer Science" (lib/programmes sidebarTitle). */
+  title: string;
   courses: ShellCourse[];
   user: { email: string; displayName: string | null };
   /** Search button: the page's own search (dashboard), else it opens the dashboard. */
@@ -211,7 +214,9 @@ export function AppShell({
             className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
             style={{ width: panelW }}
           >
-            <p className="truncate pb-4 pl-14 pr-4 text-[15px] font-medium leading-9">Ask Your Slides</p>
+            <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={title}>
+              {title}
+            </p>
             <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
               <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
               <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />
@@ -257,7 +262,7 @@ export function AppShell({
         )}
         {/* The sidebar button, beside the title: always here, open or closed. Hover peeks while
             closed; click keeps the panel open, or closes it. */}
-        <div className="group absolute top-[18px] z-50" style={{ left: RAIL + 10 }} onMouseEnter={() => !pinned && setPeek(true)}>
+        <div className="group absolute top-[18px] z-50" style={{ left: shown ? RAIL + panelW - 46 : RAIL + 10 }} onMouseEnter={() => !pinned && setPeek(true)}>
           <button
             type="button"
             onClick={togglePin}
@@ -267,7 +272,7 @@ export function AppShell({
           >
             <Icon size={19}>{ICONS.panel}</Icon>
           </button>
-          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg ring-1 ring-white/15 transition-opacity delay-200 group-hover:opacity-100">
+          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg ring-1 ring-white/15 transition-opacity delay-200 group-hover:opacity-100">
             {pinned ? "Close sidebar" : "Keep sidebar open"}
           </span>
         </div>

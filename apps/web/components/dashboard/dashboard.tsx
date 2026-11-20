@@ -57,9 +57,11 @@ interface Props {
   partner: PartnerId;
   /** On Finals: no Upgrade button, a quiet "Finals" badge instead. */
   onFinals: boolean;
+  /** The sidebar title: the student's programme. */
+  programmeTitle: string;
 }
 
-export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals }: Props) {
+export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals, programmeTitle }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -105,7 +107,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const departments = [...new Set(courses.map((c) => c.department))];
 
   return (
-    <AppShell page="dashboard" courses={courses} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
+    <AppShell page="dashboard" title={programmeTitle} courses={courses} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
         <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4 md:hidden" aria-label="Ask Your Slides home">

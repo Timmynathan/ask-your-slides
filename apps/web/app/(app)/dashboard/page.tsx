@@ -11,6 +11,7 @@ import { FinalsWelcome } from "@/components/plans/finals-welcome";
 import { FINALS_DAILY } from "@/lib/plans/config";
 import { lagosDay, limitsFor } from "@/lib/plans/limits";
 import { adminClient } from "@/lib/supabase/admin";
+import { programmeChoices, sidebarTitle } from "@/lib/programmes";
 
 export const metadata: Metadata = { title: "My courses · Ask Your Slides" };
 
@@ -89,6 +90,7 @@ async function Loaded() {
         courses={list}
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}
+        programmeTitle={sidebarTitle(await programmeChoices(supabase), profile.programme)}
         user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
         resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
       />

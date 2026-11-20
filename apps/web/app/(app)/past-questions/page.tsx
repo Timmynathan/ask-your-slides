@@ -9,6 +9,7 @@ import { planState } from "@/lib/plans/entitlement";
 import { FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { adminClient } from "@/lib/supabase/admin";
 import { myCourses } from "@/lib/study/my-courses";
+import { programmeChoices, sidebarTitle } from "@/lib/programmes";
 
 export const metadata: Metadata = { title: "Past questions · Ask Your Slides" };
 
@@ -24,7 +25,7 @@ async function Loaded() {
   if (!profile?.onboarded || !isPartnerId(profile.study_partner) || !profile.programme) redirect("/welcome");
   if (!PAST_QUESTIONS_LIVE) notFound();
 
-  const courses = await myCourses(supabase, profile.level);
+  const [courses, choices] = await Promise.all([myCourses(supabase, profile.level), programmeChoices(supabase)]);
   const ids = courses.map((c) => c.id);
   const [{ data: papers }, questionLists, state] = await Promise.all([
     supabase.from("past_papers").select("id, course_id, session").in("course_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
@@ -54,6 +55,7 @@ async function Loaded() {
 
   return (
     <PastQuestionsView
+      title={sidebarTitle(choices, profile.programme)}
       rows={rows}
       courses={courses.map((c) => ({ id: c.id, title: c.title, href: c.href }))}
       user={{ email: user.email ?? "", displayName: profile.display_name ?? null }}
