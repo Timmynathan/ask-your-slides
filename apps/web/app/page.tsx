@@ -9,6 +9,7 @@ import { StretchNav } from "@/components/landing/stretch-nav";
 import { HeroActions, NavActions } from "@/components/landing/auth-actions";
 import { PlansSection } from "@/components/landing/plans-section";
 import { PeersSection } from "@/components/landing/peers-section";
+import { StatsSection } from "@/components/landing/stats-section";
 import { landingOffer } from "@/lib/plans/landing-offer";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
 // buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
 // Structure follows studyfetch.com: banner, nav, hero, PAU courses, what your peers are saying
 // (social proof), why us, how it works (demo), steps, partners, pricing, closing call to action, footer. Sections with
-// no honest content for us (user counts, research claims) are left out.
+// no honest content for us (ratings, research claims) are left out; counts are real and rounded down.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
 
@@ -79,6 +80,9 @@ export default async function Landing() {
             <CoursePills codes={catalog.courseCodes} />
           </div>
         </section>
+
+        {/* Real numbers from the database, beside a student's video (owner, 20 Nov 2026). */}
+        <StatsSection students={catalog.studentCount} pastQuestions={catalog.pastQuestionCount} courses={catalog.distinctCourseCount} />
 
         {/* Social proof, high on the page so students see it (owner, 19 Nov 2026). */}
         <PeersSection />
