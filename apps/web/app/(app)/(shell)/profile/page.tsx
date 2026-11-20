@@ -1,3 +1,4 @@
+import { ContentSkeleton } from "@/components/nav/content-skeleton";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -32,7 +33,7 @@ async function Loaded() {
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-page" />}>
+    <Suspense fallback={<ContentSkeleton />}>
       <Loaded />
     </Suspense>
   );

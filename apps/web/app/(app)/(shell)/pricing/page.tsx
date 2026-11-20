@@ -1,3 +1,4 @@
+import { ContentSkeleton } from "@/components/nav/content-skeleton";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -33,7 +34,7 @@ async function Loaded() {
   const offer = planOffer(now);
 
   return (
-    <AppShell page="account" title={shell.title} courses={shell.courses} recent={shell.recent} files={shell.files} user={shell.user}>
+    <>
     <div className="min-h-dvh bg-page text-ink">
       <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         {/* Tablets up: the sidebar has the logo. */}
@@ -89,13 +90,13 @@ async function Loaded() {
         </div>
       </main>
     </div>
-    </AppShell>
+    </>
   );
 }
 
 export default function PricingPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-page" />}>
+    <Suspense fallback={<ContentSkeleton />}>
       <Loaded />
     </Suspense>
   );

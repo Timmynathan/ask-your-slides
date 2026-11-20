@@ -1,3 +1,4 @@
+import { ContentSkeleton } from "@/components/nav/content-skeleton";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SettingsView } from "@/components/account/settings-view";
@@ -27,7 +28,7 @@ async function Loaded() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-page" />}>
+    <Suspense fallback={<ContentSkeleton />}>
       <Loaded />
     </Suspense>
   );

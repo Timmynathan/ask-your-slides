@@ -4,7 +4,7 @@
 // clear "No past papers yet". Opening one goes straight to that course's past questions.
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/logo";
-import { AppShell, ShellMenuButton, type ShellChat, type ShellCourse, type ShellFile } from "@/components/nav/app-shell";
+import { ShellMenuButton } from "@/components/nav/app-shell";
 import { AccountMenu } from "@/components/ui/account-menu";
 
 export interface PastCourseRow {
@@ -58,11 +58,11 @@ function Row({ r }: { r: PastCourseRow }) {
   );
 }
 
-export function PastQuestionsView({ title, rows, courses, recent, files, user }: { title: string; rows: PastCourseRow[]; courses: ShellCourse[]; recent: ShellChat[]; files: ShellFile[]; user: { email: string; displayName: string | null } }) {
+export function PastQuestionsView({ rows, user }: { rows: PastCourseRow[]; user: { email: string; displayName: string | null } }) {
   const available = rows.filter((r) => r.papers > 0);
   const none = rows.filter((r) => r.papers === 0);
   return (
-    <AppShell page="past" title={title} courses={courses} recent={recent} files={files} user={user}>
+    <>
       {/* Phones: no sidebar, so a small top bar with the way back. */}
       <header className="flex h-16 items-center gap-3 px-4 md:hidden">
         <ShellMenuButton className="-ml-1.5" />
@@ -98,6 +98,6 @@ export function PastQuestionsView({ title, rows, courses, recent, files, user }:
           </>
         )}
       </main>
-    </AppShell>
+    </>
   );
 }

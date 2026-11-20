@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
-import { AppShell, ShellMenuButton, type ShellChat, type ShellFile } from "@/components/nav/app-shell";
+import { ShellMenuButton } from "@/components/nav/app-shell";
 import { GeneralChatPanel } from "@/components/chat/general-chat-panel";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -57,15 +57,9 @@ interface Props {
   partner: PartnerId;
   /** On Finals: no Upgrade button, a quiet "Finals" badge instead. */
   onFinals: boolean;
-  /** The sidebar title: the student's programme. */
-  programmeTitle: string;
-  /** The sidebar's Recent chats. */
-  recent: ShellChat[];
-  /** The sidebar's My files. */
-  files: ShellFile[];
 }
 
-export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals, programmeTitle, recent, files }: Props) {
+export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -74,6 +68,14 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const [view, setView] = useState<View>("grid");
   const [enrolling, setEnrolling] = useState(false);
   const searchBox = useRef<HTMLInputElement>(null);
+  // The sidebar's search button (shared layout): focus this page's search box, also after arriving
+  // from another page (?search=1).
+  useEffect(() => {
+    const focus = () => searchBox.current?.focus();
+    window.addEventListener("ays:focus-search", focus);
+    if (new URLSearchParams(window.location.search).get("search") === "1") setTimeout(focus, 0);
+    return () => window.removeEventListener("ays:focus-search", focus);
+  }, []);
 
   // Remembered view, read after hydration so server and browser first render the same thing.
   useEffect(() => {
@@ -110,7 +112,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const departments = [...new Set(courses.map((c) => c.department))];
 
   return (
-    <AppShell page="dashboard" title={programmeTitle} courses={courses} recent={recent} files={files} user={user} onSearch={() => searchBox.current?.focus()} onChangePartner={() => setPickingPartner(true)}>
+    <>
       <div className="xl:pr-[380px]">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
@@ -274,7 +276,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
       {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
       {/* The general chat on the right, on wide screens (owner, 20 Nov 2026). */}
       <GeneralChatPanel partner={partner} firstName={user.displayName?.trim().split(/\s+/)[0] ?? null} onChangePartner={() => setPickingPartner(true)} />
-    </AppShell>
+    </>
   );
 }
 

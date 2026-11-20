@@ -104,7 +104,7 @@ describe("no plan figures typed into the UI", () => {
     const files = [
       ...readdirSync(path.resolve("components/plans")).map((f) => path.join("components/plans", f)),
       "components/landing/plans-section.tsx",
-      "app/(app)/pricing/page.tsx",
+      "app/(app)/(shell)/pricing/page.tsx",
       "app/(app)/pay/page.tsx",
     ];
     for (const f of files) {

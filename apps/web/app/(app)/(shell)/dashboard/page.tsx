@@ -1,3 +1,4 @@
+import { ContentSkeleton } from "@/components/nav/content-skeleton";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -11,7 +12,6 @@ import { FinalsWelcome } from "@/components/plans/finals-welcome";
 import { FINALS_DAILY } from "@/lib/plans/config";
 import { lagosDay, limitsFor } from "@/lib/plans/limits";
 import { adminClient } from "@/lib/supabase/admin";
-import { programmeChoices, sidebarTitle } from "@/lib/programmes";
 
 export const metadata: Metadata = { title: "My courses · Ask Your Slides" };
 
@@ -81,19 +81,7 @@ async function Loaded() {
     .filter((c) => c.materials > 0) // a course with no material yet has nothing to study
     .filter((c) => c.extraLevel !== null || !removed.has(c.id)); // removed from My courses
 
-  // Sidebar: the student's own uploads (missing before the uploads migration: then none).
-  const { data: uploadRows } = await supabase.from("user_uploads").select("id, title, status, pages, course_id").order("created_at", { ascending: false }).limit(30);
-  const files = ((uploadRows ?? []) as { id: string; title: string; status: "uploading" | "reading" | "ready" | "failed"; pages: number; course_id: string }[]).map((u) => {
-    const c = list.find((x) => x.id === u.course_id);
-    return { id: u.id, title: u.title, status: u.status, pages: u.pages, course: c ? c.shownCode ?? c.title : "" };
-  });
   const last = chatRows[0];
-  // Sidebar: the latest chats, each opening in its course (courses the student no longer takes are skipped).
-  const recent = chatRows
-    .map((ch) => ({ ch, course: list.find((c) => c.id === ch.course_id) }))
-    .filter((r) => r.course)
-    .slice(0, 6)
-    .map(({ ch, course }) => ({ id: ch.id, title: ch.title || "New chat", href: `${course!.href}${course!.href.includes("?") ? "&" : "?"}chat=${ch.id}` }));
   const lastCourse = last ? list.find((c) => c.id === last.course_id) : undefined;
 
   return (
@@ -102,9 +90,6 @@ async function Loaded() {
         courses={list}
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}
-        recent={recent}
-        files={files}
-        programmeTitle={sidebarTitle(await programmeChoices(supabase), profile.programme)}
         user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
         resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
       />
@@ -115,7 +100,7 @@ async function Loaded() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-page" />}>
+    <Suspense fallback={<ContentSkeleton />}>
       <Loaded />
     </Suspense>
   );

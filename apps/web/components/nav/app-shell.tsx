@@ -9,7 +9,7 @@
 // the page until the pointer leaves. A small label says what a click will do. Full height, square edges. A pinned panel can be dragged narrower by its right edge;
 // far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -140,7 +140,7 @@ function NavItem({ label, href, active, icon, soon = false }: { label: string; h
 }
 
 export function AppShell({
-  page,
+  page: pageProp,
   title = "",
   courses = [],
   railOnly = false,
@@ -153,7 +153,8 @@ export function AppShell({
   chatReady = false,
   children,
 }: {
-  page: ShellPage;
+  /** Which item is current; worked out from the address when left out (the shared layout). */
+  page?: ShellPage;
   /** The student's programme, e.g. "Computer Science" (lib/programmes sidebarTitle). */
   title?: string;
   courses?: ShellCourse[];
@@ -174,6 +175,16 @@ export function AppShell({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const page: ShellPage =
+    pageProp ?? (pathname.startsWith("/past-questions") ? "past" : pathname.startsWith("/chat") ? "chat" : pathname.startsWith("/dashboard") ? "dashboard" : "account");
+  // Search: on My courses it focuses the page's search box (the dashboard listens), elsewhere it goes there.
+  const search =
+    onSearch ??
+    (() => {
+      if (pathname.startsWith("/dashboard")) window.dispatchEvent(new Event("ays:focus-search"));
+      else router.push("/dashboard?search=1");
+    });
   const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -372,15 +383,9 @@ export function AppShell({
           <Link href="/" aria-label="Ask Your Slides home" title="Home" className="mb-2 grid h-11 w-11 place-items-center">
             <LogoMark size={26} light />
           </Link>
-          {onSearch ? (
-            <RailButton label="Search courses" onClick={onSearch}>
-              {ICONS.search}
-            </RailButton>
-          ) : (
-            <RailButton label="Search courses" href="/dashboard">
-              {ICONS.search}
-            </RailButton>
-          )}
+          <RailButton label="Search courses" onClick={search}>
+            {ICONS.search}
+          </RailButton>
           {chatReady && (
             <RailButton label="Chat" href="/chat" active={page === "chat"}>
               {ICONS.chat}
