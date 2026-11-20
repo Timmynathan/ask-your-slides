@@ -246,3 +246,15 @@ def test_sanitize_strips_nul_and_control_characters():
     assert sanitize("Privacy\x00 and\x07 data\nline 2\tx") == "Privacy and data\nline 2\tx"
     assert sanitize("\x00\x01") is None
     assert sanitize(None) is None
+
+
+def test_batch_chunks_stay_under_the_size_limit(monkeypatch):
+    import batch
+
+    monkeypatch.setattr(batch, "MAX_BATCH_BYTES", 1000)
+    todo = {f"r{i:02d}": {"x": "a" * 300} for i in range(10)}
+    parts = batch._chunks(todo)
+    assert sum(len(p) for p in parts) == 10 and all(len(p) <= 3 for p in parts)
+    assert [c for p in parts for c in p] == sorted(todo)
+    monkeypatch.setattr(batch, "MAX_BATCH_BYTES", 10)
+    assert len(batch._chunks({"big": {"x": "a" * 500}})) == 1  # one oversized request still goes, alone

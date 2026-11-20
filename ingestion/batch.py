@@ -96,48 +96,28 @@ def count_input_tokens(params: dict) -> int:
     return client().messages.count_tokens(**keep).input_tokens
 
 
-def run(requests: dict[str, dict], label: str, poll_seconds: int = 20) -> dict[str, Reply]:
-    """requests: {custom_id: Messages params}. Returns {custom_id: Reply}; cached replies are free."""
-    out: dict[str, Reply] = {}
-    todo: dict[str, dict] = {}
-    for cid, params in requests.items():
-        hit = cached(params)
-        if hit:
-            hit.custom_id = cid
-            out[cid] = hit
-        else:
-            todo[cid] = params
-    if not todo:
-        return out
+MAX_BATCH_BYTES = 120_000_000  # the Batches API takes up to 256 MB per batch; past papers carry page images
+MAX_BATCH_REQUESTS = 10_000
 
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    set_key = hashlib.sha256("".join(sorted(request_key(p) for p in todo.values())).encode()).hexdigest()
-    pending = json.loads(PENDING.read_text()) if PENDING.is_file() else {}
-    batch_id = pending.get(set_key)
-    if batch_id:
-        print(f"  resuming batch {batch_id} ({label})")
-    else:
-        batch = client().messages.batches.create(requests=[
-            Request(custom_id=cid, params=MessageCreateParamsNonStreaming(**params)) for cid, params in todo.items()
-        ])
-        batch_id = batch.id
-        pending[set_key] = batch_id
-        PENDING.write_text(json.dumps(pending, indent=1))
-        print(f"  submitted batch {batch_id}: {len(todo)} request(s) ({label})")
 
-    started = time.monotonic()
-    while True:
-        b = client().messages.batches.retrieve(batch_id)
-        if b.processing_status == "ended":
-            break
-        c = b.request_counts
-        print(f"  … {int(time.monotonic() - started)}s: {c.processing} processing, {c.succeeded} done, {c.errored} errored", flush=True)
-        time.sleep(poll_seconds)
+def _chunks(todo: dict[str, dict]) -> list[dict[str, dict]]:
+    """Split requests into batches under MAX_BATCH_BYTES / MAX_BATCH_REQUESTS (in custom_id order)."""
+    out: list[dict[str, dict]] = [{}]
+    size = 0
+    for cid in sorted(todo):
+        n = len(json.dumps(todo[cid]))
+        if out[-1] and (size + n > MAX_BATCH_BYTES or len(out[-1]) >= MAX_BATCH_REQUESTS):
+            out.append({})
+            size = 0
+        out[-1][cid] = todo[cid]
+        size += n
+    return out
 
-    by_id = {cid: params for cid, params in todo.items()}
+
+def _collect(batch_id: str, chunk: dict[str, dict], out: dict[str, Reply]) -> None:
     for result in client().messages.batches.results(batch_id):
         cid = result.custom_id
-        params = by_id.get(cid)
+        params = chunk.get(cid)
         if params is None:
             continue
         r = result.result
@@ -156,6 +136,72 @@ def run(requests: dict[str, dict], label: str, poll_seconds: int = 20) -> dict[s
         else:
             out[cid] = Reply(cid, None, None, 0, 0, cached=False, error=f"{r.type}: {str(getattr(r, 'error', ''))[:300]}")
 
-    pending.pop(set_key, None)
-    PENDING.write_text(json.dumps(pending, indent=1))
+
+def run(requests: dict[str, dict], label: str, poll_seconds: int = 20) -> dict[str, Reply]:
+    """requests: {custom_id: Messages params}. Returns {custom_id: Reply}; cached replies are free.
+    Large runs go as several batches (MAX_BATCH_BYTES each). Submitted batches are remembered in
+    data/.cache/batches/pending.json, so a run stopped midway resumes them instead of paying again."""
+    out: dict[str, Reply] = {}
+    todo: dict[str, dict] = {}
+    for cid, params in requests.items():
+        hit = cached(params)
+        if hit:
+            hit.custom_id = cid
+            out[cid] = hit
+        else:
+            todo[cid] = params
+    if not todo:
+        return out
+
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    pending = json.loads(PENDING.read_text()) if PENDING.is_file() else {}
+    key_of = {cid: request_key(p) for cid, p in todo.items()}
+    by_key = {k: cid for cid, k in key_of.items()}
+    running: list[tuple[str, str, dict[str, dict]]] = []  # (set_key, batch_id, chunk)
+
+    # Resume batches submitted earlier whose requests are all still wanted.
+    for set_key, entry in list(pending.items()):
+        if not isinstance(entry, dict):
+            continue
+        keys = entry.get("keys") or []
+        if keys and all(k in by_key for k in keys):
+            chunk = {by_key[k]: todo[by_key[k]] for k in keys}
+            for cid in chunk:
+                todo.pop(cid)
+            running.append((set_key, entry["id"], chunk))
+            print(f"  resuming batch {entry['id']}: {len(chunk)} request(s) ({label})")
+
+    if todo:
+        parts = _chunks(todo)
+        for i, chunk in enumerate(parts, 1):
+            keys = sorted(key_of[cid] for cid in chunk)
+            set_key = hashlib.sha256("".join(keys).encode()).hexdigest()
+            batch = client().messages.batches.create(requests=[
+                Request(custom_id=cid, params=MessageCreateParamsNonStreaming(**params)) for cid, params in chunk.items()
+            ])
+            pending[set_key] = {"id": batch.id, "keys": keys}
+            PENDING.write_text(json.dumps(pending, indent=1))
+            running.append((set_key, batch.id, chunk))
+            print(f"  submitted batch {batch.id} ({i}/{len(parts)}): {len(chunk)} request(s) ({label})", flush=True)
+
+    started = time.monotonic()
+    left = list(running)
+    while left:
+        still = []
+        totals = [0, 0, 0]
+        for set_key, batch_id, chunk in left:
+            b = client().messages.batches.retrieve(batch_id)
+            if b.processing_status == "ended":
+                _collect(batch_id, chunk, out)
+                pending.pop(set_key, None)
+                PENDING.write_text(json.dumps(pending, indent=1))
+                continue
+            c = b.request_counts
+            totals = [totals[0] + c.processing, totals[1] + c.succeeded, totals[2] + c.errored]
+            still.append((set_key, batch_id, chunk))
+        left = still
+        if left:
+            print(f"  … {int(time.monotonic() - started)}s: {len(left)} batch(es) running, {totals[0]} processing, "
+                  f"{totals[1]} done, {totals[2]} errored", flush=True)
+            time.sleep(poll_seconds)
     return out
