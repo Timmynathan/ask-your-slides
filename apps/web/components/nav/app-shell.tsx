@@ -14,6 +14,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { UploadDialog } from "./upload-dialog";
+import { FeedbackDialog } from "./feedback-dialog";
 
 export type ShellPage = "dashboard" | "chat" | "past";
 export interface ShellCourse {
@@ -100,6 +101,7 @@ const ICONS = {
   ),
   book: <path d="M6 4.5h10.5a1.5 1.5 0 0 1 1.5 1.5v13.5H7.5A1.5 1.5 0 0 1 6 18V4.5zM6 18a1.5 1.5 0 0 1 1.5-1.5H18" />,
   upload: <path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 19h14" />,
+  feedback: <path d="M14.5 4.5l5 5L9 20H4v-5L14.5 4.5zM12.5 6.5l5 5" />,
 };
 
 const railCls = (active: boolean) => `grid h-11 w-11 place-items-center rounded-xl transition active:scale-90 ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
@@ -170,6 +172,7 @@ export function AppShell({
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   const [drawer, setDrawer] = useState(false);
   // Phones: a one-time tip pointing at the menu button.
   const [tip, setTip] = useState(false);
@@ -383,7 +386,11 @@ export function AppShell({
           <RailButton label="Past questions" href="/past-questions" active={page === "past"}>
             {ICONS.past}
           </RailButton>
-          <div className="mt-auto">
+          <div className="mt-auto flex flex-col items-center gap-3">
+            {/* Feedback (owner, 20 Nov 2026), just above the account. */}
+            <RailButton label="Give us feedback" onClick={() => setFeedback(true)}>
+              {ICONS.feedback}
+            </RailButton>
             <AccountMenu user={user} onChangePartner={onChangePartner} side />
           </div>
         </div>
@@ -438,6 +445,17 @@ export function AppShell({
               </Icon>
             </button>
             {panelBody}
+            <button
+              type="button"
+              onClick={() => {
+                setDrawer(false);
+                setFeedback(true);
+              }}
+              className="mx-2 mt-2 flex items-center gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] text-white/75 transition hover:bg-white/8 hover:text-white"
+            >
+              <Icon size={18}>{ICONS.feedback}</Icon>
+              Give us feedback
+            </button>
             <div className="mt-2 flex items-center gap-3 border-t border-white/10 px-5 pt-4">
               <AccountMenu user={user} onChangePartner={onChangePartner} side />
               <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">{user.displayName ?? user.email}</span>
@@ -445,6 +463,7 @@ export function AppShell({
           </div>
         </div>
       )}
+      {feedback && <FeedbackDialog onClose={() => setFeedback(false)} />}
       {uploading && <UploadDialog courses={courses} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
       <ShellMenu.Provider value={{ open: openDrawer, tip }}>
         <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>

@@ -26,19 +26,30 @@ async function Loaded({ searchParams }: Props) {
   const db = adminClient();
   const from = rangeStart(range);
   // The overview's own cap count is superseded by limit_events (PRD F12); FREE_DAILY keeps it sensible.
-  const [{ data, error }, plans, courses, heardFrom, funnel] = await Promise.all([
+  const [{ data, error }, plans, courses, heardFrom, funnel, { data: appFeedbackRows }] = await Promise.all([
     db.rpc("admin_overview", { p_from: from, p_cap: FREE_DAILY }),
     planStats(db, from),
     db.from("courses").select("code, department").order("sort_order"),
     heardFromCounts(db, from),
     signupFunnel(db, from),
+    // General feedback from the Feedback button (missing before its migration: then none).
+    db.from("app_feedback").select("id, created_at, message, sentiment, features, page, profiles(email)").order("created_at", { ascending: false }).limit(50),
   ]);
+  const appFeedback = ((appFeedbackRows ?? []) as unknown as { id: string; created_at: string; message: string; sentiment: "good" | "bad" | null; features: string[]; page: string | null; profiles: { email: string } | null }[]).map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    message: r.message,
+    sentiment: r.sentiment,
+    features: r.features,
+    page: r.page,
+    email: r.profiles?.email ?? "",
+  }));
   if (error) throw new Error(`Couldn't load the admin numbers: ${error.message}`);
   const overview = data as Overview;
   // admin_overview lists every course in sort_order (unique), so its rows line up with this list.
   const departments = (courses.data ?? []) as { code: string; department: string }[];
   const withDepartments = overview.courses.map((c, i) => ({ ...c, department: departments[i]?.code === c.code ? departments[i].department : "Other" }));
-  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} funnel={funnel} range={range} tab={tab} email={user.email ?? ""} />;
+  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} funnel={funnel} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} />;
 }
 
 /** "How did you hear about us?" answers from students who signed up in the period (asked since 20 Nov 2026). */

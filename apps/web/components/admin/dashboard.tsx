@@ -6,6 +6,7 @@
 //   Courses: every course with its students and questions, grouped by department.
 //   Health: error codes, slowest and most expensive answers.
 // Read-only. Data: public.admin_overview() via the server. The tab is kept in the URL (?tab=).
+import { featureLabel } from "@/lib/feedback-features";
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,7 +59,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, heardFrom, funnel, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; funnel: { label: string; n: number }[]; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; funnel: { label: string; n: number }[]; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -193,6 +194,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, range,
 
         <Plans plans={plans} />
         <Feedback data={data} />
+        <GeneralFeedback rows={appFeedback} />
         <Students data={data} />
 
         <section id="support" className="scroll-mt-24 space-y-4">
@@ -307,6 +309,52 @@ function Courses({ courses }: { courses: CourseRow[] }) {
           />
         </div>
       ))}
+    </section>
+  );
+}
+
+export interface AppFeedbackRow {
+  id: string;
+  createdAt: string;
+  message: string;
+  sentiment: "good" | "bad" | null;
+  features: string[];
+  page: string | null;
+  email: string;
+}
+
+/** Messages from the Feedback button (owner, 20 Nov 2026), newest first. */
+function GeneralFeedback({ rows }: { rows: AppFeedbackRow[] }) {
+  return (
+    <section className="mt-10">
+      <h2 className="font-heading text-[22px] text-ink">General feedback</h2>
+      <p className="mt-1 text-sm text-muted">From the Feedback button in the sidebar. Newest first; the last 50.</p>
+      {rows.length === 0 ? (
+        <p className="mt-4 text-sm text-muted">Nothing yet.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[22px] bg-card ring-1 ring-line">
+          {rows.map((r) => (
+            <li key={r.id} className="px-5 py-4">
+              <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
+                <span>{new Date(r.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })}</span>
+                <span>· {r.email}</span>
+                {r.page && <span>· {r.page}</span>}
+                {r.sentiment && (
+                  <span className={`rounded-full px-2 py-0.5 font-medium ${r.sentiment === "good" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"}`}>
+                    {r.sentiment === "good" ? "Good" : "Bad"}
+                  </span>
+                )}
+                {r.features.map((f) => (
+                  <span key={f} className="rounded-full bg-sunken px-2 py-0.5 text-ink">
+                    {featureLabel(f)}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-1.5 whitespace-pre-wrap text-[14.5px] text-ink">{r.message}</p>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
