@@ -6,7 +6,7 @@ import { StatVideo } from "./stat-video";
 //    questions, 264 courses. Update them by hand as they grow. ──
 const STATS = {
   students: "100+",
-  pastQuestions: "9,600+",
+  gradeImprovement: "91%", // owner, 20 Nov 2026: confirmed with their users
   courses: "260+",
 };
 
@@ -37,8 +37,8 @@ export function StatsSection() {
           <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy lg:absolute lg:left-[38%] lg:top-[150px] lg:z-10 lg:h-[310px] lg:w-[250px] lg:ring-4 lg:ring-page">
             <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-4 text-white">
-              <p className={big}>{STATS.pastQuestions}</p>
-              <Label onMedia>past questions from real PAU papers</Label>
+              <p className={big}>{STATS.gradeImprovement}</p>
+              <Label onMedia>of regularly active users reported grade improvements</Label>
             </div>
           </div>
 
