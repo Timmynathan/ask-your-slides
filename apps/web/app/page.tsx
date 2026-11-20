@@ -128,8 +128,8 @@ export default async function Landing() {
             Start <em className="italic">really</em> learning in seconds
           </h2>
           <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-muted sm:text-base">
-            No more scrolling through 80-slide decks the night before. Watch the hardest topic in a lecture get broken down
-            step by step, in plain words, straight from your PAU slides.
+            No more scrolling through 80-slide decks the night before. Ask about the hardest topic in a lecture and get it
+            broken down step by step, in plain words, straight from your PAU slides.
           </p>
         </div>
 
