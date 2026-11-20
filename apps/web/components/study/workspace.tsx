@@ -159,24 +159,27 @@ export function Workspace(data: WorkspaceData) {
 
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
-      {/* Top bar: as quiet as My courses. */}
-      <header className="flex h-16 shrink-0 items-center gap-1 px-3 sm:gap-2 sm:px-5">
-        <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="lg:hidden">
-          <path d="M4 7h16M4 12h16M4 17h16" />
-        </IconButton>
-        {/* Back to My courses: an arrow, not the logo (owner, 20 Nov 2026: a student couldn't find the way back). */}
-        <Link
-          href="/dashboard"
-          aria-label="Back to My courses"
-          title="Back to My courses"
-          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-ink transition hover:bg-sunken active:scale-95 sm:pr-3.5"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M19 12H5M11 18l-6-6 6-6" />
-          </svg>
-          <span className="hidden text-[14px] sm:inline">My courses</span>
-        </Link>
-        <h1 className="min-w-0 truncate text-[17px] text-ink sm:ml-1 sm:text-[19px]">
+      {/* Top bar: as quiet as My courses. Back on the left, the course name centred (owner, 20 Nov 2026:
+          "this is the course we're on"), actions on the right. Phones: the name gets its own centred line below. */}
+      <header className="flex shrink-0 flex-wrap items-center gap-x-1 px-3 pt-2 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:px-5 sm:pt-0">
+        <div className="flex shrink-0 items-center gap-1 sm:justify-self-start">
+          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="lg:hidden">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </IconButton>
+          {/* Back to My courses: an arrow, not the logo (owner, 20 Nov 2026: a student couldn't find the way back). */}
+          <Link
+            href="/dashboard"
+            aria-label="Back to My courses"
+            title="Back to My courses"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-ink transition hover:bg-sunken active:scale-95 sm:pr-3.5"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M19 12H5M11 18l-6-6 6-6" />
+            </svg>
+            <span className="hidden text-[14px] sm:inline">My courses</span>
+          </Link>
+        </div>
+        <h1 className="order-last min-w-0 basis-full truncate pb-1 pt-0.5 text-center text-[17px] text-ink sm:order-none sm:max-w-[min(60vw,720px)] sm:basis-auto sm:p-0 sm:text-[19px]">
           {course.title}
           {shownCode(course) && <span className="ml-2 hidden text-sm text-muted sm:inline">{shownCode(course)}</span>}
           {course.elective && <span className="ml-2 rounded-full bg-pau-100 px-2.5 py-0.5 align-middle text-[12px] font-medium text-brand">Elective</span>}
@@ -191,7 +194,7 @@ export function Workspace(data: WorkspaceData) {
           {data.plan.premiumLimited && <PremiumTag left={remaining} />}
         </h1>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:justify-self-end sm:gap-2">
           <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
             <path d="M15 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 4 17.5V19M9.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18.5 8v6M21.5 11h-6" />
           </IconButton>
