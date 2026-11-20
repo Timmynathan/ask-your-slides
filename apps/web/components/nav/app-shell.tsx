@@ -307,7 +307,7 @@ export function AppShell({
                         {f.status === "ready"
                           ? `${f.course} · ${f.pages} ${f.pages === 1 ? "page" : "pages"}`
                           : f.status === "failed"
-                            ? "Couldn't read it: delete and try again"
+                            ? "Couldn't read it. Delete and retry"
                             : "Reading your pages…"}
                       </span>
                     </span>
