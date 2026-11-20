@@ -6,7 +6,7 @@ import { BusyLabel } from "@/components/ui/spinner";
 import { safeNext } from "@/lib/auth/next";
 import { passwordHelpMailto, SUPPORT_EMAIL } from "@/lib/auth/support";
 
-// Accounts (PRD F1). Two clear doors, as tabs at the top:
+// Accounts (PRD F1). Two doors, linked to each other at the bottom of each form (no tabs: owner, 20 Nov 2026):
 //   Create account:  Continue with Microsoft (proves the PAU address; owner, 17 Nov 2026), or as a
 //                    fallback: PAU email → emailed code (proves it too) → create a password (steps 1–3)
 //   Log in:          email + password; "Forgot password?" runs the same code flow to set a new one
@@ -286,32 +286,8 @@ export function SignInForm({
           {banner.text}
         </p>
       )}
-      {/* The two doors, always visible: no hunting for where to sign up. */}
-      <div className="grid grid-cols-2 rounded-full bg-sunken p-1" role="tablist" aria-label="Account">
-        {(
-          [
-            ["signup", "Create account"],
-            ["login", "Log in"],
-          ] as const
-        ).map(([m, label]) => {
-          const on = m === "signup" ? mode !== "login" : mode === "login";
-          return (
-            <button
-              key={m}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              disabled={busy}
-              onClick={() => !on && switchMode(m)}
-              className={`rounded-full py-2.5 text-[15px] transition active:scale-[0.98] ${on ? "bg-page font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
 
-      <h1 className="mt-8 font-heading text-3xl font-semibold tracking-tight text-ink">{head.title}</h1>
+      <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink">{head.title}</h1>
       {head.sub && <p className="mt-2 text-[15px] text-muted">{head.sub}</p>}
       {mode === "signup" && !directSignup && !microsoftSignup && (
         <ol className="mt-4 flex items-center gap-2 text-xs text-muted" aria-label={`Step ${signupStep} of 3`}>
