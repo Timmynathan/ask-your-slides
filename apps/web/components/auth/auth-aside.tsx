@@ -1,11 +1,12 @@
 // The right half of /sign-up and /sign-in (owner, 20 Nov 2026): a headline, a small animated scene,
 // and who it's for. The scene, in exam season: a girl in her dorm by day, buried in books and clearly
 // stressed (hand on her head, a tangled scribble and "?!" above her), and a student at a library desk.
-// A full-body Zara hops from one room to the other; each time she lands she waves and says "Hi!", the
-// room lights up and AI sparkles burst (the girl's stress clears while Zara is with her). One 9-second
+// A full-body Zara hops from one room to the other; each time she lands she waves and says "Hi!", AI
+// sparkles burst and the student's face changes (the girl's stress clears while Zara is with her). One 9-second
 // loop in CSS (globals.css, "as-"); reduced motion shows the first greeting, still. Original drawing
 // in the app's navy line style; Zara's colours match her avatar (components/mascot/mascot.tsx).
 import type { ReactNode } from "react";
+import { Mascot } from "@/components/mascot/mascot";
 
 const INK = "#0e1664";
 const ZARA = { skin: "#8a5534", hair: "#1f1410", top: "#0d9488", topShade: "#0f766e", trousers: "#1e2a5a" };
@@ -24,39 +25,28 @@ function Sparkle({ x, y, s, cls, delay }: { x: number; y: number; s: number; cls
   );
 }
 
-/** Zara, full body (60 × 116): afro, teal top, navy trousers. Her right arm waves when she says hi. */
+/** Zara with a body: her real avatar (the one students see in the app) as the head, on a teal top and
+ *  navy trousers, so she reads as the study partner, not as another student. Her right arm waves. */
 function ZaraFull() {
   const c = ZARA;
   return (
-    <svg width="60" height="116" viewBox="0 0 60 116" aria-hidden>
-      {/* Legs and shoes */}
-      <path d="M24 80 L22 104 M36 80 L38 104" stroke={c.trousers} strokeWidth="9" strokeLinecap="round" />
-      <ellipse cx="20" cy="108" rx="7" ry="4" fill={INK} />
-      <ellipse cx="40" cy="108" rx="7" ry="4" fill={INK} />
-      {/* Left arm (still) */}
-      <path d="M16 50 L9 72" stroke={c.skin} strokeWidth="6" strokeLinecap="round" />
-      <circle cx="9" cy="73" r="3.6" fill={c.skin} />
-      {/* Top */}
-      <path d="M13 54 C13 46 18 42 24 42 H36 C42 42 47 46 47 54 V82 H13 Z" fill={c.top} />
-      <path d="M24 42 L30 50 L36 42" fill="none" stroke={c.topShade} strokeWidth="2" strokeLinejoin="round" />
-      {/* Right arm: waves */}
-      <g className="as-wave">
-        <path d="M44 50 L51 72" stroke={c.skin} strokeWidth="6" strokeLinecap="round" />
-        <circle cx="51" cy="73" r="3.6" fill={c.skin} />
-      </g>
-      {/* Neck, hair, head, face */}
-      <rect x="26.5" y="34" width="7" height="10" rx="3" fill={c.skin} />
-      <ellipse cx="30" cy="18" rx="17" ry="13" fill={c.hair} />
-      <circle cx="14.5" cy="24" r="6" fill={c.hair} />
-      <circle cx="45.5" cy="24" r="6" fill={c.hair} />
-      <circle cx="30" cy="26" r="12.5" fill={c.skin} />
-      <path d="M17.6 24 C19 14 41 14 42.4 24 C38 19 22 19 17.6 24 Z" fill={c.hair} />
-      <ellipse cx="25.2" cy="27" rx="1.6" ry="1.9" fill="#1a1a1a" />
-      <ellipse cx="34.8" cy="27" rx="1.6" ry="1.9" fill="#1a1a1a" />
-      <path d="M25.5 32 Q30 35.5 34.5 32" fill="none" stroke="#2b1a12" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="22" cy="31" r="2" fill="#f472b6" opacity="0.3" />
-      <circle cx="38" cy="31" r="2" fill="#f472b6" opacity="0.3" />
-    </svg>
+    <div className="flex w-[64px] flex-col items-center">
+      <div className="relative z-10">
+        <Mascot partner="zara" size={64} />
+      </div>
+      <svg width="60" height="56" viewBox="0 0 60 56" className="-mt-2" aria-hidden>
+        <path d="M24 34 L22 48 M36 34 L38 48" stroke={c.trousers} strokeWidth="9" strokeLinecap="round" />
+        <ellipse cx="20" cy="51" rx="7" ry="4" fill={INK} />
+        <ellipse cx="40" cy="51" rx="7" ry="4" fill={INK} />
+        <path d="M16 8 L9 28" stroke={c.skin} strokeWidth="6" strokeLinecap="round" />
+        <circle cx="9" cy="29" r="3.6" fill={c.skin} />
+        <path d="M13 12 C13 5 18 1 24 1 H36 C42 1 47 5 47 12 V37 H13 Z" fill={c.top} />
+        <g className="as-wave">
+          <path d="M44 8 L51 28" stroke={c.skin} strokeWidth="6" strokeLinecap="round" />
+          <circle cx="51" cy="29" r="3.6" fill={c.skin} />
+        </g>
+      </svg>
+    </div>
   );
 }
 
@@ -73,8 +63,7 @@ function Scene() {
     <div className="relative h-[300px] w-[600px] shrink-0">
       <svg viewBox="0 0 600 300" className="absolute inset-0 h-full w-full" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {/* ── Dorm room, daytime, exam season ── */}
-        <rect x="0" y="20" width="280" height="260" rx="24" fill="#fff" stroke="none" />
-        <rect className="as-glow-a" x="0" y="20" width="280" height="260" rx="24" fill="#ffe9a8" stroke="none" />
+        <rect x="0" y="20" width="280" height="260" rx="24" fill="#fff" stroke="#e3e8f2" strokeWidth="1.5" />
         {/* Window: blue sky and the sun */}
         <rect x="28" y="44" width="64" height="58" rx="8" fill="#dbeafe" />
         <circle cx="74" cy="62" r="8" fill="#fcd34d" stroke="none" />
@@ -107,9 +96,19 @@ function Scene() {
           <circle cx="108" cy="124" r="7" fill={INK} stroke="none" />
           <path d="M102 138 C104 126 116 122 128 132" />
           <circle cx="130" cy="132" r="4" fill="#fff" />
-          {/* Worried face */}
-          <path d="M110 139 l3 1 M122 139 l-3 1" strokeWidth="1.5" />
-          <path d="M111 148 q5 -3 10 0" strokeWidth="1.5" />
+          {/* Worried, then smiling while Zara is with her */}
+          <g className="as-face-a-sad">
+            <path d="M109 137 l4 2 M123 137 l-4 2" strokeWidth="1.5" />
+            <circle cx="112" cy="142" r="1.4" fill={INK} stroke="none" />
+            <circle cx="120" cy="142" r="1.4" fill={INK} stroke="none" />
+            <path d="M111 149 q5 -3.5 10 0" strokeWidth="1.5" />
+          </g>
+          <g className="as-face-a-happy">
+            <path d="M109 142 q3 -3 6 0 M117 142 q3 -3 6 0" strokeWidth="1.5" />
+            <path d="M110 147 q6 5 12 0" strokeWidth="1.6" />
+            <circle cx="108" cy="146" r="2" fill="#f9a8d4" stroke="none" opacity="0.7" />
+            <circle cx="124" cy="146" r="2" fill="#f9a8d4" stroke="none" opacity="0.7" />
+          </g>
         </g>
         {/* Stress: a tangled scribble, "?!" and a sweat drop. Clears while Zara is with her. */}
         <g className="as-stress">
@@ -125,8 +124,7 @@ function Scene() {
         <Sparkle x={76} y={170} s={6} cls="as-spark-a" delay="0.18s" />
 
         {/* ── Library ── */}
-        <rect x="320" y="20" width="280" height="260" rx="24" fill="#fff" stroke="none" />
-        <rect className="as-glow-b" x="320" y="20" width="280" height="260" rx="24" fill="#ffe9a8" stroke="none" />
+        <rect x="320" y="20" width="280" height="260" rx="24" fill="#fff" stroke="#e3e8f2" strokeWidth="1.5" />
         <rect x="340" y="48" width="70" height="150" rx="4" fill="#fff" />
         <path d="M340 98 H410 M340 148 H410" />
         {[350, 358, 366, 378, 386, 398].map((x, i) => (
@@ -141,6 +139,15 @@ function Scene() {
         <path d="M486 206 C486 184 494 170 506 170 C518 170 526 184 526 206" fill="#fff" />
         <circle cx="506" cy="150" r="14" fill="#fff" />
         <path d="M492 146 C494 134 506 130 520 140" strokeWidth="5" />
+        <g className="as-face-b-flat">
+          <circle cx="501" cy="152" r="1.4" fill={INK} stroke="none" />
+          <circle cx="511" cy="152" r="1.4" fill={INK} stroke="none" />
+          <path d="M502 158 h8" strokeWidth="1.5" />
+        </g>
+        <g className="as-face-b-happy">
+          <path d="M498 152 q3 -3 6 0 M508 152 q3 -3 6 0" strokeWidth="1.5" />
+          <path d="M500 157 q6 5 12 0" strokeWidth="1.6" />
+        </g>
         <path d="M480 206 L484 182 H528 L532 206 Z" fill="#fff" />
         <circle cx="506" cy="194" r="2.5" fill={INK} stroke="none" />
         <path d="M466 206 H584" strokeWidth="6" />
@@ -171,9 +178,9 @@ function Scene() {
 
 export function AuthAside({ signUp }: { signUp: boolean }) {
   return (
-    <aside className="relative hidden flex-col items-center justify-between overflow-hidden border-l border-[#b9cdee] bg-[#dbe7fa] px-10 py-14 lg:flex" aria-hidden>
+    <aside className="relative hidden flex-col items-center justify-between overflow-hidden border-l border-line bg-[#fbfcfe] px-10 py-14 lg:flex" aria-hidden>
       <p className="max-w-lg text-center font-heading text-[30px] leading-snug text-ink">
-        Students get <span className="rounded-md bg-white px-1.5 italic [box-decoration-break:clone]">higher grades</span>
+        Students get <span className="rounded-md bg-[#cfe3fb] px-1.5 italic [box-decoration-break:clone]">higher grades</span>
         <br />
         with Ask Your Slides!
       </p>

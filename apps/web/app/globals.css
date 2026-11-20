@@ -190,7 +190,7 @@ body {
 /* Sign-up/sign-in scene (components/auth/auth-aside.tsx), one 9 s loop: Zara greets the dorm (10-32%),
    hops to the library (38-50%), greets there (55-78%) and hops back (84-96%). Each greeting: "Hi!",
    the room lights up, sparkles burst. */
-.as-move, .as-jump, .as-squash, .as-hi-a, .as-hi-b, .as-glow-a, .as-glow-b, .as-spark-a, .as-spark-b, .as-wave, .as-stress { animation-duration: 9s; animation-iteration-count: infinite; }
+.as-move, .as-jump, .as-squash, .as-hi-a, .as-hi-b, .as-spark-a, .as-spark-b, .as-wave, .as-stress, .as-face-a-sad, .as-face-a-happy, .as-face-b-flat, .as-face-b-happy { animation-duration: 9s; animation-iteration-count: infinite; }
 @keyframes as-move { 0%, 38% { transform: translateX(0); } 50%, 84% { transform: translateX(212px); } 96%, 100% { transform: translateX(0); } }
 .as-move { animation-name: as-move; animation-timing-function: linear; }
 @keyframes as-jump {
@@ -212,10 +212,15 @@ body {
 @keyframes as-hi-b { 0%, 54% { opacity: 0; transform: translateY(8px) scale(0.7); } 57%, 76% { opacity: 1; transform: none; } 79%, 100% { opacity: 0; transform: translateY(-4px); } }
 .as-hi-a { animation-name: as-hi-a; animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1.3); }
 .as-hi-b { animation-name: as-hi-b; animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1.3); }
-@keyframes as-glow-a { 0%, 10% { opacity: 0; } 15%, 30% { opacity: 0.55; } 38%, 100% { opacity: 0; } }
-@keyframes as-glow-b { 0%, 55% { opacity: 0; } 60%, 75% { opacity: 0.55; } 83%, 100% { opacity: 0; } }
-.as-glow-a { animation-name: as-glow-a; animation-timing-function: ease-in-out; }
-.as-glow-b { animation-name: as-glow-b; animation-timing-function: ease-in-out; }
+/* The students' faces: the girl worried, the library student neutral, both smiling while Zara greets them. */
+@keyframes as-face-a-sad { 0%, 10% { opacity: 1; } 13%, 34% { opacity: 0; } 38%, 100% { opacity: 1; } }
+@keyframes as-face-a-happy { 0%, 10% { opacity: 0; } 13%, 34% { opacity: 1; } 38%, 100% { opacity: 0; } }
+@keyframes as-face-b-flat { 0%, 55% { opacity: 1; } 58%, 79% { opacity: 0; } 83%, 100% { opacity: 1; } }
+@keyframes as-face-b-happy { 0%, 55% { opacity: 0; } 58%, 79% { opacity: 1; } 83%, 100% { opacity: 0; } }
+.as-face-a-sad { animation-name: as-face-a-sad; }
+.as-face-a-happy { animation-name: as-face-a-happy; }
+.as-face-b-flat { animation-name: as-face-b-flat; }
+.as-face-b-happy { animation-name: as-face-b-happy; }
 @keyframes as-spark-a { 0%, 11% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 16% { opacity: 1; transform: scale(1.15) rotate(10deg); } 20%, 28% { opacity: 1; transform: scale(1) rotate(0); } 33%, 100% { opacity: 0; transform: scale(0.5) rotate(20deg); } }
 @keyframes as-spark-b { 0%, 56% { opacity: 0; transform: scale(0.2) rotate(-30deg); } 61% { opacity: 1; transform: scale(1.15) rotate(10deg); } 65%, 73% { opacity: 1; transform: scale(1) rotate(0); } 78%, 100% { opacity: 0; transform: scale(0.5) rotate(20deg); } }
 .as-spark-a, .as-spark-b { transform-box: fill-box; transform-origin: center; opacity: 0; }
@@ -227,7 +232,7 @@ body {
   13%, 19%, 25%, 58%, 64%, 70% { transform: rotate(-150deg); }
   16%, 22%, 28%, 61%, 67%, 73% { transform: rotate(-125deg); }
 }
-.as-wave { animation-name: as-wave; transform-box: view-box; transform-origin: 44px 50px; }
+.as-wave { animation-name: as-wave; transform-box: view-box; transform-origin: 44px 8px; }
 @keyframes as-stress { 0%, 9% { opacity: 1; } 13%, 36% { opacity: 0; } 42%, 100% { opacity: 1; } }
 .as-stress { animation-name: as-stress; }
 @keyframes as-scribble { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
@@ -236,11 +241,11 @@ body {
 .as-strain { animation: as-strain 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 @media (prefers-reduced-motion: reduce) {
   .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y, .pill-swap, .reveal-in { animation: none; }
-  .as-move, .as-jump, .as-squash, .as-hi-a, .as-hi-b, .as-glow-a, .as-glow-b, .as-spark-a, .as-spark-b, .as-wave, .as-stress, .as-scribble, .as-strain { animation: none; }
+  .as-move, .as-jump, .as-squash, .as-hi-a, .as-hi-b, .as-spark-a, .as-spark-b, .as-wave, .as-stress, .as-scribble, .as-strain, .as-face-a-sad, .as-face-a-happy, .as-face-b-flat, .as-face-b-happy { animation: none; }
+  .as-face-a-sad, .as-face-b-happy { opacity: 0; }
   .as-stress { opacity: 0; }
   .as-hi-a, .as-spark-a { opacity: 1; }
-  .as-glow-a { opacity: 0.55; }
-  .as-hi-b, .as-spark-b, .as-glow-b { opacity: 0; }
+  .as-hi-b, .as-spark-b { opacity: 0; }
   .reveal-wait { opacity: 1; }
 }
 
