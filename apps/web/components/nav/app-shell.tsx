@@ -3,10 +3,10 @@
 // The app's sidebar (owner, 20 Nov 2026), shared by the dashboard, Past questions and Chat, from
 // tablets up (phones keep each page's own top bar). A dark navy rail (logo, the sidebar button,
 // search, chat, past questions, account) beside a panel: Dashboard, Chat, Past questions, Upload,
-// and the student's courses. No pill shapes: the current page is simply brighter.
-// The sidebar button stays in the rail: clicking it keeps the panel open (pinned) or closes it; while
-// it's closed, hovering the button slides the panel out over the page until the pointer leaves. A
-// small label says what a click will do. A pinned panel can be dragged narrower by its right edge;
+// and the student's courses.
+// The sidebar button sits beside the title and stays in that spot when the panel is closed: clicking
+// it keeps the panel open (pinned) or closes it; while closed, hovering it slides the panel out over
+// the page until the pointer leaves. A small label says what a click will do. Full height, square edges. A pinned panel can be dragged narrower by its right edge;
 // far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -60,7 +60,7 @@ const ICONS = {
   upload: <path d="M12 16V5M7.5 9.5 12 5l4.5 4.5M5 19h14" />,
 };
 
-const railCls = (active: boolean) => `grid h-11 w-11 place-items-center transition active:scale-90 ${active ? "text-white" : "text-white/55 hover:text-white"}`;
+const railCls = (active: boolean) => `grid h-11 w-11 place-items-center rounded-xl transition active:scale-90 ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
 
 function RailButton({ label, active = false, href, onClick, children }: { label: string; active?: boolean; href?: string; onClick?(): void; children: ReactNode }) {
   return href ? (
@@ -75,15 +75,15 @@ function RailButton({ label, active = false, href, onClick, children }: { label:
 }
 
 const rowCls = (active: boolean) =>
-  `flex w-full items-center gap-3 px-3 py-2 text-left text-[14.5px] transition ${active ? "font-medium text-white" : "text-white/65 hover:text-white"}`;
+  `flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] transition ${active ? "bg-white/12 text-white" : "text-white/75 hover:bg-white/8 hover:text-white"}`;
 
 function NavItem({ label, href, active, icon, soon = false }: { label: string; href: string; active: boolean; icon: ReactNode; soon?: boolean }) {
   if (soon) {
     return (
-      <span className="flex cursor-default items-center gap-3 px-3 py-2 text-[14.5px] text-white/40" title={`${label}: coming soon`}>
+      <span className="flex cursor-default items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] text-white/45" title={`${label}: coming soon`}>
         <Icon size={18}>{icon}</Icon>
         <span className="flex-1 truncate">{label}</span>
-        <span className="text-[11px] text-white/50">Soon</span>
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10.5px] text-white/70">Soon</span>
       </span>
     );
   }
@@ -175,7 +175,7 @@ export function AppShell({
   const shown = pinned || peek;
   const panelW = Math.max(MIN_W, width);
   return (
-    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (pinned ? panelW + 8 : 0)}px` }}>
+    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (pinned ? panelW : 52)}px` }}>
       {/* Leaving the whole sidebar (rail and panel) ends a hover peek. */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main" onMouseLeave={() => setPeek(false)}>
         {/* Rail */}
@@ -183,15 +183,6 @@ export function AppShell({
           <Link href="/dashboard" aria-label="My courses" title="My courses" className="mb-2 grid h-11 w-11 place-items-center">
             <LogoMark size={26} light />
           </Link>
-          {/* The sidebar button: hover to peek, click to keep open or close. */}
-          <div className="group relative" onMouseEnter={() => !pinned && setPeek(true)}>
-            <button type="button" onClick={togglePin} aria-label={pinned ? "Close sidebar" : "Keep sidebar open"} aria-pressed={pinned} className={railCls(pinned)}>
-              <Icon>{ICONS.panel}</Icon>
-            </button>
-            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg transition-opacity delay-300 group-hover:opacity-100">
-              {pinned ? "Close sidebar" : "Keep sidebar open"}
-            </span>
-          </div>
           {onSearch ? (
             <RailButton label="Search courses" onClick={onSearch}>
               {ICONS.search}
@@ -217,24 +208,30 @@ export function AppShell({
         {/* Panel: beside the page when pinned, over it while peeking */}
         {shown && (
           <div
-            className={`relative my-2 flex flex-col rounded-2xl bg-navy py-4 text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
+            className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
             style={{ width: panelW }}
           >
-            <p className="truncate px-5 pb-3 text-[15px] font-medium">Ask Your Slides</p>
-            <nav className="flex flex-col px-2" aria-label="Pages">
+            <p className="truncate pb-4 pl-14 pr-4 text-[15px] font-medium leading-9">Ask Your Slides</p>
+            <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
               <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
               <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />
               <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />
-              <button type="button" onClick={onUpload} className={rowCls(false)}>
-                <Icon size={18}>{ICONS.upload}</Icon>
-                <span className="flex-1 truncate">Upload</span>
-              </button>
             </nav>
+            <div className="px-3 pt-3">
+              <button
+                type="button"
+                onClick={onUpload}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-white/12 py-2 text-[14px] font-medium text-white transition hover:bg-white/20 active:scale-[0.98]"
+              >
+                <Icon size={17}>{ICONS.upload}</Icon>
+                Upload
+              </button>
+            </div>
             <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Courses</p>
             <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
               {courses.map((c) => (
                 <li key={c.id}>
-                  <Link href={c.href} title={c.title} className={rowCls(false)}>
+                  <Link href={c.href} title={c.title} className={`${rowCls(false)} text-[14px]`}>
                     <span className="shrink-0 text-white/45">
                       <Icon size={16}>{ICONS.book}</Icon>
                     </span>
@@ -258,6 +255,22 @@ export function AppShell({
             )}
           </div>
         )}
+        {/* The sidebar button, beside the title: always here, open or closed. Hover peeks while
+            closed; click keeps the panel open, or closes it. */}
+        <div className="group absolute top-[18px] z-50" style={{ left: RAIL + 10 }} onMouseEnter={() => !pinned && setPeek(true)}>
+          <button
+            type="button"
+            onClick={togglePin}
+            aria-label={pinned ? "Close sidebar" : "Keep sidebar open"}
+            aria-pressed={pinned}
+            className={`grid h-9 w-9 place-items-center rounded-lg transition active:scale-90 ${shown ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-ink hover:bg-sunken"}`}
+          >
+            <Icon size={19}>{ICONS.panel}</Icon>
+          </button>
+          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg ring-1 ring-white/15 transition-opacity delay-200 group-hover:opacity-100">
+            {pinned ? "Close sidebar" : "Keep sidebar open"}
+          </span>
+        </div>
       </aside>
       <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
     </div>
