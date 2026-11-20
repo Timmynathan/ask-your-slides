@@ -61,7 +61,20 @@ function useGreeting(first: string, last: string) {
   return shown;
 }
 
-export function GeneralChatPanel({ partner, firstName, onChangePartner }: { partner: PartnerId; firstName: string | null; onChangePartner(): void }) {
+/** `panel`: the column on the right of the dashboard (wide screens). `page`: the full Chat page from the
+ *  sidebar (owner, 21 Nov 2026), on every screen size. */
+export function GeneralChatPanel({
+  partner,
+  firstName,
+  onChangePartner,
+  variant = "panel",
+}: {
+  partner: PartnerId;
+  firstName: string | null;
+  onChangePartner(): void;
+  variant?: "panel" | "page";
+}) {
+  const page = variant === "page";
   const router = useRouter();
   const p = PARTNERS[partner];
   const hello = `Hi${firstName ? ` ${firstName}` : ""}, I'm ${p.name}.`;
@@ -138,7 +151,10 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
   };
 
   return (
-    <aside className="group/chat fixed inset-y-0 right-0 z-20 hidden w-[380px] flex-col border-l border-line bg-page xl:flex" aria-label="Chat with your study partner">
+    <aside
+      className={page ? "group/chat flex h-[100dvh] flex-col bg-page md:h-dvh" : "group/chat fixed inset-y-0 right-0 z-20 hidden w-[380px] flex-col border-l border-line bg-page xl:flex"}
+      aria-label="Chat with your study partner"
+    >
       {messages.length > 0 && (
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
           <Mascot partner={partner} size={30} animated={false} />
@@ -149,7 +165,8 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
         </div>
       )}
 
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-8">
+      <div ref={scroller} className={`min-h-0 flex-1 overflow-y-auto px-5 pb-4 ${page ? "pt-14 sm:pt-20" : "pt-8"}`}>
+        <div className={page ? "mx-auto w-full max-w-2xl" : ""}>
         {messages.length === 0 ? (
           <>
             {/* The partner, with the others peeking out from behind */}
@@ -250,9 +267,10 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
             {error && <li className="rounded-2xl bg-red-50 px-4 py-3 text-[13.5px] text-red-800">{error.message}</li>}
           </ol>
         )}
+        </div>
       </div>
 
-      <form onSubmit={send} className="m-4 rounded-[22px] bg-card p-2 ring-1 ring-line-strong focus-within:ring-brand">
+      <form onSubmit={send} className={`m-4 rounded-[22px] bg-card p-2 ring-1 ring-line-strong focus-within:ring-brand ${page ? "sm:mx-auto sm:mb-6 sm:w-full sm:max-w-2xl" : ""}`}>
         <textarea
           ref={box}
           value={draft}

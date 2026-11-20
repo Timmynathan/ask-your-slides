@@ -4,14 +4,14 @@ import { ShellSkeleton } from "@/components/nav/content-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { shellData } from "@/lib/nav/shell-data";
 
-// The sidebar for My courses, Past questions, Plans and pricing, Settings and Your profile (owner,
+// The sidebar for My courses, Chat, Past questions, Plans and pricing, Settings and Your profile (owner,
 // 21 Nov 2026): one shared layout, so moving between these pages keeps the sidebar in place and only
 // the content changes (no blank screen). router.refresh() (e.g. after an upload) updates it too.
 async function Shell({ children }: { children: ReactNode }) {
   const { supabase, user } = await requireUser();
   const shell = await shellData(supabase, user);
   return (
-    <AppShell title={shell.title} courses={shell.courses} recent={shell.recent} files={shell.files} user={shell.user}>
+    <AppShell title={shell.title} courses={shell.courses} recent={shell.recent} files={shell.files} user={shell.user} chatReady>
       {children}
     </AppShell>
   );
