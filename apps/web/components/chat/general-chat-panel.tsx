@@ -154,22 +154,37 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
           <>
             {/* The partner, with the others peeking out from behind */}
             <div className="relative mx-auto h-[112px] w-[150px]">
-              {others.map((id, i) => (
-                <span
-                  key={id}
-                  // Only the chosen partner shows; the others pop out while the pointer is over the chat (owner, 20 Nov 2026).
-                  className="absolute translate-y-3 scale-50 opacity-0 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1.3)] group-hover/chat:translate-y-0 group-hover/chat:scale-100 group-hover/chat:opacity-100"
-                  style={{ left: [8, 104, 92][i], top: [54, 52, 0][i], transitionDelay: `${i * 70}ms` }}
-                >
-                  <Mascot partner={id} size={i === 2 ? 34 : 38} animated={false} />
-                </span>
-              ))}
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              {others.map((id, i) => {
+                // Final spot, and the offset back to the centre: each one waits hidden behind the chosen
+                // partner, and all slide out together while the pointer is over the chat (owner, 20 Nov 2026).
+                const spot = [
+                  { left: 8, top: 54, size: 38 },
+                  { left: 104, top: 52, size: 38 },
+                  { left: 92, top: 0, size: 34 },
+                ][i];
+                const dx = 75 - (spot.left + spot.size / 2);
+                const dy = 56 - (spot.top + spot.size / 2);
+                return (
+                  <span
+                    key={id}
+                    className="absolute z-0 [transform:translate(var(--dx),var(--dy))_scale(0.5)] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform group-focus-within/chat:[transform:none] group-hover/chat:[transform:none] motion-reduce:transition-none"
+                    style={{ left: spot.left, top: spot.top, ["--dx" as string]: `${dx}px`, ["--dy" as string]: `${dy}px` }}
+                  >
+                    <Mascot partner={id} size={spot.size} animated={false} />
+                  </span>
+                );
+              })}
+              <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
                 <Mascot partner={partner} size={96} mood="happy" animated={false} />
               </span>
             </div>
             <div className="mt-2 flex justify-center">
-              <button type="button" onClick={onChangePartner} className="rounded-full bg-sunken px-3 py-1 text-[12.5px] text-muted transition hover:text-ink active:scale-95">
+              <button
+                type="button"
+                onClick={onChangePartner}
+                // Shown with the other partners, while the pointer is over the chat.
+                className="translate-y-1 rounded-full bg-sunken px-3 py-1 text-[12.5px] text-muted opacity-0 transition-[opacity,transform,color] duration-300 ease-out hover:text-ink focus:translate-y-0 focus:opacity-100 active:scale-95 group-hover/chat:translate-y-0 group-hover/chat:opacity-100"
+              >
                 Change character
               </button>
             </div>
