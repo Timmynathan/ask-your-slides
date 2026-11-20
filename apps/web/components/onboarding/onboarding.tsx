@@ -124,7 +124,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
           <form key="name" onSubmit={submitName} className="panel-in w-full max-w-md text-center">
             <div className="flex justify-center -space-x-3" aria-hidden>
               {PARTNER_IDS.map((id) => (
-                <Mascot key={id} partner={id} size={64} />
+                <Mascot key={id} partner={id} size={64} animated={false} />
               ))}
             </div>
             <h1 className="mt-6 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Tell us about you</h1>
@@ -142,7 +142,6 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
             <div className="mt-3">
               <ProgrammePicker choices={choices} value={studying} onChange={setStudying} />
             </div>
-            <p className="mt-2 text-xs text-muted">You can change this later from your account menu.</p>
             <button type="submit" disabled={busy || !ready} className="mt-5 w-full rounded-full bg-brand px-4 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60">
               <BusyLabel busy={busy} label="Continue" busyLabel="Saving…" />
             </button>
