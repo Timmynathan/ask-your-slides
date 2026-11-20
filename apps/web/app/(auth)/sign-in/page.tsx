@@ -14,7 +14,7 @@ type Props = { signUp?: boolean };
 export function AuthPage(props: Props) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
-      <main className="flex flex-col bg-[#fbfcfe] px-5 py-6 sm:px-10">
+      <main className="flex flex-col bg-white px-5 py-6 sm:px-10">
         <Link href="/" className="w-fit" aria-label="Ask Your Slides home">
           <Logo />
         </Link>
