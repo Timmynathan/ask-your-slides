@@ -30,12 +30,12 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
     <nav className="flex h-full flex-col" aria-label="Topics and chats">
       {/* Past questions first: real PAU papers by year (replaced "Search the web", owner 14 Nov 2026). */}
       {past && (
-        <div className="shrink-0 px-3 pt-3">
+        <div className="shrink-0 px-3 pt-2">
           <PastBox papers={past.papers} total={past.total} active={pastActive} onOpenPaper={onOpenPast} onOpenMap={() => onOpenPast(null)} />
         </div>
       )}
 
-      <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-5">
+      <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4">
         <h2 className="text-[13px] text-white/60">Topics</h2>
         <button
           onClick={() => onOpenScope(topicId)}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Workspace } from "@/components/study/workspace";
-import { WorkspaceSkeleton } from "@/components/study/workspace-skeleton";
+import { CourseSkeleton } from "@/components/nav/content-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
@@ -129,7 +129,7 @@ function pastCounts(courseId: string, rows: PastRow[], qt: { question_id: string
 
 export default function StudyPage(props: Props) {
   return (
-    <Suspense fallback={<WorkspaceSkeleton />}>
+    <Suspense fallback={<CourseSkeleton />}>
       <Loaded {...props} />
     </Suspense>
   );

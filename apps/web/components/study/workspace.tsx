@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { AppShell, ShellNavMini } from "@/components/nav/app-shell";
+import { ShellNavMini, useShellCourse } from "@/components/nav/app-shell";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
 import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
-import { courseHref, courseParams } from "@/lib/study/course-link";
+import { courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
 import { PartnerSwitch } from "./partner-switch";
@@ -18,10 +18,9 @@ import { SourcesPanel } from "./sources-panel";
 import { StudyTour, useStudyTour } from "./study-tour";
 import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
 
-// Inside one course, laid out like a notebook: a top bar (back arrow to My courses, the course name,
-// invite, study partner, account), then three panels on a soft background: Topics | chat | the
-// cited slide (when open). Laptop first; below lg the Topics panel is a drawer and the slide a
-// bottom sheet. Other courses are reached from My courses, not listed here.
+// Inside one course: the app's sidebar holds the course's topics (tablets up), then the chat with a
+// quiet top bar (course name, past questions, study partner), then Sources or the cited slide, full
+// height on the right. Phones: Topics is a drawer and the slide a bottom sheet.
 //
 // Topics and chats are in memory, so switching between them never waits on the server: the panel
 // stays put and the chat area animates in (.panel-in in globals.css).
@@ -147,95 +146,100 @@ export function Workspace(data: WorkspaceData) {
 
   const remaining = Math.max(0, data.usage.cap - used);
   const onRemaining = useCallback((r: number) => setUsed(data.usage.cap - r), [data.usage.cap]);
-  const scopeTitle = past === "list" ? "Past questions" : topic ? topic.title : "Whole course";
   const topicPast = PAST_QUESTIONS_LIVE && topic ? data.past.byTopic[topic.id] ?? 0 : 0;
   const courseChats = useMemo(() => chats.filter((c) => c.course_id === courseId), [chats, courseId]);
   const p = PARTNERS[partner];
 
-  // Built on click: the site address is only known in the browser (no server/client mismatch).
-  const invite = () => {
-    const text = `I'm revising ${courseName(course)} with Ask Your Slides: answers straight from our lecture slides, with the slide cited. Try it: ${window.location.origin}${courseHref(course, data.courses)}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  };
+
+  // The shared sidebar (app/(app)/(shell)/layout.tsx) stays mounted; this page tells it which course
+  // is open and puts the topics into its panel (owner, 21 Nov 2026: no blank flash from the dashboard).
+  const shell = useShellCourse();
+  const setShellCourse = shell?.setCourse;
+  const shellTitle = courseName(course);
+  useEffect(() => {
+    setShellCourse?.({ id: courseId, title: shellTitle });
+    return () => setShellCourse?.(null);
+  }, [setShellCourse, courseId, shellTitle]);
+
+  const sidebar = (
+    <Sidebar
+      topics={topics}
+      chats={courseChats}
+      topicId={topicId}
+      chatId={chatId}
+      onOpenScope={openScope}
+      onOpenChat={openChat}
+      pastActive={past === "list"}
+      past={PAST_QUESTIONS_LIVE ? data.past : null}
+      onOpenPast={openPast}
+    />
+  );
 
   return (
-    // The app's sidebar is the course menu here too (owner, 21 Nov 2026): from tablets up its panel
-    // shows this course's past questions, topics and chats; phones keep the topics drawer (below).
-    <AppShell
-      user={data.user}
-      chatReady
-      courses={data.courses.map((c) => ({ id: c.id, title: c.title, href: courseHref(c, data.courses) }))}
-      defaultCourseId={courseId}
-      courseMenu={{
-        title: courseName(course),
-        body: (
-          <Sidebar
-            topics={topics}
-            chats={courseChats}
-            topicId={topicId}
-            chatId={chatId}
-            onOpenScope={openScope}
-            onOpenChat={openChat}
-            pastActive={past === "list"}
-            past={PAST_QUESTIONS_LIVE ? data.past : null}
-            onOpenPast={openPast}
-          />
-        ),
-      }}
-    >
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
-      {/* Top bar: as quiet as My courses. Back on the left, the course name centred (owner, 20 Nov 2026:
-          "this is the course we're on"), actions on the right. Phones: the name gets its own centred line below. */}
-      <header className="flex shrink-0 flex-wrap items-center gap-x-1 border-b border-line px-3 pt-1 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:border-0 sm:px-5 sm:pt-0">
-        <div className="flex shrink-0 items-center gap-1 sm:justify-self-start">
-          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </IconButton>
-          {/* Back to My courses: an arrow, not the logo (owner, 20 Nov 2026: a student couldn't find the way back). */}
-          <Link
-            href="/dashboard"
-            aria-label="Back to My courses"
-            title="Back to My courses"
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-ink transition hover:bg-sunken active:scale-95 sm:pr-3.5"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M19 12H5M11 18l-6-6 6-6" />
-            </svg>
-            <span className="hidden text-[14px] sm:inline">My courses</span>
-          </Link>
-        </div>
-        {/* The course: name over a quiet line of code and tags, centred. Phones: its own row under the buttons. */}
-        <div className="order-last min-w-0 basis-full pb-2.5 pt-0.5 text-center sm:order-none sm:max-w-[min(56vw,680px)] sm:basis-auto sm:p-0">
-          <h1 className="truncate text-[16px] font-medium leading-snug text-ink sm:text-[17px]">{course.title}</h1>
-          {(shownCode(course) || course.elective || data.plan.premiumLimited || countMain(data.materials) < LIMITED_MAIN_MATERIALS) && (
-            <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[12px] leading-5 text-muted">
-              {shownCode(course) && <span>{shownCode(course)}</span>}
-              {course.elective && <span className="rounded-full bg-pau-100 px-2 text-[11.5px] font-medium text-brand">Elective</span>}
-              {countMain(data.materials) < LIMITED_MAIN_MATERIALS && (
-                <span
-                  title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
-                  className="hidden rounded-full bg-amber-50 px-2 text-[11.5px] font-medium text-amber-800 sm:inline"
-                >
-                  Limited materials
-                </span>
-              )}
-              {data.plan.premiumLimited && <PremiumTag left={remaining} />}
-            </div>
-          )}
-        </div>
+    <div className="flex h-dvh w-full overflow-hidden bg-page text-ink">
+      {shell?.slot && createPortal(sidebar, shell.slot)}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Top bar (owner, 21 Nov 2026): the course name centred, and on the right only what this page
+            needs (past questions, Sources below xl, the study partner). Dashboard, account and the rest
+            are in the sidebar. Phones: the name gets its own centred line below. */}
+        <header className="flex shrink-0 flex-wrap items-center gap-x-1 border-b border-line px-3 pt-1 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:border-0 sm:px-5 sm:pt-0">
+          <div className="flex shrink-0 items-center gap-1 sm:justify-self-start">
+            <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </IconButton>
+          </div>
+          {/* The course: name over a quiet line of code and tags, centred. Phones: its own row under the buttons. */}
+          <div className="order-last min-w-0 basis-full pb-2.5 pt-0.5 text-center sm:order-none sm:max-w-[min(48vw,620px)] sm:basis-auto sm:p-0">
+            <h1 className="truncate text-[16px] font-medium leading-snug text-ink sm:text-[17px]">{course.title}</h1>
+            {(shownCode(course) || course.elective || data.plan.premiumLimited || countMain(data.materials) < LIMITED_MAIN_MATERIALS) && (
+              <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[12px] leading-5 text-muted">
+                {shownCode(course) && <span>{shownCode(course)}</span>}
+                {course.elective && <span className="rounded-full bg-pau-100 px-2 text-[11.5px] font-medium text-brand">Elective</span>}
+                {countMain(data.materials) < LIMITED_MAIN_MATERIALS && (
+                  <span
+                    title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
+                    className="hidden rounded-full bg-amber-50 px-2 text-[11.5px] font-medium text-amber-800 sm:inline"
+                  >
+                    Limited materials
+                  </span>
+                )}
+                {data.plan.premiumLimited && <PremiumTag left={remaining} />}
+              </div>
+            )}
+          </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:justify-self-end sm:gap-2">
-          <IconButton label="Invite coursemates on WhatsApp" onClick={invite}>
-            <path d="M15 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 4 17.5V19M9.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18.5 8v6M21.5 11h-6" />
-          </IconButton>
-          <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} quiet={tour.step !== null} />
-          <AccountMenu user={data.user} onChangePartner={() => setPickingPartner(true)} />
-        </div>
-      </header>
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:justify-self-end sm:gap-2">
+            {!past && topicPast > 0 && (
+              <button
+                type="button"
+                onClick={() => setPast("topic")}
+                className="shrink-0 rounded-full bg-pau-100 px-3 py-1 text-[12.5px] text-brand transition hover:opacity-80 active:scale-95"
+                title={`Practise past exam questions on ${topic!.title}`}
+              >
+                {topicPast} past question{topicPast === 1 ? "" : "s"}
+              </button>
+            )}
+            {/* Phones: the Topics panel is a drawer, so the past questions get a bright button here too. */}
+            {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
+              <button
+                type="button"
+                onClick={() => openPast(null)}
+                className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 md:hidden"
+                title={`Practise ${data.past.total} past questions in ${courseName(course)}`}
+              >
+                {topicPast > 0 ? "All" : "Past questions"}
+              </button>
+            )}
+            <IconButton label="Sources" onClick={openSources} tour="sources" className="xl:hidden">
+              <path d="M7 3.5h7l4 4V20.5H7z" />
+              <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
+            </IconButton>
+            <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} quiet={tour.step !== null} />
+          </div>
+        </header>
 
-      <div className="flex min-h-0 flex-1 gap-2 md:px-3 md:pb-3">
         {/* Topics (with Past questions) on phones: a drawer, with the app's links on top. From tablets
-            up they're in the sidebar (AppShell courseMenu). */}
+            up they're in the sidebar (the portal above). */}
         <div
           className={`fixed inset-0 z-30 bg-black/20 transition-opacity md:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
           onClick={closeDrawer}
@@ -247,69 +251,30 @@ export function Workspace(data: WorkspaceData) {
           }`}
         >
           <ShellNavMini onNavigate={closeDrawer} />
-          <div className="min-h-0 flex-1">
-          <Sidebar
-            topics={topics}
-            chats={courseChats}
-            topicId={topicId}
-            chatId={chatId}
-            onOpenScope={openScope}
-            onOpenChat={openChat}
-            pastActive={past === "list"}
-            past={PAST_QUESTIONS_LIVE ? data.past : null}
-            onOpenPast={openPast}
-          />
+          <div className="min-h-0 flex-1">{sidebar}</div>
+          <div className="flex items-center gap-3 border-t border-white/10 px-5 py-3">
+            <AccountMenu user={data.user} side />
+            <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">{data.user.displayName ?? data.user.email}</span>
           </div>
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-page">
-          <div className="flex h-10 shrink-0 items-center gap-2 px-5">
-            <p key={`${courseId}-${topicId ?? "course"}-${past ?? "chat"}`} className="title-in min-w-0 flex-1 truncate text-[13px] text-muted">
-              {scopeTitle}
-            </p>
-            {!past && topicPast > 0 && (
-              <button
-                type="button"
-                onClick={() => setPast("topic")}
-                className="shrink-0 rounded-full bg-pau-100 px-3 py-1 text-[12.5px] text-brand transition hover:opacity-80 active:scale-95"
-                title={`Practise past exam questions on ${topic!.title}`}
-              >
-                {topicPast} past question{topicPast === 1 ? "" : "s"}
-              </button>
-            )}
-            {/* Below lg the Topics panel is a drawer, so the past questions get a bright button here too. */}
-            {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
-              <button
-                type="button"
-                onClick={() => openPast(null)}
-                className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 lg:hidden"
-                title={`Practise ${data.past.total} past questions in ${courseName(course)}`}
-              >
-                {topicPast > 0 ? "All past questions" : "Past questions"}
-              </button>
-            )}
-            <IconButton label="Sources" onClick={openSources} tour="sources" className="xl:hidden">
-              <path d="M7 3.5h7l4 4V20.5H7z" />
-              <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
-            </IconButton>
-          </div>
-
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-page">
           {past && (
             <div key={`past-${past}-${topicId ?? "course"}-${pastPaper ?? "all"}`} className="panel-in flex min-h-0 flex-1 flex-col">
               {!PAST_QUESTIONS_LIVE ? (
                 <PastComingSoon />
               ) : (
-              <PastPanel
-                course={course}
-                topics={topics}
-                topicId={past === "topic" ? topicId : null}
-                paperId={past === "list" ? pastPaper : null}
-                onBack={() => setPast(null)}
-                onCite={setPreview}
-                onRemaining={onRemaining}
-                onLimit={onLimit}
-                partnerName={p.name}
-              />
+                <PastPanel
+                  course={course}
+                  topics={topics}
+                  topicId={past === "topic" ? topicId : null}
+                  paperId={past === "list" ? pastPaper : null}
+                  onBack={() => setPast(null)}
+                  onCite={setPreview}
+                  onRemaining={onRemaining}
+                  onLimit={onLimit}
+                  partnerName={p.name}
+                />
               )}
             </div>
           )}
@@ -338,46 +303,45 @@ export function Workspace(data: WorkspaceData) {
             />
           </div>
         </main>
-
-        {/* Right: Sources, or the slide being viewed (which replaces it until closed). */}
-        {/* Hidden while past questions are open: the original paper takes that room instead. */}
-        <div className={preview ? "contents xl:hidden" : past ? "hidden" : "contents"}>
-          <SourcesPanel
-            courseId={course.id}
-            courseCode={course.code}
-            topics={topics}
-            materials={data.materials}
-            topic={topic}
-            open={sourcesOpen}
-            onClose={closeSources}
-            onOpenSource={(key) => {
-              closeSources();
-              setPreview(key);
-            }}
-          />
-        </div>
-        {preview && (
-          <SlidePreview
-            // One viewer per material: flipping pages keeps it mounted, so the current page stays until the next loads.
-            key={preview.replace(/-\d+$/, "")}
-            slideKey={preview}
-            courseId={course.id}
-            sortOrder={course.sort_order}
-            onNavigate={setPreview}
-            onClose={() => setPreview(null)}
-            onAsk={(text, slideKey) => {
-              setPrefill({ text, n: Date.now(), slideKey });
-              setPreview(null);
-            }}
-          />
-        )}
       </div>
 
+      {/* Right, full height with square edges (owner, 21 Nov 2026): Sources, or the slide being viewed
+          (which replaces it until closed). Hidden while past questions are open: the original paper
+          takes that room instead. */}
+      <div className={preview ? "contents xl:hidden" : past ? "hidden" : "contents"}>
+        <SourcesPanel
+          courseId={course.id}
+          courseCode={course.code}
+          topics={topics}
+          materials={data.materials}
+          topic={topic}
+          open={sourcesOpen}
+          onClose={closeSources}
+          onOpenSource={(key) => {
+            closeSources();
+            setPreview(key);
+          }}
+        />
+      </div>
+      {preview && (
+        <SlidePreview
+          // One viewer per material: flipping pages keeps it mounted, so the current page stays until the next loads.
+          key={preview.replace(/-\d+$/, "")}
+          slideKey={preview}
+          courseId={course.id}
+          sortOrder={course.sort_order}
+          onNavigate={setPreview}
+          onClose={() => setPreview(null)}
+          onAsk={(text, slideKey) => {
+            setPrefill({ text, n: Date.now(), slideKey });
+            setPreview(null);
+          }}
+        />
+      )}
 
       <StudyTour step={tour.step} onSkip={tour.skip} onGotIt={(step) => (step === "drawer" ? closeDrawer() : closeSources())} />
       {sheet && <PricingSheet code={sheet.code} resetsAt={sheet.resetsAt} offer={data.plan.offer} onClose={closeSheet} />}
     </div>
-    </AppShell>
   );
 }
 

@@ -47,7 +47,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
       />
       <aside
         aria-label="Sources"
-        className={`fixed inset-y-0 right-0 z-40 flex w-[min(340px,90vw)] transform flex-col bg-page transition-transform duration-200 ease-out xl:static xl:z-auto xl:w-[320px] xl:shrink-0 xl:translate-x-0 xl:overflow-hidden xl:rounded-[28px] xl:bg-sunken/60 ${
+        className={`fixed inset-y-0 right-0 z-40 flex w-[min(340px,90vw)] transform flex-col bg-page transition-transform duration-200 ease-out xl:static xl:z-auto xl:w-[320px] xl:shrink-0 xl:translate-x-0 xl:overflow-hidden xl:border-l xl:border-line xl:bg-sunken/60 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >

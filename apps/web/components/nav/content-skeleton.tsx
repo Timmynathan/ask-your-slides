@@ -28,3 +28,20 @@ export function ShellSkeleton() {
     </div>
   );
 }
+
+/** A course loading inside the sidebar (owner, 21 Nov 2026): a top bar, an empty chat and the Sources
+ *  column, so the page never flashes blank between the dashboard and a course. */
+export function CourseSkeleton() {
+  return (
+    <div className="flex h-dvh animate-pulse bg-page" aria-busy="true" aria-label="Loading">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex h-16 shrink-0 items-center justify-center">
+          <div className="h-5 w-64 max-w-[60%] rounded-lg bg-sunken" />
+        </div>
+        <div className="mx-auto mt-24 h-24 w-24 rounded-full bg-sunken/80" />
+        <div className="mx-auto mt-auto mb-6 h-14 w-full max-w-2xl rounded-full bg-sunken px-4" />
+      </div>
+      <div className="hidden w-[320px] shrink-0 border-l border-line bg-sunken/60 xl:block" />
+    </div>
+  );
+}

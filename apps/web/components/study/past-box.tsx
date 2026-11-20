@@ -6,7 +6,7 @@
 // a link to all past questions.
 import type { WorkspaceData } from "@/lib/study/types";
 
-const SHOWN = 3;
+const SHOWN = 1; // the latest paper; the rest are one tap away (owner, 21 Nov 2026: room for Topics)
 
 interface Props {
   papers: WorkspaceData["past"]["papers"];
@@ -31,26 +31,26 @@ export function PastBox({ papers, total, active, onOpenPaper, onOpenMap }: Props
   return (
     <section
       aria-label="Past questions"
-      className={`rounded-[22px] bg-white p-3 text-[#0e1664] xl:p-3.5 shadow-lg shadow-black/20 ring-2 transition ${active ? "ring-[#5ea3ed]" : "ring-transparent"}`}
+      className={`rounded-[20px] bg-white p-2.5 text-[#0e1664] shadow-lg shadow-black/20 ring-2 transition ${active ? "ring-[#5ea3ed]" : "ring-transparent"}`}
     >
-      <div className="flex items-center gap-2.5 px-0.5">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#0e1664] text-white">
-          <PaperIcon />
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold leading-tight">Past questions</h2>
-          <p className="text-[12px] text-[#0e1664]/65">
-            {total} question{total === 1 ? "" : "s"} from real PAU papers
+      <div className="flex items-center gap-2 pl-1.5">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-[14.5px] font-semibold leading-tight">Past questions</h2>
+          <p className="truncate text-[12px] text-[#0e1664]/65" title="From real PAU papers">
+            {total} from real papers
           </p>
         </div>
+        <button type="button" onClick={onOpenMap} className="shrink-0 rounded-full px-2 py-1 text-[12.5px] font-medium text-[#2a3591] transition hover:bg-[#0e1664]/5">
+          See all
+        </button>
       </div>
-      <ul className="mt-3 space-y-1.5">
-        {shown.map((p, i) => (
+      <ul className="mt-2">
+        {shown.map((p) => (
           <li key={p.id}>
             <button
               type="button"
               onClick={() => onOpenPaper(p.id)}
-              className={`group flex w-full items-center justify-between gap-2 rounded-full bg-[#0e1664] px-3.5 py-2.5 text-left text-[13px] font-medium xl:px-4 xl:text-[13.5px] text-white transition hover:bg-[#2a3591] active:scale-[0.98] ${i === 0 ? "cta-shine" : ""}`}
+              className="cta-shine group flex w-full items-center justify-between gap-2 rounded-full bg-[#0e1664] px-3.5 py-2 text-left text-[13px] font-medium text-white transition hover:bg-[#2a3591] active:scale-[0.98]"
               title={`${p.questions} question${p.questions === 1 ? "" : "s"}`}
             >
               <span className="truncate">Practise {p.label}</span>
@@ -61,14 +61,6 @@ export function PastBox({ papers, total, active, onOpenPaper, onOpenMap }: Props
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={onOpenMap}
-        className="mt-2 w-full rounded-full px-3 py-1.5 text-[12.5px] font-medium text-[#2a3591] transition hover:bg-[#0e1664]/5"
-      >
-        See all past questions
-        {papers.length > SHOWN ? ` · ${papers.length} papers` : ""}
-      </button>
     </section>
   );
 }

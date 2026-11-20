@@ -10,7 +10,7 @@
 // far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { UploadDialog } from "./upload-dialog";
@@ -74,6 +74,14 @@ export function ShellNavMini({ onNavigate }: { onNavigate?(): void }) {
       )}
     </div>
   );
+}
+
+/** Inside a course (owner, 21 Nov 2026): the course page tells the shared sidebar which course is open
+ *  and fills the panel's lower part (its topics) through a portal into `slot`. The sidebar itself
+ *  stays mounted, so going from the dashboard into a course never blanks the screen. */
+const ShellCourseCtx = createContext<{ setCourse(c: { id: string; title: string } | null): void; slot: HTMLElement | null } | null>(null);
+export function useShellCourse() {
+  return useContext(ShellCourseCtx);
 }
 
 export function ShellMenuButton({ className = "" }: { className?: string }) {
@@ -229,6 +237,11 @@ export function AppShell({
       else router.push("/dashboard?search=1");
     });
   const [uploading, setUploading] = useState(false);
+  const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
+  const [slot, setSlot] = useState<HTMLDivElement | null>(null);
+  const courseCtx = useMemo(() => ({ setCourse, slot }), [slot]);
+  const inCourse = !!courseMenu || !!openCourse;
+  const panelTitle = courseMenu?.title ?? openCourse?.title ?? title;
   const [feedback, setFeedback] = useState(false);
   const [drawer, setDrawer] = useState(false);
   // Phones: a one-time tip pointing at the menu button.
@@ -334,15 +347,18 @@ export function AppShell({
 
   const shown = !railOnly && (pinned || peek);
   // The panel's contents: beside the page (tablets up) and in the phone drawer.
-  const panelBody = (
+  // `drawer`: the phone drawer copy, which never holds the course slot (phones in a course use the
+  // course page's own topics drawer).
+  const panel = (drawer: boolean) => (
     <>
-      <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={courseMenu?.title ?? title}>
-        {courseMenu?.title ?? title}
+      <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={panelTitle}>
+        {panelTitle}
       </p>
+      {/* In a course only Dashboard and Upload, so the topics get the room (owner, 21 Nov 2026). */}
       <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
         <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
-        <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />
-        <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />
+        {!inCourse && <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />}
+        {!inCourse && <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />}
       </nav>
       <div className="px-3 pt-3">
         <button
@@ -359,6 +375,8 @@ export function AppShell({
       </div>
       {courseMenu ? (
         <div className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10">{courseMenu.body}</div>
+      ) : openCourse ? (
+        drawer ? null : <div ref={setSlot} className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10" />
       ) : (
         <>
       {recent.length > 0 && (
@@ -458,7 +476,7 @@ export function AppShell({
             className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
             style={{ width: panelW }}
           >
-            {panelBody}
+            {panel(false)}
             {/* Drag the right edge to resize; far enough left closes the panel. */}
             {pinned && (
               <div
@@ -503,7 +521,7 @@ export function AppShell({
                 <path d="M6 6l12 12M18 6 6 18" />
               </Icon>
             </button>
-            {panelBody}
+            {panel(true)}
             <button
               type="button"
               onClick={() => {
@@ -523,9 +541,11 @@ export function AppShell({
         </div>
       )}
       {feedback && <FeedbackDialog onClose={() => setFeedback(false)} />}
-      {uploading && <UploadDialog courses={courses} defaultCourseId={defaultCourseId} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
+      {uploading && <UploadDialog courses={courses} defaultCourseId={defaultCourseId ?? openCourse?.id} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
       <ShellMenu.Provider value={{ open: openDrawer, tip, upload: () => setUploading(true) }}>
-        <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
+        <ShellCourseCtx.Provider value={courseCtx}>
+          <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
+        </ShellCourseCtx.Provider>
       </ShellMenu.Provider>
     </div>
   );
