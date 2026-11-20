@@ -1,8 +1,8 @@
 "use client";
 
 // The general chat on the right of the dashboard (owner, 20 Nov 2026), wide screens only. Before the
-// first question: the study partner greets the student with a typed line ("Hi Tolu, I'm Zara.") and
-// "How can I help?", the other partners pop up from behind, "Change character" opens the partner
+// first question: the study partner greets the student with a typed line ("Hi Tolu, I'm Zara.") that
+// erases itself and becomes "How can I help?", the other partners pop up from behind, "Change character" opens the partner
 // picker, and suggestion chips fill the question box. A question goes to /api/chat/general, which
 // picks the student's course whose slides match best and answers through that course's chat (same
 // citations and plan limits). Each answer says which course it's from, with a link to continue the
@@ -30,34 +30,42 @@ const SUGGESTIONS = ["What should I revise first?", "Quiz me on my courses", "Ex
 
 const textOf = (m: Msg | undefined) => (m?.parts ?? []).map((p) => (p.type === "text" ? p.text : "")).join("");
 
-/** Types `text` out, one character at a time, after `delay` ms. */
-function useTyped(text: string, delay = 0, speed = 38) {
-  const [n, setN] = useState(0);
+/** The greeting in one place (owner, 20 Nov 2026): types `first`, holds it, erases it, then types
+ *  `last`, which stays. */
+function useGreeting(first: string, last: string) {
+  const [shown, setShown] = useState("");
   useEffect(() => {
-    setN(0);
-    let i = 0;
-    let tick: ReturnType<typeof setInterval> | undefined;
-    const start = setTimeout(() => {
-      tick = setInterval(() => {
-        i += 1;
-        setN(i);
-        if (i >= text.length && tick) clearInterval(tick);
-      }, speed);
-    }, delay);
+    let cancelled = false;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      await wait(500);
+      for (let i = 1; i <= first.length && !cancelled; i++) {
+        setShown(first.slice(0, i));
+        await wait(42);
+      }
+      await wait(1400);
+      for (let i = first.length - 1; i >= 0 && !cancelled; i--) {
+        setShown(first.slice(0, i));
+        await wait(18);
+      }
+      await wait(250);
+      for (let i = 1; i <= last.length && !cancelled; i++) {
+        setShown(last.slice(0, i));
+        await wait(48);
+      }
+    })();
     return () => {
-      clearTimeout(start);
-      if (tick) clearInterval(tick);
+      cancelled = true;
     };
-  }, [text, delay, speed]);
-  return text.slice(0, n);
+  }, [first, last]);
+  return shown;
 }
 
 export function GeneralChatPanel({ partner, firstName, onChangePartner }: { partner: PartnerId; firstName: string | null; onChangePartner(): void }) {
   const router = useRouter();
   const p = PARTNERS[partner];
   const hello = `Hi${firstName ? ` ${firstName}` : ""}, I'm ${p.name}.`;
-  const typedHello = useTyped(hello, 500);
-  const typedAsk = useTyped("How can I help?", 500 + hello.length * 38 + 350, 45);
+  const greeting = useGreeting(hello, "How can I help?");
   const others = PARTNER_IDS.filter((id) => id !== partner);
 
   // The course this chat was routed to (from the first answer's response headers).
@@ -160,10 +168,10 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
                 Change character
               </button>
             </div>
-            <p className="mt-6 min-h-[1.5em] text-center text-[15px] text-muted" aria-live="polite">
-              {typedHello}
-            </p>
-            <h2 className="mt-1 min-h-[1.4em] text-center font-heading text-[26px] text-ink">{typedAsk}</h2>
+            <h2 className="mt-6 min-h-[1.4em] text-center font-heading text-[26px] text-ink" aria-label="How can I help?">
+              {greeting}
+              <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[2px] animate-pulse bg-ink/70 align-baseline" aria-hidden />
+            </h2>
             <p className="mx-auto mt-2 max-w-[17rem] text-center text-[13px] text-muted">Ask about any of your courses. I&apos;ll find the right slides.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {SUGGESTIONS.map((s) => (
