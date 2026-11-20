@@ -4,7 +4,7 @@
 // clear "No past papers yet". Opening one goes straight to that course's past questions.
 import Link from "next/link";
 import { LogoMark } from "@/components/brand/logo";
-import { AppShell, type ShellChat, type ShellCourse, type ShellFile } from "@/components/nav/app-shell";
+import { AppShell, ShellMenuButton, type ShellChat, type ShellCourse, type ShellFile } from "@/components/nav/app-shell";
 import { AccountMenu } from "@/components/ui/account-menu";
 
 export interface PastCourseRow {
@@ -65,11 +65,7 @@ export function PastQuestionsView({ title, rows, courses, recent, files, user }:
     <AppShell page="past" title={title} courses={courses} recent={recent} files={files} user={user}>
       {/* Phones: no sidebar, so a small top bar with the way back. */}
       <header className="flex h-16 items-center gap-3 px-4 md:hidden">
-        <Link href="/dashboard" aria-label="My courses" className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-sunken">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M19 12H5M11 18l-6-6 6-6" />
-          </svg>
-        </Link>
+        <ShellMenuButton className="-ml-1.5" />
         <LogoMark size={24} />
         <div className="ml-auto">
           <AccountMenu user={user} />

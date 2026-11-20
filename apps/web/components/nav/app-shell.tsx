@@ -10,7 +10,7 @@
 // far enough closes it. Pinned/closed and width are remembered in this browser.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { UploadDialog } from "./upload-dialog";
@@ -35,6 +35,32 @@ export interface ShellChat {
   title: string;
   href: string;
 }
+
+/** Phones: the pages' menu button opens the sidebar as a drawer (ShellMenuButton). */
+const ShellMenu = createContext<{ open(): void; tip: boolean } | null>(null);
+
+export function ShellMenuButton({ className = "" }: { className?: string }) {
+  const menu = useContext(ShellMenu);
+  if (!menu) return null;
+  return (
+    <span className="relative md:hidden">
+      <button type="button" onClick={menu.open} aria-label="Open menu" className={`grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-sunken active:scale-90 ${className}`}>
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      {menu.tip && (
+        // One-time tip on phones (owner, 20 Nov 2026), like the course page tour.
+        <span className="pop-in absolute left-0 top-12 z-40 w-64 rounded-2xl bg-navy p-4 text-left text-[14px] leading-snug text-white shadow-xl">
+          <span className="absolute -top-1.5 left-4 h-3 w-3 rotate-45 bg-navy" />
+          New: tap the menu to <span className="font-semibold">upload photos of your tests</span>, find past questions and your recent chats.
+        </span>
+      )}
+    </span>
+  );
+}
+
+const TIP_KEY = "ays-menu-tip-seen";
 
 const RAIL = 64;
 const MIN_W = 200;
@@ -144,6 +170,40 @@ export function AppShell({
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
+  const [drawer, setDrawer] = useState(false);
+  // Phones: a one-time tip pointing at the menu button.
+  const [tip, setTip] = useState(false);
+  useEffect(() => {
+    let seen = true;
+    try {
+      seen = !!localStorage.getItem(`${TIP_KEY}:${user.email.toLowerCase()}`);
+    } catch {}
+    if (seen || !window.matchMedia("(max-width: 47.98rem)").matches) return;
+    const t = setTimeout(() => setTip(true), 1200);
+    return () => clearTimeout(t);
+  }, [user.email]);
+  // Any tap hides the tip (a tap on the menu button also opens the menu).
+  useEffect(() => {
+    if (!tip) return;
+    const off = () => {
+      setTip(false);
+      try {
+        localStorage.setItem(`${TIP_KEY}:${user.email.toLowerCase()}`, "1");
+      } catch {}
+    };
+    window.addEventListener("pointerdown", off, { once: true });
+    return () => window.removeEventListener("pointerdown", off);
+  }, [tip, user.email]);
+  const hideTip = () => {
+    setTip(false);
+    try {
+      localStorage.setItem(`${TIP_KEY}:${user.email.toLowerCase()}`, "1");
+    } catch {}
+  };
+  const openDrawer = () => {
+    hideTip();
+    setDrawer(true);
+  };
   // While a file is being read, refresh every few seconds so My files shows when it's ready.
   const pending = files.some((f) => f.status === "uploading" || f.status === "reading");
   useEffect(() => {
@@ -213,6 +273,89 @@ export function AppShell({
   }
 
   const shown = pinned || peek;
+  // The panel's contents: beside the page (tablets up) and in the phone drawer.
+  const panelBody = (
+    <>
+      <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={title}>
+        {title}
+      </p>
+      <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
+        <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
+        <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />
+        <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />
+      </nav>
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={() => {
+          setDrawer(false);
+          setUploading(true);
+        }}
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-white/12 py-2 text-[14px] font-medium text-white transition hover:bg-white/20 active:scale-[0.98]"
+        >
+          <Icon size={17}>{ICONS.upload}</Icon>
+          Upload
+        </button>
+      </div>
+      {recent.length > 0 && (
+        <>
+          <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Recent chats</p>
+          <ul className="px-2">
+            {recent.map((c) => (
+              <li key={c.id}>
+                <Link href={c.href} title={c.title} className={`${rowCls(false)} text-[14px]`}>
+                  <span className="shrink-0 text-white/45">
+                    <Icon size={16}>{ICONS.chat}</Icon>
+                  </span>
+                  <span className="truncate">{c.title}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {/* The student's own uploads (owner, 20 Nov 2026): empty until uploading is built. */}
+      <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">My files</p>
+      {files.length === 0 ? (
+        <div className="min-h-0 flex-1 px-5 pt-1">
+          <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet. Photos of tests or notes you upload will appear here.</p>
+        </div>
+      ) : (
+        <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
+          {files.map((f) => (
+            <li key={f.id} className="group flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] text-white/75 hover:bg-white/8">
+              <span className="shrink-0 text-white/45">
+                <Icon size={16}>{ICONS.past}</Icon>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate" title={f.title}>
+                  {f.title}
+                </span>
+                <span className={`block truncate text-[11.5px] ${f.status === "failed" ? "text-red-300" : "text-white/45"}`}>
+                  {f.status === "ready"
+                    ? `${f.course} · ${f.pages} ${f.pages === 1 ? "page" : "pages"}`
+                    : f.status === "failed"
+                      ? "Couldn't read it. Delete and retry"
+                      : "Reading your pages…"}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => removeFile(f)}
+                aria-label={`Delete ${f.title}`}
+                title="Delete"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/50 transition hover:bg-white/10 hover:text-white focus:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+              >
+                <Icon size={15}>
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </Icon>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
   const panelW = Math.max(MIN_W, width);
   return (
     <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (pinned ? panelW : 52)}px` }}>
@@ -251,81 +394,7 @@ export function AppShell({
             className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
             style={{ width: panelW }}
           >
-            <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={title}>
-              {title}
-            </p>
-            <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
-              <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
-              <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />
-              <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />
-            </nav>
-            <div className="px-3 pt-3">
-              <button
-                type="button"
-                onClick={() => setUploading(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-white/12 py-2 text-[14px] font-medium text-white transition hover:bg-white/20 active:scale-[0.98]"
-              >
-                <Icon size={17}>{ICONS.upload}</Icon>
-                Upload
-              </button>
-            </div>
-            {recent.length > 0 && (
-              <>
-                <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Recent chats</p>
-                <ul className="px-2">
-                  {recent.map((c) => (
-                    <li key={c.id}>
-                      <Link href={c.href} title={c.title} className={`${rowCls(false)} text-[14px]`}>
-                        <span className="shrink-0 text-white/45">
-                          <Icon size={16}>{ICONS.chat}</Icon>
-                        </span>
-                        <span className="truncate">{c.title}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            {/* The student's own uploads (owner, 20 Nov 2026): empty until uploading is built. */}
-            <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">My files</p>
-            {files.length === 0 ? (
-              <div className="min-h-0 flex-1 px-5 pt-1">
-                <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet. Photos of tests or notes you upload will appear here.</p>
-              </div>
-            ) : (
-              <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
-                {files.map((f) => (
-                  <li key={f.id} className="group flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] text-white/75 hover:bg-white/8">
-                    <span className="shrink-0 text-white/45">
-                      <Icon size={16}>{ICONS.past}</Icon>
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate" title={f.title}>
-                        {f.title}
-                      </span>
-                      <span className={`block truncate text-[11.5px] ${f.status === "failed" ? "text-red-300" : "text-white/45"}`}>
-                        {f.status === "ready"
-                          ? `${f.course} · ${f.pages} ${f.pages === 1 ? "page" : "pages"}`
-                          : f.status === "failed"
-                            ? "Couldn't read it. Delete and retry"
-                            : "Reading your pages…"}
-                      </span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(f)}
-                      aria-label={`Delete ${f.title}`}
-                      title="Delete"
-                      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/50 opacity-0 transition hover:bg-white/10 hover:text-white focus:opacity-100 group-hover:opacity-100"
-                    >
-                      <Icon size={15}>
-                        <path d="M6 6l12 12M18 6 6 18" />
-                      </Icon>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {panelBody}
             {/* Drag the right edge to resize; far enough left closes the panel. */}
             {pinned && (
               <div
@@ -358,8 +427,28 @@ export function AppShell({
           </span>
         </div>
       </aside>
+      {/* Phones: the same sidebar as a drawer from the left. */}
+      {drawer && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <button type="button" aria-label="Close menu" onClick={() => setDrawer(false)} className="absolute inset-0 bg-black/40" />
+          <div className="slide-in-left absolute inset-y-0 left-0 flex w-[84%] max-w-[320px] flex-col bg-navy pb-4 pt-[18px] text-white shadow-2xl" onClick={(e) => (e.target as HTMLElement).closest("a") && setDrawer(false)}>
+            <button type="button" onClick={() => setDrawer(false)} aria-label="Close menu" className="absolute right-3 top-[18px] grid h-9 w-9 place-items-center rounded-lg text-white/80 hover:bg-white/10">
+              <Icon size={19}>
+                <path d="M6 6l12 12M18 6 6 18" />
+              </Icon>
+            </button>
+            {panelBody}
+            <div className="mt-2 flex items-center gap-3 border-t border-white/10 px-5 pt-4">
+              <AccountMenu user={user} onChangePartner={onChangePartner} side />
+              <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">{user.displayName ?? user.email}</span>
+            </div>
+          </div>
+        </div>
+      )}
       {uploading && <UploadDialog courses={courses} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
-      <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
+      <ShellMenu.Provider value={{ open: openDrawer, tip }}>
+        <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
+      </ShellMenu.Provider>
     </div>
   );
 }

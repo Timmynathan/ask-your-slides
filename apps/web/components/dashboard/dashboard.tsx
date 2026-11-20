@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
-import { AppShell, type ShellChat, type ShellFile } from "@/components/nav/app-shell";
+import { AppShell, ShellMenuButton, type ShellChat, type ShellFile } from "@/components/nav/app-shell";
 import { GeneralChatPanel } from "@/components/chat/general-chat-panel";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -114,6 +114,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
       <div className="xl:pr-[380px]">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
+        <ShellMenuButton className="-ml-1.5" />
         <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4 md:hidden" aria-label="Ask Your Slides home">
           <span className="sm:hidden">
             <LogoMark size={26} />
