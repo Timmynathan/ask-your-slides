@@ -318,7 +318,7 @@ export function AppShell({
       <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">My files</p>
       {files.length === 0 ? (
         <div className="min-h-0 flex-1 px-5 pt-1">
-          <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet. Photos of tests or notes you upload will appear here.</p>
+          <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet.</p>
         </div>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
