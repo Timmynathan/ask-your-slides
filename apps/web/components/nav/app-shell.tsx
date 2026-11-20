@@ -3,7 +3,7 @@
 // The app's sidebar (owner, 20 Nov 2026), shared by the dashboard, Past questions and Chat, from
 // tablets up (phones keep each page's own top bar). A dark navy rail (logo, the sidebar button,
 // search, chat, past questions, account) beside a panel: Dashboard, Chat, Past questions, Upload,
-// and the student's courses.
+// and My files (the student's own uploads; the courses are on the dashboard).
 // The panel's title is the student's programme. The sidebar button sits at the right of the title, and
 // beside the rail when the panel is closed: clicking it keeps the panel open (pinned) or closes it; while closed, hovering it slides the panel out over
 // the page until the pointer leaves. A small label says what a click will do. Full height, square edges. A pinned panel can be dragged narrower by its right edge;
@@ -232,19 +232,11 @@ export function AppShell({
                 Upload
               </button>
             </div>
-            <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Courses</p>
-            <ul className="min-h-0 flex-1 overflow-y-auto px-2 [scrollbar-width:thin]">
-              {courses.map((c) => (
-                <li key={c.id}>
-                  <Link href={c.href} title={c.title} className={`${rowCls(false)} text-[14px]`}>
-                    <span className="shrink-0 text-white/45">
-                      <Icon size={16}>{ICONS.book}</Icon>
-                    </span>
-                    <span className="truncate">{c.title}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {/* The student's own uploads (owner, 20 Nov 2026): empty until uploading is built. */}
+            <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">My files</p>
+            <div className="min-h-0 flex-1 px-5 pt-1">
+              <p className="text-[13px] leading-snug text-white/50">Nothing uploaded yet. Notes you upload will appear here.</p>
+            </div>
             {/* Drag the right edge to resize; far enough left closes the panel. */}
             {pinned && (
               <div

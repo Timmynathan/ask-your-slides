@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { AppShell } from "@/components/nav/app-shell";
 import { UploadSoon } from "@/components/nav/upload-soon";
+import { GeneralChatPanel } from "@/components/chat/general-chat-panel";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
@@ -108,6 +109,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
 
   return (
     <AppShell page="dashboard" title={programmeTitle} courses={courses} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
+      <div className="xl:pr-[380px]">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
         <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4 md:hidden" aria-label="Ask Your Slides home">
@@ -129,7 +131,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
               key={id}
               onClick={() => setTab(id)}
               aria-pressed={tab === id}
-              className={`rounded-full px-4 py-2 text-sm transition active:scale-95 ${tab === id ? "bg-sunken font-medium text-ink" : "text-ink hover:bg-sunken/60"}`}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition active:scale-95 ${tab === id ? "bg-sunken font-medium text-ink" : "text-ink hover:bg-sunken/60"}`}
             >
               {label}
             </button>
@@ -149,10 +151,10 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search courses"
-              className="h-11 w-56 rounded-full border border-line bg-card pl-10 pr-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/15 lg:w-80"
+              className="h-11 w-56 rounded-full border border-line bg-card pl-10 pr-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/15 lg:w-64 xl:w-48 2xl:w-72"
             />
           </label>
-          <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="View">
+          <div className="hidden rounded-full bg-sunken p-1 sm:flex xl:hidden 2xl:flex" role="group" aria-label="View">
             <ViewButton active={view === "grid"} label="Grid view" onClick={() => chooseView("grid")}>
               <path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z" />
             </ViewButton>
@@ -252,7 +254,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
         {shown.length === 0 ? (
           <Empty tab={tab} query={query} onAll={() => setTab("all")} />
         ) : view === "grid" ? (
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Courses">
+          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-4" aria-label="Courses">
             {shown.map((c) => (
               <CourseCard key={c.id} course={c} />
             ))}
@@ -265,8 +267,11 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
           </ul>
         )}
       </main>
+      </div>
       {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
       {uploading && <UploadSoon onClose={() => setUploading(false)} />}
+      {/* The general chat on the right, on wide screens (owner, 20 Nov 2026). */}
+      <GeneralChatPanel partner={partner} firstName={user.displayName?.trim().split(/\s+/)[0] ?? null} onChangePartner={() => setPickingPartner(true)} />
     </AppShell>
   );
 }
