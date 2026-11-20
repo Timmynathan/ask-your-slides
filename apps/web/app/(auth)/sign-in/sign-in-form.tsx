@@ -263,7 +263,7 @@ export function SignInForm({
         ? mode === "reset"
           ? { title: "Reset your password", sub: "We'll email a code to your PAU address, then you choose a new password." }
           : microsoftSignup
-            ? { title: "Create your free account", sub: "Use your PAU Microsoft account, or your PAU email and a code we send you." }
+            ? { title: "Create your free account", sub: "" }
             : directSignup
             ? { title: "Create your free account", sub: "Your PAU email and a password. That's it." }
             : { title: "Create your free account", sub: "Just your PAU email. We'll send you a code to confirm it's you." }
