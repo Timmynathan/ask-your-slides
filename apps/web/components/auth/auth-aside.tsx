@@ -1,6 +1,5 @@
 // The right half of /sign-up and /sign-in (owner, 20 Nov 2026): a headline, a wide animated scene,
-// and who it's for. Hand-drawn cartoon style in one dark navy and white (a displacement filter makes
-// the lines wobble like a rough sketch). One long room at a time, in a 16-second loop (globals.css,
+// and who it's for. Cartoon style in one dark navy and white, crisp lines. One long room at a time, in a 16-second loop (globals.css,
 // "as3-"):
 //   1. A dorm in exam season: a girl on her bed, stressed (hand on her head, a tangled scribble, "?!").
 //      The door opens, Zara walks in (real steps: legs and arms swing), stops near her and waves;
@@ -214,14 +213,7 @@ export function AuthAside({ signUp }: { signUp: boolean }) {
       </p>
 
       <svg viewBox="0 0 640 360" className="w-full max-w-[680px]" fill="none" stroke={INK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <defs>
-          {/* Rough, hand-drawn lines */}
-          <filter id="as3-sketch" x="-5%" y="-5%" width="110%" height="110%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" />
-            <feDisplacementMap in="SourceGraphic" scale="3.2" />
-          </filter>
-        </defs>
-        <g filter="url(#as3-sketch)">
+        <g>
           <Dorm />
           <Library />
         </g>
