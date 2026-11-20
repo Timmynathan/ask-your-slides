@@ -58,7 +58,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -172,7 +172,7 @@ export function AdminDashboard({ data, courses, plans, range, tab: initialTab, e
             </Card>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card title="Is this helping you study? (1–5)">
               <BarList rows={data.helping.map((h) => ({ label: `${h.score} ${h.score === 1 ? "· not really" : h.score === 5 ? "· a lot" : ""}`, n: h.n }))} />
             </Card>
@@ -181,6 +181,9 @@ export function AdminDashboard({ data, courses, plans, range, tab: initialTab, e
             </Card>
             <Card title="Departments">
               <BarList rows={data.departments.map((d) => ({ label: d.department, n: d.n }))} />
+            </Card>
+            <Card title="How they found us (sign-ups in this period)">
+              <BarList rows={heardFrom} />
             </Card>
           </div>
         </section>

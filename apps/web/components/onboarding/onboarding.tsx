@@ -12,6 +12,7 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
+import { HEARD_FROM, type HeardFrom } from "@/lib/heard-from";
 
 const DEFAULT_PARTNER: PartnerId = "zara";
 // The default first, so it is the first card a student sees (also on a phone).
@@ -47,7 +48,8 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
   const [studying, setStudying] = useState<ProgrammeValue>(initialProgramme ?? { programme: "", level: null });
   // The partner names the chosen programme's department (from the data, never hard-coded).
   const department = choices.find((c) => c.programme === studying.programme)?.department ?? null;
-  const ready = !!studying.programme && !!studying.level;
+  const [heardFrom, setHeardFrom] = useState<HeardFrom | null>(null);
+  const ready = !!studying.programme && !!studying.level && !!heardFrom;
   // Zara (the all-rounder) is pre-selected so a student can just continue: least friction.
   const [partner, setPartner] = useState<PartnerId | null>(initialPartner ?? DEFAULT_PARTNER);
   const [busy, setBusy] = useState(false);
@@ -75,7 +77,11 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
   async function submitName(e: FormEvent) {
     e.preventDefault();
     if (!ready) return;
-    if (await save({ display_name: name.trim() || null, programme: studying.programme, level: studying.level })) setStep("partner");
+    if (await save({ display_name: name.trim() || null, programme: studying.programme, level: studying.level })) {
+      // Saved on its own and never awaited: a failure here must not stop anyone signing up.
+      fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ heard_from: heardFrom }) }).catch(() => {});
+      setStep("partner");
+    }
   }
 
   async function submitPartner() {
@@ -133,6 +139,24 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               <ProgrammePicker choices={choices} value={studying} onChange={setStudying} />
             </div>
             <p className="mt-2 text-xs text-muted">You can change this later from your account menu.</p>
+            <fieldset className="mt-7">
+              <legend className="mx-auto text-sm font-medium text-ink">How did you hear about us?</legend>
+              <div className="mt-3 flex flex-wrap justify-center gap-2">
+                {HEARD_FROM.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    aria-pressed={heardFrom === h.id}
+                    onClick={() => setHeardFrom(h.id)}
+                    className={`rounded-full border px-4 py-2 text-sm transition active:scale-95 ${
+                      heardFrom === h.id ? "border-brand bg-brand font-medium text-brand-ink" : "border-line-strong bg-card text-ink hover:border-brand"
+                    }`}
+                  >
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
             <button type="submit" disabled={busy || !ready} className="mt-5 w-full rounded-full bg-brand px-4 py-3.5 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60">
               <BusyLabel busy={busy} label="Continue" busyLabel="Saving…" />
             </button>
