@@ -205,7 +205,7 @@ export function GeneralChatPanel({
                 Change character
               </button>
             </div>
-            <h2 className="mt-6 min-h-[1.4em] text-center font-heading text-[26px] text-ink" aria-label="How can I help?">
+            <h2 className="mt-6 min-h-[1.4em] text-center font-heading text-[20px] font-normal text-ink" aria-label="How can I help?">
               {greeting}
               <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[2px] animate-pulse bg-ink/70 align-baseline" aria-hidden />
             </h2>
