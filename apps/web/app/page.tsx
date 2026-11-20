@@ -7,9 +7,7 @@ import { FeatureDeck } from "@/components/landing/feature-deck";
 import { CoursePills } from "@/components/landing/course-pills";
 import { StretchNav } from "@/components/landing/stretch-nav";
 import { HeroActions, NavActions } from "@/components/landing/auth-actions";
-import { PlansSection } from "@/components/landing/plans-section";
 import { StatsSection } from "@/components/landing/stats-section";
-import { landingOffer } from "@/lib/plans/landing-offer";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
 import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { Mascot } from "@/components/mascot/mascot";
@@ -23,14 +21,14 @@ export const metadata: Metadata = {
 
 // Landing page, for visitors and signed-in students alike (owner, 17 Nov 2026: signed in, the
 // buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
-// Structure follows studyfetch.com: banner, nav, hero, PAU courses, numbers, why us, how it works (demo), steps, partners, pricing, closing call to action, footer. Sections with
+// Structure follows studyfetch.com: banner, nav, hero, PAU courses, numbers, why us, how it works (demo), steps, partners, closing call to action, footer. Sections with
 // no honest content for us (ratings, research claims) are left out.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
 
 export default async function Landing() {
   // Departments, courses and counts come from the database (cached hourly), not from the copy.
-  const [catalog, offer] = await Promise.all([getCatalog(), landingOffer()]);
+  const catalog = await getCatalog();
   return (
     <div className="flex min-h-dvh flex-col bg-page">
       <Banner text="Every PAU course slide, ready to chat with." linkText="Start studying" href="/sign-up" />
@@ -43,7 +41,6 @@ export default async function Landing() {
           <a href="#why" className="type-menu hover:opacity-70">Why us</a>
           <a href="#demo" className="type-menu hover:opacity-70">How it works</a>
           <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
-          <a href="#plans" className="type-menu hover:opacity-70">Pricing</a>
         </div>
         <NavActions />
       </StretchNav>
@@ -204,8 +201,7 @@ export default async function Landing() {
           </div>
         </section>
 
-        {/* Plans (PRD F12): figures from the plans config the server enforces. */}
-        <PlansSection offer={offer} />
+        {/* No prices on the landing page (owner, 20 Nov 2026): plans show after sign-up (/pricing, /pay). */}
 
         {/* Closing call to action: full width in the footer's navy, so the two read as one block (owner, 20 Nov 2026). */}
         <section className="bg-pau-900 text-white">
@@ -243,7 +239,6 @@ export default async function Landing() {
               <p className="font-medium text-white">Product</p>
               <a href="#demo" className="block text-white/75 hover:text-white">How it works</a>
               <a href="#partners" className="block text-white/75 hover:text-white">Study partners</a>
-              <a href="#plans" className="block text-white/75 hover:text-white">Pricing</a>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-white">Account</p>
