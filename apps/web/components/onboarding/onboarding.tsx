@@ -193,8 +193,13 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                       </span>
                     </span>
                     <span className="mt-3 font-heading text-xl font-semibold text-ink sm:mt-4 sm:text-2xl">{p.name}</span>
-                    {/* One line each (owner, 20 Nov 2026: step 3 was too much to read). */}
+                    {/* One line and the trait pills (owner, 20 Nov 2026). */}
                     <span className="mt-1 text-[13px] leading-snug text-muted sm:text-[15px]">{p.bestFor}</span>
+                    <span className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {p.traits.map((t) => (
+                        <span key={t} className="rounded-full bg-page px-2.5 py-1 text-[11px] font-medium text-muted ring-1 ring-line sm:text-xs">{t}</span>
+                      ))}
+                    </span>
                   </button>
                 );
               })}
