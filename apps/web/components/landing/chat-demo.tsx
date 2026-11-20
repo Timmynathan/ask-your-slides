@@ -23,7 +23,7 @@ import { DEMO_PLAY_EVENT } from "./see-how";
 
 const QUESTION = "What do my CSC 420 slides say about B+ tree indexes?";
 const ANSWER = "A B+ tree index keeps keys sorted, so lookups take O(log n) steps instead of scanning every row.";
-const FOLLOW_UP = "I still don't understand";
+const FOLLOW_UP = "Please break this down for me, I'm confused";
 
 // Timeline (ms). Courses, pointer moves in, tap CSC 420; chat: zoom in, type, send, think, slide,
 // highlight, answer, read; zoom in, type the follow-up, send, think, explanation, hold.
