@@ -2,7 +2,7 @@
 
 // The general chat on the right of the dashboard (owner, 20 Nov 2026), wide screens only. Before the
 // first question: the study partner greets the student with a typed line ("Hi Tolu, I'm Zara.") that
-// erases itself and becomes "How can I help?", the other partners pop up from behind, "Change character" opens the partner
+// erases itself and becomes "How can I help?", the other partners pop out from behind while the pointer is over the chat, "Change character" opens the partner
 // picker, and suggestion chips fill the question box. A question goes to /api/chat/general, which
 // picks the student's course whose slides match best and answers through that course's chat (same
 // citations and plan limits). Each answer says which course it's from, with a link to continue the
@@ -138,7 +138,7 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
   };
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-20 hidden w-[380px] flex-col border-l border-line bg-page xl:flex" aria-label="Chat with your study partner">
+    <aside className="group/chat fixed inset-y-0 right-0 z-20 hidden w-[380px] flex-col border-l border-line bg-page xl:flex" aria-label="Chat with your study partner">
       {messages.length > 0 && (
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
           <Mascot partner={partner} size={30} animated={false} />
@@ -155,7 +155,12 @@ export function GeneralChatPanel({ partner, firstName, onChangePartner }: { part
             {/* The partner, with the others peeking out from behind */}
             <div className="relative mx-auto h-[112px] w-[150px]">
               {others.map((id, i) => (
-                <span key={id} className="peek-up absolute" style={{ left: [8, 104, 92][i], top: [54, 52, 0][i], animationDelay: `${0.25 + i * 0.15}s` }}>
+                <span
+                  key={id}
+                  // Only the chosen partner shows; the others pop out while the pointer is over the chat (owner, 20 Nov 2026).
+                  className="absolute translate-y-3 scale-50 opacity-0 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.2,0.9,0.3,1.3)] group-hover/chat:translate-y-0 group-hover/chat:scale-100 group-hover/chat:opacity-100"
+                  style={{ left: [8, 104, 92][i], top: [54, 52, 0][i], transitionDelay: `${i * 70}ms` }}
+                >
                   <Mascot partner={id} size={i === 2 ? 34 : 38} animated={false} />
                 </span>
               ))}
