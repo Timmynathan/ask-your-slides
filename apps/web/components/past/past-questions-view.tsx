@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { LogoMark } from "@/components/brand/logo";
-import { AppShell, type ShellCourse } from "@/components/nav/app-shell";
+import { AppShell, type ShellChat, type ShellCourse } from "@/components/nav/app-shell";
 import { UploadSoon } from "@/components/nav/upload-soon";
 import { AccountMenu } from "@/components/ui/account-menu";
 
@@ -60,12 +60,12 @@ function Row({ r }: { r: PastCourseRow }) {
   );
 }
 
-export function PastQuestionsView({ title, rows, courses, user }: { title: string; rows: PastCourseRow[]; courses: ShellCourse[]; user: { email: string; displayName: string | null } }) {
+export function PastQuestionsView({ title, rows, courses, recent, user }: { title: string; rows: PastCourseRow[]; courses: ShellCourse[]; recent: ShellChat[]; user: { email: string; displayName: string | null } }) {
   const [uploading, setUploading] = useState(false);
   const available = rows.filter((r) => r.papers > 0);
   const none = rows.filter((r) => r.papers === 0);
   return (
-    <AppShell page="past" title={title} courses={courses} user={user} onUpload={() => setUploading(true)}>
+    <AppShell page="past" title={title} courses={courses} recent={recent} user={user} onUpload={() => setUploading(true)}>
       {/* Phones: no sidebar, so a small top bar with the way back. */}
       <header className="flex h-16 items-center gap-3 px-4 md:hidden">
         <Link href="/dashboard" aria-label="My courses" className="grid h-10 w-10 place-items-center rounded-full text-ink transition hover:bg-sunken">

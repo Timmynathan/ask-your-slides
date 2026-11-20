@@ -27,11 +27,17 @@ async function Loaded() {
 
   const [courses, choices] = await Promise.all([myCourses(supabase, profile.level), programmeChoices(supabase)]);
   const ids = courses.map((c) => c.id);
-  const [{ data: papers }, questionLists, state] = await Promise.all([
+  const [{ data: papers }, questionLists, state, { data: chats }] = await Promise.all([
     supabase.from("past_papers").select("id, course_id, session").in("course_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
     Promise.all(ids.map((id) => supabase.from("past_questions").select("id, parent_id, paper_id").eq("course_id", id).range(0, 4999))),
     planState(adminClient(), user.id, new Date()),
+    supabase.from("conversations").select("id, title, course_id").order("updated_at", { ascending: false }).limit(20),
   ]);
+  const recent = ((chats ?? []) as { id: string; title: string; course_id: string }[])
+    .map((ch) => ({ ch, course: courses.find((c) => c.id === ch.course_id) }))
+    .filter((r) => r.course)
+    .slice(0, 6)
+    .map(({ ch, course }) => ({ id: ch.id, title: ch.title || "New chat", href: `${course!.href}${course!.href.includes("?") ? "&" : "?"}chat=${ch.id}` }));
   const paperRows = (papers ?? []) as { id: string; course_id: string; session: string }[];
 
   const rows: PastCourseRow[] = courses.map((c, i) => {
@@ -56,6 +62,7 @@ async function Loaded() {
   return (
     <PastQuestionsView
       title={sidebarTitle(choices, profile.programme)}
+      recent={recent}
       rows={rows}
       courses={courses.map((c) => ({ id: c.id, title: c.title, href: c.href }))}
       user={{ email: user.email ?? "", displayName: profile.display_name ?? null }}

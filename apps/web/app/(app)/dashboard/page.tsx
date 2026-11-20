@@ -82,6 +82,12 @@ async function Loaded() {
     .filter((c) => c.extraLevel !== null || !removed.has(c.id)); // removed from My courses
 
   const last = chatRows[0];
+  // Sidebar: the latest chats, each opening in its course (courses the student no longer takes are skipped).
+  const recent = chatRows
+    .map((ch) => ({ ch, course: list.find((c) => c.id === ch.course_id) }))
+    .filter((r) => r.course)
+    .slice(0, 6)
+    .map(({ ch, course }) => ({ id: ch.id, title: ch.title || "New chat", href: `${course!.href}${course!.href.includes("?") ? "&" : "?"}chat=${ch.id}` }));
   const lastCourse = last ? list.find((c) => c.id === last.course_id) : undefined;
 
   return (
@@ -90,6 +96,7 @@ async function Loaded() {
         courses={list}
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}
+        recent={recent}
         programmeTitle={sidebarTitle(await programmeChoices(supabase), profile.programme)}
         user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
         resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}

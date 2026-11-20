@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
-import { AppShell } from "@/components/nav/app-shell";
+import { AppShell, type ShellChat } from "@/components/nav/app-shell";
 import { UploadSoon } from "@/components/nav/upload-soon";
 import { GeneralChatPanel } from "@/components/chat/general-chat-panel";
 import { PartnerSwitch } from "@/components/study/partner-switch";
@@ -60,9 +60,11 @@ interface Props {
   onFinals: boolean;
   /** The sidebar title: the student's programme. */
   programmeTitle: string;
+  /** The sidebar's Recent chats. */
+  recent: ShellChat[];
 }
 
-export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals, programmeTitle }: Props) {
+export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals, programmeTitle, recent }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -108,7 +110,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const departments = [...new Set(courses.map((c) => c.department))];
 
   return (
-    <AppShell page="dashboard" title={programmeTitle} courses={courses} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
+    <AppShell page="dashboard" title={programmeTitle} courses={courses} recent={recent} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
       <div className="xl:pr-[380px]">
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">

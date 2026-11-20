@@ -19,6 +19,12 @@ export interface ShellCourse {
   title: string;
   href: string;
 }
+/** A recent chat: its title, and the link into its course with the chat open. */
+export interface ShellChat {
+  id: string;
+  title: string;
+  href: string;
+}
 
 const RAIL = 64;
 const MIN_W = 200;
@@ -99,6 +105,7 @@ export function AppShell({
   page,
   title,
   courses,
+  recent = [],
   user,
   onSearch,
   onUpload,
@@ -110,6 +117,8 @@ export function AppShell({
   /** The student's programme, e.g. "Computer Science" (lib/programmes sidebarTitle). */
   title: string;
   courses: ShellCourse[];
+  /** The student's latest chats, newest first. */
+  recent?: ShellChat[];
   user: { email: string; displayName: string | null };
   /** Search button: the page's own search (dashboard), else it opens the dashboard. */
   onSearch?(): void;
@@ -232,6 +241,23 @@ export function AppShell({
                 Upload
               </button>
             </div>
+            {recent.length > 0 && (
+              <>
+                <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Recent chats</p>
+                <ul className="px-2">
+                  {recent.map((c) => (
+                    <li key={c.id}>
+                      <Link href={c.href} title={c.title} className={`${rowCls(false)} text-[14px]`}>
+                        <span className="shrink-0 text-white/45">
+                          <Icon size={16}>{ICONS.chat}</Icon>
+                        </span>
+                        <span className="truncate">{c.title}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
             {/* The student's own uploads (owner, 20 Nov 2026): empty until uploading is built. */}
             <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">My files</p>
             <div className="min-h-0 flex-1 px-5 pt-1">
