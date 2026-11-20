@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AccountMenu } from "@/components/ui/account-menu";
+import { AppShell, ShellNavMini } from "@/components/nav/app-shell";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
 import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
 import { courseHref, courseParams } from "@/lib/study/course-link";
@@ -158,12 +159,36 @@ export function Workspace(data: WorkspaceData) {
   };
 
   return (
+    // The app's sidebar is the course menu here too (owner, 21 Nov 2026): from tablets up its panel
+    // shows this course's past questions, topics and chats; phones keep the topics drawer (below).
+    <AppShell
+      user={data.user}
+      chatReady
+      courses={data.courses.map((c) => ({ id: c.id, title: c.title, href: courseHref(c, data.courses) }))}
+      defaultCourseId={courseId}
+      courseMenu={{
+        title: courseName(course),
+        body: (
+          <Sidebar
+            topics={topics}
+            chats={courseChats}
+            topicId={topicId}
+            chatId={chatId}
+            onOpenScope={openScope}
+            onOpenChat={openChat}
+            pastActive={past === "list"}
+            past={PAST_QUESTIONS_LIVE ? data.past : null}
+            onOpenPast={openPast}
+          />
+        ),
+      }}
+    >
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-page text-ink">
       {/* Top bar: as quiet as My courses. Back on the left, the course name centred (owner, 20 Nov 2026:
           "this is the course we're on"), actions on the right. Phones: the name gets its own centred line below. */}
       <header className="flex shrink-0 flex-wrap items-center gap-x-1 border-b border-line px-3 pt-1 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:border-0 sm:px-5 sm:pt-0">
         <div className="flex shrink-0 items-center gap-1 sm:justify-self-start">
-          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="lg:hidden">
+          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </IconButton>
           {/* Back to My courses: an arrow, not the logo (owner, 20 Nov 2026: a student couldn't find the way back). */}
@@ -209,18 +234,20 @@ export function Workspace(data: WorkspaceData) {
       </header>
 
       <div className="flex min-h-0 flex-1 gap-2 md:px-3 md:pb-3">
-        {/* Topics (with Past questions): a navy panel from lg (laptops, iPads in landscape: Topics,
-            chat and slide side by side), a drawer below lg (phones, iPads in portrait). */}
+        {/* Topics (with Past questions) on phones: a drawer, with the app's links on top. From tablets
+            up they're in the sidebar (AppShell courseMenu). */}
         <div
-          className={`fixed inset-0 z-30 bg-black/20 transition-opacity lg:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          className={`fixed inset-0 z-30 bg-black/20 transition-opacity md:hidden ${drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"}`}
           onClick={closeDrawer}
           aria-hidden
         />
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[288px] transform bg-navy text-white transition-transform duration-200 ease-out lg:static lg:z-auto lg:w-[260px] lg:shrink-0 lg:translate-x-0 lg:overflow-hidden lg:rounded-[28px] xl:w-[288px] ${
+          className={`fixed inset-y-0 left-0 z-40 flex w-[288px] transform flex-col bg-navy text-white transition-transform duration-200 ease-out md:hidden ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
+          <ShellNavMini onNavigate={closeDrawer} />
+          <div className="min-h-0 flex-1">
           <Sidebar
             topics={topics}
             chats={courseChats}
@@ -232,6 +259,7 @@ export function Workspace(data: WorkspaceData) {
             past={PAST_QUESTIONS_LIVE ? data.past : null}
             onOpenPast={openPast}
           />
+          </div>
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden bg-page">
@@ -349,6 +377,7 @@ export function Workspace(data: WorkspaceData) {
       <StudyTour step={tour.step} onSkip={tour.skip} onGotIt={(step) => (step === "drawer" ? closeDrawer() : closeSources())} />
       {sheet && <PricingSheet code={sheet.code} resetsAt={sheet.resetsAt} offer={data.plan.offer} onClose={closeSheet} />}
     </div>
+    </AppShell>
   );
 }
 

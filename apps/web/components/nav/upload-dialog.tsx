@@ -23,8 +23,8 @@ async function shrink(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't prepare that photo."))), "image/jpeg", 0.82));
 }
 
-export function UploadDialog({ courses, onClose, onDone }: { courses: { id: string; title: string }[]; onClose(): void; onDone(): void }) {
-  const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
+export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { courses: { id: string; title: string }[]; defaultCourseId?: string; onClose(): void; onDone(): void }) {
+  const [courseId, setCourseId] = useState(defaultCourseId && courses.some((c) => c.id === defaultCourseId) ? defaultCourseId : courses[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState<string | null>(null);

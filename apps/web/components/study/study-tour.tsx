@@ -37,7 +37,7 @@ export function useStudyTour(account: string, enabled: boolean) {
     if (!enabled) return;
     // After the page settles; phones and iPads in portrait only (below lg, where ☰ is shown).
     const t = setTimeout(() => {
-      if (!seen(account) && window.matchMedia("(max-width: 63.98rem)").matches) setStep("menu");
+      if (!seen(account) && window.matchMedia("(max-width: 47.98rem)").matches) setStep("menu");
     }, 500);
     return () => clearTimeout(t);
   }, [account, enabled]);

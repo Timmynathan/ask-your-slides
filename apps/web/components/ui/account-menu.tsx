@@ -64,11 +64,8 @@ export function AccountMenu({ user, side = false }: { user: { email: string; dis
       </button>
       {open && (
         <div className={`pop-in absolute z-30 w-64 rounded-2xl bg-card p-2 text-sm shadow-lg ring-1 ring-line ${side ? "bottom-0 left-14" : "right-0 top-12"}`}>
-          <div className="px-3 pb-2 pt-1.5">
-            {user.displayName && <p className="truncate font-medium text-ink">{user.displayName}</p>}
-            <p className="truncate text-[13px] text-muted">{user.email}</p>
-          </div>
-          <div className="border-t border-line pt-1.5">
+          {/* No name or email at the top (owner, 21 Nov 2026): straight to the options. */}
+          <div>
             <Row href="/profile" onClick={close} icon={<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />}>
               Your profile
             </Row>

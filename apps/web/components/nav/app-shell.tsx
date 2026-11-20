@@ -38,7 +38,43 @@ export interface ShellChat {
 }
 
 /** Phones: the pages' menu button opens the sidebar as a drawer (ShellMenuButton). */
-const ShellMenu = createContext<{ open(): void; tip: boolean } | null>(null);
+const ShellMenu = createContext<{ open(): void; tip: boolean; upload(): void } | null>(null);
+
+/** Phones inside a course (owner, 21 Nov 2026): the app's links and Upload at the top of the course's
+ *  topics drawer, so one menu holds everything (tablets up have the sidebar instead). */
+export function ShellNavMini({ onNavigate }: { onNavigate?(): void }) {
+  const menu = useContext(ShellMenu);
+  const link = "flex items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] text-white/80 transition hover:bg-white/10 hover:text-white";
+  return (
+    <div className="border-b border-white/10 px-2 pb-3 pt-3">
+      <Link href="/dashboard" onClick={onNavigate} className={link}>
+        <Icon size={18}>{ICONS.home}</Icon>
+        My courses
+      </Link>
+      <Link href="/chat" onClick={onNavigate} className={link}>
+        <Icon size={18}>{ICONS.chat}</Icon>
+        Chat
+      </Link>
+      <Link href="/past-questions" onClick={onNavigate} className={link}>
+        <Icon size={18}>{ICONS.past}</Icon>
+        Past questions
+      </Link>
+      {menu && (
+        <button
+          type="button"
+          onClick={() => {
+            onNavigate?.();
+            menu.upload();
+          }}
+          className={`${link} w-full`}
+        >
+          <Icon size={18}>{ICONS.upload}</Icon>
+          Upload
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ShellMenuButton({ className = "" }: { className?: string }) {
   const menu = useContext(ShellMenu);
@@ -144,6 +180,8 @@ export function AppShell({
   title = "",
   courses = [],
   railOnly = false,
+  courseMenu,
+  defaultCourseId,
   recent = [],
   files = [],
   user,
@@ -160,6 +198,11 @@ export function AppShell({
   courses?: ShellCourse[];
   /** Only the dark rail, no panel (Plans and pricing, Settings, Your profile: owner, 21 Nov 2026). */
   railOnly?: boolean;
+  /** Inside a course (owner, 21 Nov 2026): the panel's title is the course and its lower part is the
+   *  course's own menu (past questions, topics, chats) instead of Recent chats and My files. */
+  courseMenu?: { title: string; body: ReactNode };
+  /** Upload starts on this course. */
+  defaultCourseId?: string;
   /** The student's latest chats, newest first. */
   recent?: ShellChat[];
   /** The student's own uploads, newest first. */
@@ -293,8 +336,8 @@ export function AppShell({
   // The panel's contents: beside the page (tablets up) and in the phone drawer.
   const panelBody = (
     <>
-      <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={title}>
-        {title}
+      <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={courseMenu?.title ?? title}>
+        {courseMenu?.title ?? title}
       </p>
       <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
         <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
@@ -314,6 +357,10 @@ export function AppShell({
           Upload
         </button>
       </div>
+      {courseMenu ? (
+        <div className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10">{courseMenu.body}</div>
+      ) : (
+        <>
       {recent.length > 0 && (
         <>
           <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Recent chats</p>
@@ -370,6 +417,8 @@ export function AppShell({
             </li>
           ))}
         </ul>
+      )}
+        </>
       )}
     </>
   );
@@ -474,8 +523,8 @@ export function AppShell({
         </div>
       )}
       {feedback && <FeedbackDialog onClose={() => setFeedback(false)} />}
-      {uploading && <UploadDialog courses={courses} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
-      <ShellMenu.Provider value={{ open: openDrawer, tip }}>
+      {uploading && <UploadDialog courses={courses} defaultCourseId={defaultCourseId} onClose={() => setUploading(false)} onDone={() => router.refresh()} />}
+      <ShellMenu.Provider value={{ open: openDrawer, tip, upload: () => setUploading(true) }}>
         <div className={`md:pl-[var(--shell-pad)] ${dragging ? "" : "md:transition-[padding] md:duration-200"}`}>{children}</div>
       </ShellMenu.Provider>
     </div>
