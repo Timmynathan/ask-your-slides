@@ -9,7 +9,8 @@ import { DeleteAccountDialog } from "./delete-account-dialog";
 import { ProgrammeDialog } from "./programme-dialog";
 import { SignOutButton } from "./sign-out-button";
 
-export function AccountMenu({ user, onChangePartner }: { user: { email: string; displayName: string | null }; onChangePartner?: () => void }) {
+/** `side`: opened from the dashboard sidebar (a white button on navy; the menu opens to its right, upwards). */
+export function AccountMenu({ user, onChangePartner, side = false }: { user: { email: string; displayName: string | null }; onChangePartner?: () => void; side?: boolean }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [changing, setChanging] = useState(false);
@@ -22,12 +23,12 @@ export function AccountMenu({ user, onChangePartner }: { user: { email: string; 
         onClick={() => setOpen((o) => !o)}
         aria-label="Account"
         aria-expanded={open}
-        className="grid h-10 w-10 place-items-center rounded-full bg-brand text-[17px] font-medium uppercase text-brand-ink transition hover:opacity-90 active:scale-90"
+        className={`grid h-10 w-10 place-items-center rounded-full text-[17px] font-medium uppercase transition hover:opacity-90 active:scale-90 ${side ? "bg-white text-brand" : "bg-brand text-brand-ink"}`}
       >
         {name.trim().charAt(0) || "?"}
       </button>
       {open && (
-        <div className="pop-in absolute right-0 top-12 z-30 w-64 rounded-2xl bg-card p-4 text-sm shadow-lg ring-1 ring-line">
+        <div className={`pop-in absolute z-30 w-64 rounded-2xl bg-card p-4 text-sm shadow-lg ring-1 ring-line ${side ? "bottom-0 left-14" : "right-0 top-12"}`}>
           {user.displayName && <p className="truncate font-medium text-ink">{user.displayName}</p>}
           <p className="truncate text-muted">{user.email}</p>
           <div className="mt-3 border-t border-line pt-3">

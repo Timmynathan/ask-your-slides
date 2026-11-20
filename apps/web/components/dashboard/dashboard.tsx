@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Logo } from "@/components/brand/logo";
+import { Logo, LogoMark } from "@/components/brand/logo";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
@@ -53,9 +53,30 @@ interface Props {
   user: { id: string; email: string; displayName: string | null };
   resume: { href: string; label: string } | null;
   partner: PartnerId;
+  /** On Finals: no Upgrade button, a quiet "Finals" badge instead. */
+  onFinals: boolean;
 }
 
-export function Dashboard({ courses, user, resume, partner: initialPartner }: Props) {
+/** A line icon button in the sidebar; `active` marks the page or filter in use. */
+function RailButton({ label, active = false, onClick, href, children }: { label: string; active?: boolean; onClick?(): void; href?: string; children: React.ReactNode }) {
+  const cls = `grid h-11 w-11 place-items-center rounded-xl transition active:scale-90 ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
+  const icon = (
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {children}
+    </svg>
+  );
+  return href ? (
+    <Link href={href} aria-label={label} title={label} className={cls}>
+      {icon}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} aria-label={label} title={label} aria-pressed={active} className={cls}>
+      {icon}
+    </button>
+  );
+}
+
+export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -63,6 +84,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
   const [sort, setSort] = useState<Sort>("course");
   const [view, setView] = useState<View>("grid");
   const [enrolling, setEnrolling] = useState(false);
+  const searchBox = useRef<HTMLInputElement>(null);
 
   // Remembered view, read after hydration so server and browser first render the same thing.
   useEffect(() => {
@@ -99,11 +121,41 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
   const departments = [...new Set(courses.map((c) => c.department))];
 
   return (
-    <div className="min-h-dvh bg-page">
+    <div className="min-h-dvh bg-page md:pl-16">
+      {/* Sidebar (owner, 20 Nov 2026), from tablets up: logo, search, the two course lists, add a
+          course, and the account at the bottom. Phones keep the top bar only. */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center gap-2 bg-pau-900 py-4 md:flex" aria-label="Main">
+        <Link href="/" aria-label="Ask Your Slides home" title="Home" className="mb-3 grid h-11 w-11 place-items-center rounded-xl transition hover:bg-white/10">
+          <LogoMark size={26} light />
+        </Link>
+        <RailButton label="Search courses" onClick={() => searchBox.current?.focus()}>
+          <circle cx="11" cy="11" r="6.5" />
+          <path d="m16 16 4.5 4.5" />
+        </RailButton>
+        <RailButton label="All courses" active={tab === "all"} onClick={() => setTab("all")}>
+          <path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z" />
+        </RailButton>
+        <RailButton label="Recently studied" active={tab === "recent"} onClick={() => setTab("recent")}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" />
+        </RailButton>
+        <RailButton label="Add a course" onClick={() => setEnrolling(true)}>
+          <path d="M12 5v14M5 12h14" />
+        </RailButton>
+        <div className="mt-auto">
+          <AccountMenu user={user} onChangePartner={() => setPickingPartner(true)} side />
+        </div>
+      </aside>
+
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
-        <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4" aria-label="Ask Your Slides home">
-          <Logo size={26} />
+        <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4 md:hidden" aria-label="Ask Your Slides home">
+          <span className="sm:hidden">
+            <LogoMark size={26} />
+          </span>
+          <span className="hidden sm:inline">
+            <Logo size={26} />
+          </span>
         </Link>
         <nav className="hidden items-center gap-1 md:flex" aria-label="Filter courses">
           {(
@@ -131,6 +183,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
               <path d="m13 13 4 4" strokeLinecap="round" />
             </svg>
             <input
+              ref={searchBox}
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -146,8 +199,24 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
               <path d="M3 5h14M3 10h14M3 15h14" />
             </ViewButton>
           </div>
+          {/* Always in view (owner, 20 Nov 2026): Upgrade for Free students, a quiet badge on Finals. */}
+          {onFinals ? (
+            <span className="hidden rounded-full bg-pau-100 px-3 py-1.5 text-[13px] font-medium text-brand sm:inline">Finals</span>
+          ) : (
+            <Link
+              href="/pricing"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-pau-100 px-3.5 text-[14px] font-medium text-brand transition hover:bg-pau-200 active:scale-95"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
+              </svg>
+              Upgrade
+            </Link>
+          )}
           <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={user.id} />
-          <AccountMenu user={user} onChangePartner={() => setPickingPartner(true)} />
+          <div className="md:hidden">
+            <AccountMenu user={user} onChangePartner={() => setPickingPartner(true)} />
+          </div>
         </div>
       </header>
 
@@ -218,7 +287,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner }: Pr
         {shown.length === 0 ? (
           <Empty tab={tab} query={query} onAll={() => setTab("all")} />
         ) : view === "grid" ? (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Courses">
+          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Courses">
             {shown.map((c) => (
               <CourseCard key={c.id} course={c} />
             ))}
@@ -293,11 +362,11 @@ function meta(c: DashboardCourse) {
 
 function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
-    <li className="group relative flex min-h-[230px] flex-col rounded-[28px] bg-navy p-7 text-white transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
+    <li className="group relative flex min-h-[150px] flex-col rounded-[22px] bg-navy p-4 text-white sm:min-h-[170px] sm:p-5 transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
-      <Link href={c.href} className="absolute inset-0 z-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
+      <Link href={c.href} className="absolute inset-0 z-0 rounded-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
       <div className="flex items-start justify-between">
-        <CourseIcon title={c.title} size={34} className="mt-1" light />
+        <CourseIcon title={c.title} size={26} className="mt-0.5" light />
         <CardMenu course={c} onDark />
       </div>
       <div className="mt-auto">
@@ -305,10 +374,10 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
         {c.elective && <ElectiveTag onDark />}
         {c.limited && <LimitedTag onDark />}
         {c.premiumLeft !== null && <PremiumTag onDark />}
-        <h2 className="truncate text-[22px] leading-tight text-white" title={c.title}>
+        <h2 className="line-clamp-2 text-[15px] leading-snug text-white sm:text-[17px]" title={c.title}>
           {c.title}
         </h2>
-        <p className="mt-1.5 truncate text-[15px] text-white/70">
+        <p className="mt-1 truncate text-[12.5px] text-white/70 sm:text-[13px]">
           {meta(c)}
           {c.lastStudied && ` · Studied ${c.lastStudied}`}
         </p>
