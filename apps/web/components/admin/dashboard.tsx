@@ -58,7 +58,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, heardFrom, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, funnel, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; funnel: { label: string; n: number }[]; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -186,6 +186,9 @@ export function AdminDashboard({ data, courses, plans, heardFrom, range, tab: in
               <BarList rows={heardFrom} />
             </Card>
           </div>
+          <Card title="Sign-up funnel (sign-ups in this period)" className="mt-4">
+            <Funnel rows={funnel} />
+          </Card>
         </section>
 
         <Plans plans={plans} />
@@ -538,6 +541,31 @@ function Tile({ label, value, sub, warn = false }: { label: string; value: strin
       <p className="mt-1 text-[26px] font-semibold tabular-nums tracking-tight">{value}</p>
       {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
     </div>
+  );
+}
+
+/** Each step's count, its share of everyone who signed up, and how many stopped at that step. */
+function Funnel({ rows }: { rows: { label: string; n: number }[] }) {
+  const total = rows[0]?.n ?? 0;
+  if (!total) return <p className="text-sm text-muted">Nothing yet.</p>;
+  return (
+    <ul className="space-y-3">
+      {rows.map((r, i) => {
+        const lost = i > 0 ? rows[i - 1].n - r.n : 0;
+        const pct = Math.round((r.n / total) * 100);
+        return (
+          <li key={r.label} className="grid grid-cols-[minmax(0,15rem)_1fr_auto] items-center gap-3 text-sm">
+            <span className="truncate text-ink" title={r.label}>{r.label}</span>
+            <span className="h-2.5 overflow-hidden rounded-full bg-line">
+              <span className="block h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+            </span>
+            <span className="w-40 text-right tabular-nums text-muted">
+              <span className="font-medium text-ink">{r.n}</span> · {pct}%{lost > 0 && <span className="text-red-700 dark:text-red-400"> · {lost} stopped</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
