@@ -223,7 +223,7 @@ export function SignInForm({
   }
 
   const input =
-    "mt-1.5 w-full rounded-xl border border-line-strong bg-card px-4 py-3 text-base text-ink outline-none transition-shadow placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-pau-200";
+    "mt-1.5 w-full rounded-xl border border-line-strong bg-white px-4 shadow-[0_1px_2px_rgba(14,22,100,0.06)] py-3 text-base text-ink outline-none transition-shadow placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-pau-200";
   const button =
     "mt-5 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60";
   const link = "rounded text-sm font-medium text-ink underline decoration-pau-400 decoration-2 underline-offset-4 hover:decoration-pau-800 disabled:opacity-50";
