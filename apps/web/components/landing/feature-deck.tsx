@@ -3,7 +3,8 @@
 // Landing: what you can do, as a deck of cards (layout and interaction modelled on a reference site;
 // the words, previews, drawings and colours are ours). A pill row of tabs on top; the front card
 // has the copy on the left and a small live preview on the right; the others fan out behind it.
-// Drag the front card away (mouse or finger) to bring the next one forward, or pick a tab.
+// Drag the front card away (mouse or finger) to bring the next one forward, or pick a tab. It also
+// moves on by itself every few seconds (AUTO_MS).
 // Keyboard: the tabs are a tablist (arrow keys). Reduced motion: no flying, cards just swap.
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
@@ -180,6 +181,9 @@ function PreviewCard({ children }: { children: ReactNode }) {
 
 const FLY_MS = 280;
 const THRESHOLD = 110; // px of drag that sends the front card to the back
+// The deck moves on by itself (owner, 20 Nov 2026) while it's on screen, unless the pointer is over it,
+// a card is being dragged, or the visitor prefers reduced motion. Any tab or drag restarts the wait.
+const AUTO_MS = 4500;
 
 export function FeatureDeck() {
   // order[0] is the front card; the rest fan out behind it in this order.
@@ -226,6 +230,24 @@ export function FeatureDeck() {
     }, FLY_MS);
   }, []);
 
+  const root = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!inView || hovered || drag || flying !== null || reduced.current) return;
+    const t = setTimeout(() => {
+      if (document.visibilityState === "visible") sendFrontToBack(-1);
+    }, AUTO_MS);
+    return () => clearTimeout(t);
+  }, [inView, hovered, drag, flying, front, sendFrontToBack]);
+
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if ((e.target as HTMLElement).closest("a,button")) return; // links and buttons still work
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
@@ -253,7 +275,7 @@ export function FeatureDeck() {
   }
 
   return (
-    <div>
+    <div ref={root} onPointerEnter={(e) => e.pointerType === "mouse" && setHovered(true)} onPointerLeave={() => setHovered(false)}>
       {/* Tabs */}
       <div data-tab-row className="mx-auto max-w-4xl overflow-x-auto px-1 [scrollbar-width:none]">
         <div role="tablist" aria-label="What you can do" className="mx-auto flex w-max min-w-full gap-1 rounded-full border border-line bg-card p-1">

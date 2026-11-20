@@ -139,9 +139,18 @@ export default async function Landing() {
         {/* Features: a deck of cards with tabs (drag a card, or pick a tab), below the demo. */}
         <section id="features" className="scroll-mt-20 overflow-hidden bg-tint py-20">
           <div className="mx-auto max-w-6xl px-5">
-            <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Everything in your slides, on demand</h2>
-            <p className="mx-auto mt-3 max-w-xl text-center text-muted">Built around what your lecturers actually taught.</p>
-            <div className="mt-10">
+            {/* Heading on the left, a short paragraph on the right (owner, 20 Nov 2026). */}
+            <p className="font-heading text-[15px] italic text-muted">Features</p>
+            <div className="mt-3 grid gap-5 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:items-start md:gap-12">
+              <h2 className="font-heading text-4xl font-normal leading-[1.08] tracking-tight text-ink sm:text-6xl">
+                <em className="italic">Personalized</em> tutoring, totally redefined
+              </h2>
+              <p className="max-w-md text-[15px] leading-relaxed text-muted md:mt-3 md:justify-self-end sm:text-base">
+                Your PAU slides are already loaded. Ask anything and see the exact slide, get a lecture summarised, quiz yourself
+                and practise past questions with answers, so you understand faster and walk into the exam ready.
+              </p>
+            </div>
+            <div className="mt-12">
               <FeatureDeck />
             </div>
           </div>
