@@ -8,7 +8,6 @@ import { CoursePills } from "@/components/landing/course-pills";
 import { StretchNav } from "@/components/landing/stretch-nav";
 import { HeroActions, NavActions } from "@/components/landing/auth-actions";
 import { PlansSection } from "@/components/landing/plans-section";
-import { PeersSection } from "@/components/landing/peers-section";
 import { StatsSection } from "@/components/landing/stats-section";
 import { landingOffer } from "@/lib/plans/landing-offer";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
@@ -24,8 +23,7 @@ export const metadata: Metadata = {
 
 // Landing page, for visitors and signed-in students alike (owner, 17 Nov 2026: signed in, the
 // buttons lead to the dashboard instead of sign-up; see auth-actions.tsx).
-// Structure follows studyfetch.com: banner, nav, hero, PAU courses, what your peers are saying
-// (social proof), why us, how it works (demo), steps, partners, pricing, closing call to action, footer. Sections with
+// Structure follows studyfetch.com: banner, nav, hero, PAU courses, numbers, why us, how it works (demo), steps, partners, pricing, closing call to action, footer. Sections with
 // no honest content for us (ratings, research claims) are left out.
 
 const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
@@ -83,9 +81,6 @@ export default async function Landing() {
 
         {/* Figures beside a student's video (owner, 20 Nov 2026); set in stats-section.tsx. */}
         <StatsSection />
-
-        {/* Social proof, high on the page so students see it (owner, 19 Nov 2026). */}
-        <PeersSection />
 
         {/* Why not a general chatbot? Kept to the one point that matters. */}
         <section id="why" className="mx-auto max-w-5xl scroll-mt-20 px-5 py-20">
