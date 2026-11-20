@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
+import { AppShell } from "@/components/nav/app-shell";
+import { UploadSoon } from "@/components/nav/upload-soon";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
@@ -57,25 +59,6 @@ interface Props {
   onFinals: boolean;
 }
 
-/** A line icon button in the sidebar; `active` marks the page or filter in use. */
-function RailButton({ label, active = false, onClick, href, children }: { label: string; active?: boolean; onClick?(): void; href?: string; children: React.ReactNode }) {
-  const cls = `grid h-11 w-11 place-items-center rounded-xl transition active:scale-90 ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
-  const icon = (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {children}
-    </svg>
-  );
-  return href ? (
-    <Link href={href} aria-label={label} title={label} className={cls}>
-      {icon}
-    </Link>
-  ) : (
-    <button type="button" onClick={onClick} aria-label={label} title={label} aria-pressed={active} className={cls}>
-      {icon}
-    </button>
-  );
-}
-
 export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
@@ -84,6 +67,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const [sort, setSort] = useState<Sort>("course");
   const [view, setView] = useState<View>("grid");
   const [enrolling, setEnrolling] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const searchBox = useRef<HTMLInputElement>(null);
 
   // Remembered view, read after hydration so server and browser first render the same thing.
@@ -121,32 +105,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
   const departments = [...new Set(courses.map((c) => c.department))];
 
   return (
-    <div className="min-h-dvh bg-page md:pl-16">
-      {/* Sidebar (owner, 20 Nov 2026), from tablets up: logo, search, the two course lists, add a
-          course, and the account at the bottom. Phones keep the top bar only. */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-16 flex-col items-center gap-2 bg-pau-900 py-4 md:flex" aria-label="Main">
-        <Link href="/" aria-label="Ask Your Slides home" title="Home" className="mb-3 grid h-11 w-11 place-items-center rounded-xl transition hover:bg-white/10">
-          <LogoMark size={26} light />
-        </Link>
-        <RailButton label="Search courses" onClick={() => searchBox.current?.focus()}>
-          <circle cx="11" cy="11" r="6.5" />
-          <path d="m16 16 4.5 4.5" />
-        </RailButton>
-        <RailButton label="All courses" active={tab === "all"} onClick={() => setTab("all")}>
-          <path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z" />
-        </RailButton>
-        <RailButton label="Recently studied" active={tab === "recent"} onClick={() => setTab("recent")}>
-          <circle cx="12" cy="12" r="8.5" />
-          <path d="M12 7.5V12l3 2" />
-        </RailButton>
-        <RailButton label="Add a course" onClick={() => setEnrolling(true)}>
-          <path d="M12 5v14M5 12h14" />
-        </RailButton>
-        <div className="mt-auto">
-          <AccountMenu user={user} onChangePartner={() => setPickingPartner(true)} side />
-        </div>
-      </aside>
-
+    <AppShell page="dashboard" courses={courses} user={user} onSearch={() => searchBox.current?.focus()} onUpload={() => setUploading(true)} onChangePartner={() => setPickingPartner(true)}>
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
         <Link href="/" className="mr-1 shrink-0 rounded-full sm:mr-4 md:hidden" aria-label="Ask Your Slides home">
@@ -199,13 +158,13 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
               <path d="M3 5h14M3 10h14M3 15h14" />
             </ViewButton>
           </div>
-          {/* Always in view (owner, 20 Nov 2026): Upgrade for Free students, a quiet badge on Finals. */}
+          {/* Always in view (owner, 20 Nov 2026): Upgrade for Free students in its own bright aqua (#BBEEF0), a quiet badge on Finals. */}
           {onFinals ? (
             <span className="hidden rounded-full bg-pau-100 px-3 py-1.5 text-[13px] font-medium text-brand sm:inline">Finals</span>
           ) : (
             <Link
               href="/pricing"
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-pau-100 px-3.5 text-[14px] font-medium text-brand transition hover:bg-pau-200 active:scale-95"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#BBEEF0] px-3.5 text-[14px] font-semibold text-brand shadow-sm ring-1 ring-[#8fdde1] transition hover:bg-[#a5e7ea] active:scale-95"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
@@ -234,11 +193,15 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
                 key={id}
                 onClick={() => setTab(id)}
                 aria-pressed={tab === id}
-                className={`rounded-full px-4 py-2 text-sm transition active:scale-95 ${tab === id ? "bg-sunken font-medium text-ink" : "text-ink"}`}
+                className={`whitespace-nowrap rounded-full px-3 py-2 text-sm transition active:scale-95 ${tab === id ? "bg-sunken font-medium text-ink" : "text-ink"}`}
               >
                 {label}
               </button>
             ))}
+            {/* Phones have no sidebar: Past questions sits with the tabs. */}
+            <Link href="/past-questions" className="whitespace-nowrap rounded-full px-3 py-2 text-sm text-ink transition active:scale-95">
+              Past questions
+            </Link>
           </div>
           <input
             type="search"
@@ -301,7 +264,8 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
         )}
       </main>
       {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
-    </div>
+      {uploading && <UploadSoon onClose={() => setUploading(false)} />}
+    </AppShell>
   );
 }
 
