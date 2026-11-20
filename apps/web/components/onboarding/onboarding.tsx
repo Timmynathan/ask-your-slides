@@ -237,9 +237,6 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
             >
               {steps.includes("plan") ? "Continue" : "Start studying"}
             </button>
-            <button onClick={() => setStep("partner")} className="mt-3 text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
-              Choose someone else
-            </button>
           </div>
         )}
 
