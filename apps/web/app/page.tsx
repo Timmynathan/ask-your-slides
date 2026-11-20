@@ -207,21 +207,19 @@ export default async function Landing() {
         {/* Plans (PRD F12): figures from the plans config the server enforces. */}
         <PlansSection offer={offer} />
 
-        {/* Closing call to action */}
-        <section className="mx-auto max-w-6xl px-5 py-20">
-          <div className="flex flex-col items-center gap-8 rounded-[25px] bg-pau-100 px-6 py-14 text-center md:flex-row md:justify-between md:px-14 md:text-left">
+        {/* Closing call to action: full width in the footer's navy, so the two read as one block (owner, 20 Nov 2026). */}
+        <section className="bg-pau-900 text-white">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 px-5 pb-14 pt-20 text-center md:flex-row md:justify-between md:text-left">
             <div>
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-pau-900 dark:text-ink md:text-4xl">
-                Exams are coming...
-              </h2>
-              <p className="mt-3 text-pau-900/80 dark:text-ink/80">Pick a partner and ask your first question in under a minute.</p>
-              <Link href="/sign-up" className={`${pill} mt-6 bg-brand text-brand-ink hover:opacity-90`}>
+              <h2 className="font-heading text-3xl font-normal tracking-tight text-white md:text-5xl">Ready to transform how you study?</h2>
+              <p className="mt-3 text-white/75">Pick a partner and ask your first question in under a minute.</p>
+              <Link href="/sign-up" className={`${pill} mt-6 bg-white text-pau-900 hover:bg-white/90`}>
                 Get started free
               </Link>
             </div>
             <div className="flex -space-x-4">
               {PARTNER_IDS.map((id) => (
-                <span key={id} className="rounded-full ring-4 ring-pau-100">
+                <span key={id} className="rounded-full ring-4 ring-pau-900">
                   <Mascot partner={id} size={84} />
                 </span>
               ))}
@@ -230,9 +228,9 @@ export default async function Landing() {
         </section>
       </main>
 
-      {/* Footer: the darker PAU navy (#0a0f47, as the "Exams are coming" heading), white text (owner, 18 Nov 2026). */}
+      {/* Footer: the darker PAU navy (#0a0f47), white text (owner, 18 Nov 2026); it continues the closing call to action above. */}
       <footer className="bg-pau-900 text-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-start md:justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 border-t border-white/15 px-5 py-10 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <Logo light />
             <p className="mt-3 text-sm text-white/75">
