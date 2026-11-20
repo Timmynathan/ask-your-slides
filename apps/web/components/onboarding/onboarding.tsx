@@ -152,12 +152,11 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
 
         {step === "partner" && (
           <div key="partner" className="panel-in w-full max-w-5xl text-center">
-            <p className="text-sm font-medium uppercase tracking-wide text-pau-800 dark:text-pau-400">Choose your study partner</p>
-            <h1 className="mt-2 font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
 
-            <div role="radiogroup" aria-label="Study partners" className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div role="radiogroup" aria-label="Study partners" className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 xl:grid-cols-4">
               {ORDER.map((id) => {
                 const p = PARTNERS[id];
                 const selected = partner === id;
@@ -169,7 +168,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                     role="radio"
                     aria-checked={selected}
                     onClick={() => setPartner(id)}
-                    className={`group relative flex flex-col items-center rounded-[25px] bg-card p-6 text-center ring-1 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                    className={`group relative flex flex-col items-center rounded-[25px] bg-card px-3 pb-5 pt-6 text-center sm:p-6 ring-1 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
                       selected ? `ring-[3px] ${p.accent.ring} shadow-lg` : "ring-line"
                     }`}
                   >
@@ -186,30 +185,21 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                       </span>
                     )}
                     <span className={selected ? "pop-in" : ""} key={selected ? "on" : "off"}>
-                      <Mascot partner={id} size={108} mood={selected ? "happy" : "idle"} />
-                    </span>
-                    <span className="mt-4 font-heading text-2xl font-semibold text-ink">{p.name}</span>
-                    <span className="text-sm text-muted">{p.role}</span>
-                    <span className={`mt-3 rounded-full px-3 py-1 text-xs font-semibold ${p.accent.bg} ${p.accent.text}`}>Best for: {p.bestFor}</span>
-                    <span className="mt-3 text-[15px] leading-snug text-ink">{p.tagline}</span>
-                    <span className="mt-3 flex flex-wrap justify-center gap-1.5">
-                      {p.traits.map((t) => (
-                        <span key={t} className="rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line">{t}</span>
-                      ))}
-                    </span>
-                    <span
-                      className={`grid w-full transition-[grid-template-rows,opacity,margin] duration-300 ${selected ? "mt-4 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
-                    >
-                      <span className="overflow-hidden">
-                        <span className={`block rounded-2xl px-4 py-3 text-left text-sm leading-relaxed text-ink ${p.accent.soft}`}>“{p.sample}”</span>
+                      <span className="sm:hidden">
+                        <Mascot partner={id} size={76} mood={selected ? "happy" : "idle"} animated={false} />
+                      </span>
+                      <span className="hidden sm:inline">
+                        <Mascot partner={id} size={108} mood={selected ? "happy" : "idle"} animated={false} />
                       </span>
                     </span>
+                    <span className="mt-3 font-heading text-xl font-semibold text-ink sm:mt-4 sm:text-2xl">{p.name}</span>
+                    {/* One line each (owner, 20 Nov 2026: step 3 was too much to read). */}
+                    <span className="mt-1 text-[13px] leading-snug text-muted sm:text-[15px]">{p.bestFor}</span>
                   </button>
                 );
               })}
             </div>
 
-            <p className="mx-auto mt-6 max-w-xl text-sm text-muted">You can change your study partner any time.</p>
             {/* Pinned to the bottom on phones, so continuing is always one tap away. */}
             <div className="sticky bottom-4 z-10 mt-8 flex justify-center sm:static">
               <button
