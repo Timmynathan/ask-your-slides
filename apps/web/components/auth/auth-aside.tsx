@@ -205,7 +205,7 @@ function Library() {
 
 export function AuthAside({ signUp }: { signUp: boolean }) {
   return (
-    <aside className="relative hidden flex-col items-center justify-between gap-6 overflow-hidden border-l border-line bg-[#fbfcfe] px-8 py-12 lg:flex" aria-hidden>
+    <aside className="relative hidden flex-col items-center justify-between gap-6 overflow-hidden border-l border-line bg-[#f4f6fa] px-8 py-12 lg:flex" aria-hidden>
       <p className="max-w-lg text-center font-heading text-[30px] leading-snug text-ink">
         Students get <span className="rounded-md bg-[#cfe3fb] px-1.5 italic [box-decoration-break:clone]">higher grades</span>
         <br />
