@@ -52,7 +52,7 @@ import pymupdf
 import yaml
 from config import CACHE, DATA, PAST_ANSWER_MODEL, PAST_Q_MODEL, ROOT
 from manifest import Course, ManifestError, PastPaper, load
-from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check, course_match, flag_reasons
+from past_validate import CONFIDENCE, QUESTION_TYPES, Checked, apply_review, check, course_guessed, course_match, flag_reasons
 
 PROMPT_VERSION = "2"  # bump only to re-extract every paper (a re-store replaces its questions)
 LONG_EDGE = 1568  # Claude's vision input is downscaled beyond this; render at it so nothing is wasted
@@ -208,7 +208,7 @@ class Job:
 
     @property
     def fingerprint(self) -> str:
-        return self.fingerprint_for(PAST_Q_MODEL)
+        return self.fingerprint_for(self.model)
 
     def fingerprint_for(self, model: str) -> str:
         """The fingerprint this paper would have if `model` had read it (file, prompt and review unchanged)."""
@@ -420,6 +420,19 @@ def is_unchanged(store, course_id: str, job: Job) -> bool:
     return bool(row) and row["fingerprint"] == job.fingerprint_for(row["extraction_model"])
 
 
+def revalidate(store, course_id: str, job: Job) -> bool:
+    """--revalidate: give a stored paper its own saved reply again (as a reuse, no model call) so it is
+    checked and stored afresh. Papers with answered questions are left alone: re-storing would drop them."""
+    row = store.db.execute(
+        """select p.extraction_model, exists (select 1 from past_questions q where q.paper_id = p.id and q.model_answer is not null) as answered
+           from past_papers p where p.course_id = %s and p.source_file = %s""", (course_id, job.paper.rel_file)).fetchone()
+    dump = REPORTS / "past_papers" / f"{job.course.code}-{Path(job.paper.rel_file).stem}.json"
+    if not row or row["answered"] or row["extraction_model"] == "manual" or not dump.is_file():
+        return False
+    job.reuse, job.reuse_model = json.loads(dump.read_text())["raw"], row["extraction_model"]
+    return True
+
+
 def save_paper(store, course_id: str, job: Job, extraction: dict, checked: Checked) -> None:
     paper = extraction.get("paper") or {}
     rules = {k: paper.get(k) for k in ("answer_total", "compulsory", "sections")}
@@ -611,6 +624,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--yes", action="store_true", help="don't ask before submitting")
     ap.add_argument("--no-store", action="store_true", help="extract and report only; don't write the database")
     ap.add_argument("--force", action="store_true", help="re-store papers even if unchanged (with --analyse: re-answer questions)")
+    ap.add_argument("--revalidate", action="store_true",
+                    help="re-check stored, unanswered papers from their saved replies (no model call), e.g. after a validator fix")
     ap.add_argument("--flagged", action="store_true", help=f"rewrite {FLAGGED.relative_to(ROOT)} from the database and stop")
     ap.add_argument("--analyse", action="store_true", help="step 2: slides, topics, relevance, model answers for stored papers")
     ap.add_argument("--recheck", action="store_true", help="with --analyse: redo partial/general answers whose search now finds new slides")
@@ -653,6 +668,10 @@ def main(argv: list[str] | None = None) -> int:
             r["file_hash"] for r in store.db.execute("select file_hash from past_papers where extraction_model = 'manual'").fetchall()}
         unchanged = [j for j in jobs if is_unchanged(store, course_ids[j.course.key], j)
                      and not (j.file_hash in hand and j.manual is None)]
+        if args.revalidate:
+            again = [j for j in unchanged if revalidate(store, course_ids[j.course.key], j)]
+            print(f"  {len(again)} stored paper(s) re-checked from their saved replies (no model call)")
+            unchanged = [j for j in unchanged if j not in again]
         for j in unchanged:
             print(f"  unchanged: {j.name}")
         jobs = [j for j in jobs if j not in unchanged]
@@ -666,7 +685,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  hand-made extraction rejected: {j.name}: {j.manual_error}")
     if store:
         for j in jobs:
-            if j.manual is not None or j.manual_error:
+            if j.manual is not None or j.manual_error or j.reuse is not None:
                 continue
             found = find_reuse(store, j, course_ids[j.course.key], manual_only=args.force)
             if found:
@@ -675,6 +694,14 @@ def main(argv: list[str] | None = None) -> int:
                     j.review = src_review
                 print(f"  identical to the {j.reuse_from} paper, reused (no model call): {j.name}")
 
+    if args.revalidate:
+        left = [j for j in jobs if j.reuse is None and j.manual is None and not j.manual_error]
+        if left:
+            print(f"  --revalidate makes no model calls: {len(left)} paper(s) without a saved reply are left for a normal run")
+        jobs = [j for j in jobs if j not in left]
+        if not jobs:
+            print("Nothing to do.")
+            return 0
     # Identical files in this run (one paper filed under several programmes): one request per file.
     copies = group_identical([j for j in jobs if j.reuse is None and not j.manual_error])
     if copies:
@@ -727,7 +754,8 @@ def main(argv: list[str] | None = None) -> int:
             continue
         also = (j.reuse_from,) if j.reuse_from else ()
         checked = check(extraction, course_code=j.course.code, aliases=j.course.aliases, listed_code=j.paper.code_on_paper,
-                        accepted=accepted, course_title=j.course.title, guessed=bool(j.paper.review), also_codes=also)
+                        accepted=accepted, course_title=j.course.title, guessed=course_guessed(j.paper.review), also_codes=also,
+                        placeholder_code=not j.course.code_confirmed)
         verdict, detail = course_match(extraction.get("paper") or {}, course_code=j.course.code, aliases=j.course.aliases,
                                        listed_codes=(j.paper.code_on_paper, *also), course_title=j.course.title)
         matches.append((j, verdict, detail, checked.status))

@@ -41,7 +41,7 @@ import yaml
 from config import DATA
 from manifest import load
 from past_golden import compare
-from past_validate import apply_review, check
+from past_validate import apply_review, check, course_guessed
 from store import Store
 
 MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5"}
@@ -187,7 +187,8 @@ def main() -> int:
             raw = json.loads(r.text)
             extraction, accepted = apply_review(raw, j.review)
             checked = check(extraction, course_code=j.course.code, aliases=j.course.aliases, listed_code=j.paper.code_on_paper,
-                            accepted=accepted, course_title=j.course.title, guessed=bool(j.paper.review))
+                            accepted=accepted, course_title=j.course.title, guessed=course_guessed(j.paper.review),
+                            placeholder_code=not j.course.code_confirmed)
             got[m] = (raw, checked, None)
             dump = OUT / m / f"{j.course.code}-{Path(j.paper.rel_file).stem}.json"
             dump.parent.mkdir(parents=True, exist_ok=True)

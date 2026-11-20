@@ -14,6 +14,7 @@ it into info.
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 from dataclasses import dataclass, field
 
 QUESTION_TYPES = ("define", "explain", "compare", "calculate", "code", "case_study", "mcq", "essay")
@@ -131,14 +132,43 @@ TITLE_MATCH = 0.6
 _TITLE_NOISE = {"and", "of", "the", "in", "for", "to", "a", "an", "units", "unit", "pau"}
 
 
+# Words of a heading that names the test, not the course ('First Semester Quiz', 'CA1', 'Test 2').
+_GENERIC_TITLE = {"first", "second", "third", "semester", "examination", "examinations", "exam", "exams", "test", "tests",
+                  "quiz", "continuous", "assessment", "assignment", "question", "questions", "paper", "mid", "midsemester",
+                  "ca", "session", "final", "practice", "theory", "option", "section", "part", "jan", "january", "feb",
+                  "february", "march", "april", "may", "june", "july", "august", "sept", "september", "oct", "october",
+                  "nov", "november", "dec", "december"}
+
+
+def _title_words(t: str) -> list[str]:
+    t = re.sub(r"\b[A-Z]{2,4}\s?\d{3}\b", " ", t)  # course codes
+    t = re.sub(r"(?<=[A-Za-z])-(?=[A-Za-z])", "", t)  # 'E-Commerce' = 'ECommerce'
+    return [w for w in re.findall(r"[a-z]+", t.lower()) if w not in _TITLE_NOISE]
+
+
+def generic_title(t: str | None) -> bool:
+    """The 'title' only names the test ('Continuous Assessment Question', 'CA1'): it says nothing about the course."""
+    return bool(t) and all(w in _GENERIC_TITLE or len(w) <= 2 for w in _title_words(t))
+
+
 def title_similarity(a: str, b: str) -> float:
-    """Overlap of word stems (first 5 letters), ignoring small words, codes and "(2 Units)":
+    """Share of the shorter title's words found in the other, ignoring small words, codes and "(2 Units)".
+    Words match on their first 5 letters, or when nearly the same word (a typo: 'Intoductory'):
     'Ethical and Legal Issues in Computing' vs 'Ethics and Legal Issues for CSC…' → 0.75."""
-    def stems(t: str) -> set[str]:
-        words = re.findall(r"[a-z]+", re.sub(r"\b[A-Z]{3}\s?\d{3}\b", " ", t).lower())
-        return {w[:5] for w in words if w not in _TITLE_NOISE and not w.isdigit()}
-    x, y = stems(a), stems(b)
-    return len(x & y) / min(len(x), len(y)) if x and y else 1.0
+    x, y = set(_title_words(a)), set(_title_words(b))
+    if not x or not y:
+        return 1.0
+    small, big = (x, y) if len(x) <= len(y) else (y, x)
+    same = lambda u, v: u[:5] == v[:5] or (min(len(u), len(v)) >= 5 and SequenceMatcher(None, u, v).ratio() >= 0.85)
+    return sum(any(same(u, v) for v in big) for u in small) / len(small)
+
+
+# A review note about the course itself, not 'Several photos joined into one paper': the course was guessed.
+_GUESSED_RE = re.compile(r"\bcourse\b|assumed|archive title", re.I)
+
+
+def course_guessed(review: str | None) -> bool:
+    return bool(review and _GUESSED_RE.search(review))
 
 
 def course_match(paper: dict, *, course_code: str, aliases: tuple[str, ...] = (), listed_codes: tuple[str | None, ...] = (),
@@ -150,6 +180,7 @@ def course_match(paper: dict, *, course_code: str, aliases: tuple[str, ...] = ()
     when both are printed; a code alone that differs is a mismatch.
     """
     code, title = paper.get("code_on_paper"), paper.get("title_on_paper")
+    title = None if generic_title(title) else title
     known = {normalize_code(c) for c in (course_code, *aliases, *listed_codes) if c}
     code_ok = normalize_code(code) in known if code else None
     title_ok = title_similarity(title, course_title) >= TITLE_MATCH if title and course_title else None
@@ -165,6 +196,12 @@ _ARABIC_SUB = re.compile(r"^Q(\d+)([a-z])?\((\d{1,2})\)$")
 # '11', '11b', 'Question 11', 'q11.', '11 (ii)' → 'Q11', 'Q11b', ... (Haiku sometimes drops the Q, bake-off Nov 2026)
 _NO_Q = re.compile(r"^(?:q(?:uestion)?\s*)?(\d+)\s*\.?\s*([a-z]?)\s*(\([ivx]+\)|\(\d{1,2}\))?\.?$", re.I)
 _TOP = re.compile(r"^Q(\d+)")
+# Section-prefixed numbers → the section plus Q-form (bake-off/Haiku run, Nov 2026):
+# 'Part1-Q1', 'CA1-Q2', 'S2-Q1', 'P2Q1' and 'A1', 'B-Q1a', 'QB1', 'BQ1'.
+_SECTION_PREFIX = (
+    (re.compile(r"^(section|part|sec|ca|s|p|t)\s*(\d+|[a-h])\s*[-:.]?\s*q(?:uestion)?\s*(\d.*)$", re.I), "{0} {1}"),
+    (re.compile(r"^Q?()([A-H])\s*[-:.]?\s*Q?(\d.*)$"), "Section {1}"),
+)
 
 
 def _restart_sections(questions: list[dict]) -> None:
@@ -200,6 +237,14 @@ def normalize_numbers(questions: list[dict]) -> list[dict]:
     for q in questions:
         for field in ("number", "parent"):
             n = (q.get(field) or "").strip()
+            for rx, label in _SECTION_PREFIX:
+                m = rx.match(n)
+                if n and m and not NUMBER_RE.match(n):
+                    n = q[field] = f"Q{m.group(3)}"
+                    if field == "number" and not q.get("section"):
+                        q["section"] = label.format(m.group(1).upper() if len(m.group(1)) <= 2 else m.group(1).title(),
+                                                    m.group(2).upper())
+                    break
             m = _NO_Q.match(n)
             if n and m and not NUMBER_RE.match(n):
                 q[field] = f"Q{m.group(1)}{m.group(2).lower()}{(m.group(3) or '').lower()}"
@@ -227,10 +272,11 @@ def normalize_numbers(questions: list[dict]) -> list[dict]:
 
 def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), listed_code: str | None = None,
           accepted: set[str] | None = None, course_title: str | None = None, guessed: bool = False,
-          also_codes: tuple[str, ...] = ()) -> Checked:
+          also_codes: tuple[str, ...] = (), placeholder_code: bool = False) -> Checked:
     """`guessed`: the paper was matched to this course from an archive folder name (past_papers.yaml
     `review:`), so the paper itself must confirm it before students see it. `also_codes`: codes known
-    to be the same course (a reused paper's source course, e.g. CSC412 for SEN412)."""
+    to be the same course (a reused paper's source course, e.g. CSC412 for SEN412). `placeholder_code`:
+    the course's own code isn't known (course.yaml code_confirmed: false), so a printed code can't contradict it."""
     accepted = accepted or set()
     problems: list[Problem] = []
     add = lambda code, sev, detail, q=None: problems.append(Problem(code, sev, detail, q))
@@ -327,8 +373,11 @@ def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), 
     seen = normalize_code(paper.get("code_on_paper"))
     known = {normalize_code(c) for c in (course_code, *aliases, listed_code, *also_codes) if c}
     printed = paper.get("title_on_paper")
+    printed = None if generic_title(printed) else printed
     title_ok = bool(course_title and printed and title_similarity(printed, course_title) >= TITLE_MATCH)
-    if seen and seen not in known:
+    if seen and seen not in known and placeholder_code:
+        add("printed_code", "info", f"the paper prints {paper.get('code_on_paper')!r}; this course's code is a placeholder")
+    elif seen and seen not in known:
         # A renumbered course still prints its own title; without that (or for a guessed match) a
         # different code means it may be another course.
         sev = "warning" if title_ok and not guessed else "blocking"
@@ -336,7 +385,7 @@ def check(extraction: dict, *, course_code: str, aliases: tuple[str, ...] = (), 
     if course_title and printed and not title_ok:
         add("title_mismatch", "blocking",
             f"the paper's title {printed!r} doesn't match the course {course_title!r}: it may be another course that used this code")
-    if guessed and not seen and not printed:
+    if guessed and (not seen or placeholder_code) and not printed:
         add("course_unconfirmed", "blocking", "matched to this course from the archive folder name, and the paper prints no code or title to confirm it")
     for note in extraction.get("page_notes") or []:
         add("page_note", "info", str(note))

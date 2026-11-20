@@ -464,3 +464,37 @@ def test_fingerprint_for_keeps_a_paper_read_by_another_model():
     assert j.fingerprint == j.fingerprint_for(PAST_Q_MODEL)
     assert j.fingerprint_for("claude-sonnet-5-5") != j.fingerprint_for("claude-haiku-5-5")
     assert PAST_Q_MODEL == "claude-haiku-5-5"  # the default since the bake-off (owner, 20 Nov 2026)
+
+
+def test_section_prefixed_numbers_become_q_form():
+    from past_validate import normalize_numbers
+    qs = normalize_numbers([{"number": "A1", "parent": None}, {"number": "A2", "parent": None},
+                            {"number": "B-Q1", "parent": None}, {"number": "B-Q1a", "parent": "B-Q1"},
+                            {"number": "P10", "parent": None}])
+    assert [(q["number"], q["parent"], q.get("section")) for q in qs] == [
+        ("Q1", None, "Section A"), ("Q2", None, "Section A"), ("Q3", None, "Section B"), ("Q3a", "Q3", "Section B"),
+        ("P10", None, None)]
+    assert normalize_numbers([{"number": "Part1-Q2", "parent": None}])[0]["section"] == "Part 1"
+
+
+def test_generic_headings_are_not_course_titles():
+    from past_validate import check, generic_title, title_similarity
+    assert generic_title("Continuous Assessment Question") and generic_title("CA1") and generic_title("First Semester Quiz")
+    assert not generic_title("Laboratory Manual")
+    assert title_similarity("ECommerce", "E-Commerce") == 1.0
+    assert title_similarity("ECO 306: INTODUCTORY ECONOMETRICS", "Introductory Econometrics") == 1.0
+    paper = {"paper": {"title_on_paper": "Test 2"}, "questions": [
+        {"number": "Q1", "parent": None, "text": "Define cost.", "type": "define", "marks": 5, "confidence": "high"}]}
+    assert not [p for p in check(paper, course_code="ACC202", course_title="Cost Accounting").problems if p.code == "title_mismatch"]
+
+
+def test_photos_note_is_not_a_guessed_course_and_placeholder_codes_dont_clash():
+    from past_validate import check, course_guessed
+    assert not course_guessed("Several photos joined into one paper - check they are one paper.")
+    assert course_guessed('Course read from the paper header ("PHY 101 General Physics I") - check.')
+    paper = {"paper": {"code_on_paper": "ACC 202"}, "questions": [
+        {"number": "Q1", "parent": None, "text": "Define cost.", "type": "define", "marks": 5, "confidence": "high"}]}
+    real = check(paper, course_code="ACC-COST-ACCOUNTING", course_title="Cost Accounting")
+    placeholder = check(paper, course_code="ACC-COST-ACCOUNTING", course_title="Cost Accounting", placeholder_code=True)
+    assert real.status == "needs_review" and placeholder.status == "ok"
+    assert [p.severity for p in placeholder.problems if p.code == "printed_code"] == ["info"]
