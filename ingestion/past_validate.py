@@ -59,7 +59,9 @@ class Checked:
 # A paper waits (listed in data/_reports/past-flagged.md, not answered) for any blocking problem or
 # one of these warnings. medium_confidence alone doesn't count: it fired on 16 of 20 papers in the
 # Haiku/Sonnet bake-off (Nov 2026) and didn't separate good reads from bad ones.
-FLAG_WARNINGS = ("total_marks", "subparts_sum", "missing_marks")
+# missing_marks alone doesn't count either (owner, 20 Nov 2026): many CA tests print no marks, and the
+# answer doesn't need them.
+FLAG_WARNINGS = ("total_marks", "subparts_sum")
 
 
 def flag_reasons(problems: list[dict]) -> list[str]:

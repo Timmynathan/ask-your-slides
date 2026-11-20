@@ -442,7 +442,8 @@ def test_flag_reasons_ignores_medium_confidence_and_accepted_problems():
 
     p = lambda code, sev: {"code": code, "severity": sev, "detail": "", "question": None}
     assert flag_reasons([p("medium_confidence", "warning"), p("model_note", "info")]) == []
-    assert flag_reasons([p("missing_marks", "warning"), p("medium_confidence", "warning")]) == ["missing_marks"]
+    assert flag_reasons([p("missing_marks", "warning"), p("medium_confidence", "warning")]) == []
+    assert flag_reasons([p("subparts_sum", "warning")]) == ["subparts_sum"]
     assert flag_reasons([p("title_mismatch", "blocking"), p("total_marks", "info")]) == ["title_mismatch"]  # info = accepted
     assert flag_reasons(None) == []
 
