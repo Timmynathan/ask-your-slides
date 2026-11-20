@@ -307,7 +307,6 @@ export function SignInForm({
       {showMicrosoft && (step.kind === "password" || (step.kind === "code-email" && mode !== "reset")) && (
         <div className="mb-6">
           <MicrosoftButton next={next} />
-          <p className="mt-2 text-center text-xs text-muted">Your PAU Outlook / Teams account. No code needed.</p>
           <div className="mt-6 flex items-center gap-3 text-xs text-muted" aria-hidden>
             <span className="h-px flex-1 bg-line" />
             or use your email
