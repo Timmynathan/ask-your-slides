@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/logo";
 import { Mascot } from "@/components/mascot/mascot";
 import { directSignupEnabled } from "@/lib/auth/signup-mode";
 import { SignInForm } from "./sign-in-form";
+import { AuthAside } from "@/components/auth/auth-aside";
 
 export const metadata: Metadata = { title: "Sign in · Ask Your Slides" };
 
@@ -26,23 +27,7 @@ export function AuthPage(props: Props) {
           <SignInForm startWithCode={props.signUp} directSignup={directSignupEnabled()} />
         </div>
       </main>
-      <aside className="relative hidden overflow-hidden bg-pau-100 lg:flex lg:flex-col lg:items-center lg:justify-center" aria-hidden>
-        <div className="relative">
-          <div className="pop-in rounded-[22px] bg-white px-5 py-4 text-[15px] text-[#191919] shadow-lg">
-            {props.signUp ? "Welcome! You're one minute away from your slides." : "Log in and let's pick up where you stopped."}
-            <span className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-white" />
-          </div>
-        </div>
-        <div className="mt-6">
-          <Mascot partner="ada" size={190} mood="happy" />
-        </div>
-        <div className="float-y absolute left-[12%] top-[18%]">
-          <Mascot partner="tobi" size={96} />
-        </div>
-        <div className="float-y absolute bottom-[14%] right-[12%]" style={{ animationDelay: "1.4s" }}>
-          <Mascot partner="musa" size={104} />
-        </div>
-      </aside>
+      <AuthAside signUp={!!props.signUp} />
     </div>
   );
 }

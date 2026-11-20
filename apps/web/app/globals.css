@@ -187,8 +187,18 @@ body {
   100% { opacity: 1; transform: none; filter: none; }
 }
 .reveal-in { animation: reveal-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+/* Sign-up/sign-in study room (components/auth/auth-aside.tsx): tags bob above the desk, Tobi hops
+   across the floor every so often. */
+@keyframes auth-tag { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -6px); } }
+.auth-tag { animation: auth-tag 3.2s ease-in-out infinite; }
+@keyframes auth-hop-x { 0% { transform: translateX(40px); opacity: 0; } 6% { opacity: 1; } 48% { opacity: 1; } 54% { transform: translateX(470px); opacity: 0; } 100% { transform: translateX(470px); opacity: 0; } }
+.auth-hop-x { left: 0; animation: auth-hop-x 11s linear infinite; }
+@keyframes auth-hop-y { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+.auth-hop-y { animation: auth-hop-y 0.55s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .mascot-alive .mascot-bob, .mascot-alive .mascot-eyes, .mascot-alive .mascot-spark, .pop-in, .float-y, .pill-swap, .reveal-in { animation: none; }
+  .auth-tag, .auth-hop-y { animation: none; }
+  .auth-hop-x { animation: none; transform: translateX(470px); }
   .reveal-wait { opacity: 1; }
 }
 
