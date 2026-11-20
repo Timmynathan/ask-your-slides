@@ -5,6 +5,7 @@ import { ProfileForm } from "@/components/account/profile-form";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
 import { programmeChoices } from "@/lib/programmes";
+import { shellData } from "@/lib/nav/shell-data";
 
 export const metadata: Metadata = { title: "Your profile · Ask Your Slides" };
 
@@ -12,9 +13,10 @@ export const metadata: Metadata = { title: "Your profile · Ask Your Slides" };
 // page and editable together (replaces "Change study partner" / "Change programme" in the menu).
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const [{ data: profile, error }, choices] = await Promise.all([
+  const [{ data: profile, error }, choices, shell] = await Promise.all([
     supabase.from("profiles").select("display_name, onboarded, study_partner, programme, level").eq("id", user.id).single(),
     programmeChoices(supabase),
+    shellData(supabase, user),
   ]);
   if (error) throw new Error(`Couldn't load your profile: ${error.message}`);
   if (!profile?.onboarded || !isPartnerId(profile.study_partner) || !profile.programme) redirect("/welcome");
@@ -22,6 +24,7 @@ async function Loaded() {
     <ProfileForm
       email={user.email ?? ""}
       choices={choices}
+      shell={shell}
       initial={{ name: profile.display_name ?? "", programme: profile.programme, level: profile.level, partner: profile.study_partner }}
     />
   );

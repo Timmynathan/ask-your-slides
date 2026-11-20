@@ -6,13 +6,14 @@ import { DeleteAccountDialog } from "@/components/ui/delete-account-dialog";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 import type { PlanId } from "@/lib/plans/config";
 import { PageFrame } from "./page-frame";
+import type { ShellData } from "@/lib/nav/shell-data";
 
 // Settings: your plan, sign out, and (last, quiet) delete account.
-export function SettingsView({ email, plan }: { email: string; plan: { id: PlanId; name: string; endsAt: string | null } }) {
+export function SettingsView({ email, plan, shell }: { email: string; plan: { id: PlanId; name: string; endsAt: string | null }; shell: ShellData }) {
   const [deleting, setDeleting] = useState(false);
   const card = "mt-4 rounded-[22px] bg-card p-6 ring-1 ring-line";
   return (
-    <PageFrame title="Settings">
+    <PageFrame title="Settings" shell={shell}>
       <section className={`${card} mt-6`}>
         <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted">Your plan</h2>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">

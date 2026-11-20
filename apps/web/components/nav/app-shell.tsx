@@ -16,7 +16,7 @@ import { AccountMenu } from "@/components/ui/account-menu";
 import { UploadDialog } from "./upload-dialog";
 import { FeedbackDialog } from "./feedback-dialog";
 
-export type ShellPage = "dashboard" | "chat" | "past";
+export type ShellPage = "dashboard" | "chat" | "past" | "account";
 export interface ShellCourse {
   id: string;
   title: string;
@@ -141,8 +141,9 @@ function NavItem({ label, href, active, icon, soon = false }: { label: string; h
 
 export function AppShell({
   page,
-  title,
-  courses,
+  title = "",
+  courses = [],
+  railOnly = false,
   recent = [],
   files = [],
   user,
@@ -154,8 +155,10 @@ export function AppShell({
 }: {
   page: ShellPage;
   /** The student's programme, e.g. "Computer Science" (lib/programmes sidebarTitle). */
-  title: string;
-  courses: ShellCourse[];
+  title?: string;
+  courses?: ShellCourse[];
+  /** Only the dark rail, no panel (Plans and pricing, Settings, Your profile: owner, 21 Nov 2026). */
+  railOnly?: boolean;
   /** The student's latest chats, newest first. */
   recent?: ShellChat[];
   /** The student's own uploads, newest first. */
@@ -275,7 +278,7 @@ export function AppShell({
     }
   }
 
-  const shown = pinned || peek;
+  const shown = !railOnly && (pinned || peek);
   // The panel's contents: beside the page (tablets up) and in the phone drawer.
   const panelBody = (
     <>
@@ -361,12 +364,12 @@ export function AppShell({
   );
   const panelW = Math.max(MIN_W, width);
   return (
-    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (pinned ? panelW : 52)}px` }}>
+    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (railOnly ? 0 : pinned ? panelW : 52)}px` }}>
       {/* Leaving the whole sidebar (rail and panel) ends a hover peek. */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main" onMouseLeave={() => setPeek(false)}>
         {/* Rail */}
         <div className="flex w-16 flex-col items-center gap-1.5 bg-pau-900 py-4">
-          <Link href="/dashboard" aria-label="My courses" title="My courses" className="mb-2 grid h-11 w-11 place-items-center">
+          <Link href="/" aria-label="Ask Your Slides home" title="Home" className="mb-2 grid h-11 w-11 place-items-center">
             <LogoMark size={26} light />
           </Link>
           {onSearch ? (
@@ -419,6 +422,7 @@ export function AppShell({
         )}
         {/* The sidebar button, beside the title: always here, open or closed. Hover peeks while
             closed; click keeps the panel open, or closes it. */}
+        {!railOnly && (
         <div className="group absolute top-[18px] z-50" style={{ left: shown ? RAIL + panelW - 46 : RAIL + 10 }} onMouseEnter={() => !pinned && setPeek(true)}>
           <button
             type="button"
@@ -433,6 +437,7 @@ export function AppShell({
             {pinned ? "Close sidebar" : "Keep sidebar open"}
           </span>
         </div>
+        )}
       </aside>
       {/* Phones: the same sidebar as a drawer from the left. */}
       {drawer && (

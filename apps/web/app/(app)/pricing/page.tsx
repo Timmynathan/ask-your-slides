@@ -8,6 +8,8 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
+import { AppShell } from "@/components/nav/app-shell";
+import { shellData } from "@/lib/nav/shell-data";
 import { TIME_ZONE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
@@ -22,18 +24,20 @@ const action = "inline-flex w-full items-center justify-center rounded-full px-6
 // In-app pricing (PRD F12): Free and Finals; "Get Finals" goes to /pay (bank transfer + WhatsApp).
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const { data: profile } = await supabase.from("profiles").select("onboarded, programme").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("onboarded, programme, display_name").eq("id", user.id).single();
   if (!profile?.onboarded || !profile.programme) redirect(`/welcome?next=${encodeURIComponent("/pricing")}`);
 
   const now = new Date();
   const db = adminClient();
-  const [state, latest] = await Promise.all([planState(db, user.id, now), latestRequest(db, user.id)]);
+  const [state, latest, shell] = await Promise.all([planState(db, user.id, now), latestRequest(db, user.id), shellData(supabase, user)]);
   const offer = planOffer(now);
 
   return (
+    <AppShell page="account" title={shell.title} courses={shell.courses} recent={shell.recent} files={shell.files} user={shell.user}>
     <div className="min-h-dvh bg-page text-ink">
       <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/dashboard" aria-label="My courses">
+        {/* Tablets up: the sidebar has the logo. */}
+        <Link href="/dashboard" aria-label="My courses" className="md:invisible">
           <Logo />
         </Link>
         <Link href="/dashboard" className="rounded-full px-4 py-2 text-sm text-muted transition hover:bg-sunken hover:text-ink">
@@ -85,6 +89,7 @@ async function Loaded() {
         </div>
       </main>
     </div>
+    </AppShell>
   );
 }
 

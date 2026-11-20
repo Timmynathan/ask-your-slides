@@ -8,13 +8,16 @@ import { ProgrammePicker, type ProgrammeValue } from "@/components/onboarding/pr
 import { PARTNER_IDS, PARTNERS, type PartnerId } from "@/lib/partners";
 import type { ProgrammeChoice } from "@/lib/programmes";
 import { PageFrame } from "./page-frame";
+import type { ShellData } from "@/lib/nav/shell-data";
 
 export function ProfileForm({
   email,
   choices,
   initial,
+  shell,
 }: {
   email: string;
+  shell: ShellData;
   choices: ProgrammeChoice[];
   initial: { name: string; programme: string; level: number | null; partner: PartnerId };
 }) {
@@ -49,7 +52,7 @@ export function ProfileForm({
   const label = "block text-sm font-medium text-ink";
   const field = "mt-1.5 w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-[15px] text-ink outline-none focus:border-brand focus:ring-4 focus:ring-pau-200";
   return (
-    <PageFrame title="Your profile">
+    <PageFrame title="Your profile" shell={shell}>
       <div className="mt-6 space-y-6 rounded-[22px] bg-card p-6 ring-1 ring-line">
         <label className={label}>
           Name

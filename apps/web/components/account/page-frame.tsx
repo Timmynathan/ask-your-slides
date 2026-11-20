@@ -1,9 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AppShell } from "@/components/nav/app-shell";
+import type { ShellData } from "@/lib/nav/shell-data";
 
-// The frame of Your profile and Settings: a back link to My courses, the title, and the content.
-export function PageFrame({ title, children }: { title: string; children: ReactNode }) {
+// The frame of Your profile and Settings: the full sidebar (tablets up), a back link to My courses,
+// the title, and the content.
+export function PageFrame({ title, shell, children }: { title: string; shell: ShellData; children: ReactNode }) {
   return (
+    <AppShell page="account" title={shell.title} courses={shell.courses} recent={shell.recent} files={shell.files} user={shell.user}>
     <div className="min-h-dvh bg-page">
       <header className="mx-auto flex max-w-2xl items-center px-4 pt-5 sm:px-6">
         <Link href="/dashboard" className="-ml-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-2 text-[14px] text-ink transition hover:bg-sunken">
@@ -18,5 +22,6 @@ export function PageFrame({ title, children }: { title: string; children: ReactN
         {children}
       </main>
     </div>
+    </AppShell>
   );
 }
