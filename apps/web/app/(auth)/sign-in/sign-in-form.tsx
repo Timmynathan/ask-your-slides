@@ -387,7 +387,7 @@ export function SignInForm({
         <form onSubmit={(e) => run(e, sendCode)} noValidate>
           {emailField}
           <button type="submit" disabled={busy} className={button}>
-            <BusyLabel busy={busy} label={mode === "reset" ? "Send me a code" : "Get my code"} busyLabel="Sending…" />
+            <BusyLabel busy={busy} label={mode === "reset" ? "Send me a code" : "Continue"} busyLabel="Sending…" arrow={mode !== "reset"} />
           </button>
           <p className="mt-5 text-center text-sm text-muted">
             {mode === "reset" ? "Remembered it? " : "Already have an account? "}

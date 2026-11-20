@@ -7,12 +7,20 @@ export function Spinner({ className = "" }: { className?: string }) {
   );
 }
 
-/** Button content: label, or spinner + busy label. Keeps the button's width steady-ish. */
-export function BusyLabel({ busy, label, busyLabel }: { busy: boolean; label: string; busyLabel: string }) {
+/** Button content: label, or spinner + busy label. Keeps the button's width steady-ish. `arrow` adds a
+ *  small → after the label. */
+export function BusyLabel({ busy, label, busyLabel, arrow = false }: { busy: boolean; label: string; busyLabel: string; arrow?: boolean }) {
   return busy ? (
     <span className="inline-flex items-center justify-center gap-2">
       <Spinner />
       {busyLabel}
+    </span>
+  ) : arrow ? (
+    <span className="inline-flex items-center justify-center gap-2">
+      {label}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M5 12h14M13 6l6 6-6 6" />
+      </svg>
     </span>
   ) : (
     <>{label}</>
