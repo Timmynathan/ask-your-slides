@@ -23,7 +23,7 @@ export function StatsSection({ students, pastQuestions, courses }: { students: n
   return (
     <section aria-labelledby="numbers" className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
       <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14">
-        <h2 id="numbers" className="text-center font-heading text-4xl font-semibold leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-left">
+        <h2 id="numbers" className="text-center font-heading text-4xl font-normal leading-[1.1] tracking-tight text-ink sm:text-5xl lg:text-left">
           The trusted AI learning platform for PAU students
         </h2>
 
