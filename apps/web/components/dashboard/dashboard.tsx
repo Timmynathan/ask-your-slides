@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ShellMenuButton } from "@/components/nav/app-shell";
 import { AskBox } from "./ask-box";
+import { HoverLink } from "@/components/ui/hover-link";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
@@ -62,23 +63,13 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
-  const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("course");
   const [view, setView] = useState<View>("grid");
   const [enrolling, setEnrolling] = useState(false);
-  const searchBox = useRef<HTMLInputElement>(null);
   // "Add a course" opens with its list already loaded: fetched quietly a moment after the page.
   useEffect(() => {
     const t = setTimeout(() => void prefetchEnrollments().catch(() => {}), 1200);
     return () => clearTimeout(t);
-  }, []);
-  // The sidebar's search button (shared layout): focus this page's search box, also after arriving
-  // from another page (?search=1).
-  useEffect(() => {
-    const focus = () => searchBox.current?.focus();
-    window.addEventListener("ays:focus-search", focus);
-    if (new URLSearchParams(window.location.search).get("search") === "1") setTimeout(focus, 0);
-    return () => window.removeEventListener("ays:focus-search", focus);
   }, []);
 
   // Remembered view, read after hydration so server and browser first render the same thing.
@@ -100,9 +91,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
   };
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase().replace(/\s+/g, "");
-    let list = courses.filter((c) => tab === "all" || c.chats > 0);
-    if (q) list = list.filter((c) => (c.title + c.code).toLowerCase().replace(/\s+/g, "").includes(q));
+    const list = courses.filter((c) => tab === "all" || c.chats > 0);
     const by = tab === "recent" && sort === "course" ? "recent" : sort;
     return [...list].sort((a, b) =>
       by === "az"
@@ -111,7 +100,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
           ? (b.lastStudiedAt ?? "").localeCompare(a.lastStudiedAt ?? "") || a.sortOrder - b.sortOrder
           : a.sortOrder - b.sortOrder,
     );
-  }, [courses, tab, query, sort]);
+  }, [courses, tab, sort]);
 
   const departments = [...new Set(courses.map((c) => c.department))];
 
@@ -148,21 +137,6 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
         </nav>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <label className="relative hidden sm:block">
-            <span className="sr-only">Search courses</span>
-            <svg className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-              <circle cx="8.5" cy="8.5" r="5.5" />
-              <path d="m13 13 4 4" strokeLinecap="round" />
-            </svg>
-            <input
-              ref={searchBox}
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search courses"
-              className="h-11 w-56 rounded-full border border-line bg-card pl-10 pr-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/15 lg:w-64 xl:w-72"
-            />
-          </label>
           <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="View">
             <ViewButton active={view === "grid"} label="Grid view" onClick={() => chooseView("grid")}>
               <path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z" />
@@ -212,20 +186,12 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
               </button>
             ))}
           </div>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search courses"
-            aria-label="Search courses"
-            className="h-11 w-full rounded-full border border-line bg-card px-4 text-[15px] text-ink outline-none placeholder:text-muted focus:border-brand sm:hidden"
-          />
         </div>
 
         {/* One way in for "which course is this?" questions (owner, 21 Nov 2026): it opens inside the
             right course's chat, so there is no separate chat to keep track of. */}
         <div className="mx-auto max-w-3xl">
-          <AskBox />
+          <AskBox courses={courses.map((c) => ({ code: c.code, shownCode: c.shownCode, title: c.title, href: c.href }))} />
         </div>
 
         <div className="mb-6 flex flex-wrap items-end gap-3">
@@ -254,7 +220,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
         </div>
 
         {shown.length === 0 ? (
-          <Empty tab={tab} query={query} onAll={() => setTab("all")} />
+          <Empty tab={tab} onAll={() => setTab("all")} />
         ) : view === "grid" ? (
           <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4" aria-label="Courses">
             {shown.map((c) => (
@@ -334,7 +300,9 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="group relative flex min-h-[150px] flex-col rounded-[22px] bg-navy p-4 text-white sm:min-h-[170px] sm:p-5 transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
-      <Link href={c.href} className="absolute inset-0 z-0 rounded-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
+      {/* The course loads in full as soon as the pointer is over the card (or a finger touches it), so
+          the click opens it at once (owner, 21 Nov 2026: "it takes a while for the chat to show"). */}
+      <HoverLink href={c.href} className="absolute inset-0 z-0 rounded-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
       <div className="flex items-start justify-between">
         <CourseIcon title={c.title} size={26} className="mt-0.5" light />
         <CardMenu course={c} onDark />
@@ -360,7 +328,7 @@ function CourseCard({ course: c }: { course: DashboardCourse }) {
 function CourseRow({ course: c }: { course: DashboardCourse }) {
   return (
     <li className="relative flex items-center gap-4 border-b border-line/70 px-5 py-3.5 last:border-0 hover:bg-pau-50">
-      <Link href={c.href} className="absolute inset-0 z-0" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
+      <HoverLink href={c.href} className="absolute inset-0 z-0" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
       <CourseIcon title={c.title} size={22} />
       <span className="min-w-0 flex-1 truncate text-[16px] text-ink">
         {c.title}
@@ -501,12 +469,10 @@ function ViewButton({ active, label, onClick, children }: { active: boolean; lab
   );
 }
 
-function Empty({ tab, query, onAll }: { tab: Tab; query: string; onAll(): void }) {
+function Empty({ tab, onAll }: { tab: Tab; onAll(): void }) {
   return (
     <div className="rounded-[28px] bg-sunken px-6 py-16 text-center">
-      {query.trim() ? (
-        <p className="text-ink">No courses match “{query.trim()}”.</p>
-      ) : tab === "recent" ? (
+      {tab === "recent" ? (
         <>
           <p className="text-ink">You haven&apos;t studied a course yet.</p>
           <button onClick={onAll} className="mt-4 rounded-full bg-brand px-5 py-2.5 text-sm font-medium text-brand-ink transition active:scale-95">

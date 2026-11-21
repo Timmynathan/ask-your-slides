@@ -15,10 +15,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { History, House, Menu, PanelLeft, PencilLine, Search, Upload, X, type LucideIcon } from "lucide-react";
+import { History, House, Menu, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { useClickAway } from "@/lib/ui/use-click-away";
+import { HoverLink } from "@/components/ui/hover-link";
 import { UploadDialog } from "./upload-dialog";
 import { FeedbackDialog } from "./feedback-dialog";
 
@@ -156,9 +157,9 @@ function RecentChats({ recent }: { recent: ShellChat[] }) {
             <ul>
               {recent.map((c) => (
                 <li key={c.id}>
-                  <Link href={c.href} onClick={() => setOpen(false)} title={c.title} className="block truncate rounded-xl px-3 py-2 text-[14px] text-ink transition hover:bg-sunken">
+                  <HoverLink href={c.href} onClick={() => setOpen(false)} title={c.title} className="block truncate rounded-xl px-3 py-2 text-[14px] text-ink transition hover:bg-sunken">
                     {c.title}
-                  </Link>
+                  </HoverLink>
                 </li>
               ))}
             </ul>
@@ -177,7 +178,6 @@ export function AppShell({
   defaultCourseId,
   recent = [],
   user,
-  onSearch,
   onChangePartner,
   children,
 }: {
@@ -195,21 +195,12 @@ export function AppShell({
   /** The student's latest chats, newest first. */
   recent?: ShellChat[];
   user: { email: string; displayName: string | null };
-  /** Search button: the page's own search (dashboard), else it opens the dashboard. */
-  onSearch?(): void;
   onChangePartner?(): void;
   children: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const page: ShellPage = pageProp ?? (pathname.startsWith("/past-questions") ? "past" : pathname.startsWith("/dashboard") ? "dashboard" : "account");
-  // Search: on My courses it focuses the page's search box (the dashboard listens), elsewhere it goes there.
-  const search =
-    onSearch ??
-    (() => {
-      if (pathname.startsWith("/dashboard")) window.dispatchEvent(new Event("ays:focus-search"));
-      else router.push("/dashboard?search=1");
-    });
   const [uploading, setUploading] = useState(false);
   const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
@@ -358,7 +349,6 @@ export function AppShell({
               <span className={`${railLabel} font-heading text-[16px] text-white`}>Ask Your Slides</span>
             </Link>
             <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
-            <RailButton label="Search courses" onClick={search} icon={Search} />
             <RecentChats recent={recent} />
             <div className="mt-auto flex flex-col gap-3">
               {/* Feedback (owner, 20 Nov 2026), just above the account. */}
@@ -450,9 +440,9 @@ export function AppShell({
               <ul className="min-h-0 flex-1 overflow-y-auto px-2">
                 {recent.map((c) => (
                   <li key={c.id}>
-                    <Link href={c.href} title={c.title} className={`${rowCls} text-[14px]`}>
+                    <HoverLink href={c.href} title={c.title} className={`${rowCls} text-[14px]`}>
                       <span className="truncate">{c.title}</span>
-                    </Link>
+                    </HoverLink>
                   </li>
                 ))}
               </ul>

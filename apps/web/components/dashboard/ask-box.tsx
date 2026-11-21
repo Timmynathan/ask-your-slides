@@ -9,12 +9,27 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type Choice = { id: string; label: string; href: string };
+type Course = { code: string; shownCode: string | null; title: string; href: string };
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Just a course's code or name ("CSC 420", "data management"): that course, to open directly
+ *  (owner, 21 Nov 2026: the dashboard's course search was removed; the Ask box jumps instead). */
+export function courseNamed(text: string, courses: Course[]): Course | null {
+  const q = text.trim();
+  const n = norm(q);
+  if (n.length < 3 || /\?/.test(q) || q.split(/\s+/).length > 6) return null;
+  const byCode = courses.filter((c) => norm(c.code) === n || (c.shownCode && norm(c.shownCode) === n));
+  if (byCode.length === 1) return byCode[0];
+  const byTitle = courses.filter((c) => norm(c.title) === n || (n.length >= 6 && norm(c.title).startsWith(n)));
+  return byTitle.length === 1 ? byTitle[0] : null;
+}
 
 export function askHref(href: string, question: string) {
   return `${href}${href.includes("?") ? "&" : "?"}ask=${encodeURIComponent(question)}`;
 }
 
-export function AskBox() {
+export function AskBox({ courses = [] }: { courses?: Course[] }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -61,7 +76,14 @@ export function AskBox() {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const q = text.trim();
-    if (q && !busy) void route(q, false);
+    if (!q || busy) return;
+    const named = courseNamed(q, courses);
+    if (named) {
+      setBusy(true);
+      router.push(named.href);
+      return;
+    }
+    void route(q, false);
   };
 
   return (
@@ -79,7 +101,7 @@ export function AskBox() {
             if (choices) setChoices(null);
           }}
           maxLength={4000}
-          placeholder="Ask anything across your courses…"
+          placeholder="Ask anything, or type a course to open it…"
           className="h-14 w-full rounded-full border border-line-strong bg-card pl-5 pr-16 text-[16px] text-ink shadow-sm outline-none transition placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-pau-200"
         />
         <button

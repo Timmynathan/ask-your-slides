@@ -31,10 +31,11 @@ async function Loaded({ params, searchParams }: Props) {
   const code = rawCode.toUpperCase();
   const { supabase, user } = await requireUser();
 
-  const [{ data: courses }, { data: profile, error: profileError }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastTopics }, { data: pastPapers }] = await Promise.all([
+  const [{ data: courses }, { data: profile, error: profileError }, { data: topicRows }, { data: chats }, { data: materialRows }, { count: questionCount }, { data: pulseRow }, { data: pastRows }, { data: pastPapers }] = await Promise.all([
     supabase.from("courses").select("id, code, code_confirmed, programme, department, title, sort_order, elective, premium").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, department, programme").eq("id", user.id).single(),
-    supabase.from("topics").select("id, course_id, topic_order, title, materials(count)").order("topic_order"),
+    // This course code's lectures only (every course's used to be read, and the 1,000-row cap cut them off).
+    supabase.from("topics").select("id, course_id, topic_order, title, materials(count), courses!inner(code)").eq("courses.code", code).order("topic_order"),
     supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
     // Every programme's course with this code; narrowed to the chosen one below.
     supabase.from("materials").select("id, course_id, topic_id, kind, material_order, title, page_count, source_file, courses!inner(code)").eq("courses.code", code).order("material_order"),
@@ -43,7 +44,6 @@ async function Loaded({ params, searchParams }: Props) {
     // Past questions (PRD F10): ids only, for the Topics entry and the topic chips; the questions
     // themselves load when the student opens them.
     supabase.from("past_questions").select("id, parent_id, course_id, paper_id, courses!inner(code)").eq("courses.code", code),
-    supabase.from("question_topics").select("question_id, topic_id"),
     // The papers, by year, for the "Practise 2025/26 exam" buttons in the Topics panel.
     supabase.from("past_papers").select("id, course_id, session, type, courses!inner(code)").eq("courses.code", code),
   ]);
@@ -62,7 +62,15 @@ async function Loaded({ params, searchParams }: Props) {
   const chatList = (chats ?? []) as ChatItem[];
   const initialChat = sp.chat ? chatList.find((c) => c.id === sp.chat && c.course_id === course.id) ?? null : null;
   const topicFromUrl = sp.topic ? topics.find((t) => t.course_id === course.id && String(t.order) === sp.topic) ?? null : null;
-  const past = pastCounts(course.id, (pastRows ?? []) as PastRow[], pastTopics ?? [], (pastPapers ?? []) as PaperRow[]);
+  // The topic links of this course's past questions only, in chunks (the whole table is ~20,000 rows
+  // and the database returns at most 1,000 per request, so reading it all undercounted them).
+  const leafIds = pastLeafIds(course.id, (pastRows ?? []) as PastRow[]);
+  const chunks: string[][] = [];
+  for (let i = 0; i < leafIds.length; i += 150) chunks.push(leafIds.slice(i, i + 150));
+  const pastTopics = (
+    await Promise.all(chunks.map((ids) => supabase.from("question_topics").select("question_id, topic_id").in("question_id", ids)))
+  ).flatMap((r) => (r.data ?? []) as { question_id: string; topic_id: string }[]);
+  const past = pastCounts(course.id, (pastRows ?? []) as PastRow[], pastTopics, (pastPapers ?? []) as PaperRow[]);
   // Plan limits (PRD F12): what this student can still send in this course today.
   const db = adminClient();
   const now = new Date();
@@ -109,6 +117,13 @@ async function Loaded({ params, searchParams }: Props) {
 
 type PastRow = { id: string; parent_id: string | null; course_id: string; paper_id: string | null };
 type PaperRow = { id: string; course_id: string; session: string; type: PaperType };
+
+/** The ids of a course's practised past questions (those without parts). */
+function pastLeafIds(courseId: string, rows: PastRow[]): string[] {
+  const mine = rows.filter((r) => r.course_id === courseId);
+  const parents = new Set(mine.map((r) => r.parent_id).filter(Boolean));
+  return mine.filter((r) => !parents.has(r.id)).map((r) => r.id);
+}
 
 /** Practised past questions (those without parts) of one course, in total, per topic and per paper
  *  (newest paper first; only papers with questions). */

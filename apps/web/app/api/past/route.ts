@@ -45,8 +45,12 @@ export async function GET(request: Request) {
   if (failed) return NextResponse.json({ error: "Couldn't load past questions." }, { status: 500 });
 
   const ids = (questions.data ?? []).map((q) => q.id);
-  const topics = ids.length ? await supabase.from("question_topics").select("question_id, topic_id").in("question_id", ids) : { data: [], error: null };
-  if (topics.error) return NextResponse.json({ error: "Couldn't load past questions." }, { status: 500 });
+  // In chunks: a long course's ids make one request too long, and each answer holds at most 1,000 rows.
+  const parts = await Promise.all(
+    Array.from({ length: Math.ceil(ids.length / 150) }, (_, i) => supabase.from("question_topics").select("question_id, topic_id").in("question_id", ids.slice(i * 150, i * 150 + 150))),
+  );
+  if (parts.some((p) => p.error)) return NextResponse.json({ error: "Couldn't load past questions." }, { status: 500 });
+  const topics = { data: parts.flatMap((p) => p.data ?? []) };
 
   // Latest attempt per question of this course, for the ✓ marks in practice.
   const mine = new Set(ids);
