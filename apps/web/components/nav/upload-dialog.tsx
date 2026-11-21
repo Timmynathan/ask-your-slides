@@ -79,7 +79,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
         {done ? (
           <div className="text-center">
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-pau-100 text-brand">
-              <Check size={22} strokeWidth={2} aria-hidden />
+              <Check size={22} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
             </span>
             <h2 id="upload-title" className="mt-4 font-heading text-xl text-ink">Reading your pages…</h2>
             <p className="mt-2 text-[14.5px] leading-relaxed text-muted">
@@ -103,7 +103,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                 aria-label="Close"
                 className="-mr-2 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition hover:bg-sunken hover:text-ink disabled:opacity-40"
               >
-                <X size={18} strokeWidth={1.75} aria-hidden />
+                <X size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
               </button>
             </div>
 
@@ -121,7 +121,9 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                       </option>
                     ))}
                   </select>
-                  <ChevronDown size={18} strokeWidth={1.75} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-muted">
+                    <ChevronDown size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+                  </span>
                 </div>
               </div>
 
@@ -140,7 +142,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                   className="flex w-full flex-col items-center rounded-2xl border-2 border-dashed border-line-strong px-4 py-7 text-center transition hover:border-brand hover:bg-pau-50/50"
                 >
                   <span className="grid h-11 w-11 place-items-center rounded-full bg-pau-100 text-brand">
-                    <Camera size={22} strokeWidth={1.75} aria-hidden />
+                    <Camera size={22} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
                   </span>
                   <span className="mt-3 text-[15px] font-medium text-ink">Take or choose photos</span>
                   <span className="mt-0.5 text-[12.5px] text-muted">Up to {MAX_UPLOAD_PHOTOS} photos, or one PDF</span>
@@ -151,7 +153,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                     {files.map((f, i) => (
                       <li key={`${f.name}-${i}`} className="flex items-center gap-3 rounded-xl bg-card px-3 py-2">
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pau-100 text-brand">
-                          {f.type === "application/pdf" ? <FileText size={16} strokeWidth={1.75} aria-hidden /> : <ImageIcon size={16} strokeWidth={1.75} aria-hidden />}
+                          {f.type === "application/pdf" ? <FileText size={16} absoluteStrokeWidth strokeWidth={1.5} aria-hidden /> : <ImageIcon size={16} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] text-ink">{f.name}</span>
@@ -164,7 +166,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                           aria-label={`Remove ${f.name}`}
                           className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-sunken hover:text-ink"
                         >
-                          <X size={15} strokeWidth={1.75} aria-hidden />
+                          <X size={15} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
                         </button>
                       </li>
                     ))}

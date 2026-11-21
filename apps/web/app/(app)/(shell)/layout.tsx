@@ -11,7 +11,7 @@ async function Shell({ children }: { children: ReactNode }) {
   const { supabase, user } = await requireUser();
   const shell = await shellData(supabase, user);
   return (
-    <AppShell title={shell.title} courses={shell.courses} recent={shell.recent} files={shell.files} user={shell.user}>
+    <AppShell title={shell.title} courses={shell.courses} recent={shell.recent} user={shell.user}>
       {children}
     </AppShell>
   );

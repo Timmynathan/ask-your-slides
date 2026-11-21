@@ -434,7 +434,7 @@ export function ChatPanel({
             <div className="flex flex-col items-center pt-[8vh] text-center">
               <PartnerCast partner={partner} onChangePartner={onChangePartner} />
               {/* The topic name in Bitter 400, #191919 (owner, 21 Nov 2026), at a modest size. */}
-              <h2 className="mt-4 max-w-full break-words font-heading text-[26px] font-normal not-italic leading-[1.15] text-[#191919] dark:text-ink sm:text-[30px]">
+              <h2 className="mt-4 max-w-full break-words font-heading text-[22px] font-normal not-italic leading-[1.2] text-[#191919] dark:text-ink sm:text-[24px]">
                 {topic ? topic.title : course.title}
               </h2>
               <p className="pop-in mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted">
@@ -450,7 +450,7 @@ export function ChatPanel({
                   >
                     {(() => {
                       const StarterIcon = STARTER_ICONS[s.icon];
-                      return <StarterIcon size={16} strokeWidth={1.75} className="shrink-0 text-brand" aria-hidden />;
+                      return <StarterIcon size={16} absoluteStrokeWidth strokeWidth={1.5} className="shrink-0 text-brand" aria-hidden />;
                     })()}
                     {s.label}
                   </button>
@@ -583,7 +583,7 @@ export function ChatPanel({
                       aria-label="Remove photo"
                       className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-ink text-page shadow transition active:scale-90"
                     >
-                      <X size={13} strokeWidth={2.25} aria-hidden />
+                      <X size={13} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
                     </button>
                   </span>
                 ))}
@@ -601,7 +601,7 @@ export function ChatPanel({
                 title="Add a photo"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/70 transition hover:bg-black/5 hover:text-ink active:scale-90 disabled:opacity-40"
               >
-                <Plus size={20} strokeWidth={1.75} aria-hidden />
+                <Plus size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
               </button>
               <textarea
                 ref={inputRef}

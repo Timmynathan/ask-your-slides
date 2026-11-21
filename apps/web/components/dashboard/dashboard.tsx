@@ -211,10 +211,6 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
                 {label}
               </button>
             ))}
-            {/* Phones have no sidebar: Past questions sits with the tabs. */}
-            <Link href="/past-questions" className="whitespace-nowrap rounded-full px-3 py-2 text-sm text-ink transition active:scale-95">
-              Past questions
-            </Link>
           </div>
           <input
             type="search"
