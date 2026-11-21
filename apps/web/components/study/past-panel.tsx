@@ -124,8 +124,16 @@ export function PastPanel({ course, topics, topicId, paperId = null, onBack, onC
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-2 px-5 pb-3 pt-1">
         {onBack && (
-          <button type="button" onClick={onBack} className="mr-1 rounded-full px-3 py-1.5 text-[13px] text-muted transition hover:bg-sunken hover:text-ink">
-            ← Back to chat
+          // A navy pill, like the site's other main buttons (owner, 21 Nov 2026).
+          <button
+            type="button"
+            onClick={onBack}
+            className="mr-1 flex items-center gap-1.5 rounded-full bg-navy py-1.5 pl-3 pr-4 text-[13px] font-medium text-white transition hover:opacity-90 active:scale-95"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M19 12H5M11 18l-6-6 6-6" />
+            </svg>
+            Back to chat
           </button>
         )}
         {data && data.papers.length > 0 && <p className="w-full text-[12.5px] text-muted sm:ml-2 sm:w-auto">{paperSummary(data.papers)}</p>}
