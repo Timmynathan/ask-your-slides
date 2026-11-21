@@ -50,6 +50,7 @@ export const TABS = [
   { id: "overview", label: "Overview" },
   { id: "students", label: "Students" },
   { id: "answers", label: "Answers" },
+  { id: "feedback", label: "Feedback" },
   { id: "courses", label: "Courses" },
   { id: "health", label: "Health" },
 ] as const;

@@ -8,6 +8,7 @@
 //   Health: error codes, slowest and most expensive answers.
 // Read-only. Data: public.admin_overview() via the server. The tab is kept in the URL (?tab=).
 import { errorInfo, splitErrors } from "@/lib/admin/error-codes";
+import { Download, ThumbsDown, ThumbsUp } from "lucide-react";
 import { featureLabel } from "@/lib/feedback-features";
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
@@ -60,7 +61,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; funnel: { label: string; n: number }[]; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -69,7 +70,6 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
   // student (owner, 21 Nov 2026: test runs showed up as errors).
   const studentAnswers = data.recent.filter((r) => r.student);
   const withProblems = studentAnswers.filter((r) => splitErrors(r.errors).problems.length > 0).length;
-  const rated = t.thumbs_up + t.thumbs_down;
   const href = (r: Range, x: Tab) => `/admin?range=${r}${x === "overview" ? "" : `&tab=${x}`}`;
   function open(x: Tab) {
     setTab(x);
@@ -79,12 +79,12 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
 
   return (
     <div className="min-h-dvh bg-page text-ink">
-      <header className="sticky top-0 z-20 border-b border-line bg-page/90 backdrop-blur">
+      <header className="sticky top-0 z-20 bg-page/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:px-6">
           <Link href="/dashboard" aria-label="My courses">
             <Logo size={24} />
           </Link>
-          <span className="rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-ink">Admin</span>
+          <span className="text-[14px] text-muted">Admin</span>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="Period">
               {RANGES.map((r) => (
@@ -92,23 +92,23 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
                   key={r.id}
                   href={href(r.id, tab)}
                   aria-current={range === r.id ? "page" : undefined}
-                  className={`rounded-full px-3 py-1 text-[13px] transition ${range === r.id ? "bg-page font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+                  className={`rounded-full px-3 py-1 text-[13px] transition ${range === r.id ? "bg-card font-medium text-ink shadow-sm" : "text-muted hover:text-ink"}`}
                 >
                   {r.label}
                 </Link>
               ))}
             </div>
-            <Link href="/admin/payments" className="rounded-full bg-brand px-3 py-1.5 text-sm font-medium text-brand-ink transition hover:opacity-90">
+            <Link href="/admin/payments" className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-ink transition hover:bg-navy-hover">
               Payments
             </Link>
-            <Link href="/admin/promo" className="rounded-full px-3 py-1.5 text-sm font-medium text-brand ring-1 ring-line transition hover:bg-sunken">
+            <Link href="/admin/promo" className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken">
               Promo codes
             </Link>
             <button
               type="button"
               onClick={() => startRefresh(() => router.refresh())}
               disabled={refreshing}
-              className="rounded-full px-3 py-1.5 text-sm text-ink ring-1 ring-line transition hover:bg-sunken active:scale-95 disabled:opacity-50"
+              className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95 disabled:opacity-50"
             >
               {refreshing ? "Refreshing…" : "Refresh"}
             </button>
@@ -117,15 +117,16 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] space-y-14 px-4 pb-24 pt-8 sm:px-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="text-[28px] tracking-tight">Pilot dashboard</h1>
-          <p className="text-sm text-muted">
+      <main className="mx-auto max-w-[1400px] space-y-10 px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
+        <div>
+          <h1 className="text-[28px] font-normal tracking-tight text-ink sm:text-[32px]">Admin</h1>
+          <p className="mt-1 text-sm text-muted">
             {RANGES.find((r) => r.id === range)?.label} · from {when(data.from)} · updated {when(data.generated_at)} (WAT)
           </p>
         </div>
 
-        <div className="-mt-8 overflow-x-auto border-b border-line" role="tablist" aria-label="Dashboard sections">
+        {/* Tabs as pills, like the student dashboard's "All courses / Recently studied". */}
+        <div className="-mt-4 overflow-x-auto" role="tablist" aria-label="Dashboard sections">
           <div className="flex min-w-max gap-1">
             {TABS.map((x) => (
               <button
@@ -136,7 +137,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
                 aria-selected={tab === x.id}
                 aria-controls={`panel-${x.id}`}
                 onClick={() => open(x.id)}
-                className={`-mb-px border-b-2 px-4 py-2.5 text-[15px] transition ${tab === x.id ? "border-brand font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition active:scale-95 ${tab === x.id ? "bg-sunken font-medium text-ink" : "text-ink hover:bg-sunken/60"}`}
               >
                 {x.label}
                 {x.id === "health" && withProblems > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 text-xs text-red-800">{withProblems}</span>}
@@ -150,7 +151,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
 
         {/* Overview */}
         <section id="overview" className="scroll-mt-24 space-y-6">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             <Tile label="Students signed up" value={n(t.students_signed_up)} sub={`${n(t.students_onboarded)} onboarded · ${n(t.new_students)} new in period`} />
             <Tile label="Active students" value={n(t.active_students)} sub="asked a question or practised past questions, in this period" />
             <Tile
@@ -160,7 +161,6 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
             />
             <Tile label="Questions" value={n(t.questions)} sub={`${n(t.answers)} answers`} />
             <Tile label="Cost" value={usd(t.cost_usd)} sub={`${usd(t.cost_per_answer)} per answer`} />
-            <Tile label="Thumbs up" value={pct(t.thumbs_up, rated)} sub={`${n(t.thumbs_up)} up · ${n(t.thumbs_down)} down`} />
             <Tile label="Is it helping? (1–5)" value={t.helping_avg != null ? String(t.helping_avg) : "—"} sub={`${n(t.helping_n)} answers`} />
             <Tile label="Time to first word" value={secs(t.avg_ttft_ms)} sub="average" />
             <Tile label="Slowest 5% of answers" value={secs(t.p95_latency_ms)} sub="p95 full answer" />
@@ -170,8 +170,6 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
               sub={`${n(withProblems)} of the latest ${n(studentAnswers.length)} students' answers`}
               warn={studentAnswers.length > 0 && withProblems / studentAnswers.length > 0.05}
             />
-            <Tile label="Limits reached" value={n(plans.limits.reduce((s, l) => s + l.hits, 0))} sub="daily, premium, summary, quiz" />
-            <Tile label="Feedback given" value={n(rated)} sub={pct(rated, t.answers) + " of answers rated"} />
             <Tile label="Cost per student" value={usd(t.active_students ? t.cost_usd / t.active_students : 0)} sub="per active student" />
           </div>
 
@@ -201,14 +199,16 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
               <BarList rows={heardFrom} />
             </Card>
           </div>
-          <Card title="Sign-up funnel (sign-ups in this period)" className="mt-4">
-            <Funnel rows={funnel} />
-          </Card>
         </section>
 
         <Plans plans={plans} />
-        <Feedback data={data} />
-        <GeneralFeedback rows={appFeedback} />
+          </div>
+        )}
+
+        {tab === "feedback" && (
+          <div role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback" className="space-y-10">
+            <GeneralFeedback rows={appFeedback} />
+            <Feedback data={data} />
           </div>
         )}
 
@@ -339,16 +339,15 @@ export interface AppFeedbackRow {
 /** Messages from the Feedback button (owner, 20 Nov 2026), newest first. */
 function GeneralFeedback({ rows }: { rows: AppFeedbackRow[] }) {
   return (
-    <section className="mt-10">
-      <h2 className="font-heading text-[22px] text-ink">General feedback</h2>
-      <p className="mt-1 text-sm text-muted">From the Feedback button in the sidebar. Newest first; the last 50.</p>
+    <section className="space-y-4">
+      <SectionTitle title="General feedback" note="From the Feedback button in the app. Newest first; the last 50." />
       {rows.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">Nothing yet.</p>
+        <Empty>Nothing yet.</Empty>
       ) : (
-        <ul className="mt-4 divide-y divide-line overflow-hidden rounded-[22px] bg-card ring-1 ring-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card ring-1 ring-line">
           {rows.map((r) => (
             <li key={r.id} className="px-5 py-4">
-              <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-muted">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
                 <span>{new Date(r.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })}</span>
                 <span>· {r.email}</span>
                 {r.page && <span>· {r.page}</span>}
@@ -363,7 +362,7 @@ function GeneralFeedback({ rows }: { rows: AppFeedbackRow[] }) {
                   </span>
                 ))}
               </div>
-              <p className="mt-1.5 whitespace-pre-wrap text-[14.5px] text-ink">{r.message}</p>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm text-ink">{r.message}</p>
             </li>
           ))}
         </ul>
@@ -377,7 +376,7 @@ function Feedback({ data }: { data: Overview }) {
   const items = data.thumbs_down.filter((f) => !reason || (f.reason ?? "no reason") === reason);
   return (
     <section id="feedback" className="scroll-mt-24 space-y-4">
-      <SectionTitle title="Feedback" note="Every thumbs down in this period, newest first, with the question and the full answer." />
+      <SectionTitle title="Answers rated down" note="Every thumbs down on an answer in this period, newest first, with the question and the full answer." />
       <div className="grid gap-4 lg:grid-cols-3">
         <Card title="Why answers got a thumbs down">
           <BarList rows={data.reasons.map((r) => ({ label: REASON[r.reason] ?? r.reason, n: r.n }))} />
@@ -399,7 +398,7 @@ function Feedback({ data }: { data: Overview }) {
             <ul className="space-y-2">
               {items.map((f, i) => (
                 <li key={i}>
-                  <details className="group rounded-2xl bg-sunken/60 px-4 py-3 open:bg-sunken">
+                  <details className="group rounded-2xl bg-card px-4 py-3 ring-1 ring-line">
                     <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-800">{REASON[f.reason ?? "no reason"] ?? f.reason}</span>
                       <span className="min-w-0 flex-1 truncate text-[15px]">{f.question ?? "(question not logged)"}</span>
@@ -412,7 +411,7 @@ function Feedback({ data }: { data: Overview }) {
                       <p className="text-xs text-muted">
                         {f.student ?? "deleted account"} · {usd(f.cost_usd)} · {secs(f.latency_ms)}
                       </p>
-                      <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-page p-3 font-sans text-[13.5px] leading-relaxed">{readable(f.answer)}</pre>
+                      <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-sunken/50 p-3 font-sans text-[13.5px] leading-relaxed">{readable(f.answer)}</pre>
                     </div>
                   </details>
                 </li>
@@ -501,10 +500,10 @@ function Answers({ range }: { range: Range }) {
         <ul className="space-y-2">
           {items.map((r) => (
             <li key={r.id}>
-              <details className="rounded-2xl bg-sunken/60 px-4 py-3 open:bg-sunken">
+              <details className="rounded-2xl bg-card px-4 py-3 ring-1 ring-line">
                 <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="w-5 text-center" aria-label={r.rating === 1 ? "thumbs up" : r.rating === -1 ? "thumbs down" : "not rated"}>
-                    {r.rating === 1 ? "👍" : r.rating === -1 ? "👎" : "·"}
+                  <span className="grid w-5 place-items-center text-muted" aria-label={r.rating === 1 ? "thumbs up" : r.rating === -1 ? "thumbs down" : "not rated"}>
+                    {r.rating === 1 ? <ThumbsUp size={14} absoluteStrokeWidth strokeWidth={1.5} aria-hidden /> : r.rating === -1 ? <ThumbsDown size={14} absoluteStrokeWidth strokeWidth={1.5} className="text-red-700" aria-hidden /> : "·"}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[15px]">{r.question}</span>
                   {(() => {
@@ -534,7 +533,7 @@ function Answers({ range }: { range: Range }) {
                       ))}
                     </ul>
                   )}
-                  <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-page p-3 font-sans text-[13.5px] leading-relaxed">{readable(r.answer) || "(no answer text: the turn failed)"}</pre>
+                  <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-sunken/50 p-3 font-sans text-[13.5px] leading-relaxed">{readable(r.answer) || "(no answer text: the turn failed)"}</pre>
                 </div>
               </details>
             </li>
@@ -637,41 +636,16 @@ function Students({ data }: { data: Overview }) {
   );
 }
 
-const LIMIT_LABEL: Record<string, string> = {
-  daily_cap: "Daily limit",
-  premium_cap: "Premium-course limit",
-  summary: "Second summary (Free)",
-  quiz: "Quiz mode (Free)",
-  past: "Past questions (Free)",
-};
 
 /** PRD F12: what Finals is earning, who referred it, and which limits push students to the sheet. */
 function Plans({ plans: p }: { plans: PlanStats }) {
   return (
     <section id="plans" className="scroll-mt-24 space-y-4">
-      <SectionTitle title="Plans" note="Payments and limit hits in the period; active plans right now." />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <SectionTitle title="Plans" note="Payments in the period; active plans right now." />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Tile label="Finals sold" value={n(p.paid)} sub={`${n(p.pending)} waiting for approval`} />
         <Tile label="Revenue" value={`₦${n(p.revenueNaira)}`} sub="approved bank transfers" />
         <Tile label="Finals active now" value={n(p.activeFinals.manual + p.activeFinals.comp + p.activeFinals.promo)} sub={`${n(p.activeFinals.manual)} paid · ${n(p.activeFinals.promo)} promo trial · ${n(p.activeFinals.comp)} comp`} />
-        <Tile label="Students who hit a limit" value={n(Math.max(0, ...p.limits.map((l) => l.students)))} sub="most for any one limit" />
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Limits reached">
-          <Table
-            compact
-            head={["Limit", "Times", "Students"]}
-            rows={p.limits.map((l) => [LIMIT_LABEL[l.feature] ?? l.feature, n(l.hits), n(l.students)])}
-          />
-        </Card>
-        <Card title="Referral codes (all time)">
-          <Table
-            compact
-            empty="No payments yet."
-            head={["Code", "Approved", "Revenue", "Pending"]}
-            rows={p.referrals.map((r) => [r.code, n(r.paid), `₦${n(r.revenue)}`, n(r.pending)])}
-          />
-        </Card>
       </div>
     </section>
   );
@@ -681,43 +655,20 @@ function Plans({ plans: p }: { plans: PlanStats }) {
 
 function Tile({ label, value, sub, warn = false }: { label: string; value: string; sub?: string; warn?: boolean }) {
   return (
-    <div className={`rounded-[22px] p-4 ${warn ? "bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:ring-amber-400/30" : "bg-sunken/60"}`}>
+    <div className={`rounded-2xl p-4 ring-1 ${warn ? "bg-amber-50 ring-amber-200 dark:bg-amber-400/10 dark:ring-amber-400/30" : "bg-card ring-line"}`}>
       <p className="text-[13px] text-muted">{label}</p>
-      <p className="mt-1 text-[26px] font-semibold tabular-nums tracking-tight">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
+      <p className="mt-1.5 text-[26px] font-normal tabular-nums tracking-tight text-ink">{value}</p>
+      {sub && <p className="mt-1 text-xs leading-snug text-muted">{sub}</p>}
     </div>
   );
 }
 
 /** Each step's count, its share of everyone who signed up, and how many stopped at that step. */
-function Funnel({ rows }: { rows: { label: string; n: number }[] }) {
-  const total = rows[0]?.n ?? 0;
-  if (!total) return <p className="text-sm text-muted">Nothing yet.</p>;
-  return (
-    <ul className="space-y-3">
-      {rows.map((r, i) => {
-        const lost = i > 0 ? rows[i - 1].n - r.n : 0;
-        const pct = Math.round((r.n / total) * 100);
-        return (
-          <li key={r.label} className="grid grid-cols-[minmax(0,15rem)_1fr_auto] items-center gap-3 text-sm">
-            <span className="truncate text-ink" title={r.label}>{r.label}</span>
-            <span className="h-2.5 overflow-hidden rounded-full bg-line">
-              <span className="block h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
-            </span>
-            <span className="w-40 text-right tabular-nums text-muted">
-              <span className="font-medium text-ink">{r.n}</span> · {pct}%{lost > 0 && <span className="text-red-700 dark:text-red-400"> · {lost} stopped</span>}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-[22px] bg-sunken/60 p-5 ${className}`}>
-      <h3 className="mb-4 text-[15px] font-medium">{title}</h3>
+    <div className={`rounded-2xl bg-card p-5 ring-1 ring-line ${className}`}>
+      <h3 className="mb-4 text-sm font-medium text-ink">{title}</h3>
       {children}
     </div>
   );
@@ -727,7 +678,7 @@ function SectionTitle({ title, note, action }: { title: string; note?: string; a
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
       <div>
-        <h2 className="text-[22px] tracking-tight">{title}</h2>
+        <h2 className="text-[20px] font-normal tracking-tight text-ink">{title}</h2>
         {note && <p className="mt-0.5 text-sm text-muted">{note}</p>}
       </div>
       {action}
@@ -738,7 +689,7 @@ function SectionTitle({ title, note, action }: { title: string; note?: string; a
 function Table({ head, rows, compact = false, empty = "Nothing yet." }: { head: string[]; rows: React.ReactNode[][]; compact?: boolean; empty?: string }) {
   if (rows.length === 0) return <Empty>{empty}</Empty>;
   return (
-    <div className={`overflow-x-auto ${compact ? "" : "rounded-[22px] bg-sunken/60"}`}>
+    <div className={`overflow-x-auto ${compact ? "" : "rounded-2xl bg-card ring-1 ring-line"}`}>
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="text-xs text-muted">
@@ -788,12 +739,13 @@ function Chip({ on, onClick, children }: { on: boolean; onClick(): void; childre
 
 function DownloadButton({ onClick }: { onClick(): void }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-full px-3 py-1.5 text-sm text-ink ring-1 ring-line transition hover:bg-sunken active:scale-95">
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95">
+      <Download size={15} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
       Download CSV
     </button>
   );
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-2xl bg-sunken/60 px-4 py-6 text-center text-sm text-muted">{children}</p>;
+  return <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted ring-1 ring-line">{children}</p>;
 }
