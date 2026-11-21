@@ -41,9 +41,6 @@ async function Loaded() {
         <Link href="/dashboard" aria-label="My courses" className="md:invisible">
           <Logo />
         </Link>
-        <Link href="/dashboard" className="rounded-full px-4 py-2 text-sm text-muted transition hover:bg-sunken hover:text-ink">
-          Back to my courses
-        </Link>
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-5">
