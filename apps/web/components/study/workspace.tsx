@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { ShellNavMini, useShellCourse } from "@/components/nav/app-shell";
 import type { ChatItem, WorkspaceData } from "@/lib/study/types";
-import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
+import { courseName } from "@/lib/study/course-code";
 import { courseParams } from "@/lib/study/course-link";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { ChatPanel } from "./chat-panel";
@@ -146,7 +146,6 @@ export function Workspace(data: WorkspaceData) {
 
   const remaining = Math.max(0, data.usage.cap - used);
   const onRemaining = useCallback((r: number) => setUsed(data.usage.cap - r), [data.usage.cap]);
-  const topicPast = PAST_QUESTIONS_LIVE && topic ? data.past.byTopic[topic.id] ?? 0 : 0;
   const courseChats = useMemo(() => chats.filter((c) => c.course_id === courseId), [chats, courseId]);
   const p = PARTNERS[partner];
 
@@ -179,47 +178,14 @@ export function Workspace(data: WorkspaceData) {
     <div className="flex h-dvh w-full overflow-hidden bg-page text-ink">
       {shell?.slot && createPortal(sidebar, shell.slot)}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar (owner, 21 Nov 2026): the course name centred, and on the right only what this page
-            needs (past questions, Sources below xl, the study partner). Dashboard, account and the rest
-            are in the sidebar. Phones: the name gets its own centred line below. */}
-        <header className="flex shrink-0 flex-wrap items-center gap-x-1 border-b border-line px-3 pt-1 sm:grid sm:h-16 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:border-0 sm:px-5 sm:pt-0">
-          <div className="flex shrink-0 items-center gap-1 sm:justify-self-start">
-            <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden">
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            </IconButton>
-          </div>
-          {/* The course: name over a quiet line of code and tags, centred. Phones: its own row under the buttons. */}
-          <div className="order-last min-w-0 basis-full pb-2.5 pt-0.5 text-center sm:order-none sm:max-w-[min(48vw,620px)] sm:basis-auto sm:p-0">
-            <h1 className="truncate text-[16px] font-medium leading-snug text-ink sm:text-[17px]">{course.title}</h1>
-            {(shownCode(course) || course.elective || data.plan.premiumLimited || countMain(data.materials) < LIMITED_MAIN_MATERIALS) && (
-              <div className="mt-0.5 flex items-center justify-center gap-1.5 text-[12px] leading-5 text-muted">
-                {shownCode(course) && <span>{shownCode(course)}</span>}
-                {course.elective && <span className="rounded-full bg-pau-100 px-2 text-[11.5px] font-medium text-brand">Elective</span>}
-                {countMain(data.materials) < LIMITED_MAIN_MATERIALS && (
-                  <span
-                    title="Only a few lecture files are up for this course so far. Answers explain more from general knowledge, clearly marked."
-                    className="hidden rounded-full bg-amber-50 px-2 text-[11.5px] font-medium text-amber-800 sm:inline"
-                  >
-                    Limited materials
-                  </span>
-                )}
-                {data.plan.premiumLimited && <PremiumTag left={remaining} />}
-              </div>
-            )}
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-1 sm:ml-0 sm:justify-self-end sm:gap-2">
-            {!past && topicPast > 0 && (
-              <button
-                type="button"
-                onClick={() => setPast("topic")}
-                className="shrink-0 rounded-full bg-pau-100 px-3 py-1 text-[12.5px] text-brand transition hover:opacity-80 active:scale-95"
-                title={`Practise past exam questions on ${topic!.title}`}
-              >
-                {topicPast} past question{topicPast === 1 ? "" : "s"}
-              </button>
-            )}
-            {/* Phones: the Topics panel is a drawer, so the past questions get a bright button here too. */}
+        {/* Top bar (owner, 21 Nov 2026): no course name, tags or counts (the sidebar names the course);
+            only the menu on phones, past questions on phones, Sources below xl and the study partner. */}
+        <header className="flex h-14 shrink-0 items-center gap-1 px-3 sm:h-16 sm:gap-2 sm:px-5">
+          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </IconButton>
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+            {/* Phones: the Topics panel is a drawer, so the past questions get a bright button here. */}
             {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
               <button
                 type="button"
@@ -227,7 +193,7 @@ export function Workspace(data: WorkspaceData) {
                 className="cta-shine shrink-0 rounded-full bg-navy px-3.5 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90 active:scale-95 md:hidden"
                 title={`Practise ${data.past.total} past questions in ${courseName(course)}`}
               >
-                {topicPast > 0 ? "All" : "Past questions"}
+                Past questions
               </button>
             )}
             <IconButton label="Sources" onClick={openSources} tour="sources" className="xl:hidden">
@@ -372,23 +338,5 @@ function PastComingSoon() {
         <p className="mx-auto mt-3 max-w-sm text-[15px] text-muted">Past exam questions to practise, marked against the real paper. Ready before your exams.</p>
       </div>
     </div>
-  );
-}
-
-/** Free + premium course (PRD F12): the badge, with today's free questions on wider screens
- *  (phones see the count under the message box). */
-function PremiumTag({ left }: { left: number }) {
-  return (
-    <>
-      <span
-        title="Premium courses are the heaviest courses in your programme. Free gives a few questions a day; Finals has no limit."
-        className="rounded-full bg-pau-100 px-2 text-[11.5px] font-semibold text-pau-800 dark:text-pau-400"
-      >
-        Premium
-      </span>
-      <span>
-        · {left} free question{left === 1 ? "" : "s"} left today
-      </span>
-    </>
   );
 }
