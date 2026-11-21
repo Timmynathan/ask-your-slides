@@ -145,6 +145,11 @@ export function preSearchQuery(turn: Pick<ChatTurn, "userMessage" | "history">):
 
 const SUMMARY_WORDS = /\b(summar|overview|recap|outline of|go through|walk me through)/i;
 
+/** A maths question: solving, expanding, examples, or a question with numbers or symbols in it. */
+export function asksForWorking(message: string): boolean {
+  return /\b(solve|calculat|comput|find|expand|example|work (it )?out|evaluat|differentiat|integrat|simplif|prove|coefficient|polar form|show me how|step by step)\w*/i.test(message) || /\d\s*[-+×x*/^=]\s*\d|[=^√∫]/.test(message);
+}
+
 /** "Explain every slide", "slide by slide", "all the slides in detail", "explain the whole deck". */
 export function asksForWalkthrough(message: string): boolean {
   return (
@@ -491,6 +496,10 @@ export async function runChatTurn(turn: ChatTurn) {
     preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
   }
   const longAnswer = walkthrough || continuing;
+  // Maths in a calculator course (owner's answer review, 21 Nov 2026): with thinking off, Haiku
+  // rushed worked examples (a wrong binomial coefficient, a slide's wrong angle repeated) and
+  // skipped the calculator. A short think at low effort; thinking tokens count against the cap.
+  const thinkMaths = !!turn.calculationHeavy && !longAnswer && asksForWorking(turn.userMessage);
   // The previous answer asked a question and this is a short reply: it is the student's answer.
   const answering = !!previous && !continuing && !walkthrough && endsWithQuestion(previous) && turn.userMessage.trim().length <= 160;
   const answerNote = picked
@@ -529,11 +538,15 @@ export async function runChatTurn(turn: ChatTurn) {
     stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     prepareStep: () =>
-      longAnswer ? { maxOutputTokens: MAX_OUTPUT_TOKENS_WALKTHROUGH } : ctx.readMaterial || summaryAsked ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY } : {},
+      longAnswer || thinkMaths
+        ? { maxOutputTokens: longAnswer ? MAX_OUTPUT_TOKENS_WALKTHROUGH : MAX_OUTPUT_TOKENS_SUMMARY + 8000 }
+        : ctx.readMaterial || summaryAsked
+          ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY }
+          : {},
     providerOptions: {
       // Grounded answers from retrieved slides: thinking adds latency before the first word
       // (PRD target: p95 time to first token <= 3 s). Allowed on Haiku 5.5 at effort <= high.
-      anthropic: { thinking: { type: "disabled" } },
+      anthropic: thinkMaths ? { thinking: { type: "adaptive" }, effort: "low" } : { thinking: { type: "disabled" } },
     },
     abortSignal: turn.abortSignal,
     experimental_transform: citationTransform,

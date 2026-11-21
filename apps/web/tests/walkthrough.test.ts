@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForWalkthrough, asksForWorking, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -113,4 +113,9 @@ describe("instructions contain no hidden control characters", async () => {
   it.each([["core", CORE_INSTRUCTIONS], ["calculation", CALCULATION_RULES], ["reminder", TURN_REMINDER]])("%s", (_, text) => {
     expect(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text)).toBe(false);
   });
+});
+
+describe("asksForWorking (maths turns think first in calculator courses)", () => {
+  it.each(["Solve more examples on complex numbers and dive into Binomial theorem after", "Show more examples on binomial theorem", "expand (1+3x)^3/2", "what is 3 + 4i in polar form"])("yes: %s", (m) => expect(asksForWorking(m)).toBe(true));
+  it.each(["What is a balance sheet?", "explain the history of the press in Nigeria"])("no: %s", (m) => expect(asksForWorking(m)).toBe(false));
 });
