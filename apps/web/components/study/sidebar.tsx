@@ -36,7 +36,7 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
       )}
 
       <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4">
-        <h2 className="text-[13px] text-white/60">Topics</h2>
+        <h2 className="text-[13px] text-white/60">Lectures</h2>
         <button
           onClick={() => onOpenScope(topicId)}
           aria-label="New chat"

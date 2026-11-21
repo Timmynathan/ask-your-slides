@@ -159,6 +159,12 @@ export function Workspace(data: WorkspaceData) {
   // is open and puts the topics into its panel (owner, 21 Nov 2026: no blank flash from the dashboard).
   const shell = useShellCourse();
   const setShellCourse = shell?.setCourse;
+  // A slide open beside the chat: on smaller laptops the panel tucks away until it closes.
+  const setShellTucked = shell?.setTucked;
+  useEffect(() => {
+    setShellTucked?.(!!preview);
+    return () => setShellTucked?.(false);
+  }, [setShellTucked, preview]);
   const shellTitle = courseName(course);
   useEffect(() => {
     setShellCourse?.({ id: courseId, title: shellTitle });

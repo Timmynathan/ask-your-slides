@@ -69,7 +69,12 @@ export function ShellNavMini({ onNavigate }: { onNavigate?(): void }) {
 /** Inside a course: the course page tells the shared sidebar which course is open and fills the
  *  panel's lower part (its topics) through a portal into `slot`. The sidebar itself stays mounted, so
  *  going from the dashboard into a course never blanks the screen. */
-const ShellCourseCtx = createContext<{ setCourse(c: { id: string; title: string } | null): void; slot: HTMLElement | null } | null>(null);
+const ShellCourseCtx = createContext<{
+  setCourse(c: { id: string; title: string } | null): void;
+  slot: HTMLElement | null;
+  /** A slide is open beside the chat: on smaller laptops the panel tucks away until it closes. */
+  setTucked(tucked: boolean): void;
+} | null>(null);
 export function useShellCourse() {
   return useContext(ShellCourseCtx);
 }
@@ -208,7 +213,26 @@ export function AppShell({
   const [uploading, setUploading] = useState(false);
   const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
-  const courseCtx = useMemo(() => ({ setCourse, slot }), [slot]);
+  // Smaller laptops: panel + chat + an open slide leave the chat too narrow, so the panel tucks away
+  // (still a hover away) while a slide is open, and comes back when it closes.
+  const [tucked, setTuckedState] = useState(false);
+  const [untuck, setUntuck] = useState(false); // the student opened it anyway
+  const setTucked = useCallback((v: boolean) => {
+    setTuckedState(v);
+    if (!v) setUntuck(false);
+  }, []);
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 89.99rem)"); // below 1440 px
+    const sync = () => setNarrow(mq.matches);
+    const t = setTimeout(sync, 0);
+    mq.addEventListener("change", sync);
+    return () => {
+      clearTimeout(t);
+      mq.removeEventListener("change", sync);
+    };
+  }, []);
+  const courseCtx = useMemo(() => ({ setCourse, slot, setTucked }), [slot, setTucked]);
   const inCourse = !!courseMenu || !!openCourse;
   const hasPanel = inCourse && !railOnly;
   const panelTitle = courseMenu?.title ?? openCourse?.title ?? "";
@@ -250,33 +274,46 @@ export function AppShell({
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ x: number; w: number } | null>(null);
 
-  // Remembered after hydration, so server and browser first render the same (open) layout.
+  // Only the width is remembered (owner, 21 Nov 2026): the panel is the course's table of contents,
+  // so it opens every time a course opens; closing it lasts until the student leaves that course.
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(KEY) ?? "null") as { open?: boolean; width?: number } | null;
-      if (saved) {
-        const id = setTimeout(() => {
-          if (typeof saved.width === "number") setWidth(Math.min(MAX_W, Math.max(MIN_W, saved.width)));
-          if (saved.open === false) setPinned(false);
-        }, 0);
+      const saved = JSON.parse(localStorage.getItem(KEY) ?? "null") as { width?: number } | null;
+      if (typeof saved?.width === "number") {
+        const w = Math.min(MAX_W, Math.max(MIN_W, saved.width));
+        const id = setTimeout(() => setWidth(w), 0);
         return () => clearTimeout(id);
       }
     } catch {}
   }, []);
-  const remember = useCallback((next: { open: boolean; width: number }) => {
+  const remember = useCallback((next: { width: number }) => {
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
     } catch {}
   }, []);
+  const courseKey = courseMenu ? "menu" : (openCourse?.id ?? null);
+  useEffect(() => {
+    if (!courseKey) return;
+    const id = setTimeout(() => {
+      setPinned(true);
+      setPeek(false);
+    }, 0);
+    return () => clearTimeout(id);
+  }, [courseKey]);
+  const autoTucked = tucked && narrow && !untuck;
+  const open = pinned && !autoTucked;
   const togglePin = () => {
-    const next = !pinned;
-    setPinned(next);
     setPeek(false);
-    remember({ open: next, width });
+    if (open) {
+      setPinned(false);
+    } else {
+      setPinned(true);
+      if (autoTucked) setUntuck(true);
+    }
   };
 
   function onDragStart(e: React.PointerEvent<HTMLDivElement>) {
-    if (!pinned) return;
+    if (!open) return;
     start.current = { x: e.clientX, w: width };
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
@@ -292,19 +329,19 @@ export function AppShell({
     if (width < CLOSE_BELOW) {
       setPinned(false);
       setWidth(DEFAULT_W);
-      remember({ open: false, width: DEFAULT_W });
+      remember({ width: DEFAULT_W });
     } else {
       const w = Math.max(MIN_W, width);
       setWidth(w);
-      remember({ open: true, width: w });
+      remember({ width: w });
     }
   }
 
-  const shown = hasPanel && (pinned || peek);
+  const shown = hasPanel && (open || peek);
   const panelW = Math.max(MIN_W, width);
   const rowCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] text-white/75 transition hover:bg-white/8 hover:text-white";
   return (
-    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (hasPanel ? (pinned ? panelW : 52) : 0)}px` }}>
+    <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (hasPanel ? (open ? panelW : 52) : 0)}px` }}>
       {/* Leaving the whole sidebar (rail and panel) ends a hover peek. */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main" onMouseLeave={() => setPeek(false)}>
         {/* Rail: a 64 px slot; the rail itself sits over the page and the course panel, and opens
@@ -335,10 +372,10 @@ export function AppShell({
           </div>
         </div>
 
-        {/* The course panel: beside the page when pinned, over it while peeking */}
+        {/* The course panel: beside the page when open, over it while peeking */}
         {shown && (
           <div
-            className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${pinned ? "" : "slide-in-left shadow-2xl"}`}
+            className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${open ? "" : "slide-in-left shadow-2xl"}`}
             style={{ width: panelW }}
           >
             <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={panelTitle}>
@@ -360,7 +397,7 @@ export function AppShell({
               <div ref={setSlot} className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10" />
             )}
             {/* Drag the right edge to resize; far enough left closes the panel. */}
-            {pinned && (
+            {open && (
               <div
                 role="separator"
                 aria-orientation="vertical"
@@ -377,18 +414,18 @@ export function AppShell({
         {/* The panel's button, beside its title: always here in a course, open or closed. Hover
             peeks while closed; click keeps the panel open, or closes it. */}
         {hasPanel && (
-          <div className="group absolute top-[18px] z-50" style={{ left: shown ? RAIL + panelW - 46 : RAIL + 10 }} onMouseEnter={() => !pinned && setPeek(true)}>
+          <div className="group absolute top-[18px] z-50" style={{ left: shown ? RAIL + panelW - 46 : RAIL + 10 }} onMouseEnter={() => !open && setPeek(true)}>
             <button
               type="button"
               onClick={togglePin}
-              aria-label={pinned ? "Close sidebar" : "Keep sidebar open"}
-              aria-pressed={pinned}
+              aria-label={open ? "Close sidebar" : "Keep sidebar open"}
+              aria-pressed={open}
               className={`grid h-9 w-9 place-items-center rounded-lg transition active:scale-90 ${shown ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-ink hover:bg-sunken"}`}
             >
               <PanelLeft size={19} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
             </button>
             <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg ring-1 ring-white/15 transition-opacity delay-200 group-hover:opacity-100">
-              {pinned ? "Close sidebar" : "Keep sidebar open"}
+              {open ? "Close sidebar" : "Keep sidebar open"}
             </span>
           </div>
         )}
