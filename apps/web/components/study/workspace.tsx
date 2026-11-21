@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { ShellNavMini, useShellCourse } from "@/components/nav/app-shell";
@@ -140,13 +139,10 @@ export function Workspace(data: WorkspaceData) {
   const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
   const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
 
-  const router = useRouter();
   const onChatCreated = useCallback((chat: ChatItem) => {
     setChats((prev) => [chat, ...prev]);
     setChatId(chat.id);
-    // Pages kept for 30 s (next.config staleTimes) would miss this chat: drop them.
-    router.refresh();
-  }, [router]);
+  }, []);
 
   const onChatActive = useCallback((id: string) => {
     setChats((prev) => {
