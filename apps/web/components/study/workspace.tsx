@@ -251,6 +251,7 @@ export function Workspace(data: WorkspaceData) {
               topic={topic}
               chatId={chatId}
               partner={partner}
+              onChangePartner={() => setPickingPartner(true)}
               studentName={studentName}
               remaining={remaining}
               onRemaining={onRemaining}

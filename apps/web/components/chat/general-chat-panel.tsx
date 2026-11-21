@@ -11,10 +11,11 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Mascot } from "@/components/mascot/mascot";
+import { PartnerCast } from "./partner-cast";
 import { Answer } from "@/components/study/answer";
-import { PARTNER_IDS, PARTNERS, type PartnerId } from "@/lib/partners";
+import { PARTNERS, type PartnerId } from "@/lib/partners";
 import type { CitationInfo } from "@/lib/study/format";
 
 type Meta = { citations?: CitationInfo[]; fallback?: { topic: string; used: boolean } | null; remaining?: number };
@@ -79,7 +80,6 @@ export function GeneralChatPanel({
   const p = PARTNERS[partner];
   const hello = `Hi${firstName ? ` ${firstName}` : ""}, I'm ${p.name}.`;
   const greeting = useGreeting(hello, "How can I help?");
-  const others = PARTNER_IDS.filter((id) => id !== partner);
 
   // The course this chat was routed to (from the first answer's response headers).
   const [picked, setPicked] = useState<Picked | null>(null);
@@ -88,7 +88,10 @@ export function GeneralChatPanel({
   const box = useRef<HTMLTextAreaElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
 
-  const transport = useMemo(
+  // Made once; its callbacks read the refs when a message is sent, not while drawing, so the
+  // React Compiler's ref warning is a false alarm here.
+  /* eslint-disable react-hooks/refs */
+  const [transport] = useState(
     () =>
       new DefaultChatTransport<Msg>({
         api: "/api/chat/general",
@@ -120,8 +123,8 @@ export function GeneralChatPanel({
           return res;
         },
       }),
-    [],
-  );
+  );  /* eslint-enable react-hooks/refs */
+
   const { messages, setMessages, sendMessage, status, error, clearError, stop } = useChat<Msg>({
     transport,
     generateId: () => crypto.randomUUID(),
@@ -169,42 +172,7 @@ export function GeneralChatPanel({
         <div className={page ? "mx-auto w-full max-w-2xl" : ""}>
         {messages.length === 0 ? (
           <>
-            {/* The partner, with the others peeking out from behind */}
-            <div className="relative mx-auto h-[112px] w-[150px]">
-              {others.map((id, i) => {
-                // Final spot, and the offset back to the centre: each one waits hidden behind the chosen
-                // partner, and all slide out together while the pointer is over the chat (owner, 20 Nov 2026).
-                const spot = [
-                  { left: 8, top: 54, size: 38 },
-                  { left: 104, top: 52, size: 38 },
-                  { left: 92, top: 0, size: 34 },
-                ][i];
-                const dx = 75 - (spot.left + spot.size / 2);
-                const dy = 56 - (spot.top + spot.size / 2);
-                return (
-                  <span
-                    key={id}
-                    className="absolute z-0 [transform:translate(var(--dx),var(--dy))_scale(0.5)] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform group-focus-within/chat:[transform:none] group-hover/chat:[transform:none] motion-reduce:transition-none"
-                    style={{ left: spot.left, top: spot.top, ["--dx" as string]: `${dx}px`, ["--dy" as string]: `${dy}px` }}
-                  >
-                    <Mascot partner={id} size={spot.size} animated={false} />
-                  </span>
-                );
-              })}
-              <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
-                <Mascot partner={partner} size={96} mood="happy" animated={false} />
-              </span>
-            </div>
-            <div className="mt-2 flex justify-center">
-              <button
-                type="button"
-                onClick={onChangePartner}
-                // Shown with the other partners, while the pointer is over the chat.
-                className="translate-y-1 rounded-full bg-sunken px-3 py-1 text-[12.5px] text-muted opacity-0 transition-[opacity,transform,color] duration-300 ease-out hover:text-ink focus:translate-y-0 focus:opacity-100 active:scale-95 group-hover/chat:translate-y-0 group-hover/chat:opacity-100"
-              >
-                Change character
-              </button>
-            </div>
+            <PartnerCast partner={partner} onChangePartner={onChangePartner} />
             <h2 className="mt-6 min-h-[1.4em] text-center font-heading text-[20px] font-normal text-ink" aria-label="How can I help?">
               {greeting}
               <span className="ml-0.5 inline-block h-[0.9em] w-[2px] translate-y-[2px] animate-pulse bg-ink/70 align-baseline" aria-hidden />

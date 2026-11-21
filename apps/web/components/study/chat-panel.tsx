@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CitationInfo } from "@/lib/study/format";
 import type { ChatItem, CourseItem, TopicItem } from "@/lib/study/types";
 import { Mascot } from "@/components/mascot/mascot";
+import { PartnerCast } from "@/components/chat/partner-cast";
 import { Spinner } from "@/components/ui/spinner";
 import { fill, PARTNERS, pick, type PartnerId } from "@/lib/partners";
 import { Answer } from "./answer";
@@ -32,6 +33,8 @@ interface Props {
   topic: TopicItem | null;
   chatId: string | null;
   partner: PartnerId;
+  /** "Change character" under the partner: opens the study-partner picker. */
+  onChangePartner(): void;
   studentName: string | null;
   remaining: number;
   /** The server's count after each answer, so the allowance survives switching chats. */
@@ -86,6 +89,7 @@ export function ChatPanel({
   topic,
   chatId,
   partner,
+  onChangePartner,
   studentName,
   remaining,
   onRemaining,
@@ -367,7 +371,7 @@ export function ChatPanel({
       ];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="group/chat flex min-h-0 flex-1 flex-col">
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} onScroll={onScroll} onWheel={stopFollowing} onTouchMove={() => { following.current = false; }} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl px-4 py-6 lg:px-8">
@@ -381,9 +385,9 @@ export function ChatPanel({
           )}
 
           {!loadingHistory && messages.length === 0 && (
-            <div className="flex flex-col items-center pt-[10vh] text-center">
-              <Mascot partner={partner} size={76} mood="happy" />
-              <h2 className="mt-5 text-[28px] font-normal tracking-tight text-ink">{topic ? topic.title : course.title}</h2>
+            <div className="flex flex-col items-center pt-[8vh] text-center">
+              <PartnerCast partner={partner} onChangePartner={onChangePartner} />
+              <h2 className="mt-4 text-[28px] font-normal tracking-tight text-ink">{topic ? topic.title : course.title}</h2>
               <p className="pop-in mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted">
                 {fill(pick(p.greetings, `${course.id}-${topic?.id ?? ""}`), studentName)}
               </p>
