@@ -55,7 +55,7 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
                 <button
                   onClick={() => onOpenChat(ch)}
                   aria-current={ch.id === chatId ? "true" : undefined}
-                  className={`w-full truncate rounded-xl px-3 py-1.5 text-left text-[13.5px] ${ch.id === chatId ? "text-white" : "text-white/60 hover:text-white"}`}
+                  className={`w-full truncate rounded-xl px-3 py-1.5 text-left text-[12px] ${ch.id === chatId ? "text-white" : "text-white/60 hover:text-white"}`}
                   title={ch.title}
                 >
                   <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${ch.id === chatId ? "bg-[#5ea3ed]" : "bg-white/30"}`} aria-hidden />
