@@ -213,13 +213,6 @@ export default async function Landing() {
                 Get started free
               </Link>
             </div>
-            <div className="flex -space-x-4">
-              {PARTNER_IDS.map((id) => (
-                <span key={id} className="rounded-full ring-4 ring-pau-900">
-                  <Mascot partner={id} size={84} />
-                </span>
-              ))}
-            </div>
           </div>
         </section>
       </main>
