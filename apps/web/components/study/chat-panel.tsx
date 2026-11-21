@@ -89,6 +89,30 @@ function errorText(e: Error | undefined): string | null {
   }
 }
 
+/** Line icons for the starter buttons (24 grid, drawn like the rest of the app). */
+const STARTER_ICONS = {
+  ask: (
+    <>
+      <path d="M5 6.5h14v9H10l-4 3.5v-3.5H5z" />
+      <path d="M10.3 9.6a1.8 1.8 0 1 1 2.6 1.6c-.5.3-.9.6-.9 1.2M12 14.2v.1" />
+    </>
+  ),
+  overview: <path d="M6 4.5h10.5a1.5 1.5 0 0 1 1.5 1.5v13.5H7.5A1.5 1.5 0 0 1 6 18V4.5zM6 18a1.5 1.5 0 0 1 1.5-1.5H18M9.5 8.5h5M9.5 11.5h5" />,
+  quiz: (
+    <>
+      <path d="M9 18h6M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.9V16h5v-.2c0-.8.4-1.5 1-1.9A6 6 0 0 0 12 3z" />
+    </>
+  ),
+  explain: (
+    <>
+      <path d="M3 9l9-4.5L21 9l-9 4.5L3 9z" />
+      <path d="M7 11v4.5c1.4 1.2 3.1 1.8 5 1.8s3.6-.6 5-1.8V11M21 9v5" />
+    </>
+  ),
+  summary: <path d="M7 3.5h7l4 4V20.5H7zM14 3.5v4h4M9.5 12h5M9.5 15.5h5" />,
+};
+
 export function ChatPanel({
   course,
   topic,
@@ -361,28 +385,17 @@ export function ChatPanel({
     (status === "streaming" &&
       (last?.role !== "assistant" || !textOf(last).trim()));
 
-  const starters = topic
+  // Each starter has a line icon (owner, 21 Nov 2026).
+  const starters: { label: string; send: string | null; icon: keyof typeof STARTER_ICONS }[] = topic
     ? [
-        {
-          label: "Explain like I missed class",
-          send: `Explain "${topic.title}" like I missed the class.`,
-        },
-        {
-          label: "Summarize this topic",
-          send: `Summarize the topic "${topic.title}".`,
-        },
-        {
-          label: "Quiz me on this topic",
-          send: `Quiz me on "${topic.title}".`,
-        },
+        { label: "Explain like I missed class", send: `Explain "${topic.title}" like I missed the class.`, icon: "explain" },
+        { label: "Summarize this topic", send: `Summarize the topic "${topic.title}".`, icon: "summary" },
+        { label: "Quiz me on this topic", send: `Quiz me on "${topic.title}".`, icon: "quiz" },
       ]
     : [
-        { label: "Ask a question", send: null },
-        {
-          label: "Course overview",
-          send: "Give me an overview of the whole course.",
-        },
-        { label: "Quiz me", send: "Quiz me on this course." },
+        { label: "Ask a question", send: null, icon: "ask" },
+        { label: "Course overview", send: "Give me an overview of the whole course.", icon: "overview" },
+        { label: "Quiz me", send: "Quiz me on this course.", icon: "quiz" },
       ];
 
   return (
@@ -412,8 +425,11 @@ export function ChatPanel({
                     key={s.label}
                     onClick={() => (s.send ? submit(s.send) : inputRef.current?.focus())}
                     disabled={busy}
-                    className="rounded-full bg-sunken/70 px-4 py-2 text-sm text-ink transition hover:bg-sunken active:scale-95 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-full bg-sunken/70 py-2 pl-3 pr-4 text-sm text-ink transition hover:bg-sunken active:scale-95 disabled:opacity-50"
                   >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand" aria-hidden>
+                      {STARTER_ICONS[s.icon]}
+                    </svg>
                     {s.label}
                   </button>
                 ))}
