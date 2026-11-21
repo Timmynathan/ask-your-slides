@@ -30,6 +30,22 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   WhatsApp; Finals is granted ONLY by an admin approval (/admin/payments); no emails: the student sees a "You're on Finals" pop-up. Never grant
   automatically.
 - Launch to final-year students Mon 16 Nov 2026; price goes up 22 Nov 23:59; exams from 5 Dec 2026.
+- App shell (20–21 Nov 2026): one sidebar (components/nav/app-shell.tsx) in the shared layout app/(app)/(shell)/
+  for the dashboard, Chat, Past questions, pricing, profile, settings and the course page (the course page
+  fills the panel with its topics through a portal, so the sidebar never remounts). General Chat
+  (/api/chat/general) picks the best-matching course and forwards to /api/chat. Uploads (photos/PDF of a
+  student's own test or notes, read by Claude into user_upload_chunks, searched as your_notes). Feedback
+  dialog -> app_feedback. Pricing is one table (components/plans/plan-table.tsx).
+- Past-question extraction + answers ran 19–20 Nov: $3.74 of the $8 cap; 7,184 questions answered. 184
+  flagged papers wait for Sonnet re-reads (owner, after topping up).
+- Answer quality (21 Nov 2026): all 132 real answers were reviewed against their slides. Fixed: whole-deck
+  "explain every slide" in one answer (32K tokens, routes allow 300 s), "keep going" resumes after the last
+  cited slide, follow-ups re-read the previous answer's slides, "5"/"b" resolved to the list item, quiz
+  replies marked, no thin-slides opener, no search talk or apology openings (also trimmed on the stream).
+  Checks: `npm run check:walkthrough` and `npm run check:replay` (live site, ~3 US cents; cases in
+  data/evals/). Still to do: phase B (citations that point at the wrong slide in big overviews; check
+  claim vs slide on the server) and phase C (maths: calculate tool for MTH courses, LaTeX, flag slide errors
+  such as MTH101 345° for −3+3i; CAMA s.96 ratification on the Company Law slides needs the owner's check).
 
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.
