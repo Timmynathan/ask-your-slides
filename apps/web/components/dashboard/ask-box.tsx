@@ -97,7 +97,7 @@ export function AskBox() {
           )}
         </button>
       </form>
-      <p className="mt-2 pl-5 text-[13px] text-muted">{busy ? "Finding the right course…" : "Opens in the course it belongs to, with your slides."}</p>
+      {busy && <p className="mt-2 pl-5 text-[13px] text-muted">Finding the right course…</p>}
       {error && <p role="alert" className="mt-2 pl-5 text-[13.5px] text-red-700">{error}</p>}
       {choices && (
         <div className="pop-in mt-3 rounded-2xl bg-sunken/70 p-4">
