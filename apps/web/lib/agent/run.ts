@@ -2,7 +2,7 @@ import "server-only";
 import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
-import { CORE_INSTRUCTIONS, chatContext, partnerContext } from "./prompt";
+import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from "./prompt";
 import { buildTools, getMaterialPages, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { parseSlideKey } from "@/lib/study/course-code";
@@ -182,6 +182,15 @@ export function citedRanges(content: string, budget = 40): { material: string; f
   return out;
 }
 
+const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
+
+/** Drops a closing "…let me pull the slides too." from text written just before a tool call. */
+export function trimTrailingNarration(text: string): { text: string; dropped: string | null } {
+  const m = text.match(NARRATION_END);
+  if (!m) return { text, dropped: null };
+  return { text: text.slice(0, m.index! + m[1].length).replace(/\s+$/, ""), dropped: m[2].trim() };
+}
+
 /** The text of the latest assistant answer in the history. */
 function lastAnswer(history: ModelMessage[]): string {
   for (let i = history.length - 1; i >= 0; i--) {
@@ -263,10 +272,45 @@ export async function runChatTurn(turn: ChatTurn) {
     type Held = { start: TextStreamPart<ToolSet>; raw: string; end?: TextStreamPart<ToolSet> };
     const held = new Map<string, Held>();
     type Ctrl = TransformStreamDefaultController<TextStreamPart<ToolSet>>;
+    // Trailing narration: a block that is clearly an answer can still end with "…let me pull the
+    // slides too." just before a tool call (owner's answer review, 21 Nov 2026). The last TAIL
+    // characters of each streaming block wait until we know what follows: a tool call drops a
+    // closing narration sentence; anything else sends them on unchanged.
+    const TAIL = 200;
+    type Tail = { text: string; end?: TextStreamPart<ToolSet> };
+    const tails = new Map<string, Tail>();
+    const toTail = (controller: Ctrl, id: string, text: string) => {
+      if (!text) return;
+      const t = tails.get(id) ?? { text: "" };
+      t.text += text;
+      tails.set(id, t);
+      if (t.text.length > TAIL) {
+        emit(controller, id, t.text.slice(0, -TAIL));
+        t.text = t.text.slice(-TAIL);
+      }
+    };
+    const flushTail = (controller: Ctrl, id: string, beforeTool: boolean) => {
+      const t = tails.get(id);
+      if (!t) return;
+      tails.delete(id);
+      let text = t.text;
+      if (beforeTool) {
+        const cut = trimTrailingNarration(text);
+        if (cut.dropped) {
+          errors.push({ code: "narration_dropped", detail: cut.dropped.slice(0, 200) });
+          text = cut.text;
+        }
+      }
+      emit(controller, id, text);
+      if (t.end) controller.enqueue(t.end);
+    };
+    const flushTails = (controller: Ctrl, beforeTool: boolean) => {
+      for (const id of [...tails.keys()]) flushTail(controller, id, beforeTool);
+    };
     const streamText_ = (controller: Ctrl, id: string, raw: string) => {
       let text = filterFor(id).push(raw);
       if (text && needsBreak.delete(id)) text = `\n\n${text.replace(/^\s+/, "")}`;
-      emit(controller, id, text);
+      toTail(controller, id, text);
     };
     const release = (controller: Ctrl, id: string) => {
       const h = held.get(id);
@@ -275,14 +319,17 @@ export async function runChatTurn(turn: ChatTurn) {
       controller.enqueue(h.start);
       streamText_(controller, id, h.raw);
       if (h.end) {
-        emit(controller, id, filterFor(id).flush());
-        controller.enqueue(h.end);
+        toTail(controller, id, filterFor(id).flush());
+        const t = tails.get(id);
+        if (t) t.end = h.end;
+        else controller.enqueue(h.end);
       }
     };
     return new TransformStream<TextStreamPart<ToolSet>, TextStreamPart<ToolSet>>({
       transform(part, controller) {
         switch (part.type) {
           case "text-start":
+            flushTails(controller, false);
             if (output.trim() && !output.endsWith("\n")) needsBreak.add(part.id);
             held.set(part.id, { start: part, raw: "" });
             return;
@@ -302,11 +349,19 @@ export async function runChatTurn(turn: ChatTurn) {
               h.end = part; // decide when the step ends or a tool call starts
               return;
             }
-            emit(controller, part.id, filterFor(part.id).flush());
+            toTail(controller, part.id, filterFor(part.id).flush());
+            {
+              const t = tails.get(part.id);
+              if (t) {
+                t.end = part; // sent with the tail, once we know whether a tool call follows
+                return;
+              }
+            }
             break;
           }
           case "tool-input-start":
           case "tool-call":
+            flushTails(controller, true);
             for (const [id, h] of held) {
               if (h.raw.trim()) errors.push({ code: "narration_dropped", detail: h.raw.trim().slice(0, 200) });
               held.delete(id);
@@ -316,9 +371,14 @@ export async function runChatTurn(turn: ChatTurn) {
           case "finish-step":
           case "finish":
             for (const id of [...held.keys()]) release(controller, id);
+            flushTails(controller, false);
             break;
         }
         controller.enqueue(part);
+      },
+      // An aborted or failed stream: whatever is still held back goes out.
+      flush(controller) {
+        flushTails(controller, false);
       },
     });
   };
@@ -411,7 +471,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

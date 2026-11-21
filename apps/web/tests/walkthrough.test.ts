@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide } = await import("@/lib/agent/run");
+const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -59,4 +59,20 @@ describe("citedRanges (the previous answer's slides, read again on a follow-up)"
     expect(total).toBe(40);
   });
   it("nothing when the answer cited nothing", () => expect(citedRanges("plain text")).toEqual([]));
+});
+
+describe("trimTrailingNarration (before a tool call)", () => {
+  it("drops the closing planning sentence the review caught", () => {
+    const r = trimTrailingNarration("I've covered the cash book and the subsidiary books here; for the Journal and the Petty Cash Book, let me pull the slides too.\n\n");
+    expect(r.dropped).toMatch(/let me pull the slides too/);
+    expect(r.text).toBe("");
+  });
+  it("keeps the teaching before it", () => {
+    const r = trimTrailingNarration("A ledger groups entries by account. [[s:X-01-2]] I'll fetch the petty cash slides next.");
+    expect(r.text).toBe("A ledger groups entries by account. [[s:X-01-2]]");
+  });
+  it("leaves ordinary endings alone", () => {
+    expect(trimTrailingNarration("Let me know if you want another example.").dropped).toBeNull();
+    expect(trimTrailingNarration("So the balance b/d is 13,400.").dropped).toBeNull();
+  });
 });

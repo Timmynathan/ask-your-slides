@@ -131,3 +131,9 @@ function chatScope(ctx: {
     noCode
   );
 }
+
+/** Repeated at the end of every turn's instructions, where it carries most weight: the three slips
+ *  the answer review still saw after the rules were added (owner, 21 Nov 2026). */
+export const TURN_REMINDER =
+  "For this reply: start straight with the content (no \"sorry\", no \"you're right\"); never mention searching, search results, or pulling/fetching slides; don't comment on how detailed the slides are.";
+

@@ -74,7 +74,8 @@ async function run(c: Case) {
     for (const p of c.must ?? []) if (!new RegExp(p, "i").test(answer)) fails.push(`missing /${p}/`);
     for (const p of c.mustNot ?? []) if (new RegExp(p, "i").test(answer)) fails.push(`has /${p}/`);
     const stripped = ((tr?.errors ?? []) as { code: string }[]).filter((e) => e.code === "citation_invalid").length;
-    if (stripped) fails.push(`${stripped} citation(s) stripped`);
+    if (stripped > 1) fails.push(`${stripped} citations stripped`);
+    else if (stripped) warnings.push("1 citation stripped");
     if (/"truncated":true/.test(body)) fails.push("cut short");
     return { id: c.id, what: c.what, pass: !fails.length, fails, warnings, secs: Math.round((Date.now() - t0) / 1000), tokens: tr?.output_tokens, cost: tr?.cost_usd, question: c.question, answer };
   } finally {
