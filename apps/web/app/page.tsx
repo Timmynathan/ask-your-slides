@@ -81,7 +81,7 @@ export default async function Landing() {
 
         {/* Why not a general chatbot? Kept to the one point that matters. */}
         <section id="why" className="mx-auto max-w-5xl scroll-mt-20 px-5 py-20">
-          <h2 className="text-center font-heading text-4xl font-normal tracking-tight text-ink">Why not just ChatGPT, Claude or Gemini?</h2>
+          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Why not just ChatGPT, Claude or Gemini?</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-lg text-muted">They don&apos;t have your slides. We do.</p>
           <div className="mt-10 grid gap-6 md:grid-cols-2">
             <div className="rounded-[25px] bg-tint p-7 ring-1 ring-line">
