@@ -50,6 +50,8 @@ export interface AgentContext {
   calculationHeavy?: boolean;
   /** slide_key → citation info: every slide a tool returned this turn. The only citable set. */
   retrieved: Map<string, Citation>;
+  /** slide_key → the slide's title and text, to check that a citation supports its sentence (support.ts). */
+  slideText: Map<string, string>;
   toolLog: ToolLogEntry[];
   fellBack: boolean;
   readMaterial: boolean;
@@ -58,8 +60,8 @@ export interface AgentContext {
   abortSignal?: AbortSignal;
 }
 
-export function newContext(base: Omit<AgentContext, "retrieved" | "toolLog" | "fellBack" | "readMaterial" | "computed">): AgentContext {
-  return { ...base, retrieved: new Map(), toolLog: [], fellBack: false, readMaterial: false, computed: [] };
+export function newContext(base: Omit<AgentContext, "retrieved" | "slideText" | "toolLog" | "fellBack" | "readMaterial" | "computed">): AgentContext {
+  return { ...base, retrieved: new Map(), slideText: new Map(), toolLog: [], fellBack: false, readMaterial: false, computed: [] };
 }
 
 // ── Tool definition helper (support-agent convention) ───────────────────────
@@ -207,7 +209,10 @@ export const searchSlides = defineTool({
       hits = await matchSlides(ctx.db, base);
     }
 
-    hits.forEach((h) => remember(ctx, h));
+    hits.forEach((h) => {
+      remember(ctx, h);
+      ctx.slideText.set(h.slide_key, `${h.title ?? ""}\n${chunkBody(h.chunk_text)}`);
+    });
     const notes = (await notesPromise).filter((n) => n.similarity >= NO_MATCH_SIMILARITY);
     const yourNotes = notes.map((n) => ({ upload: n.title, kind: n.kind === "pdf" ? "uploaded PDF" : "uploaded photos", page: n.page, content: n.chunk_text }));
     const results = hits.map((h) => ({
@@ -351,6 +356,7 @@ export const getMaterialPages = defineTool({
         label: r.label, material_source: mat.source,
       }),
     );
+    rows.forEach((r) => ctx.slideText.set(r.slide_key, `${r.title ?? ""}\n${chunkBody(r.chunk_text)}`));
     return {
       status: rows.length ? "ok" : "not_found",
       slideKeys: rows.map((r) => r.slide_key),

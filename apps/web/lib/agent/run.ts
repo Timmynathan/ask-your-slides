@@ -2,6 +2,7 @@ import "server-only";
 import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
+import { supportsClaim } from "./support";
 import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from "./prompt";
 import { buildTools, getMaterialPages, listTopics, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
@@ -267,6 +268,9 @@ export async function runChatTurn(turn: ChatTurn) {
       if (!f) {
         f = createCitationFilter({
           isAllowed: (k) => ctx.retrieved.has(k),
+          // A loaded slide that clearly says nothing of the sentence is dropped (support.ts).
+          supports: (k, claim) => supportsClaim(claim, ctx.slideText.get(k)).ok,
+          onUnsupported: (k) => errors.push({ code: "citation_unsupported", detail: k }),
           onCited: (k) => cited.set(k, ctx.retrieved.get(k)!),
           onInvalid: (k) => {
             invalid.push(k);
@@ -440,9 +444,9 @@ export async function runChatTurn(turn: ChatTurn) {
       preCalls.push({ tool: getMaterialPages, input: r });
     }
   }
-  // A whole-course walkthrough ("all the notes from initiation to risk", "every slide of week 3"):
-  // the course's topic list first, so the model reads the right decks, middle ones included.
-  if (!preCalls.length && walkthrough && (!turn.topicId || namesOtherPart)) {
+  // A whole-course walkthrough ("all the notes from initiation to risk", "every slide of week 3") or
+  // overview: the course's topic list first, so the model reads the right decks, middle ones included.
+  if (!preCalls.length && (walkthrough || (summaryAsked && !turn.topicId)) && (!turn.topicId || namesOtherPart)) {
     preCalls.push({ tool: listTopics, input: {} });
   }
   // "Keep going": pick up after the last slide the previous answer cited, with those slides read

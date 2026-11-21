@@ -52,3 +52,39 @@ describe("citation filter", () => {
     expect(citedKeys("a [[s:CSC402-09-3]] b [[s:CSC402-09-4]]")).toEqual(["CSC402-09-3", "CSC402-09-4"]);
   });
 });
+
+// Phase B of the answer review (21 Nov 2026): a loaded slide that says nothing of its sentence.
+describe("citation support check", async () => {
+  const { supportsClaim } = await import("@/lib/agent/support");
+  const TITLE = "FUNDAMENTALS\nFoundations of Data Structures\n4\nStephen A. Adubi";
+  const QUEUE = "What is a Queue?\nA queue is a linear data structure that follows First In First Out: elements are added at the rear and removed from the front, like people waiting in line at a bank.";
+  const TREE = "TREE\nUnlike natural trees, these trees are depicted upside down with the root at the top and the leaves (terminal nodes) at the bottom. Each node has a parent except the root.";
+
+  it("drops a slide about something else (the real CSC301 overview)", () => {
+    expect(supportsClaim("A tree is a hierarchy of nodes with a root at the top and leaves at the bottom.", QUEUE).ok).toBe(false);
+  });
+  it("keeps a slide that supports the claim", () => {
+    expect(supportsClaim("A tree is a hierarchy of nodes with a root at the top and leaves at the bottom.", TREE).ok).toBe(true);
+  });
+  it("never judges a nearly empty slide or a maths step", () => {
+    expect(supportsClaim("A linked list is a sequence of nodes, each holding data plus a pointer to the next node.", TITLE).ok).toBe(true);
+    expect(supportsClaim("Then raise r to the 6th power and multiply the angle by 6, which gives 117 − 44i.", QUEUE).ok).toBe(true);
+  });
+
+  it("the stream filter drops the unsupported marker and keeps the sentence", () => {
+    const unsupported: string[] = [];
+    const cited: string[] = [];
+    const texts: Record<string, string> = { "CSC301-11-4": QUEUE, "CSC301-13-2": TREE };
+    const f = createCitationFilter({
+      isAllowed: (k) => k in texts,
+      supports: (k, claim) => supportsClaim(claim, texts[k]).ok,
+      onCited: (k) => cited.push(k),
+      onInvalid: () => {},
+      onUnsupported: (k) => unsupported.push(k),
+    });
+    const out = f.push("A tree is a hierarchy of nodes with a root at the top and leaves at the bottom. [[s:CSC301-11-4]] [[s:CSC301-13-2]]") + f.flush();
+    expect(out).toBe("A tree is a hierarchy of nodes with a root at the top and leaves at the bottom.  [[s:CSC301-13-2]]");
+    expect(unsupported).toEqual(["CSC301-11-4"]);
+    expect(cited).toEqual(["CSC301-13-2"]);
+  });
+});

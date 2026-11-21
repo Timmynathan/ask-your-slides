@@ -13,37 +13,56 @@ export interface CitationFilterEvents {
   isAllowed(key: string): boolean;
   onCited(key: string): void;
   onInvalid(key: string): void;
+  /** Does this (allowed) slide support the sentence citing it? Left out: always yes. */
+  supports?(key: string, claim: string): boolean;
+  onUnsupported?(key: string): void;
 }
 
 /** Stateful filter for one text block. push() returns what is safe to show now; flush() the rest. */
 export function createCitationFilter(events: CitationFilterEvents) {
   let pending = "";
+  // The text since the last marker: the claim the next marker supports. A run of markers
+  // ("… [[s:A]] [[s:B]]") all support the same claim.
+  let sinceMarker = "";
+  let lastClaim = "";
+  const claimFor = () => {
+    if (sinceMarker.trim()) lastClaim = sinceMarker.split(/\n\s*\n/).pop()!.replace(/<\/?general>/g, "").slice(-400);
+    sinceMarker = "";
+    return lastClaim;
+  };
 
   function drain(final: boolean): string {
     let out = "";
+    const keep = (text: string) => {
+      out += text;
+      sinceMarker += text;
+    };
     while (pending.length) {
       const open = pending.indexOf("[");
       if (open === -1) {
-        out += pending;
+        keep(pending);
         pending = "";
         break;
       }
-      out += pending.slice(0, open);
+      keep(pending.slice(0, open));
       pending = pending.slice(open);
       const m = pending.match(MARKER);
       if (m && m.index === 0) {
         const key = normalizeKey(m[1]);
-        if (events.isAllowed(key)) {
+        const claim = claimFor();
+        if (!events.isAllowed(key)) {
+          events.onInvalid(key);
+        } else if (events.supports && !events.supports(key, claim)) {
+          events.onUnsupported?.(key);
+        } else {
           events.onCited(key);
           out += `[[s:${key}]]`;
-        } else {
-          events.onInvalid(key);
         }
         pending = pending.slice(m[0].length);
         continue;
       }
       if (!final && PARTIAL.test(pending)) break; // wait for more text
-      out += "[";
+      keep("[");
       pending = pending.slice(1);
     }
     return out;
