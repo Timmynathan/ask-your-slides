@@ -12,6 +12,15 @@ import { HEARD_FROM } from "@/lib/heard-from";
 
 export const metadata: Metadata = { title: "Admin · Ask Your Slides", robots: { index: false, follow: false } };
 
+/** The admin numbers, with the owner's and admins' own accounts left out of activity (migration
+ *  20261121000003). Until that migration is pushed, the older function (no p_exclude) answers. */
+async function loadOverview(db: ReturnType<typeof adminClient>, from: string | null) {
+  const exclude = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const res = await db.rpc("admin_overview", { p_from: from, p_cap: FREE_DAILY, p_exclude: exclude });
+  if (!res.error) return res;
+  return db.rpc("admin_overview", { p_from: from, p_cap: FREE_DAILY });
+}
+
 type Props = { searchParams: Promise<{ range?: string; tab?: string }> };
 
 // Owner-only. Anyone else (signed in or not) gets a plain 404: the page doesn't admit it exists.
@@ -27,7 +36,7 @@ async function Loaded({ searchParams }: Props) {
   const from = rangeStart(range);
   // The overview's own cap count is superseded by limit_events (PRD F12); FREE_DAILY keeps it sensible.
   const [{ data, error }, plans, courses, heardFrom, funnel, { data: appFeedbackRows }] = await Promise.all([
-    db.rpc("admin_overview", { p_from: from, p_cap: FREE_DAILY }),
+    loadOverview(db, from),
     planStats(db, from),
     db.from("courses").select("code, department").order("sort_order"),
     heardFromCounts(db, from),

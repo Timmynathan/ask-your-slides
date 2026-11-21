@@ -21,6 +21,8 @@ export interface Overview {
     questions: number; answers: number; answers_with_errors: number; cost_usd: number; cost_per_answer: number | null;
     avg_ttft_ms: number | null; p95_latency_ms: number | null; thumbs_up: number; thumbs_down: number;
     helping_avg: number | null; helping_n: number; returning_3plus: number; cap_hits: number;
+    /** Studied on 3+ different days in the period (missing until migration 20261121000003). */
+    regular_students?: number;
   };
   daily: { day: string; questions: number; active: number; answers: number; cost_usd: number; avg_ttft_ms: number | null; thumbs_up: number; thumbs_down: number }[];
   reasons: { reason: string; n: number }[];

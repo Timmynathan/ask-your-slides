@@ -152,7 +152,12 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
         <section id="overview" className="scroll-mt-24 space-y-6">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <Tile label="Students signed up" value={n(t.students_signed_up)} sub={`${n(t.students_onboarded)} onboarded · ${n(t.new_students)} new in period`} />
-            <Tile label="Active students" value={n(t.active_students)} sub={`${n(t.returning_3plus)} came back on 3+ days`} />
+            <Tile label="Active students" value={n(t.active_students)} sub="asked a question or practised past questions, in this period" />
+            <Tile
+              label="Regular students"
+              value={t.regular_students != null ? n(t.regular_students) : "—"}
+              sub={t.regular_students != null ? "studied on 3+ different days in this period" : "appears once the database update is pushed"}
+            />
             <Tile label="Questions" value={n(t.questions)} sub={`${n(t.answers)} answers`} />
             <Tile label="Cost" value={usd(t.cost_usd)} sub={`${usd(t.cost_per_answer)} per answer`} />
             <Tile label="Thumbs up" value={pct(t.thumbs_up, rated)} sub={`${n(t.thumbs_up)} up · ${n(t.thumbs_down)} down`} />
