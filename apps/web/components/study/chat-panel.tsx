@@ -415,7 +415,11 @@ export function ChatPanel({
           {!loadingHistory && messages.length === 0 && (
             <div className="flex flex-col items-center pt-[8vh] text-center">
               <PartnerCast partner={partner} onChangePartner={onChangePartner} />
-              <h2 className="mt-4 text-[28px] font-normal tracking-tight text-ink">{topic ? topic.title : course.title}</h2>
+              {/* The topic name in Bitter 400, #191919, 68px / 73.44px (owner, 21 Nov 2026); smaller on
+                  narrow screens so long names don't break mid-word. */}
+              <h2 className="mt-4 max-w-full break-words font-heading text-[40px] font-normal not-italic leading-[1.08] text-[#191919] dark:text-ink sm:text-[52px] lg:text-[68px]">
+                {topic ? topic.title : course.title}
+              </h2>
               <p className="pop-in mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted">
                 {fill(pick(p.greetings, `${course.id}-${topic?.id ?? ""}`), studentName)}
               </p>
