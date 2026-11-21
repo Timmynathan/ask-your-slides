@@ -46,6 +46,7 @@ export interface Overview {
 /** The /admin tabs (?tab=); Overview is the default. */
 export const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "students", label: "Students" },
   { id: "answers", label: "Answers" },
   { id: "courses", label: "Courses" },
   { id: "health", label: "Health" },

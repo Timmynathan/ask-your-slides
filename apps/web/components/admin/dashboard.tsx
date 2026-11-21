@@ -1,7 +1,8 @@
 "use client";
 
 // /admin: the pilot at a glance, then the detail behind it, in tabs (owner, 15 Nov 2026):
-//   Overview: headline numbers, daily charts, plans, feedback (every thumbs down), students, resets.
+//   Overview: headline numbers, daily charts, plans, feedback (every thumbs down).
+//   Students: every student, newest first, searchable by email and filtered by department.
 //   Answers: the latest answers with cost, speed, tools, citations, errors.
 //   Courses: every course with its students and questions, grouped by department.
 //   Health: error codes, slowest and most expensive answers.
@@ -16,7 +17,6 @@ import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { RANGES, TABS, type Overview, type Range, type Tab } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
-import { ResetPassword } from "./reset-password";
 
 const tz = "Africa/Lagos";
 const dayFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: tz });
@@ -204,14 +204,12 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
         <Plans plans={plans} />
         <Feedback data={data} />
         <GeneralFeedback rows={appFeedback} />
-        <Students data={data} />
+          </div>
+        )}
 
-        <section id="support" className="scroll-mt-24 space-y-4">
-          <SectionTitle title="Password resets" note="When a student presses “Escalate to admin”, you get an email at hello@. Set a temporary password here and reply with it." />
-          <Card title="Reset a student's password">
-            <ResetPassword />
-          </Card>
-        </section>
+        {tab === "students" && (
+          <div role="tabpanel" id="panel-students" aria-labelledby="tab-students">
+            <Students data={data} />
           </div>
         )}
 
@@ -556,42 +554,79 @@ function Answers({ range }: { range: Range }) {
 }
 
 function Students({ data }: { data: Overview }) {
+  // Its own tab (owner, 21 Nov 2026): newest sign-up at the top, earliest at the bottom; search by
+  // email or name, filter by department. Thumbs up/down left out (students don't use them yet).
   const [q, setQ] = useState("");
-  const rows = data.students.filter((s) => !q.trim() || `${s.email} ${s.name ?? ""}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const [dept, setDept] = useState("");
+  const departments = useMemo(() => [...new Set(data.students.map((s) => s.department).filter(Boolean))].sort() as string[], [data.students]);
+  const rows = useMemo(
+    () =>
+      data.students
+        .filter((s) => (!q.trim() || `${s.email} ${s.name ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())) && (!dept || s.department === dept))
+        .sort((a, b) => b.joined.localeCompare(a.joined)),
+    [data.students, q, dept],
+  );
+  const csv = rows.map((s) => ({
+    name: s.name ?? "",
+    email: s.email,
+    department: s.department ?? "",
+    onboarded: s.onboarded ? "yes" : "no",
+    questions_in_period: s.questions,
+    questions_all_time: s.questions_all_time,
+    cost_usd: s.cost_usd,
+    helping: s.helping ?? "",
+    partner: s.partner ? PARTNER[s.partner] ?? s.partner : "",
+    last_active: s.last_active ?? "",
+    joined: s.joined,
+  }));
   return (
     <section id="students" className="scroll-mt-24 space-y-4">
       <SectionTitle
         title="Students"
-        note="Questions and cost are for the selected period; the rest is all-time."
-        action={<DownloadButton onClick={() => downloadCsv("students.csv", data.students)} />}
+        note={`${n(rows.length)} of ${n(data.students.length)} students, newest first. Questions and cost are for the selected period; the rest is all-time.`}
+        action={<DownloadButton onClick={() => downloadCsv("students.csv", csv)} />}
       />
-      <input
-        type="search"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search by email or name"
-        aria-label="Search students"
-        className="h-9 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by email or name"
+          aria-label="Search students"
+          className="h-9 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
+        />
+        <select
+          value={dept}
+          onChange={(e) => setDept(e.target.value)}
+          aria-label="Filter by department"
+          className="h-9 rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200"
+        >
+          <option value="">All departments</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+      </div>
       <Table
-        head={["Student", "Questions", "All time", "Cost", "👍", "👎", "Helping", "Partner", "Last active", "Joined"]}
+        head={["Student", "Department", "Questions", "All time", "Cost", "Helping", "Partner", "Last active", "Joined"]}
         rows={rows.map((s) => [
           <span key="s" className="block max-w-[16rem] truncate" title={s.email}>
             {s.name ? <span className="font-medium">{s.name} </span> : null}
             <span className="text-muted">{s.email}</span>
             {!s.onboarded && <span className="ml-1 text-xs text-amber-800">(not onboarded)</span>}
           </span>,
+          s.department ?? "—",
           n(s.questions),
           n(s.questions_all_time),
           usd(s.cost_usd),
-          n(s.thumbs_up),
-          n(s.thumbs_down),
           s.helping ?? "—",
           s.partner ? PARTNER[s.partner] ?? s.partner : "—",
           when(s.last_active),
           when(s.joined),
         ])}
-        empty="No students yet."
+        empty="No students match."
       />
     </section>
   );
