@@ -11,7 +11,7 @@ import { featureLabel } from "@/lib/feedback-features";
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { RANGES, TABS, type Overview, type Range, type Tab } from "@/lib/admin-shared";
@@ -139,7 +139,6 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
                 className={`-mb-px border-b-2 px-4 py-2.5 text-[15px] transition ${tab === x.id ? "border-brand font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
               >
                 {x.label}
-                {x.id === "answers" && <span className="ml-1.5 text-xs text-muted">{studentAnswers.length}</span>}
                 {x.id === "health" && withProblems > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 text-xs text-red-800">{withProblems}</span>}
               </button>
             ))}
@@ -218,7 +217,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
 
         {tab === "answers" && (
           <div role="tabpanel" id="panel-answers" aria-labelledby="tab-answers">
-            <Answers data={data} />
+            <Answers range={range} />
           </div>
         )}
 
@@ -423,28 +422,44 @@ function Feedback({ data }: { data: Overview }) {
   );
 }
 
-function Answers({ data }: { data: Overview }) {
+function Answers({ range }: { range: Range }) {
+  // One page at a time from /api/admin/answers: every student answer in the period, with the
+  // filter and search applied to all of them (owner, 21 Nov 2026).
   const [filter, setFilter] = useState<"all" | "down" | "errors" | "slow">("all");
   const [q, setQ] = useState("");
-  const items = useMemo(
-    () =>
-      data.recent.filter(
-        (r) =>
-          !!r.student &&
-          (filter === "all" ||
-            (filter === "down" && r.rating === -1) ||
-            (filter === "errors" && splitErrors(r.errors).problems.length > 0) ||
-            (filter === "slow" && (r.latency_ms ?? 0) > 15000)) &&
-          (!q.trim() || `${r.question} ${r.course} ${r.student}`.toLowerCase().includes(q.trim().toLowerCase())),
-      ),
-    [data.recent, filter, q],
-  );
+  const [query, setQuery] = useState(""); // the search, once typing pauses
+  const [page, setPage] = useState(1);
+  const [result, setResult] = useState<{ rows: Overview["recent"]; total: number; pages: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQuery(q);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [q]);
+  useEffect(() => {
+    let live = true;
+    const t = setTimeout(() => {
+      setLoading(true);
+      fetch(`/api/admin/answers?range=${range}&page=${page}&filter=${filter}&q=${encodeURIComponent(query)}`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+        .then((d) => live && setResult(d))
+        .catch(() => live && setResult({ rows: [], total: 0, pages: 1 }))
+        .finally(() => live && setLoading(false));
+    }, 0);
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [range, page, filter, query]);
+  const items = result?.rows ?? [];
   return (
     <section id="answers" className="scroll-mt-24 space-y-4">
       <SectionTitle
         title="Answers"
-        note={`The latest ${data.recent.filter((r) => r.student).length} students' answers in this period (test runs hidden). Open one to read it in full.`}
-        action={<DownloadButton onClick={() => downloadCsv("answers.csv", data.recent.map(({ answer, ...r }) => ({ ...r, answer: readable(answer) })))} />}
+        note={result ? `${n(result.total)} students' answers in this period (test runs hidden). Open one to read it in full.` : "Loading…"}
+        action={<DownloadButton onClick={() => downloadCsv("answers.csv", items.map(({ answer, ...r }) => ({ ...r, answer: readable(answer) })))} />}
       />
       <div className="flex flex-wrap items-center gap-1.5">
         {(
@@ -455,7 +470,14 @@ function Answers({ data }: { data: Overview }) {
             ["slow", "Slower than 15 s"],
           ] as const
         ).map(([id, label]) => (
-          <Chip key={id} on={filter === id} onClick={() => setFilter(id)}>
+          <Chip
+            key={id}
+            on={filter === id}
+            onClick={() => {
+              setFilter(id);
+              setPage(1);
+            }}
+          >
             {label}
           </Chip>
         ))}
@@ -468,7 +490,9 @@ function Answers({ data }: { data: Overview }) {
           className="ml-auto h-9 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
         />
       </div>
-      {items.length === 0 ? (
+      {loading && !items.length ? (
+        <Empty>Loading answers…</Empty>
+      ) : items.length === 0 ? (
         <Empty>No answers match.</Empty>
       ) : (
         <ul className="space-y-2">
@@ -513,6 +537,19 @@ function Answers({ data }: { data: Overview }) {
             </li>
           ))}
         </ul>
+      )}
+      {result && result.pages > 1 && (
+        <nav className="flex items-center justify-center gap-2 pt-2" aria-label="Pages of answers">
+          <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)} className="rounded-full px-4 py-2 text-sm ring-1 ring-line transition hover:bg-sunken disabled:opacity-40">
+            Previous
+          </button>
+          <span className="px-2 text-sm text-muted">
+            Page {page} of {result.pages}
+          </span>
+          <button type="button" disabled={page >= result.pages || loading} onClick={() => setPage((p) => p + 1)} className="rounded-full px-4 py-2 text-sm ring-1 ring-line transition hover:bg-sunken disabled:opacity-40">
+            Next
+          </button>
+        </nav>
       )}
     </section>
   );
