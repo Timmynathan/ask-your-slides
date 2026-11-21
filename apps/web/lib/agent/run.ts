@@ -111,6 +111,18 @@ export function refersBack(message: string): boolean {
   return /\b(it|its|that|this|these|those|they|them|their|same|again|more|another|other|else|above|previous|earlier|last|why|example|examples|instead|also|too|then)\b|^(and|but|so|what about|how about|ok|okay|yes|no)\b/i.test(m);
 }
 
+/** "5" or "b" after an answer with a numbered or lettered list: the item the student picked. */
+export function pickedItem(message: string, previous: string): string | null {
+  const pick = message.trim().match(/^(?:option\s+|number\s+|no\.?\s*)?\(?([0-9]{1,2}|[a-h])\)?[.)]?$/i);
+  if (!pick) return null;
+  const want = pick[1].toLowerCase();
+  for (const line of previous.split("\n")) {
+    const m = line.match(/^\s*(?:[-*]\s+)?(?:\*\*)?\(?([0-9]{1,2}|[a-h])[.)](?:\*\*)?\s+(.+)$/i);
+    if (m && m[1].toLowerCase() === want) return m[2].replace(/\[\[s:[^\]]+\]\]/g, "").replace(/\*\*/g, "").trim().slice(0, 200);
+  }
+  return null;
+}
+
 /** The previous answer ended by asking the student something (a quiz or check question). */
 export function endsWithQuestion(answer: string): boolean {
   const tail = answer.replace(/<\/?general>/g, "").replace(/\[\[s:[^\]]+\]\]/g, "").trim().split("\n").filter((l) => l.trim()).slice(-3).join(" ");
@@ -460,7 +472,10 @@ export async function runChatTurn(turn: ChatTurn) {
   const longAnswer = walkthrough || continuing;
   // The previous answer asked a question and this is a short reply: it is the student's answer.
   const answering = !!previous && !continuing && !walkthrough && endsWithQuestion(previous) && turn.userMessage.trim().length <= 160;
-  const answerNote = answering
+  const picked = previous ? pickedItem(turn.userMessage, previous) : null;
+  const answerNote = picked
+    ? `The student's message "${turn.userMessage.trim()}" picks item ${turn.userMessage.trim()} of your previous message: "${picked}". If that was a quiz question's options, mark their choice; otherwise act on that item directly, with no remark about their reply.`
+    : answering
     ? `Your previous message ended with a question to the student, and this message is most likely their reply to it. If you had asked a quiz or check question, this is their answer: mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. Only if the message clearly asks something new, answer that instead.`
     : null;
   // Follow-ups ("5", "b", a quiz answer, "explain that again"): the slides the previous answer

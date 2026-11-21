@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -85,5 +85,15 @@ describe("trimApologyOpening", () => {
   it("keeps a quiz verdict and ordinary openings", () => {
     expect(trimApologyOpening("You're right, it's Planning. [[s:A-01-2]]")).toBe("You're right, it's Planning. [[s:A-01-2]]");
     expect(trimApologyOpening("A ledger groups entries by account.")).toBe("A ledger groups entries by account.");
+  });
+});
+
+describe("pickedItem ('5' or 'b' after a list)", () => {
+  const roadmap = "Here is the roadmap:\n\n1. Introduction to accounting\n2. Users of accounts\n3. Concepts\n4. Source documents\n5. The Accounting Equation\n6. Double-entry\n\nWhich one?";
+  it("finds the numbered item", () => expect(pickedItem("5", roadmap)).toBe("The Accounting Equation"));
+  it("finds a lettered option", () => expect(pickedItem("b", "Which is right?\n(a) A treaty\n(b) An intergovernmental body\n(c) A company")).toBe("An intergovernmental body"));
+  it("nothing for a real question or a missing item", () => {
+    expect(pickedItem("what is 5?", roadmap)).toBeNull();
+    expect(pickedItem("9", roadmap)).toBeNull();
   });
 });
