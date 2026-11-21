@@ -1,6 +1,6 @@
 // Sends the owner-approved emails in data/emails/drafts.json from hello@askyourslides.com through
 // Resend (the service that already sends the sign-in codes). Plain text, one at a time, replies go to
-// hello@askyourslides.com. Nothing is sent unless the draft has "approved": true AND --send is given;
+// hello@askyourslides.com, with a copy (BCC) to hello@ so the owner has them too. Nothing is sent unless the draft has "approved": true AND --send is given;
 // without --send it only lists what would go out. Sent emails are marked "sent" in the file, so a
 // second run never sends twice.
 //
@@ -36,7 +36,8 @@ for (const d of ready) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: FROM, to: [d.to], reply_to: REPLY_TO, subject: d.subject, text: d.body }),
+    // A copy to hello@ (BCC), so the owner sees every email sent in the same inbox as the replies.
+    body: JSON.stringify({ from: FROM, to: [d.to], bcc: [REPLY_TO], reply_to: REPLY_TO, subject: d.subject, text: d.body }),
   });
   const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
   if (!res.ok) {
