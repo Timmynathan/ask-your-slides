@@ -67,20 +67,19 @@ async function Loaded({ params, searchParams }: Props) {
   const leafIds = pastLeafIds(course.id, (pastRows ?? []) as PastRow[]);
   const chunks: string[][] = [];
   for (let i = 0; i < leafIds.length; i += 150) chunks.push(leafIds.slice(i, i + 150));
-  const pastTopics = (
-    await Promise.all(chunks.map((ids) => supabase.from("question_topics").select("question_id, topic_id").in("question_id", ids)))
-  ).flatMap((r) => (r.data ?? []) as { question_id: string; topic_id: string }[]);
-  const past = pastCounts(course.id, (pastRows ?? []) as PastRow[], pastTopics, (pastPapers ?? []) as PaperRow[]);
-  // Plan limits (PRD F12): what this student can still send in this course today.
+  // Plan limits (PRD F12): what this student can still send in this course today. Run at the same
+  // time as the past-question links (one round trip instead of two).
   const db = adminClient();
   const now = new Date();
-  const state = await planState(db, user.id, now);
-  const plan = await usageNow(db, state, {
-    userId: user.id,
-    courseId: course.id,
-    premium: !!course.premium,
-    now,
-  });
+  const [topicParts, { state, plan }] = await Promise.all([
+    Promise.all(chunks.map((ids) => supabase.from("question_topics").select("question_id, topic_id").in("question_id", ids))),
+    planState(db, user.id, now).then(async (state) => ({
+      state,
+      plan: await usageNow(db, state, { userId: user.id, courseId: course.id, premium: !!course.premium, now }),
+    })),
+  ]);
+  const pastTopics = topicParts.flatMap((r) => (r.data ?? []) as { question_id: string; topic_id: string }[]);
+  const past = pastCounts(course.id, (pastRows ?? []) as PastRow[], pastTopics, (pastPapers ?? []) as PaperRow[]);
   const cap = plan.used + plan.left;
   const premiumLimited = plan.limits.course !== null;
   const dailyLeft = plan.limits.daily - plan.used;
