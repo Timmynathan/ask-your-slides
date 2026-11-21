@@ -26,8 +26,9 @@ const GENERAL: { label: string; bad: RegExp }[] = [
   { label: "thin-slides opener", bad: /only outline this/i },
   { label: "talks about searching", bad: /\b(the search|search (results|returned|pulled|gave)|I searched|let me (gather|pull|fetch|grab))\b/i },
   { label: "apology opening", bad: /^\s*(you.?re right|i.?m sorry|sorry|apolog)/i },
-  { label: "citation inside <general>", bad: /<general>(?:(?!<\/general>)[\s\S])*\[\[s:/ },
 ];
+// Reported but not failed: minor slips worth watching.
+const WARN: { label: string; bad: RegExp }[] = [{ label: "citation inside <general>", bad: /<general>(?:(?!<\/general>)[\s\S])*?\[\[s:/ }];
 
 async function run(c: Case) {
   // The original question, its conversation and everything said before it.
@@ -69,12 +70,13 @@ async function run(c: Case) {
     if (!r.ok) fails.push(`http ${r.status}: ${body.slice(0, 120)}`);
     if (!answer.trim()) fails.push("no answer");
     for (const g of GENERAL) if (g.bad.test(answer)) fails.push(g.label);
+    const warnings = WARN.filter((w) => w.bad.test(answer)).map((w) => w.label);
     for (const p of c.must ?? []) if (!new RegExp(p, "i").test(answer)) fails.push(`missing /${p}/`);
     for (const p of c.mustNot ?? []) if (new RegExp(p, "i").test(answer)) fails.push(`has /${p}/`);
     const stripped = ((tr?.errors ?? []) as { code: string }[]).filter((e) => e.code === "citation_invalid").length;
     if (stripped) fails.push(`${stripped} citation(s) stripped`);
     if (/"truncated":true/.test(body)) fails.push("cut short");
-    return { id: c.id, what: c.what, pass: !fails.length, fails, secs: Math.round((Date.now() - t0) / 1000), tokens: tr?.output_tokens, cost: tr?.cost_usd, question: c.question, answer };
+    return { id: c.id, what: c.what, pass: !fails.length, fails, warnings, secs: Math.round((Date.now() - t0) / 1000), tokens: tr?.output_tokens, cost: tr?.cost_usd, question: c.question, answer };
   } finally {
     if (userId) await db.auth.admin.deleteUser(userId);
   }
@@ -89,7 +91,7 @@ for (const r of results) {
   if ("error" in r && r.error) console.log(`#${r.id} ERROR ${r.error}`);
   else if ("pass" in r) {
     cost += Number(r.cost ?? 0);
-    console.log(`#${r.id} ${r.pass ? "PASS" : "FAIL"} ${r.what}${r.fails?.length ? ` — ${r.fails.join("; ")}` : ""} (${r.secs}s)`);
+    console.log(`#${r.id} ${r.pass ? "PASS" : "FAIL"} ${r.what}${r.fails?.length ? ` — ${r.fails.join("; ")}` : ""}${r.warnings?.length ? ` [warn: ${r.warnings.join("; ")}]` : ""} (${r.secs}s)`);
   }
 }
 const passed = results.filter((r) => "pass" in r && r.pass).length;

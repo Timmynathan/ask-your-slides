@@ -99,10 +99,28 @@ export function asksForOtherMaterial(message: string): boolean {
   return /\b(presentations?|group\s*\d+|groups?['’]s?\s+(work|slides)|briefs?|templates?|handouts?)\b/i.test(message);
 }
 
+/** A message that leans on the previous one ("why?", "how is that different…", "more", "scope",
+ *  "yes please"), as opposed to a new question of its own ("components of project charter"). Only
+ *  these get the previous question added to the server's first search: adding it to a new
+ *  question pulled the search towards the old topic (owner's answer review, 21 Nov 2026). */
+export function refersBack(message: string): boolean {
+  const m = message.trim();
+  const words = m.split(/\s+/).filter(Boolean).length;
+  if (words <= 3 && !/\b(what|define|explain|meaning)\b/i.test(m)) return true;
+  if (m.length >= 120) return false;
+  return /\b(it|its|that|this|these|those|they|them|their|same|again|more|another|other|else|above|previous|earlier|last|why|example|examples|instead|also|too|then)\b|^(and|but|so|what about|how about|ok|okay|yes|no)\b/i.test(m);
+}
+
+/** The previous answer ended by asking the student something (a quiz or check question). */
+export function endsWithQuestion(answer: string): boolean {
+  const tail = answer.replace(/<\/?general>/g, "").replace(/\[\[s:[^\]]+\]\]/g, "").trim().split("\n").filter((l) => l.trim()).slice(-3).join(" ");
+  return /\?/.test(tail);
+}
+
 export function preSearchQuery(turn: Pick<ChatTurn, "userMessage" | "history">): string {
   const lastUser = [...turn.history].reverse().find((m) => m.role === "user");
   const previous = typeof lastUser?.content === "string" ? lastUser.content : "";
-  return turn.userMessage.length < 80 && previous ? `${previous}\n${turn.userMessage}` : turn.userMessage;
+  return previous && refersBack(turn.userMessage) ? `${previous}\n${turn.userMessage}` : turn.userMessage;
 }
 
 const SUMMARY_WORDS = /\b(summar|overview|recap|outline of|go through|walk me through)/i;
@@ -370,6 +388,11 @@ export async function runChatTurn(turn: ChatTurn) {
     preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
   }
   const longAnswer = walkthrough || continuing;
+  // The previous answer asked a question and this is a short reply: it is the student's answer.
+  const answering = !!previous && !continuing && !walkthrough && endsWithQuestion(previous) && turn.userMessage.trim().length <= 160;
+  const answerNote = answering
+    ? `Your previous message ended with a question to the student, and this message is most likely their reply to it. If you had asked a quiz or check question, this is their answer: mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. Only if the message clearly asks something new, answer that instead.`
+    : null;
   // Follow-ups ("5", "b", a quiz answer, "explain that again"): the slides the previous answer
   // cited are read again, so the model can check the student's answer against them and its
   // citations stay valid (they used to be stripped as citation_invalid, and the model said it
@@ -388,7 +411,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

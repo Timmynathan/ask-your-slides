@@ -38,6 +38,23 @@ describe("preSearchQuery", async () => {
     expect(preSearchQuery({ userMessage: "How is that different from a hash index?", history }))
       .toBe("What is a B+ tree?\nHow is that different from a hash index?");
   });
+  it("keeps a new question of its own on its own (it used to pull the search back to the old topic)", () => {
+    const history = [{ role: "user" as const, content: "explain resource leveling and smoothing" }, { role: "assistant" as const, content: "…" }];
+    expect(preSearchQuery({ userMessage: "components of project charter", history })).toBe("components of project charter");
+    expect(preSearchQuery({ userMessage: "scope", history })).toBe("explain resource leveling and smoothing\nscope");
+    expect(preSearchQuery({ userMessage: "Are there any other terms you can define for me", history })).toContain("resource leveling");
+    expect(preSearchQuery({ userMessage: "Yes please", history })).toContain("resource leveling");
+  });
+});
+
+describe("endsWithQuestion (a short reply after it is the student's answer)", async () => {
+  const { endsWithQuestion } = await import("@/lib/agent/run");
+  it("spots a closing quiz question, even inside a <general> block", () => {
+    expect(endsWithQuestion("Text [[s:A-01-1]]\n\n**Question 2:** Which process group does it belong to?\n\nGive it a go and I'll check it.\n</general>")).toBe(true);
+  });
+  it("not for an answer that ends with a statement", () => {
+    expect(endsWithQuestion("Why does this matter? Because the leaves are linked.\n\nThat is why range queries are fast.\n\nThe end.\n\nMore text here.")).toBe(false);
+  });
 });
 
 describe("asksForOtherMaterial (PRD F11: student work only when asked)", () => {
