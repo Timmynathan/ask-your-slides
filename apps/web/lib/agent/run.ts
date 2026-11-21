@@ -184,6 +184,15 @@ export function citedRanges(content: string, budget = 40): { material: string; f
 
 const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
 
+const APOLOGY_START = /^\s*((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?re|you are) (?:right|correct)\b[^.!?\n]*\b(my|last|previous|earlier|answer|reply|explanation|response|skimm|missed|skipped)\b)[^.!?\n]*[.!?]+\s*/i;
+
+/** Drops an opening apology or comment on an earlier answer ("Sorry about that, Leko.", "You're
+ *  right, my last explanation skipped the steps."). A quiz verdict ("You're right, it's Planning")
+ *  is kept: it says nothing about an earlier answer. */
+export function trimApologyOpening(text: string): string {
+  return text.replace(APOLOGY_START, "");
+}
+
 /** Drops a closing "…let me pull the slides too." from text written just before a tool call. */
 export function trimTrailingNarration(text: string): { text: string; dropped: string | null } {
   const m = text.match(NARRATION_END);
@@ -317,7 +326,8 @@ export async function runChatTurn(turn: ChatTurn) {
       if (!h) return;
       held.delete(id);
       controller.enqueue(h.start);
-      streamText_(controller, id, h.raw);
+      // The answer's first words: no apology or comment on an earlier answer (rule 19).
+      streamText_(controller, id, output.trim() ? h.raw : trimApologyOpening(h.raw));
       if (h.end) {
         toTail(controller, id, filterFor(id).flush());
         const t = tails.get(id);

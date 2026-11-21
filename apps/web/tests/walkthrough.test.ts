@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -74,5 +74,16 @@ describe("trimTrailingNarration (before a tool call)", () => {
   it("leaves ordinary endings alone", () => {
     expect(trimTrailingNarration("Let me know if you want another example.").dropped).toBeNull();
     expect(trimTrailingNarration("So the balance b/d is 13,400.").dropped).toBeNull();
+  });
+});
+
+describe("trimApologyOpening", () => {
+  it("drops an apology or a comment on the earlier answer", () => {
+    expect(trimApologyOpening("You're right, my last explanation skipped the expansion steps. Let's go slowly.")).toBe("Let's go slowly.");
+    expect(trimApologyOpening("Sorry about that, Leko. Let's slow down.")).toBe("Let's slow down.");
+  });
+  it("keeps a quiz verdict and ordinary openings", () => {
+    expect(trimApologyOpening("You're right, it's Planning. [[s:A-01-2]]")).toBe("You're right, it's Planning. [[s:A-01-2]]");
+    expect(trimApologyOpening("A ledger groups entries by account.")).toBe("A ledger groups entries by account.");
   });
 });
