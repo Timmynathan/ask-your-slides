@@ -31,7 +31,8 @@ export function Workspace(data: WorkspaceData) {
   const [chatId, setChatId] = useState<string | null>(data.initialChatId);
   // Remounts (and re-animates) the chat panel when the student picks a course, topic or chat,
   // never when a brand-new chat gets its id mid-stream.
-  const [panelKey, setPanelKey] = useState(() => data.initialChatId ?? `new-${data.initialCourseId}-${data.initialTopicId ?? "course"}`);
+  const initialPanelKey = data.initialChatId ?? `new-${data.initialCourseId}-${data.initialTopicId ?? "course"}`;
+  const [panelKey, setPanelKey] = useState(initialPanelKey);
   const [preview, setPreview] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false); // below xl; on wide screens Sources is always shown
@@ -56,6 +57,9 @@ export function Workspace(data: WorkspaceData) {
   }, [advance]);
   const [used, setUsed] = useState(data.usage.used);
   const [prefill, setPrefill] = useState<{ text: string; n: number; slideKey?: string } | null>(null);
+  // Arrived from the dashboard's "Ask anything": asked once in the whole-course chat, with a note
+  // saying which course answered and a way back to pick another.
+  const [asked, setAsked] = useState<string | null>(data.initialAsk ?? null);
   const [partner, setPartner] = useState<PartnerId>(data.partner);
   const [pickingPartner, setPickingPartner] = useState(false);
   // Past questions (PRD F10): "list" = opened from the Topics panel; "topic" = from a topic chat's
@@ -120,6 +124,7 @@ export function Workspace(data: WorkspaceData) {
   }, []);
 
   const show = useCallback((next: { courseId: string; topicId: string | null; chatId: string | null }) => {
+    setAsked(null);
     setTopicId(next.topicId);
     setChatId(next.chatId);
     setPanelKey(next.chatId ?? `new-${next.courseId}-${next.topicId ?? "course"}-${Date.now()}`);
@@ -225,6 +230,14 @@ export function Workspace(data: WorkspaceData) {
         </aside>
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-page">
+          {asked && !past && (
+            <p className="mx-auto mt-1 w-full max-w-3xl px-4 text-[13px] text-muted lg:px-8">
+              Answering in {courseName(course)}.{" "}
+              <a href={`/dashboard?ask=${encodeURIComponent(asked)}&pick=1`} className="font-medium text-brand underline-offset-2 hover:underline">
+                Wrong course?
+              </a>
+            </p>
+          )}
           {past && (
             <div key={`past-${past}-${topicId ?? "course"}-${pastPaper ?? "all"}`} className="panel-in flex min-h-0 flex-1 flex-col">
               {!PAST_QUESTIONS_LIVE ? (
@@ -252,6 +265,7 @@ export function Workspace(data: WorkspaceData) {
               chatId={chatId}
               partner={partner}
               onChangePartner={() => setPickingPartner(true)}
+              autoAsk={panelKey === initialPanelKey ? data.initialAsk ?? null : null}
               studentName={studentName}
               remaining={remaining}
               onRemaining={onRemaining}

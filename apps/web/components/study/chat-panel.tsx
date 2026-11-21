@@ -38,6 +38,8 @@ interface Props {
   partner: PartnerId;
   /** "Change character" under the partner: opens the study-partner picker. */
   onChangePartner(): void;
+  /** Sent once as soon as the chat opens (the dashboard's "Ask anything"). */
+  autoAsk?: string | null;
   studentName: string | null;
   remaining: number;
   /** The server's count after each answer, so the allowance survives switching chats. */
@@ -93,6 +95,7 @@ export function ChatPanel({
   chatId,
   partner,
   onChangePartner,
+  autoAsk = null,
   studentName,
   remaining,
   onRemaining,
@@ -342,6 +345,15 @@ export function ChatPanel({
     onQuestion();
     await sendMessage({ text, messageId: id }, { body: { conversation_id: conversationId.current } });
   }
+
+  // "Ask anything" from the dashboard: the question goes out once, as soon as the new chat is ready.
+  const autoAsked = useRef(false);
+  useEffect(() => {
+    if (!autoAsk || autoAsked.current || chatId || loadingHistory) return;
+    autoAsked.current = true;
+    void submit(autoAsk);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoAsk, chatId, loadingHistory]);
 
   const last = messages.at(-1);
   const waitingForWords =

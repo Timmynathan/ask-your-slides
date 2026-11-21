@@ -119,3 +119,12 @@ describe("asksForWorking (maths turns think first in calculator courses)", () =>
   it.each(["Solve more examples on complex numbers and dive into Binomial theorem after", "Show more examples on binomial theorem", "expand (1+3x)^3/2", "what is 3 + 4i in polar form"])("yes: %s", (m) => expect(asksForWorking(m)).toBe(true));
   it.each(["What is a balance sheet?", "explain the history of the press in Nigeria"])("no: %s", (m) => expect(asksForWorking(m)).toBe(false));
 });
+
+describe("hasNoSubject (Ask anything: vague questions show the courses to pick from)", async () => {
+  const { hasNoSubject } = await import("@/lib/study/question-subject");
+  it.each(["Give me an overview of the whole course.", "Quiz me on this course.", "What should I revise first?", "Explain all my slides for first semester", "i have a test today give me a summary of all topics"])(
+    "pick: %s",
+    (q) => expect(hasNoSubject(q)).toBe(true),
+  );
+  it.each(["What is database normalisation?", "Explain the ethics of AI surveillance", "What are the types of networking cables"])("route: %s", (q) => expect(hasNoSubject(q)).toBe(false));
+});

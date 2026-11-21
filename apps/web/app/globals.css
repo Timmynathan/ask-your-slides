@@ -188,7 +188,7 @@ body {
 }
 .reveal-in { animation: reveal-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 /* Sign-up/sign-in: the study partners rise in one after another (components/auth/auth-aside.tsx). */
-/* The general chat: the other partners pop up from behind the chosen one (components/chat/general-chat-panel.tsx). */
+/* The study partner and the others popping out from behind (components/chat/partner-cast.tsx). */
 @keyframes peek-up { 0% { opacity: 0; transform: translateY(14px) scale(0.6); } 70% { opacity: 1; transform: translateY(-3px) scale(1.05); } 100% { opacity: 1; transform: none; } }
 .peek-up { animation: peek-up 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 /* The sidebar panel sliding out over the page on hover (components/nav/app-shell.tsx). */

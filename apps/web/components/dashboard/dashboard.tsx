@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ShellMenuButton } from "@/components/nav/app-shell";
-import { GeneralChatPanel } from "@/components/chat/general-chat-panel";
+import { AskBox } from "./ask-box";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
@@ -113,7 +113,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
 
   return (
     <>
-      <div className="xl:pr-[380px]">
+      <div>
       {/* Top bar */}
       <header className="sticky top-0 z-20 flex h-16 items-center gap-2 bg-page/90 px-4 backdrop-blur sm:gap-4 sm:px-6">
         <ShellMenuButton className="-ml-1.5" />
@@ -156,10 +156,10 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search courses"
-              className="h-11 w-56 rounded-full border border-line bg-card pl-10 pr-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/15 lg:w-64 xl:w-48 2xl:w-72"
+              className="h-11 w-56 rounded-full border border-line bg-card pl-10 pr-4 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/15 lg:w-64 xl:w-72"
             />
           </label>
-          <div className="hidden rounded-full bg-sunken p-1 sm:flex xl:hidden 2xl:flex" role="group" aria-label="View">
+          <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="View">
             <ViewButton active={view === "grid"} label="Grid view" onClick={() => chooseView("grid")}>
               <path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z" />
             </ViewButton>
@@ -222,6 +222,12 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
           />
         </div>
 
+        {/* One way in for "which course is this?" questions (owner, 21 Nov 2026): it opens inside the
+            right course's chat, so there is no separate chat to keep track of. */}
+        <div className="mx-auto max-w-3xl">
+          <AskBox />
+        </div>
+
         <div className="mb-6 flex flex-wrap items-end gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -259,7 +265,7 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
         {shown.length === 0 ? (
           <Empty tab={tab} query={query} onAll={() => setTab("all")} />
         ) : view === "grid" ? (
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-4" aria-label="Courses">
+          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4" aria-label="Courses">
             {shown.map((c) => (
               <CourseCard key={c.id} course={c} />
             ))}
@@ -274,8 +280,6 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
       </main>
       </div>
       {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
-      {/* The general chat on the right, on wide screens (owner, 20 Nov 2026). */}
-      <GeneralChatPanel partner={partner} firstName={user.displayName?.trim().split(/\s+/)[0] ?? null} onChangePartner={() => setPickingPartner(true)} />
     </>
   );
 }

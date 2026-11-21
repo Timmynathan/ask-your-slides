@@ -75,4 +75,6 @@ export interface WorkspaceData {
   past: { total: number; byTopic: Record<string, number>; papers: { id: string; label: string; questions: number }[] };
   /** Opened with ?past=1: the Past questions view instead of a chat. */
   initialPast: boolean;
+  /** "Ask anything" from the dashboard: asked in this course's whole-course chat on arrival. */
+  initialAsk?: string | null;
 }

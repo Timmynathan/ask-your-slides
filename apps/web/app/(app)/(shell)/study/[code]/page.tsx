@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Ask Your Slides" };
 
 type Props = {
   params: Promise<{ code: string }>;
-  searchParams: Promise<{ topic?: string; chat?: string; programme?: string; past?: string }>;
+  searchParams: Promise<{ topic?: string; chat?: string; programme?: string; past?: string; ask?: string }>;
 };
 
 // Loads every course's topics and all of the student's chats in one go. Switching courses then
@@ -100,6 +100,7 @@ async function Loaded({ params, searchParams }: Props) {
         pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}
         past={past}
         initialPast={sp.past === "1" && (past.total > 0 || !PAST_QUESTIONS_LIVE) && !initialChat}
+        initialAsk={!initialChat && !topicFromUrl && sp.ask?.trim() ? sp.ask.trim().slice(0, 4000) : null}
       />
       {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} trial={state.welcome.trial} />}
     </>

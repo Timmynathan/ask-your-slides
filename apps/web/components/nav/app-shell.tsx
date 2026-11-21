@@ -51,10 +51,6 @@ export function ShellNavMini({ onNavigate }: { onNavigate?(): void }) {
         <Icon size={18}>{ICONS.home}</Icon>
         My courses
       </Link>
-      <Link href="/chat" onClick={onNavigate} className={link}>
-        <Icon size={18}>{ICONS.chat}</Icon>
-        Chat
-      </Link>
       <Link href="/past-questions" onClick={onNavigate} className={link}>
         <Icon size={18}>{ICONS.past}</Icon>
         Past questions
@@ -196,7 +192,6 @@ export function AppShell({
   onSearch,
   onUpload,
   onChangePartner,
-  chatReady = false,
   children,
 }: {
   /** Which item is current; worked out from the address when left out (the shared layout). */
@@ -221,8 +216,6 @@ export function AppShell({
   /** Deprecated: the shell opens its own Upload dialog. */
   onUpload?(): void;
   onChangePartner?(): void;
-  /** The general chat is built (step 2 of the owner's plan); until then it shows "Soon". */
-  chatReady?: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -357,7 +350,6 @@ export function AppShell({
       {/* In a course only Dashboard and Upload, so the topics get the room (owner, 21 Nov 2026). */}
       <nav className="flex flex-col gap-0.5 px-2" aria-label="Pages">
         <NavItem label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={ICONS.home} />
-        {!inCourse && <NavItem label="Chat" href="/chat" active={page === "chat"} icon={ICONS.chat} soon={!chatReady} />}
         {!inCourse && <NavItem label="Past questions" href="/past-questions" active={page === "past"} icon={ICONS.past} />}
       </nav>
       <div className="px-3 pt-3">
@@ -453,11 +445,6 @@ export function AppShell({
           <RailButton label="Search courses" onClick={search}>
             {ICONS.search}
           </RailButton>
-          {chatReady && (
-            <RailButton label="Chat" href="/chat" active={page === "chat"}>
-              {ICONS.chat}
-            </RailButton>
-          )}
           <RailButton label="Past questions" href="/past-questions" active={page === "past"}>
             {ICONS.past}
           </RailButton>
