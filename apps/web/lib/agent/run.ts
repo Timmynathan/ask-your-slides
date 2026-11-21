@@ -460,6 +460,8 @@ export async function runChatTurn(turn: ChatTurn) {
   // (searching for the words "keep going" found nothing and lost the place).
   const previous = lastAnswer(turn.history);
   const continuing = !preCalls.length && isContinuation(turn.userMessage) && !!previous;
+  // "5" or "b" after a list: the item picked (searched for, and named to the model below).
+  const picked = previous ? pickedItem(turn.userMessage, previous) : null;
   let resumeNote: string | null = null;
   if (continuing) {
     const at = lastCitedSlide(previous);
@@ -485,13 +487,12 @@ export async function runChatTurn(turn: ChatTurn) {
   }
   if (!preCalls.length) {
     // A bare "keep going" says nothing to search for: search with the earlier question instead.
-    const query = continuing ? preSearchQuery({ userMessage: "", history: turn.history }) || turn.userMessage : preSearchQuery(turn);
+    const query = picked ?? (continuing ? preSearchQuery({ userMessage: "", history: turn.history }) || turn.userMessage : preSearchQuery(turn));
     preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
   }
   const longAnswer = walkthrough || continuing;
   // The previous answer asked a question and this is a short reply: it is the student's answer.
   const answering = !!previous && !continuing && !walkthrough && endsWithQuestion(previous) && turn.userMessage.trim().length <= 160;
-  const picked = previous ? pickedItem(turn.userMessage, previous) : null;
   const answerNote = picked
     ? `The student's message "${turn.userMessage.trim()}" picks item ${turn.userMessage.trim()} of your previous message: "${picked}". If that was a quiz question's options, mark their choice; otherwise act on that item directly, with no remark about their reply.`
     : answering
