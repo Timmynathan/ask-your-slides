@@ -19,6 +19,7 @@ import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
+import { BookOpen, FileText, GraduationCap, Lightbulb, MessageCircleQuestion, Plus, X, type LucideIcon } from "lucide-react";
 
 type Meta = {
   citations?: CitationInfo[];
@@ -97,29 +98,14 @@ function errorText(e: Error | undefined): string | null {
   }
 }
 
-/** Line icons for the starter buttons (24 grid, drawn like the rest of the app). */
+/** Icons for the starter buttons (Lucide, owner 21 Nov 2026: no hand-drawn icons). */
 const STARTER_ICONS = {
-  ask: (
-    <>
-      <path d="M5 6.5h14v9H10l-4 3.5v-3.5H5z" />
-      <path d="M10.3 9.6a1.8 1.8 0 1 1 2.6 1.6c-.5.3-.9.6-.9 1.2M12 14.2v.1" />
-    </>
-  ),
-  overview: <path d="M6 4.5h10.5a1.5 1.5 0 0 1 1.5 1.5v13.5H7.5A1.5 1.5 0 0 1 6 18V4.5zM6 18a1.5 1.5 0 0 1 1.5-1.5H18M9.5 8.5h5M9.5 11.5h5" />,
-  quiz: (
-    <>
-      <path d="M9 18h6M10 21h4" />
-      <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.9V16h5v-.2c0-.8.4-1.5 1-1.9A6 6 0 0 0 12 3z" />
-    </>
-  ),
-  explain: (
-    <>
-      <path d="M3 9l9-4.5L21 9l-9 4.5L3 9z" />
-      <path d="M7 11v4.5c1.4 1.2 3.1 1.8 5 1.8s3.6-.6 5-1.8V11M21 9v5" />
-    </>
-  ),
-  summary: <path d="M7 3.5h7l4 4V20.5H7zM14 3.5v4h4M9.5 12h5M9.5 15.5h5" />,
-};
+  ask: MessageCircleQuestion,
+  overview: BookOpen,
+  quiz: Lightbulb,
+  explain: GraduationCap,
+  summary: FileText,
+} satisfies Record<string, LucideIcon>;
 
 export function ChatPanel({
   course,
@@ -447,9 +433,8 @@ export function ChatPanel({
           {!loadingHistory && messages.length === 0 && (
             <div className="flex flex-col items-center pt-[8vh] text-center">
               <PartnerCast partner={partner} onChangePartner={onChangePartner} />
-              {/* The topic name in Bitter 400, #191919, 68px / 73.44px (owner, 21 Nov 2026); smaller on
-                  narrow screens so long names don't break mid-word. */}
-              <h2 className="mt-4 max-w-full break-words font-heading text-[40px] font-normal not-italic leading-[1.08] text-[#191919] dark:text-ink sm:text-[52px] lg:text-[68px]">
+              {/* The topic name in Bitter 400, #191919 (owner, 21 Nov 2026), at a modest size. */}
+              <h2 className="mt-4 max-w-full break-words font-heading text-[26px] font-normal not-italic leading-[1.15] text-[#191919] dark:text-ink sm:text-[30px]">
                 {topic ? topic.title : course.title}
               </h2>
               <p className="pop-in mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted">
@@ -463,9 +448,10 @@ export function ChatPanel({
                     disabled={busy}
                     className="inline-flex items-center gap-2 rounded-full bg-sunken/70 py-2 pl-3 pr-4 text-sm text-ink transition hover:bg-sunken active:scale-95 disabled:opacity-50"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand" aria-hidden>
-                      {STARTER_ICONS[s.icon]}
-                    </svg>
+                    {(() => {
+                      const StarterIcon = STARTER_ICONS[s.icon];
+                      return <StarterIcon size={16} strokeWidth={1.75} className="shrink-0 text-brand" aria-hidden />;
+                    })()}
                     {s.label}
                   </button>
                 ))}
@@ -597,9 +583,7 @@ export function ChatPanel({
                       aria-label="Remove photo"
                       className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-ink text-page shadow transition active:scale-90"
                     >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
-                        <path d="M6 6l12 12M18 6 6 18" />
-                      </svg>
+                      <X size={13} strokeWidth={2.25} aria-hidden />
                     </button>
                   </span>
                 ))}
@@ -617,9 +601,7 @@ export function ChatPanel({
                 title="Add a photo"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/70 transition hover:bg-black/5 hover:text-ink active:scale-90 disabled:opacity-40"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
+                <Plus size={20} strokeWidth={1.75} aria-hidden />
               </button>
               <textarea
                 ref={inputRef}

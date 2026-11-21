@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_UPLOAD_PHOTOS } from "@/lib/plans/config";
 import { shrinkImage } from "@/lib/ui/shrink-image";
+import { Camera, Check, ChevronDown, FileText, Image as ImageIcon, X } from "lucide-react";
 
 async function shrink(file: File): Promise<Blob> {
   return file.type === "application/pdf" ? file : shrinkImage(file);
@@ -78,9 +79,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
         {done ? (
           <div className="text-center">
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-pau-100 text-brand">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="m5 12.5 4.5 4.5L19 7.5" />
-              </svg>
+              <Check size={22} strokeWidth={2} aria-hidden />
             </span>
             <h2 id="upload-title" className="mt-4 font-heading text-xl text-ink">Reading your pages…</h2>
             <p className="mt-2 text-[14.5px] leading-relaxed text-muted">
@@ -104,9 +103,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                 aria-label="Close"
                 className="-mr-2 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition hover:bg-sunken hover:text-ink disabled:opacity-40"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-                  <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
+                <X size={18} strokeWidth={1.75} aria-hidden />
               </button>
             </div>
 
@@ -124,9 +121,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                       </option>
                     ))}
                   </select>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden>
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
+                  <ChevronDown size={18} strokeWidth={1.75} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
                 </div>
               </div>
 
@@ -145,10 +140,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                   className="flex w-full flex-col items-center rounded-2xl border-2 border-dashed border-line-strong px-4 py-7 text-center transition hover:border-brand hover:bg-pau-50/50"
                 >
                   <span className="grid h-11 w-11 place-items-center rounded-full bg-pau-100 text-brand">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M4 8h3l2-2.5h6L17 8h3v11H4z" />
-                      <circle cx="12" cy="13" r="3.5" />
-                    </svg>
+                    <Camera size={22} strokeWidth={1.75} aria-hidden />
                   </span>
                   <span className="mt-3 text-[15px] font-medium text-ink">Take or choose photos</span>
                   <span className="mt-0.5 text-[12.5px] text-muted">Up to {MAX_UPLOAD_PHOTOS} photos, or one PDF</span>
@@ -159,9 +151,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                     {files.map((f, i) => (
                       <li key={`${f.name}-${i}`} className="flex items-center gap-3 rounded-xl bg-card px-3 py-2">
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-pau-100 text-brand">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                            {f.type === "application/pdf" ? <path d="M7 3.5h7l4 4V20.5H7zM14 3.5v4h4" /> : <path d="M4 6h16v12H4zM4 15l4.5-4 3.5 3 2.5-2L20 16" />}
-                          </svg>
+                          {f.type === "application/pdf" ? <FileText size={16} strokeWidth={1.75} aria-hidden /> : <ImageIcon size={16} strokeWidth={1.75} aria-hidden />}
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] text-ink">{f.name}</span>
@@ -174,9 +164,7 @@ export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { co
                           aria-label={`Remove ${f.name}`}
                           className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-sunken hover:text-ink"
                         >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-                            <path d="M6 6l12 12M18 6 6 18" />
-                          </svg>
+                          <X size={15} strokeWidth={1.75} aria-hidden />
                         </button>
                       </li>
                     ))}
