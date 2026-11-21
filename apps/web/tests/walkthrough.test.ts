@@ -15,6 +15,7 @@ describe("asksForWalkthrough", () => {
     "can you explain all 35 slides",
     "explain the whole deck in detail",
     "teach me the entire lecture",
+    "Do all the notes from project initiation note to managing project risk note",
   ])("yes: %s", (m) => expect(asksForWalkthrough(m)).toBe(true));
   it.each([
     "What is three-point lighting?",

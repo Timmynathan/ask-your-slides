@@ -140,7 +140,7 @@ const SUMMARY_WORDS = /\b(summar|overview|recap|outline of|go through|walk me th
 /** "Explain every slide", "slide by slide", "all the slides in detail", "explain the whole deck". */
 export function asksForWalkthrough(message: string): boolean {
   return (
-    /\b(every|each|all(\s+of)?(\s+the)?|all\s+\d+)\s+(single\s+)?(slides?|pages?)\b/i.test(message) ||
+    /\b(every|each|all(\s+of)?(\s+the)?|all\s+\d+)\s+(single\s+)?(slides?|pages?|notes?|lectures?|decks?)\b/i.test(message) ||
     /\b(slide|page)[\s-]+by[\s-]+(slide|page)\b/i.test(message) ||
     /\b(explain|teach|go through|break down)\b.{0,40}\b(whole|entire|full|complete)\s+(deck|lecture|slides?|topic|week|note|notes)\b/i.test(message)
   );
