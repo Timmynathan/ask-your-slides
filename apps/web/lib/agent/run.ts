@@ -161,6 +161,19 @@ export function asksForWalkthrough(message: string): boolean {
   );
 }
 
+/** "week 7", "wk 7", "lecture 3": the part of the course the student names. */
+export function namedPart(message: string): { kind: "week" | "lecture"; n: number } | null {
+  const m = message.match(/\b(week|wk|lecture|lec)\.?\s*0?(\d{1,2})\b/i);
+  if (!m) return null;
+  return { kind: /^(week|wk)$/i.test(m[1]) ? "week" : "lecture", n: Number(m[2]) };
+}
+
+/** Does a material's title or file name carry that week or lecture number ("WK7 …", "Lecture-3-…")? */
+export function matchesPart(text: string, part: { kind: "week" | "lecture"; n: number }, kind = part.kind): boolean {
+  const word = kind === "week" ? "w(?:ee)?k" : "lec(?:ture)?";
+  return new RegExp(`(?:^|[^a-z])${word}[\\s_.-]*0?${part.n}(?!\\d)`, "i").test(text);
+}
+
 /** "keep going", "continue", "go on", "you stopped at 19… keep going", "why did you stop". */
 export function isContinuation(message: string): boolean {
   const m = message.trim();
@@ -458,6 +471,24 @@ export async function runChatTurn(turn: ChatTurn) {
       preCalls.push({ tool: getMaterialPages, input: r });
     }
   }
+  // "Week 7" / "lecture 3" (owner's review, 21 Nov 2026: asked about week 7, the model taught week
+  // 2's three-part test): find the file by its name, read it all, and say which one it is.
+  const part = namedPart(turn.userMessage);
+  let partNote: string | null = null;
+  if (!preCalls.length && part) {
+    const mats = must(
+      await db.from("materials").select("material_order, page_count, title, source_file, kind").eq("course_id", turn.courseId).in("kind", ["slides", "notes"]).order("material_order"),
+    ) as { material_order: number; page_count: number; title: string; source_file: string | null; kind: string }[];
+    const named = (kind: "week" | "lecture") => mats.filter((m) => matchesPart(m.title, part, kind) || matchesPart(m.source_file?.split("/").pop() ?? "", part, kind));
+    let found = named(part.kind);
+    if (!found.length) found = named(part.kind === "week" ? "lecture" : "week");
+    if (found.length && found.length <= 3) {
+      for (const r of pageReads(turn.courseCode, found.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })))) preCalls.push({ tool: getMaterialPages, input: r });
+      partNote = `The student means ${part.kind} ${part.n}: ${found.map((m) => `"${m.title}" (${materialKey(turn.courseCode, m.material_order)})`).join(", ")}. Its pages are given to you above: teach from them, and don't use another week's material for this unless they ask.`;
+    } else {
+      partNote = `No file in this course is named ${part.kind} ${part.n}. Use list_topics (lms_section often holds the week's dates) to find it; if more than one could fit, ask which one instead of guessing.`;
+    }
+  }
   // A whole-course walkthrough ("all the notes from initiation to risk", "every slide of week 3") or
   // overview: the course's topic list first, so the model reads the right decks, middle ones included.
   if (!preCalls.length && (walkthrough || (summaryAsked && !turn.topicId)) && (!turn.topicId || namesOtherPart)) {
@@ -507,11 +538,13 @@ export async function runChatTurn(turn: ChatTurn) {
   // skipped the calculator. A short think at low effort; thinking tokens count against the cap.
   const thinkMaths = !!turn.calculationHeavy && !longAnswer && asksForWorking(turn.userMessage);
   // The previous answer asked a question and this is a short reply: it is the student's answer.
-  const answering = !!previous && !continuing && !walkthrough && endsWithQuestion(previous) && turn.userMessage.trim().length <= 160;
+  // Short replies only: a longer message is the student saying something new, not an answer
+  // (the model once "marked" a remark about real-life examples as a quiz answer).
+  const answering = !!previous && !continuing && !walkthrough && endsWithQuestion(previous) && turn.userMessage.trim().split(/\s+/).length <= 12;
   const answerNote = picked
     ? `The student's message "${turn.userMessage.trim()}" picks item ${turn.userMessage.trim()} of your previous message: "${picked}". If that was a quiz question's options, mark their choice; otherwise act on that item directly, with no remark about their reply.`
     : answering
-    ? `Your previous message ended with this question to the student: "${lastQuestion(previous!) ?? ""}". Their reply: "${turn.userMessage.trim().slice(0, 160)}". This is most likely their answer to it. If you had asked a quiz or check question, this is their answer: mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. Only if the message clearly asks something new, answer that instead.`
+    ? `Your previous message ended with this question to the student: "${lastQuestion(previous!) ?? ""}". Their reply: "${turn.userMessage.trim().slice(0, 160)}". It may be their answer to it. If it answers your question, mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. If it doesn't answer the question, respond to what they actually said, and never say or imply that they answered.`
     : null;
   // Follow-ups ("5", "b", a quiz answer, "explain that again"): the slides the previous answer
   // cited are read again, so the model can check the student's answer against them and its
@@ -531,7 +564,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

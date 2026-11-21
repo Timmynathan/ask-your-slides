@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, asksForWorking, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForWalkthrough, asksForWorking, matchesPart, namedPart, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -148,5 +148,25 @@ describe("decide (which course a question opens in)", async () => {
     expect(d.clear).toBe(false);
     expect(d.several).toBeFalsy();
     expect(d.choices).toHaveLength(3);
+  });
+});
+
+describe("namedPart / matchesPart ('week 7' finds the week 7 file)", () => {
+  it("reads the week or lecture the student names", () => {
+    expect(namedPart("okay lets go back to the note for today week 7 pls")).toEqual({ kind: "week", n: 7 });
+    expect(namedPart("no explain wk7")).toEqual({ kind: "week", n: 7 });
+    expect(namedPart("summarise lecture 3")).toEqual({ kind: "lecture", n: 3 });
+    expect(namedPart("what is a B+ tree?")).toBeNull();
+  });
+  it("matches real file names, not other numbers", () => {
+    const wk7 = { kind: "week" as const, n: 7 };
+    expect(matchesPart("WK7 Digital Legislations in Nigeria.pptx", wk7)).toBe(true);
+    expect(matchesPart("WEEK 07", wk7)).toBe(true);
+    expect(matchesPart("WK17 Something.pptx", wk7)).toBe(false);
+    expect(matchesPart("WK2 Freedom of Expression.pptx", wk7)).toBe(false);
+    const l3 = { kind: "lecture" as const, n: 3 };
+    expect(matchesPart("05-PAU-CSC420-Lecture3-Functions-Procedures-Triggers.pdf", l3)).toBe(true);
+    expect(matchesPart("07-COS409-Lecture-3-Notes.pdf", l3)).toBe(true);
+    expect(matchesPart("03-CSC409-Lecture-0-Notes.pdf", l3)).toBe(false);
   });
 });
