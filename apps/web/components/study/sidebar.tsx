@@ -5,6 +5,7 @@
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
 // badges or counts. Navy panel with white text; the selected scope is a white pill.
 import type { ChatItem, TopicItem, WorkspaceData } from "@/lib/study/types";
+import { BookOpen, Library } from "lucide-react";
 import { PastBox } from "./past-box";
 
 interface Props {
@@ -34,12 +35,18 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
         <button
           onClick={() => onOpenScope(sc.id)}
           aria-current={active ? "location" : undefined}
-          className={`w-full rounded-2xl px-3 py-2.5 text-left text-[15px] leading-snug transition-colors ${
+          className={`flex w-full items-start gap-2.5 rounded-2xl px-3 py-2.5 text-left text-[14px] leading-snug transition-colors ${
             active ? "bg-white font-medium text-[#0e1664]" : "text-white/85 hover:bg-white/10 hover:text-white"
           }`}
           title={sc.label}
         >
-          <span className="line-clamp-2">{sc.label}</span>
+          {/* A book for each lecture, a library for the whole course (owner, 21 Nov 2026). */}
+          {sc.id === null ? (
+            <Library size={16} absoluteStrokeWidth strokeWidth={1.5} className="mt-px shrink-0" aria-hidden />
+          ) : (
+            <BookOpen size={16} absoluteStrokeWidth strokeWidth={1.5} className="mt-px shrink-0" aria-hidden />
+          )}
+          <span className="line-clamp-2 min-w-0">{sc.label}</span>
         </button>
         {active && scopeChats.length > 0 && (
           <ul className="list-in mb-1 mt-0.5 space-y-0.5 pl-3">
