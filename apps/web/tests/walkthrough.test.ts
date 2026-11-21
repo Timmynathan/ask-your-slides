@@ -106,3 +106,11 @@ describe("lastQuestion", () => {
     expect(lastQuestion(a)).toBe("Question 2: Which process group do the other planning processes belong to, and what knowledge area is it under?");
   });
 });
+
+// "\frac" inside a template literal is a form feed + "rac": the maths example the model saw was garbled.
+describe("instructions contain no hidden control characters", async () => {
+  const { CORE_INSTRUCTIONS, CALCULATION_RULES, TURN_REMINDER } = await import("@/lib/agent/prompt");
+  it.each([["core", CORE_INSTRUCTIONS], ["calculation", CALCULATION_RULES], ["reminder", TURN_REMINDER]])("%s", (_, text) => {
+    expect(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text)).toBe(false);
+  });
+});
