@@ -3,7 +3,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
 import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from "./prompt";
-import { buildTools, getMaterialPages, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
+import { buildTools, getMaterialPages, listTopics, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { parseSlideKey } from "@/lib/study/course-code";
 
@@ -420,7 +420,7 @@ export async function runChatTurn(turn: ChatTurn) {
   // "Explain the code in this topic": every practical file (scripts, notebooks) of the topic or
   // course is read first, so the answer covers each file, not just the best search matches.
   const focus = turn.focusSlide ? parseSlideKey(turn.focusSlide) : null;
-  const preCalls: { tool: typeof searchSlides | typeof getMaterialPages; input: Record<string, unknown> }[] = [];
+  const preCalls: { tool: typeof searchSlides | typeof getMaterialPages | typeof listTopics; input: Record<string, unknown> }[] = [];
   if (focus) {
     preCalls.push({ tool: getMaterialPages, input: { material: focus.material, from: focus.number, to: focus.number } });
   } else if (asksForCodeOverview(turn.userMessage)) {
@@ -439,6 +439,11 @@ export async function runChatTurn(turn: ChatTurn) {
     for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })))) {
       preCalls.push({ tool: getMaterialPages, input: r });
     }
+  }
+  // A whole-course walkthrough ("all the notes from initiation to risk", "every slide of week 3"):
+  // the course's topic list first, so the model reads the right decks, middle ones included.
+  if (!preCalls.length && walkthrough && (!turn.topicId || namesOtherPart)) {
+    preCalls.push({ tool: listTopics, input: {} });
   }
   // "Keep going": pick up after the last slide the previous answer cited, with those slides read
   // (searching for the words "keep going" found nothing and lost the place).
