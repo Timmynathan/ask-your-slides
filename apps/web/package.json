@@ -13,7 +13,8 @@
     "check:golden": "node scripts/golden-check.mts",
     "export:traces": "node scripts/export-traces.mts",
     "check:ui": "node scripts/ui-smoke.mts",
-    "plans:comp": "node scripts/comp-grant.mts"
+    "plans:comp": "node scripts/comp-grant.mts",
+    "check:walkthrough": "tsx scripts/walkthrough-check.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.99",
