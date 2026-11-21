@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { ShellNavMini, useShellCourse } from "@/components/nav/app-shell";
@@ -15,6 +15,7 @@ import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 import { SourcesPanel } from "./sources-panel";
+import { ResizeHandle } from "./resize-handle";
 import { StudyTour, useStudyTour } from "./study-tour";
 import { LaptopTour, useLaptopTour } from "./laptop-tour";
 import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
@@ -37,6 +38,27 @@ export function Workspace(data: WorkspaceData) {
   const [preview, setPreview] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false); // below xl; on wide screens Sources is always shown
+  // Laptops (owner, 21 Nov 2026): Sources and the slide viewer can be dragged wider or narrower by
+  // their left edge; widths are remembered on this device. Dragging Sources far enough right closes
+  // it (a Sources button brings it back); an open slide never closes by dragging, only with its X.
+  const [rightW, setRightW] = useState({ sources: 320, slide: 520 });
+  const [sourcesClosed, setSourcesClosed] = useState(false);
+  const dragFrom = useRef(0);
+  const [closingSources, setClosingSources] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("ays:right") ?? "null") as { sources?: number; slide?: number } | null;
+      if (saved) {
+        const t = setTimeout(() => setRightW((w) => ({ sources: saved.sources ?? w.sources, slide: saved.slide ?? w.slide })), 0);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, []);
+  const saveRight = (w: { sources: number; slide: number }) => {
+    try {
+      localStorage.setItem("ays:right", JSON.stringify(w));
+    } catch {}
+  };
   // First visit on a phone or iPad in portrait: a short tour of ☰ (topics) and Sources (study-tour.tsx).
   const tour = useStudyTour(data.user.id, !data.initialPast);
   // Tablets and laptops: a guided walk of the page instead (laptop-tour.tsx).
@@ -51,6 +73,11 @@ export function Workspace(data: WorkspaceData) {
     advance("drawer");
   }, [advance]);
   const openSources = () => {
+    // Laptops: the Sources column was dragged closed, so this brings it back.
+    if (window.matchMedia("(min-width: 80rem)").matches) {
+      setSourcesClosed(false);
+      return;
+    }
     setSourcesOpen(true);
     advance("sources");
   };
@@ -189,7 +216,7 @@ export function Workspace(data: WorkspaceData) {
   );
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-page text-ink">
+    <div className="flex h-dvh w-full overflow-hidden bg-page text-ink" style={{ ["--sources-w" as string]: `${rightW.sources}px`, ["--slide-w" as string]: `${rightW.slide}px` }}>
       {shell?.slot && createPortal(sidebar, shell.slot)}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar (owner, 21 Nov 2026): no course name, tags or counts (the sidebar names the course);
@@ -210,7 +237,7 @@ export function Workspace(data: WorkspaceData) {
                 Past questions
               </button>
             )}
-            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className="xl:hidden">
+            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className={sourcesClosed && !preview && !past ? "" : "xl:hidden"}>
               <path d="M7 3.5h7l4 4V20.5H7z" />
               <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
             </IconButton>
@@ -298,8 +325,36 @@ export function Workspace(data: WorkspaceData) {
       {/* Right, full height with square edges (owner, 21 Nov 2026): Sources, or the slide being viewed
           (which replaces it until closed). Hidden while past questions are open: the original paper
           takes that room instead. */}
+      {!preview && !past && !sourcesClosed && (
+        <ResizeHandle
+          label="Resize sources"
+          onStart={() => {
+            dragFrom.current = rightW.sources;
+          }}
+          onMove={(dx) => {
+            const w = dragFrom.current - dx;
+            setClosingSources(w < 200);
+            setRightW((r) => ({ ...r, sources: Math.min(560, Math.max(160, w)) }));
+          }}
+          onEnd={() => {
+            if (closingSources) {
+              // Dragged far enough right: close it, and keep the width it had before.
+              setSourcesClosed(true);
+              setClosingSources(false);
+              setRightW((r) => ({ ...r, sources: dragFrom.current }));
+              return;
+            }
+            setRightW((r) => {
+              const next = { ...r, sources: Math.max(240, r.sources) };
+              saveRight(next);
+              return next;
+            });
+          }}
+        />
+      )}
       <div className={preview ? "contents xl:hidden" : past ? "hidden" : "contents"}>
         <SourcesPanel
+          collapsed={sourcesClosed}
           courseId={course.id}
           courseCode={course.code}
           topics={topics}
@@ -313,6 +368,25 @@ export function Workspace(data: WorkspaceData) {
           }}
         />
       </div>
+      {preview && (
+        <ResizeHandle
+          label="Resize slide"
+          onStart={() => {
+            dragFrom.current = rightW.slide;
+          }}
+          onMove={(dx) => {
+            // Never closes by dragging: the slide stays readable (its X closes it).
+            const max = Math.min(900, Math.round(window.innerWidth * 0.6));
+            setRightW((r) => ({ ...r, slide: Math.min(max, Math.max(380, dragFrom.current - dx)) }));
+          }}
+          onEnd={() =>
+            setRightW((r) => {
+              saveRight(r);
+              return r;
+            })
+          }
+        />
+      )}
       {preview && (
         <SlidePreview
           // One viewer per material: flipping pages keeps it mounted, so the current page stays until the next loads.

@@ -103,7 +103,7 @@ const TIP_KEY = "ays-menu-tip-seen";
 
 const RAIL = 64;
 const MIN_W = 200;
-const MAX_W = 340;
+const MAX_W = 480; // owner, 21 Nov 2026: can be dragged much wider
 const DEFAULT_W = 252;
 const CLOSE_BELOW = 150; // dragging narrower than this closes the panel
 const KEY = "ays:sidebar";
