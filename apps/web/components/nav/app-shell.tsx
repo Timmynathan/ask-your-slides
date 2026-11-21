@@ -311,21 +311,25 @@ export function AppShell({
   }
   function onDragMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!start.current) return;
-    setWidth(Math.min(MAX_W, Math.max(CLOSE_BELOW - 30, start.current.w + e.clientX - start.current.x)));
+    const w = start.current.w + e.clientX - start.current.x;
+    // Dragged far enough left: it closes there and then, without letting go (owner, 21 Nov 2026).
+    if (w < CLOSE_BELOW) {
+      const before = start.current.w;
+      start.current = null;
+      setDragging(false);
+      setPinned(false);
+      setWidth(before);
+      return;
+    }
+    setWidth(Math.min(MAX_W, w));
   }
   function onDragEnd() {
     if (!start.current) return;
     start.current = null;
     setDragging(false);
-    if (width < CLOSE_BELOW) {
-      setPinned(false);
-      setWidth(DEFAULT_W);
-      remember({ width: DEFAULT_W });
-    } else {
-      const w = Math.max(MIN_W, width);
-      setWidth(w);
-      remember({ width: w });
-    }
+    const w = Math.max(MIN_W, width);
+    setWidth(w);
+    remember({ width: w });
   }
 
   const shown = hasPanel && (open || peek);

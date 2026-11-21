@@ -44,7 +44,6 @@ export function Workspace(data: WorkspaceData) {
   const [rightW, setRightW] = useState({ sources: 320, slide: 520 });
   const [sourcesClosed, setSourcesClosed] = useState(false);
   const dragFrom = useRef(0);
-  const [closingSources, setClosingSources] = useState(false);
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("ays:right") ?? "null") as { sources?: number; slide?: number } | null;
@@ -333,17 +332,16 @@ export function Workspace(data: WorkspaceData) {
           }}
           onMove={(dx) => {
             const w = dragFrom.current - dx;
-            setClosingSources(w < 200);
-            setRightW((r) => ({ ...r, sources: Math.min(560, Math.max(160, w)) }));
-          }}
-          onEnd={() => {
-            if (closingSources) {
-              // Dragged far enough right: close it, and keep the width it had before.
+            // Dragged far enough right: it closes there and then, without letting go, keeping the
+            // width it had before (owner, 21 Nov 2026).
+            if (w < 200) {
               setSourcesClosed(true);
-              setClosingSources(false);
               setRightW((r) => ({ ...r, sources: dragFrom.current }));
               return;
             }
+            setRightW((r) => ({ ...r, sources: Math.min(560, w) }));
+          }}
+          onEnd={() => {
             setRightW((r) => {
               const next = { ...r, sources: Math.max(240, r.sources) };
               saveRight(next);
