@@ -17,6 +17,25 @@ interface Offered {
   enrolled: boolean;
 }
 
+// Loaded ahead (owner, 21 Nov 2026: "it takes a while for courses to show up"): the dashboard starts
+// this in the background, so the list is usually there the moment the dialog opens. Saving a change
+// drops it, so the next open reads fresh data.
+let ahead: Promise<Offered[]> | null = null;
+export function prefetchEnrollments(): Promise<Offered[]> {
+  ahead ??= fetch("/api/enrollments")
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+    .then((d: { courses: Offered[] }) => d.courses)
+    .catch((e) => {
+      ahead = null; // try again next time
+      throw e;
+    });
+  return ahead;
+}
+/** A saved change makes the loaded list out of date. */
+function forgetEnrollments() {
+  ahead = null;
+}
+
 export function EnrollDialog({ onClose }: { onClose(): void }) {
   const router = useRouter();
   const [courses, setCourses] = useState<Offered[] | null>(null);
@@ -26,9 +45,8 @@ export function EnrollDialog({ onClose }: { onClose(): void }) {
 
   useEffect(() => {
     let live = true;
-    fetch("/api/enrollments")
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
-      .then((d: { courses: Offered[] }) => live && setCourses(d.courses))
+    prefetchEnrollments()
+      .then((list) => live && setCourses(list))
       .catch(() => live && setError("Couldn't load the courses. Try again."));
     return () => {
       live = false;
@@ -56,6 +74,7 @@ export function EnrollDialog({ onClose }: { onClose(): void }) {
       const r = await fetch("/api/enrollments", { method: c.enrolled ? "DELETE" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course: c.id }) });
       if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? "Couldn't save. Try again.");
       setCourses((list) => list?.map((x) => (x.id === c.id ? { ...x, enrolled: !c.enrolled } : x)) ?? null);
+      forgetEnrollments();
       router.refresh(); // My courses re-reads its list from the server
     } catch (e) {
       setError((e as Error).message);

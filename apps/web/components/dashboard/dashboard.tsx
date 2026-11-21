@@ -13,7 +13,7 @@ import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
 import { CourseIcon } from "./course-icon";
-import { EnrollDialog } from "./enroll-dialog";
+import { EnrollDialog, prefetchEnrollments } from "./enroll-dialog";
 import { useClickAway } from "@/lib/ui/use-click-away";
 
 export interface DashboardCourse {
@@ -67,6 +67,11 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
   const [view, setView] = useState<View>("grid");
   const [enrolling, setEnrolling] = useState(false);
   const searchBox = useRef<HTMLInputElement>(null);
+  // "Add a course" opens with its list already loaded: fetched quietly a moment after the page.
+  useEffect(() => {
+    const t = setTimeout(() => void prefetchEnrollments().catch(() => {}), 1200);
+    return () => clearTimeout(t);
+  }, []);
   // The sidebar's search button (shared layout): focus this page's search box, also after arriving
   // from another page (?search=1).
   useEffect(() => {
@@ -241,6 +246,8 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
           <button
             type="button"
             onClick={() => setEnrolling(true)}
+            onPointerEnter={() => void prefetchEnrollments().catch(() => {})}
+            onFocus={() => void prefetchEnrollments().catch(() => {})}
             className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-brand py-2.5 pl-3.5 pr-4 text-[15px] font-medium text-brand-ink shadow-sm transition hover:bg-navy-hover active:scale-95"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
