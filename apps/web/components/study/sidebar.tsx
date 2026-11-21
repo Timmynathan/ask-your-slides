@@ -26,6 +26,41 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
     { id: null, label: "Whole course" },
     ...topics.map((t) => ({ id: t.id, label: t.title })),
   ];
+  const scopeItem = (sc: { id: string | null; label: string }) => {
+    const active = !pastActive && sc.id === topicId;
+    const scopeChats = active ? chats.filter((ch) => ch.topic_id === sc.id) : [];
+    return (
+      <li key={sc.id ?? "course"}>
+        <button
+          onClick={() => onOpenScope(sc.id)}
+          aria-current={active ? "location" : undefined}
+          className={`w-full rounded-2xl px-3 py-2.5 text-left text-[15px] leading-snug transition-colors ${
+            active ? "bg-white font-medium text-[#0e1664]" : "text-white/85 hover:bg-white/10 hover:text-white"
+          }`}
+          title={sc.label}
+        >
+          <span className="line-clamp-2">{sc.label}</span>
+        </button>
+        {active && scopeChats.length > 0 && (
+          <ul className="list-in mb-1 mt-0.5 space-y-0.5 pl-3">
+            {scopeChats.map((ch) => (
+              <li key={ch.id}>
+                <button
+                  onClick={() => onOpenChat(ch)}
+                  aria-current={ch.id === chatId ? "true" : undefined}
+                  className={`w-full truncate rounded-xl px-3 py-1.5 text-left text-[13.5px] ${ch.id === chatId ? "text-white" : "text-white/60 hover:text-white"}`}
+                  title={ch.title}
+                >
+                  <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${ch.id === chatId ? "bg-[#5ea3ed]" : "bg-white/30"}`} aria-hidden />
+                  {ch.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    );
+  };
   return (
     <nav className="flex h-full flex-col" aria-label="Topics and chats">
       {/* Past questions first: real PAU papers by year (replaced "Search the web", owner 14 Nov 2026). */}
@@ -35,59 +70,25 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
         </div>
       )}
 
-      <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-4">
-        <h2 className="text-[13px] text-white/60">Lectures</h2>
-        <button
-          onClick={() => onOpenScope(topicId)}
-          aria-label="New chat"
-          title="New chat"
-          className="grid h-8 w-8 place-items-center rounded-full text-white transition hover:bg-white/10 active:scale-90"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
+      {/* Whole course on its own, above the lectures (owner, 21 Nov 2026): it isn't a lecture. One
+          scrolling list holds both. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">
+        <ul>{scopes.slice(0, 1).map(scopeItem)}</ul>
+        <div className="flex items-center justify-between pb-1 pl-2 pt-4">
+          <h2 className="text-[13px] text-white/60">Lectures</h2>
+          <button
+            onClick={() => onOpenScope(topicId)}
+            aria-label="New chat"
+            title="New chat"
+            className="grid h-8 w-8 place-items-center rounded-full text-white transition hover:bg-white/10 active:scale-90"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden>
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
+        <ul className="space-y-0.5">{scopes.slice(1).map(scopeItem)}</ul>
       </div>
-
-      <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
-        {scopes.map((s) => {
-          const active = !pastActive && s.id === topicId;
-          const scopeChats = active ? chats.filter((ch) => ch.topic_id === s.id) : [];
-          return (
-            <li key={s.id ?? "course"}>
-              <button
-                onClick={() => onOpenScope(s.id)}
-                aria-current={active ? "location" : undefined}
-                className={`w-full rounded-2xl px-3 py-2.5 text-left text-[15px] leading-snug transition-colors ${
-                  active ? "bg-white font-medium text-[#0e1664]" : "text-white/85 hover:bg-white/10 hover:text-white"
-                }`}
-                title={s.label}
-              >
-                <span className="line-clamp-2">{s.label}</span>
-              </button>
-              {active && scopeChats.length > 0 && (
-                <ul className="list-in mb-1 mt-0.5 space-y-0.5 pl-3">
-                  {scopeChats.map((ch) => (
-                    <li key={ch.id}>
-                      <button
-                        onClick={() => onOpenChat(ch)}
-                        aria-current={ch.id === chatId ? "true" : undefined}
-                        className={`w-full truncate rounded-xl px-3 py-1.5 text-left text-[13.5px] ${
-                          ch.id === chatId ? "text-white" : "text-white/60 hover:text-white"
-                        }`}
-                        title={ch.title}
-                      >
-                        <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle ${ch.id === chatId ? "bg-[#5ea3ed]" : "bg-white/30"}`} aria-hidden />
-                        {ch.title}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          );
-        })}
-      </ul>
     </nav>
   );
 }

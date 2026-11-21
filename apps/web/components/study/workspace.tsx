@@ -41,12 +41,12 @@ export function Workspace(data: WorkspaceData) {
   // Laptops (owner, 21 Nov 2026): Sources and the slide viewer can be dragged wider or narrower by
   // their left edge; widths are remembered on this device. Dragging Sources far enough right closes
   // it (a Sources button brings it back); an open slide never closes by dragging, only with its X.
-  const [rightW, setRightW] = useState({ sources: 320, slide: 520 });
+  const [rightW, setRightW] = useState({ sources: 240, slide: 520 }); // Sources narrower (owner, 21 Nov 2026)
   const [sourcesClosed, setSourcesClosed] = useState(false);
   const dragFrom = useRef(0);
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("ays:right") ?? "null") as { sources?: number; slide?: number } | null;
+      const saved = JSON.parse(localStorage.getItem("ays:right2") ?? "null") as { sources?: number; slide?: number } | null;
       if (saved) {
         const t = setTimeout(() => setRightW((w) => ({ sources: saved.sources ?? w.sources, slide: saved.slide ?? w.slide })), 0);
         return () => clearTimeout(t);
@@ -55,7 +55,7 @@ export function Workspace(data: WorkspaceData) {
   }, []);
   const saveRight = (w: { sources: number; slide: number }) => {
     try {
-      localStorage.setItem("ays:right", JSON.stringify(w));
+      localStorage.setItem("ays:right2", JSON.stringify(w));
     } catch {}
   };
   // First visit on a phone or iPad in portrait: a short tour of ☰ (topics) and Sources (study-tour.tsx).
@@ -334,7 +334,7 @@ export function Workspace(data: WorkspaceData) {
             const w = dragFrom.current - dx;
             // Dragged far enough right: it closes there and then, without letting go, keeping the
             // width it had before (owner, 21 Nov 2026).
-            if (w < 200) {
+            if (w < 170) {
               setSourcesClosed(true);
               setRightW((r) => ({ ...r, sources: dragFrom.current }));
               return;
@@ -343,7 +343,7 @@ export function Workspace(data: WorkspaceData) {
           }}
           onEnd={() => {
             setRightW((r) => {
-              const next = { ...r, sources: Math.max(240, r.sources) };
+              const next = { ...r, sources: Math.max(200, r.sources) };
               saveRight(next);
               return next;
             });
