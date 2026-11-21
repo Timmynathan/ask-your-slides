@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // A page loaded ahead on hover (components/ui/hover-link.tsx) is reused for 30 s instead of
+    // being fetched again on click (owner, 21 Nov 2026: courses were slow to open). A new chat
+    // refreshes it (workspace.tsx), so lists don't show stale chats.
+    staleTimes: { dynamic: 30 },
+  },
   turbopack: {
     rules: {
       "*.css": {
