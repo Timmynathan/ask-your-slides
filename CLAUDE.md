@@ -43,9 +43,11 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   cited slide, follow-ups re-read the previous answer's slides, "5"/"b" resolved to the list item, quiz
   replies marked, no thin-slides opener, no search talk or apology openings (also trimmed on the stream).
   Checks: `npm run check:walkthrough` and `npm run check:replay` (live site, ~3 US cents; cases in
-  data/evals/). Still to do: phase B (citations that point at the wrong slide in big overviews; check
-  claim vs slide on the server) and phase C (maths: calculate tool for MTH courses, LaTeX, flag slide errors
-  such as MTH101 345° for −3+3i; CAMA s.96 ratification on the Company Law slides needs the owner's check).
+  data/evals/). Phase B done: citations whose slide shares almost nothing with the sentence are dropped
+  on the stream (lib/agent/support.ts, logged citation_unsupported; title slides and maths steps are not
+  judged); overviews start from list_topics. Still to do: phase C (maths: calculate tool for MTH courses,
+  LaTeX, flag slide errors such as MTH101 345° for −3+3i; CAMA s.96 ratification on the Company Law slides
+  needs the owner's check).
 
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.
