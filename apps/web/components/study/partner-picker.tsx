@@ -44,12 +44,12 @@ export function PartnerPicker({ current, onClose, onChanged }: { current: Partne
         role="dialog"
         aria-modal="true"
         aria-label="Change study partner"
-        className="pop-in w-full max-w-sm rounded-[22px] bg-card p-5 shadow-2xl ring-1 ring-line"
+        className="pop-in w-full max-w-md rounded-[25px] bg-card p-6 shadow-2xl ring-1 ring-line"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-heading text-xl font-semibold text-ink">Change study partner</h2>
-        <p className="mt-1 text-[13px] text-muted">Same slides, different way of explaining. Takes effect from your next question.</p>
-        <div role="radiogroup" className="mt-4 space-y-1.5">
+        <h2 className="font-heading text-2xl font-semibold text-ink">Change study partner</h2>
+        <p className="mt-1 text-sm text-muted">Same slides, different way of explaining. Takes effect from your next question.</p>
+        <div role="radiogroup" className="mt-5 space-y-2">
           {PARTNER_IDS.map((id) => {
             const p = PARTNERS[id];
             const selected = id === current;
@@ -60,12 +60,12 @@ export function PartnerPicker({ current, onClose, onChanged }: { current: Partne
                 aria-checked={selected}
                 onClick={() => choose(id)}
                 disabled={!!saving}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ring-1 transition-colors hover:bg-sunken ${selected ? `ring-2 ${p.accent.ring} ${p.accent.soft}` : "ring-line"}`}
+                className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left ring-1 transition-colors hover:bg-sunken ${selected ? `ring-2 ${p.accent.ring} ${p.accent.soft}` : "ring-line"}`}
               >
-                <Mascot partner={id} size={34} mood={selected ? "happy" : "idle"} />
+                <Mascot partner={id} size={52} mood={selected ? "happy" : "idle"} />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-semibold leading-tight text-ink">{p.name}</span>
-                  <span className="block truncate text-[12.5px] text-muted">Best for: {p.bestFor.toLowerCase()}</span>
+                  <span className="block font-heading text-lg font-semibold text-ink">{p.name}</span>
+                  <span className="block text-sm text-muted">Best for: {p.bestFor.toLowerCase()}</span>
                 </span>
                 {saving === id ? <Spinner /> : selected ? <span className="text-xs font-medium text-muted">Current</span> : null}
               </button>
@@ -73,7 +73,7 @@ export function PartnerPicker({ current, onClose, onChanged }: { current: Partne
           })}
         </div>
         {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-        <button onClick={onClose} className="mt-4 w-full rounded-full px-4 py-2 text-sm font-medium text-ink ring-1 ring-line hover:bg-sunken">
+        <button onClick={onClose} className="mt-5 w-full rounded-full px-4 py-2.5 text-sm font-medium text-ink ring-1 ring-line hover:bg-sunken">
           Close
         </button>
       </div>

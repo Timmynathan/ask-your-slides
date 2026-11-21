@@ -180,19 +180,19 @@ export default async function Landing() {
           <p className="mx-auto mt-3 max-w-xl text-center text-muted">
             Pick the style you enjoy and switch any time. Every partner answers from your school slides and cites every point.
           </p>
-          <div className="mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-2">
+          <div className="mx-auto mt-10 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {PARTNER_IDS.map((id) => {
               const p = PARTNERS[id];
               return (
-                <div key={id} className="flex flex-col items-center rounded-[25px] bg-card p-7 text-center ring-1 ring-line">
-                  <Mascot partner={id} size={104} mood="happy" />
-                  <h3 className="mt-4 font-heading text-2xl font-semibold text-ink">{p.name}</h3>
-                  <p className="text-sm text-muted">{p.role}</p>
-                  <p className={`mt-3 rounded-full px-3 py-1 text-xs font-semibold ${p.accent.bg} ${p.accent.text}`}>Best for: {p.bestFor}</p>
-                  <p className={`mt-4 rounded-2xl px-4 py-3 text-[15px] leading-relaxed ${p.accent.soft} text-ink`}>“{p.sample}”</p>
-                  <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                <div key={id} className="flex flex-col items-center rounded-[20px] bg-card p-4 text-center ring-1 ring-line">
+                  <Mascot partner={id} size={60} mood="happy" />
+                  <h3 className="mt-2.5 font-heading text-lg font-semibold text-ink">{p.name}</h3>
+                  <p className="text-[13px] text-muted">{p.role}</p>
+                  <p className={`mt-2 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${p.accent.bg} ${p.accent.text}`}>Best for: {p.bestFor}</p>
+                  <p className={`mt-3 rounded-xl px-3 py-2 text-[13px] leading-snug ${p.accent.soft} text-ink`}>“{p.sample}”</p>
+                  <div className="mt-3 flex flex-wrap justify-center gap-1">
                     {p.traits.map((t) => (
-                      <span key={t} className="rounded-full bg-page px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-line">{t}</span>
+                      <span key={t} className="rounded-full bg-page px-2 py-0.5 text-[11px] font-medium text-muted ring-1 ring-line">{t}</span>
                     ))}
                   </div>
                 </div>
