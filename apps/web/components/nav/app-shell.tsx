@@ -102,16 +102,28 @@ const DEFAULT_W = 252;
 const CLOSE_BELOW = 150; // dragging narrower than this closes the panel
 const KEY = "ays:sidebar";
 
-const railCls = (active: boolean) => `grid h-11 w-11 place-items-center rounded-xl transition active:scale-90 ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
+// The rail opens over the page on hover (to 224 px) and shows each icon's name (owner, 21 Nov 2026).
+// Each row is an icon cell (the closed rail's width) plus a label that fades in while it is open.
+const railCls = (active: boolean) =>
+  `flex h-11 w-full items-center rounded-xl text-left transition active:scale-[0.98] ${active ? "bg-white/15 text-white" : "text-white/65 hover:bg-white/10 hover:text-white"}`;
+const railLabel =
+  "pointer-events-none whitespace-nowrap pr-3 text-[14.5px] opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-hover/rail:delay-100";
 
 function RailButton({ label, active = false, href, onClick, icon: Icon }: { label: string; active?: boolean; href?: string; onClick?(): void; icon: LucideIcon }) {
-  const inner = <Icon size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />;
+  const inner = (
+    <>
+      <span className="grid h-11 w-11 shrink-0 place-items-center">
+        <Icon size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+      </span>
+      <span className={railLabel}>{label}</span>
+    </>
+  );
   return href ? (
-    <Link href={href} aria-label={label} title={label} aria-current={active ? "page" : undefined} className={railCls(active)}>
+    <Link href={href} aria-label={label} aria-current={active ? "page" : undefined} className={railCls(active)}>
       {inner}
     </Link>
   ) : (
-    <button type="button" onClick={onClick} aria-label={label} title={label} className={railCls(active)}>
+    <button type="button" onClick={onClick} aria-label={label} className={railCls(active)}>
       {inner}
     </button>
   );
@@ -123,12 +135,15 @@ function RecentChats({ recent }: { recent: ShellChat[] }) {
   const root = useRef<HTMLDivElement>(null);
   useClickAway(root, open, () => setOpen(false));
   return (
-    <div ref={root} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Recent chats" title="Recent chats" aria-expanded={open} className={railCls(open)}>
-        <History size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+    <div ref={root} className="relative w-full">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Recent chats" aria-expanded={open} className={railCls(open)}>
+        <span className="grid h-11 w-11 shrink-0 place-items-center">
+          <History size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+        </span>
+        <span className={railLabel}>Recent chats</span>
       </button>
       {open && (
-        <div className="pop-in absolute left-14 top-0 z-50 w-72 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-line">
+        <div className="pop-in absolute left-full top-0 z-50 ml-3 w-72 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-line">
           <p className="px-3 pb-1 pt-2 text-[12px] font-medium uppercase tracking-wide text-muted">Recent chats</p>
           {recent.length === 0 ? (
             <p className="px-3 pb-3 pt-1 text-[13.5px] text-muted">No chats yet. Open a course to start one.</p>
@@ -292,18 +307,31 @@ export function AppShell({
     <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (hasPanel ? (pinned ? panelW : 52) : 0)}px` }}>
       {/* Leaving the whole sidebar (rail and panel) ends a hover peek. */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main" onMouseLeave={() => setPeek(false)}>
-        {/* Rail */}
-        <div className="flex w-16 flex-col items-center gap-1.5 bg-pau-900 py-4">
-          <Link href="/" aria-label="Ask Your Slides home" title="Home" className="mb-2 grid h-11 w-11 place-items-center">
-            <LogoMark size={26} light />
-          </Link>
-          <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
-          <RailButton label="Search courses" onClick={search} icon={Search} />
-          <RecentChats recent={recent} />
-          <div className="mt-auto flex flex-col items-center gap-3">
-            {/* Feedback (owner, 20 Nov 2026), just above the account. */}
-            <RailButton label="Give us feedback" onClick={() => setFeedback(true)} icon={PencilLine} />
-            <AccountMenu user={user} onChangePartner={onChangePartner} side />
+        {/* Rail: a 64 px slot; the rail itself sits over the page and the course panel, and opens
+            on hover (after a short pause, so passing the pointer over it doesn't flash it open). */}
+        <div className="relative w-16 shrink-0">
+          <div
+            className="group/rail absolute inset-y-0 left-0 z-[60] flex w-16 flex-col gap-1.5 bg-pau-900 px-2.5 py-4 transition-[width,box-shadow] delay-0 duration-200 ease-out hover:w-56 hover:shadow-2xl hover:delay-150"
+          >
+            <Link href="/" aria-label="Ask Your Slides home" className="mb-2 flex h-11 w-full items-center">
+              <span className="grid h-11 w-11 shrink-0 place-items-center">
+                <LogoMark size={26} light />
+              </span>
+              <span className={`${railLabel} font-heading text-[16px] text-white`}>Ask Your Slides</span>
+            </Link>
+            <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
+            <RailButton label="Search courses" onClick={search} icon={Search} />
+            <RecentChats recent={recent} />
+            <div className="mt-auto flex flex-col gap-3">
+              {/* Feedback (owner, 20 Nov 2026), just above the account. */}
+              <RailButton label="Give us feedback" onClick={() => setFeedback(true)} icon={PencilLine} />
+              <div className="flex h-11 w-full items-center">
+                <span className="grid h-11 w-11 shrink-0 place-items-center">
+                  <AccountMenu user={user} onChangePartner={onChangePartner} side menuClassName="bottom-0 left-[220px]" />
+                </span>
+                <span className={`${railLabel} truncate text-white/80`}>{user.displayName ?? "Account"}</span>
+              </div>
+            </div>
           </div>
         </div>
 

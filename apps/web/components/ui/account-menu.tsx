@@ -45,7 +45,7 @@ function Row({ icon, children, href, onClick, external = false }: { icon: ReactN
 /** `side`: opened from the sidebar (a white button on navy; the menu opens to its right, upwards).
  *  `onChangePartner` is no longer used here (the partner is changed on the profile page); kept so
  *  callers don't break. */
-export function AccountMenu({ user, side = false }: { user: { email: string; displayName: string | null }; onChangePartner?: () => void; side?: boolean }) {
+export function AccountMenu({ user, side = false, menuClassName }: { user: { email: string; displayName: string | null }; onChangePartner?: () => void; side?: boolean; menuClassName?: string }) {
   const [open, setOpen] = useState(false);
   const [feedback, setFeedback] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ export function AccountMenu({ user, side = false }: { user: { email: string; dis
         {name.trim().charAt(0) || "?"}
       </button>
       {open && (
-        <div className={`pop-in absolute z-30 w-64 rounded-2xl bg-card p-2 text-sm shadow-lg ring-1 ring-line ${side ? "bottom-0 left-14" : "right-0 top-12"}`}>
+        <div className={`pop-in absolute z-30 w-64 rounded-2xl bg-card p-2 text-sm shadow-lg ring-1 ring-line ${menuClassName ?? (side ? "bottom-0 left-14" : "right-0 top-12")}`}>
           {/* No name or email at the top (owner, 21 Nov 2026): straight to the options. */}
           <div>
             <Row href="/profile" onClick={close} icon={<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />}>
