@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, isContinuation, lastCitedSlide } = await import("@/lib/agent/run");
+const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -42,4 +42,21 @@ describe("lastCitedSlide", () => {
   it("none when nothing was cited", () => {
     expect(lastCitedSlide("No citations here.")).toBeNull();
   });
+});
+
+describe("citedRanges (the previous answer's slides, read again on a follow-up)", () => {
+  it("groups nearby slides per deck and bridges small gaps", () => {
+    const a = "x [[s:INS401-06-14]] y [[s:INS401-06-12]] z [[s:INS401-06-30]] w [[s:INS401-02-3]] [[s:INS401-06-14]]";
+    expect(citedRanges(a)).toEqual([
+      { material: "INS401-06", from: 12, to: 14 },
+      { material: "INS401-06", from: 30, to: 30 },
+      { material: "INS401-02", from: 3, to: 3 },
+    ]);
+  });
+  it("stays within the page budget", () => {
+    const many = Array.from({ length: 60 }, (_, i) => `[[s:PHY101-05-${i + 1}]]`).join(" ");
+    const total = citedRanges(many).reduce((s, r) => s + r.to - r.from + 1, 0);
+    expect(total).toBe(40);
+  });
+  it("nothing when the answer cited nothing", () => expect(citedRanges("plain text")).toEqual([]));
 });

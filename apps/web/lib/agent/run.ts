@@ -133,6 +133,37 @@ export function lastCitedSlide(content: string): { material: string; number: num
   return null;
 }
 
+/** Page ranges covering the slides an earlier answer cited, per deck (gaps of up to 3 slides are
+ *  bridged), at most `budget` pages in all, most-cited decks first. */
+export function citedRanges(content: string, budget = 40): { material: string; from: number; to: number }[] {
+  const byMat = new Map<string, number[]>();
+  for (const m of content.matchAll(/\[\[s:([^\]\s]+)\]\]/g)) {
+    const k = parseSlideKey(m[1]);
+    if (k) byMat.set(k.material, [...(byMat.get(k.material) ?? []), k.number]);
+  }
+  const out: { material: string; from: number; to: number }[] = [];
+  for (const [material, nums] of [...byMat].sort((a, b) => b[1].length - a[1].length)) {
+    const sorted = [...new Set(nums)].sort((a, b) => a - b);
+    let from = sorted[0];
+    let to = sorted[0];
+    const push = () => {
+      const size = Math.min(to - from + 1, 40, budget);
+      if (size > 0) out.push({ material, from, to: from + size - 1 });
+      budget -= Math.max(0, size);
+    };
+    for (const n of sorted.slice(1)) {
+      if (n - to <= 4) to = n;
+      else {
+        push();
+        from = to = n;
+      }
+    }
+    push();
+    if (budget <= 0) break;
+  }
+  return out;
+}
+
 /** The text of the latest assistant answer in the history. */
 function lastAnswer(history: ModelMessage[]): string {
   for (let i = history.length - 1; i >= 0; i--) {
@@ -339,6 +370,13 @@ export async function runChatTurn(turn: ChatTurn) {
     preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
   }
   const longAnswer = walkthrough || continuing;
+  // Follow-ups ("5", "b", a quiz answer, "explain that again"): the slides the previous answer
+  // cited are read again, so the model can check the student's answer against them and its
+  // citations stay valid (they used to be stripped as citation_invalid, and the model said it
+  // "couldn't confirm" a figure it had cited one turn earlier). Owner's review, 21 Nov 2026.
+  if (previous && !continuing && !walkthrough && !focus) {
+    for (const r of citedRanges(previous)) preCalls.push({ tool: getMaterialPages, input: r });
+  }
   const pre = [];
   for (const [i, c] of preCalls.entries()) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
