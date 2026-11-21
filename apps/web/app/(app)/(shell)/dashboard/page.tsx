@@ -81,9 +81,6 @@ async function Loaded() {
     .filter((c) => c.materials > 0) // a course with no material yet has nothing to study
     .filter((c) => c.extraLevel !== null || !removed.has(c.id)); // removed from My courses
 
-  const last = chatRows[0];
-  const lastCourse = last ? list.find((c) => c.id === last.course_id) : undefined;
-
   return (
     <>
       <Dashboard
@@ -91,7 +88,6 @@ async function Loaded() {
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}
         user={{ id: user.id, email: user.email ?? "", displayName: profile.display_name ?? null }}
-        resume={last && lastCourse ? { href: `${lastCourse.href}${lastCourse.href.includes("?") ? "&" : "?"}chat=${last.id}`, label: last.title || lastCourse.title } : null}
       />
       {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} trial={state.welcome.trial} />}
     </>

@@ -53,13 +53,12 @@ const VIEW_KEY = "ays:dashboard-view";
 interface Props {
   courses: DashboardCourse[];
   user: { id: string; email: string; displayName: string | null };
-  resume: { href: string; label: string } | null;
   partner: PartnerId;
   /** On Finals: no Upgrade button, a quiet "Finals" badge instead. */
   onFinals: boolean;
 }
 
-export function Dashboard({ courses, user, resume, partner: initialPartner, onFinals }: Props) {
+export function Dashboard({ courses, user, partner: initialPartner, onFinals }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -248,18 +247,6 @@ export function Dashboard({ courses, user, resume, partner: initialPartner, onFi
               Add a course
             </button>
           </div>
-          {resume && (
-            <Link
-              href={resume.href}
-              className="ml-auto inline-flex max-w-full items-center gap-2 rounded-full bg-brand py-2.5 pl-4 pr-5 text-[15px] font-medium text-brand-ink shadow-sm transition hover:bg-navy-hover active:scale-95"
-              title={resume.label}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M3 8h10M9 4l4 4-4 4" />
-              </svg>
-              Continue studying
-            </Link>
-          )}
         </div>
 
         {shown.length === 0 ? (
