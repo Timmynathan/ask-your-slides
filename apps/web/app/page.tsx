@@ -207,7 +207,7 @@ export default async function Landing() {
         <section className="bg-pau-900 text-white">
           <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 px-5 pb-14 pt-20 text-center md:flex-row md:justify-between md:text-left">
             <div>
-              <h2 className="font-heading text-3xl font-normal tracking-tight text-white md:text-5xl">Ready to transform how you study?</h2>
+              <h2 className="font-heading text-2xl font-normal tracking-tight text-white md:text-3xl">Ready to transform how you study?</h2>
               <p className="mt-3 text-white/75">Pick a partner and ask your first question in under a minute.</p>
               <Link href="/sign-up" className={`${pill} mt-6 bg-white text-pau-900 hover:bg-white/90`}>
                 Get started free

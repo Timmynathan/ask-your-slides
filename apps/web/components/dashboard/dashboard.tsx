@@ -236,17 +236,18 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
             <p className="mt-1 text-sm text-muted">
               {departments.join(", ")} · {courses.length} {courses.length === 1 ? "course" : "courses"}, all slides already here
             </p>
-            <button
-              type="button"
-              onClick={() => setEnrolling(true)}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3.5 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
-                <path d="M8 3v10M3 8h10" />
-              </svg>
-              Add a course
-            </button>
           </div>
+          {/* Right side, in the brand blue (owner, 21 Nov 2026): easier to find. */}
+          <button
+            type="button"
+            onClick={() => setEnrolling(true)}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-brand py-2.5 pl-3.5 pr-4 text-[15px] font-medium text-brand-ink shadow-sm transition hover:bg-navy-hover active:scale-95"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+              <path d="M8 3v10M3 8h10" />
+            </svg>
+            Add a course
+          </button>
         </div>
 
         {shown.length === 0 ? (
