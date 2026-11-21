@@ -6,6 +6,7 @@
 //   Courses: every course with its students and questions, grouped by department.
 //   Health: error codes, slowest and most expensive answers.
 // Read-only. Data: public.admin_overview() via the server. The tab is kept in the URL (?tab=).
+import { errorInfo, splitErrors } from "@/lib/admin/error-codes";
 import { featureLabel } from "@/lib/feedback-features";
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
@@ -64,6 +65,10 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
   const t = data.totals;
+  // Real students' answers only: a test run's account is deleted afterwards, so its answer has no
+  // student (owner, 21 Nov 2026: test runs showed up as errors).
+  const studentAnswers = data.recent.filter((r) => r.student);
+  const withProblems = studentAnswers.filter((r) => splitErrors(r.errors).problems.length > 0).length;
   const rated = t.thumbs_up + t.thumbs_down;
   const href = (r: Range, x: Tab) => `/admin?range=${r}${x === "overview" ? "" : `&tab=${x}`}`;
   function open(x: Tab) {
@@ -134,8 +139,8 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
                 className={`-mb-px border-b-2 px-4 py-2.5 text-[15px] transition ${tab === x.id ? "border-brand font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
               >
                 {x.label}
-                {x.id === "answers" && <span className="ml-1.5 text-xs text-muted">{data.recent.length}</span>}
-                {x.id === "health" && t.answers_with_errors > 0 && <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 text-xs text-amber-900">{t.answers_with_errors}</span>}
+                {x.id === "answers" && <span className="ml-1.5 text-xs text-muted">{studentAnswers.length}</span>}
+                {x.id === "health" && withProblems > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 text-xs text-red-800">{withProblems}</span>}
               </button>
             ))}
           </div>
@@ -155,7 +160,12 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
             <Tile label="Is it helping? (1–5)" value={t.helping_avg != null ? String(t.helping_avg) : "—"} sub={`${n(t.helping_n)} answers`} />
             <Tile label="Time to first word" value={secs(t.avg_ttft_ms)} sub="average" />
             <Tile label="Slowest 5% of answers" value={secs(t.p95_latency_ms)} sub="p95 full answer" />
-            <Tile label="Answers with errors" value={pct(t.answers_with_errors, t.answers)} sub={`${n(t.answers_with_errors)} of ${n(t.answers)}`} warn={t.answers > 0 && t.answers_with_errors / t.answers > 0.05} />
+            <Tile
+              label="Answers with problems"
+              value={pct(withProblems, studentAnswers.length)}
+              sub={`${n(withProblems)} of the latest ${n(studentAnswers.length)} students' answers`}
+              warn={studentAnswers.length > 0 && withProblems / studentAnswers.length > 0.05}
+            />
             <Tile label="Limits reached" value={n(plans.limits.reduce((s, l) => s + l.hits, 0))} sub="daily, premium, summary, quiz" />
             <Tile label="Feedback given" value={n(rated)} sub={pct(rated, t.answers) + " of answers rated"} />
             <Tile label="Cost per student" value={usd(t.active_students ? t.cost_usd / t.active_students : 0)} sub="per active student" />
@@ -224,8 +234,9 @@ export function AdminDashboard({ data, courses, plans, heardFrom, funnel, appFee
         <section id="health" className="scroll-mt-24 space-y-4">
           <SectionTitle title="Health" note="Slow or expensive answers, and what went wrong." />
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card title="Error codes">
-              <BarList rows={data.error_codes.map((e) => ({ label: e.code, n: e.n }))} />
+            <Card title="What the server fixed or flagged">
+              <BarList rows={data.error_codes.map((e) => ({ label: `${errorInfo(e.code).problem ? "Problem: " : "Fixed: "}${errorInfo(e.code).label}`, n: e.n }))} />
+              <p className="mt-3 text-xs text-muted">&ldquo;Fixed&rdquo; happened before the student saw the answer. Counts include test runs.</p>
             </Card>
             <Card title="Slowest answers" className="lg:col-span-2">
               <Table
@@ -419,9 +430,10 @@ function Answers({ data }: { data: Overview }) {
     () =>
       data.recent.filter(
         (r) =>
+          !!r.student &&
           (filter === "all" ||
             (filter === "down" && r.rating === -1) ||
-            (filter === "errors" && r.errors.length > 0) ||
+            (filter === "errors" && splitErrors(r.errors).problems.length > 0) ||
             (filter === "slow" && (r.latency_ms ?? 0) > 15000)) &&
           (!q.trim() || `${r.question} ${r.course} ${r.student}`.toLowerCase().includes(q.trim().toLowerCase())),
       ),
@@ -431,7 +443,7 @@ function Answers({ data }: { data: Overview }) {
     <section id="answers" className="scroll-mt-24 space-y-4">
       <SectionTitle
         title="Answers"
-        note={`The latest ${data.recent.length} answers in this period. Open one to read it in full.`}
+        note={`The latest ${data.recent.filter((r) => r.student).length} students' answers in this period (test runs hidden). Open one to read it in full.`}
         action={<DownloadButton onClick={() => downloadCsv("answers.csv", data.recent.map(({ answer, ...r }) => ({ ...r, answer: readable(answer) })))} />}
       />
       <div className="flex flex-wrap items-center gap-1.5">
@@ -439,7 +451,7 @@ function Answers({ data }: { data: Overview }) {
           [
             ["all", "All"],
             ["down", "Thumbs down"],
-            ["errors", "With errors"],
+            ["errors", "With problems"],
             ["slow", "Slower than 15 s"],
           ] as const
         ).map(([id, label]) => (
@@ -468,7 +480,14 @@ function Answers({ data }: { data: Overview }) {
                     {r.rating === 1 ? "👍" : r.rating === -1 ? "👎" : "·"}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[15px]">{r.question}</span>
-                  {r.errors.length > 0 && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-900">{r.errors.length} error{r.errors.length > 1 ? "s" : ""}</span>}
+                  {(() => {
+                    const { problems, fixes } = splitErrors(r.errors);
+                    return problems.length > 0 ? (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-800">{problems.length} problem{problems.length > 1 ? "s" : ""}</span>
+                    ) : fixes > 0 ? (
+                      <span className="rounded-full bg-sunken px-2 py-0.5 text-xs text-muted" title="Fixed before the student saw the answer">{fixes} fixed</span>
+                    ) : null;
+                  })()}
                   <span className="text-xs tabular-nums text-muted">
                     {r.course ?? "—"} · {usd(r.cost_usd)} · {secs(r.latency_ms)} · {when(r.created_at)}
                   </span>
@@ -479,10 +498,11 @@ function Answers({ data }: { data: Overview }) {
                     {r.invalid_citations ? ` · ${r.invalid_citations} invalid citations removed` : ""} · tools: {r.tools.join(", ") || "none"}
                   </p>
                   {r.errors.length > 0 && (
-                    <ul className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <ul className="space-y-1 rounded-xl bg-page px-3 py-2 text-xs">
                       {r.errors.map((e, i) => (
-                        <li key={i}>
-                          <span className="font-medium">{e.code}</span> {e.detail}
+                        <li key={i} className={errorInfo(e.code).problem ? "text-red-800" : "text-muted"}>
+                          <span className="font-medium">{errorInfo(e.code).problem ? "Problem: " : "Fixed: "}{errorInfo(e.code).label}</span>
+                          {e.detail ? <span className="text-muted"> · {e.detail}</span> : null}
                         </li>
                       ))}
                     </ul>
