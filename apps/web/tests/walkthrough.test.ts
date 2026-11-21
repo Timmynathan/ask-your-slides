@@ -81,6 +81,7 @@ describe("trimApologyOpening", () => {
   it("drops an apology or a comment on the earlier answer", () => {
     expect(trimApologyOpening("You're right, my last explanation skipped the expansion steps. Let's go slowly.")).toBe("Let's go slowly.");
     expect(trimApologyOpening("Sorry about that, Leko. Let's slow down.")).toBe("Let's slow down.");
+    expect(trimApologyOpening("You're right, Leko. My last answer rushed the steps. Let's slow down.")).toBe("Let's slow down.");
   });
   it("keeps a quiz verdict and ordinary openings", () => {
     expect(trimApologyOpening("You're right, it's Planning. [[s:A-01-2]]")).toBe("You're right, it's Planning. [[s:A-01-2]]");

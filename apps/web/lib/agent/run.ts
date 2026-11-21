@@ -201,8 +201,11 @@ const APOLOGY_START = /^\s*((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?
 /** Drops an opening apology or comment on an earlier answer ("Sorry about that, Leko.", "You're
  *  right, my last explanation skipped the steps."). A quiz verdict ("You're right, it's Planning")
  *  is kept: it says nothing about an earlier answer. */
+// "You're right, Leko. My last answer rushed the steps." — the same, over two sentences.
+const APOLOGY_TWO = /^\s*(?:you'?re|you are) (?:right|correct)(?:,\s*[\p{L}'-]+)?[.!]\s*(?:my|the|that) (?:last|previous|earlier|first) (?:answer|reply|explanation|response|attempt)[^.!?\n]*[.!?]+\s*/iu;
+
 export function trimApologyOpening(text: string): string {
-  return text.replace(APOLOGY_START, "");
+  return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "");
 }
 
 /** Drops a closing "…let me pull the slides too." from text written just before a tool call. */
