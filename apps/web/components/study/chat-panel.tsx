@@ -18,6 +18,7 @@ import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
+import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
 
 type Meta = {
   citations?: CitationInfo[];
@@ -62,6 +63,13 @@ interface Props {
   /** A limit or lock stopped the student: open the pricing sheet. */
   onLimit(code: LimitCode, resetsAt: string | null): void;
 }
+
+/** Photos attached to a message (data URLs; only on messages sent in this session). */
+function photosOf(m: Msg | undefined): string[] {
+  return (m?.parts ?? []).flatMap((p) => (p.type === "file" && p.mediaType.startsWith("image/") ? [p.url] : []));
+}
+
+const MAX_PHOTOS = 3;
 
 function textOf(m: Msg | undefined): string {
   return (m?.parts ?? [])
@@ -162,6 +170,7 @@ export function ChatPanel({
             conversation_id: body?.conversation_id,
             message: textOf(messages.at(-1)),
             message_id: messages.at(-1)?.id,
+            ...(photosOf(messages.at(-1)).length ? { images: photosOf(messages.at(-1)) } : {}),
             edit: messageId != null,
             ...(body?.focus_slide ? { focus_slide: body.focus_slide } : {}),
           },
@@ -312,7 +321,8 @@ export function ChatPanel({
   }, [error]);
 
   async function submit(raw: string) {
-    const text = raw.trim();
+    const attached = photos;
+    const text = raw.trim() || (attached.length ? (attached.length === 1 ? "Explain this photo." : "Explain these photos.") : "");
     if (!text || busy) return;
     if (capped) {
       setCapNotes((n) => [...n, { id: `cap-${Date.now()}`, text, reply: capReply(lastCap.code, lastCap.resetsAt, Date.now()) }]);
@@ -350,8 +360,12 @@ export function ChatPanel({
       // Still the question that opened from the viewer (its opening kept): say which item it's about.
       const focusSlide = focus && text.startsWith(focus.text.slice(0, -1)) ? focus.key : undefined;
       setFocus(null);
+      setPhotos([]);
+      setPhotoError(null);
       const pending = sendMessage(
-        { text },
+        attached.length
+          ? { text, files: attached.map((p, i) => ({ type: "file" as const, mediaType: "image/jpeg", url: p.url, filename: `photo-${i + 1}.jpg` })) }
+          : { text },
         { body: { conversation_id: conversationId.current, ...(focusSlide ? { focus_slide: focusSlide } : {}) } },
       );
       setSending(false); // from here the chat status (submitted/streaming) shows progress
@@ -368,6 +382,24 @@ export function ChatPanel({
     clearError();
     onQuestion();
     await sendMessage({ text, messageId: id }, { body: { conversation_id: conversationId.current } });
+  }
+
+  // Photos for the next question (the + in the chat box, owner 21 Nov 2026).
+  const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
+  async function addPhotos(list: FileList | null) {
+    setPhotoError(null);
+    const chosen = Array.from(list ?? []).filter((f) => f.type.startsWith("image/"));
+    if (!chosen.length) return;
+    const room = MAX_PHOTOS - photos.length;
+    if (chosen.length > room) setPhotoError(`Up to ${MAX_PHOTOS} photos per question.`);
+    try {
+      const added = await Promise.all(chosen.slice(0, Math.max(0, room)).map(async (f) => ({ id: crypto.randomUUID(), url: await blobToDataUrl(await shrinkImage(f)) })));
+      setPhotos((p) => [...p, ...added].slice(0, MAX_PHOTOS));
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : "Couldn't add that photo.");
+    }
   }
 
   // "Ask anything" from the dashboard: the question goes out once, as soon as the new chat is ready.
@@ -444,8 +476,16 @@ export function ChatPanel({
           <ol className="space-y-6">
             {messages.map((m) =>
               m.role === "user" ? (
-                <li key={m.id} data-message="user" className="flex justify-end">
-                  <UserMessage text={textOf(m)} canEdit={!busy && !capped} onEdit={(t) => editQuestion(m.id, t)} />
+                <li key={m.id} data-message="user" className="flex flex-col items-end gap-2">
+                  {photosOf(m).length > 0 && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {photosOf(m).map((url, i) => (
+                        // eslint-disable-next-line @next/next/no-img-element -- the student's own photo (data URL)
+                        <img key={i} src={url} alt={`Your photo ${i + 1}`} className="h-28 w-28 rounded-2xl object-cover ring-1 ring-line" />
+                      ))}
+                    </div>
+                  )}
+                  <UserMessage text={textOf(m)} canEdit={!busy && !capped && !photosOf(m).length} onEdit={(t) => editQuestion(m.id, t)} />
                 </li>
               ) : (
                 <li key={m.id} data-message="assistant" className="flex gap-3">
@@ -545,7 +585,42 @@ export function ChatPanel({
             submit(input);
           }}
         >
-            <div className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-5 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
+            {(photos.length > 0 || photoError) && (
+              <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
+                {photos.map((p) => (
+                  <span key={p.id} className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- a local preview (data URL) */}
+                    <img src={p.url} alt="Photo to send" className="h-16 w-16 rounded-xl object-cover ring-1 ring-line" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotos((list) => list.filter((x) => x.id !== p.id))}
+                      aria-label="Remove photo"
+                      className="absolute -right-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full bg-ink text-page shadow transition active:scale-90"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </svg>
+                    </button>
+                  </span>
+                ))}
+                {photoError && <span className="text-[13px] text-red-700">{photoError}</span>}
+              </div>
+            )}
+            <div className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-2 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
+              {/* Add a photo (a test question, a diagram, notes): sent with this question. */}
+              <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
+              <button
+                type="button"
+                onClick={() => photoInput.current?.click()}
+                disabled={busy || photos.length >= MAX_PHOTOS}
+                aria-label="Add a photo"
+                title="Add a photo"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/70 transition hover:bg-black/5 hover:text-ink active:scale-90 disabled:opacity-40"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -618,7 +693,7 @@ export function ChatPanel({
               ) : (
                 <button
                   type="submit"
-                  disabled={!input.trim()}
+                  disabled={!input.trim() && !photos.length}
                   aria-label="Send"
                   title="Send"
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-brand-ink transition hover:opacity-90 active:scale-90 disabled:bg-black/10 disabled:text-white dark:disabled:bg-white/15"

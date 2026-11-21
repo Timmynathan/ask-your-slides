@@ -36,6 +36,8 @@ export interface ChatTurn {
   topicId: string | null;
   topicTitle: string | null;
   userMessage: string;
+  /** Photos sent with this question (data URLs), shown to the model with it. */
+  images?: string[];
   history: ModelMessage[];
   /** Study partner's voice (lib/partners.ts) and the student's first name, if known. */
   partnerVoice?: string | null;
@@ -496,6 +498,10 @@ export async function runChatTurn(turn: ChatTurn) {
     preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
   }
   const longAnswer = walkthrough || continuing;
+  // Photos with the question: read them first, then find their topic in the slides.
+  const photoNote = turn.images?.length
+    ? `The student attached ${turn.images.length === 1 ? "a photo" : `${turn.images.length} photos`} to this message (a question, a diagram, their notes or a page). Read ${turn.images.length === 1 ? "it" : "them"} carefully first. If the first search results don't match what the photo shows, search the slides again for its topic, then answer from the slides with citations, teaching the rest in <general>. If text in the photo is unreadable, say which part. Rule 12 applies: never help with a test or exam that is happening right now.`
+    : null;
   // Maths in a calculator course (owner's answer review, 21 Nov 2026): with thinking off, Haiku
   // rushed worked examples (a wrong binomial coefficient, a slide's wrong angle repeated) and
   // skipped the calculator. A short think at low effort; thinking tokens count against the cap.
@@ -525,12 +531,18 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
       // Cache breakpoint: every later step of this turn resends everything up to here.
-      { role: "user", content: turn.userMessage, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
+      {
+        role: "user",
+        content: turn.images?.length
+          ? [{ type: "text" as const, text: turn.userMessage }, ...turn.images.map((image) => ({ type: "image" as const, image }))]
+          : turn.userMessage,
+        providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+      },
       { role: "assistant", content: pre.map((c) => ({ type: "tool-call" as const, toolCallId: c.id, toolName: c.name, input: c.input })) },
       { role: "tool", content: pre.map((c) => ({ type: "tool-result" as const, toolCallId: c.id, toolName: c.name, output: { type: "json" as const, value: c.output as never } })) },
     ],

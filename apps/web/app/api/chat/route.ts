@@ -11,6 +11,10 @@ import { admitChatTurn, LIMIT_MESSAGES } from "@/lib/plans/gate";
 // A whole deck explained slide by slide takes Haiku about 3 minutes (lib/agent/run.ts).
 export const maxDuration = 300;
 
+/** Photos per question, and the largest one accepted (base64 characters, ~2 MB of image). */
+export const MAX_CHAT_IMAGES = 3;
+const MAX_IMAGE_CHARS = 2_800_000;
+
 export const DAILY_LIMIT_MESSAGE = LIMIT_MESSAGES.daily_cap;
 
 const Body = z.object({
@@ -29,6 +33,9 @@ const Body = z.object({
   edit: z.boolean().optional(),
   // "Ask about this…" from the viewer: the exact slide/section/code part the question is about.
   focus_slide: z.string().regex(SLIDE_KEY_RE).optional(),
+  // Photos from the chat box's + (owner, 21 Nov 2026): a test question, a diagram, notes. Shrunk in
+  // the browser to ~1600 px JPEG; sent to the model with this question only, not stored.
+  images: z.array(z.string().regex(/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/).max(MAX_IMAGE_CHARS)).max(MAX_CHAT_IMAGES).optional(),
 });
 
 const EDIT_GONE_MESSAGE = "That question can't be edited any more. Refresh the page and try again.";
@@ -43,7 +50,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Bad request." }, { status: 400 });
   }
-  const { conversation_id: conversationId, message, message_id: messageId, edit, focus_slide: focusSlide } = parsed.data;
+  const { conversation_id: conversationId, message, message_id: messageId, edit, focus_slide: focusSlide, images = [] } = parsed.data;
   if (edit && !messageId) return NextResponse.json({ error: EDIT_GONE_MESSAGE }, { status: 400 });
 
   // Read as the student: RLS returns the conversation only if it is theirs. Course and topic come
@@ -109,7 +116,8 @@ export async function POST(request: Request) {
     conversation_id: conversationId,
     user_id: auth.user.id,
     role: "user",
-    content: message,
+    // The photos aren't kept: the saved question says they were there.
+    content: images.length ? `${message}\n\n(${images.length} photo${images.length === 1 ? "" : "s"} attached)` : message,
   };
   let saved = await db.from("messages").insert(messageId ? { ...row, id: messageId } : row).select("id").single();
   // The id is already taken (never by this chat's live questions): save under a fresh id instead.
@@ -132,6 +140,7 @@ export async function POST(request: Request) {
     topicId: convo.topic_id,
     topicTitle: topic?.title ?? null,
     userMessage: message,
+    images,
     history,
     partnerVoice: partner?.voice ?? null,
     studentName: profile?.display_name?.split(/\s+/)[0] ?? null,

@@ -6,21 +6,10 @@
 // to private storage through signed URLs; the server then reads them in the background.
 import { useEffect, useRef, useState } from "react";
 import { MAX_UPLOAD_PHOTOS } from "@/lib/plans/config";
-
-const LONG_EDGE = 1600;
+import { shrinkImage } from "@/lib/ui/shrink-image";
 
 async function shrink(file: File): Promise<Blob> {
-  if (file.type === "application/pdf") return file;
-  const bitmap = await createImageBitmap(file).catch(() => {
-    throw new Error(`"${file.name}" can't be opened. Use a JPEG or PNG photo.`);
-  });
-  const scale = Math.min(1, LONG_EDGE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't prepare that photo."))), "image/jpeg", 0.82));
+  return file.type === "application/pdf" ? file : shrinkImage(file);
 }
 
 export function UploadDialog({ courses, defaultCourseId, onClose, onDone }: { courses: { id: string; title: string }[]; defaultCourseId?: string; onClose(): void; onDone(): void }) {
