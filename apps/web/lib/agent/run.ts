@@ -13,7 +13,7 @@ export const HISTORY_LIMIT = 12; // PRD §10.6
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
 const MAX_STEPS_CALCULATION = 10; // plus calculate (sometimes twice, after a fix) and optimize
 const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
-const MAX_OUTPUT_TOKENS_SUMMARY = 6000; // once the agent has read whole materials (3000 cut overviews short)
+const MAX_OUTPUT_TOKENS_SUMMARY = 12000; // once the agent has read whole materials (3000, then 6000, cut summaries short)
 // "Explain every slide" (owner, 21 Nov 2026, after a student's 35-slide walkthroughs stopped at slide
 // ~19 four times in a row): the whole deck in one answer. ~32K tokens is ~24K words, a full deck in
 // depth; Haiku writes it in about 3 minutes (the route allows 5). It only costs what is written.
@@ -122,6 +122,13 @@ export function pickedItem(message: string, previous: string): string | null {
     if (m && m[1].toLowerCase() === want) return m[2].replace(/\[\[s:[^\]]+\]\]/g, "").replace(/\*\*/g, "").trim().slice(0, 200);
   }
   return null;
+}
+
+/** The question the previous answer ended with (its last sentence with a question mark). */
+export function lastQuestion(answer: string): string | null {
+  const text = answer.replace(/<\/?general>/g, "").replace(/\[\[s:[^\]]+\]\]/g, "");
+  const qs = text.match(/[^.!?\n]*\?/g);
+  return qs?.length ? qs[qs.length - 1].replace(/\*\*/g, "").trim().slice(0, 300) : null;
 }
 
 /** The previous answer ended by asking the student something (a quiz or check question). */
@@ -488,7 +495,7 @@ export async function runChatTurn(turn: ChatTurn) {
   const answerNote = picked
     ? `The student's message "${turn.userMessage.trim()}" picks item ${turn.userMessage.trim()} of your previous message: "${picked}". If that was a quiz question's options, mark their choice; otherwise act on that item directly, with no remark about their reply.`
     : answering
-    ? `Your previous message ended with a question to the student, and this message is most likely their reply to it. If you had asked a quiz or check question, this is their answer: mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. Only if the message clearly asks something new, answer that instead.`
+    ? `Your previous message ended with this question to the student: "${lastQuestion(previous!) ?? ""}". Their reply: "${turn.userMessage.trim().slice(0, 160)}". This is most likely their answer to it. If you had asked a quiz or check question, this is their answer: mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. Only if the message clearly asks something new, answer that instead.`
     : null;
   // Follow-ups ("5", "b", a quiz answer, "explain that again"): the slides the previous answer
   // cited are read again, so the model can check the student's answer against them and its

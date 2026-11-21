@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForWalkthrough, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -97,5 +97,12 @@ describe("pickedItem ('5' or 'b' after a list)", () => {
   it("nothing for a real question or a missing item", () => {
     expect(pickedItem("what is 5?", roadmap)).toBeNull();
     expect(pickedItem("9", roadmap)).toBeNull();
+  });
+});
+
+describe("lastQuestion", () => {
+  it("takes the closing quiz question", () => {
+    const a = "Plan [[s:A-06-17]].\n\n**Question 2:** Which process group do the other planning processes belong to, and what knowledge area is it under?\n\nGive it a go and I'll check it.\n</general>";
+    expect(lastQuestion(a)).toBe("Question 2: Which process group do the other planning processes belong to, and what knowledge area is it under?");
   });
 });
