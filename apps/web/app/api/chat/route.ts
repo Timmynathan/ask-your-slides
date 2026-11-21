@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SLIDE_KEY_RE } from "@/lib/study/course-code";
 import { admitChatTurn, LIMIT_MESSAGES } from "@/lib/plans/gate";
 
-export const maxDuration = 60;
+// A whole deck explained slide by slide takes Haiku about 3 minutes (lib/agent/run.ts).
+export const maxDuration = 300;
 
 export const DAILY_LIMIT_MESSAGE = LIMIT_MESSAGES.daily_cap;
 
@@ -151,7 +152,9 @@ export async function POST(request: Request) {
       stream: result.stream,
       generateMessageId: () => assistantMessageId,
       messageMetadata: ({ part }) =>
-        part.type === "finish" ? { ...summary(), remaining: admitted.remaining, plan: admitted.state.plan } : undefined,
+        part.type === "finish"
+          ? { ...summary(), remaining: admitted.remaining, plan: admitted.state.plan, truncated: part.finishReason === "length" }
+          : undefined,
       onError: () => "Something went wrong while answering. Please try again.",
     }),
   });

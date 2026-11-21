@@ -12,7 +12,12 @@ export const HISTORY_LIMIT = 12; // PRD §10.6
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
 const MAX_STEPS_CALCULATION = 10; // plus calculate (sometimes twice, after a fix) and optimize
 const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
-const MAX_OUTPUT_TOKENS_SUMMARY = 3000; // once the agent has read whole materials
+const MAX_OUTPUT_TOKENS_SUMMARY = 6000; // once the agent has read whole materials (3000 cut overviews short)
+// "Explain every slide" (owner, 21 Nov 2026, after a student's 35-slide walkthroughs stopped at slide
+// ~19 four times in a row): the whole deck in one answer. ~32K tokens is ~24K words, a full deck in
+// depth; Haiku writes it in about 3 minutes (the route allows 5). It only costs what is written.
+const MAX_OUTPUT_TOKENS_WALKTHROUGH = 32000;
+const WALKTHROUGH_PAGES = 120; // pages read before a walkthrough (40 per call)
 // Claude Haiku 5.5, prompts <= 100K tokens (check the provider page before launch).
 const USD_PER_MTOK = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 };
 
@@ -101,6 +106,55 @@ export function preSearchQuery(turn: Pick<ChatTurn, "userMessage" | "history">):
 }
 
 const SUMMARY_WORDS = /\b(summar|overview|recap|outline of|go through|walk me through)/i;
+
+/** "Explain every slide", "slide by slide", "all the slides in detail", "explain the whole deck". */
+export function asksForWalkthrough(message: string): boolean {
+  return (
+    /\b(every|each|all(\s+of)?(\s+the)?|all\s+\d+)\s+(single\s+)?(slides?|pages?)\b/i.test(message) ||
+    /\b(slide|page)[\s-]+by[\s-]+(slide|page)\b/i.test(message) ||
+    /\b(explain|teach|go through|break down)\b.{0,40}\b(whole|entire|full|complete)\s+(deck|lecture|slides?|topic|week|note|notes)\b/i.test(message)
+  );
+}
+
+/** "keep going", "continue", "go on", "you stopped at 19… keep going", "why did you stop". */
+export function isContinuation(message: string): boolean {
+  const m = message.trim();
+  if (m.length > 120) return false;
+  return /\b(keep+\s*-?\s*go+i*n+g?|continue|carry on|go on|proceed|don'?t stop|why did ?you sto+p+|you stopped|finish (it|the rest)|the rest|next slides?)\b/i.test(m);
+}
+
+/** The last slide an earlier answer cited ([[s:CSC402-03-19]] → CSC402-03, slide 19). */
+export function lastCitedSlide(content: string): { material: string; number: number } | null {
+  const keys = [...content.matchAll(/\[\[s:([^\]\s]+)\]\]/g)].map((m) => m[1]);
+  for (let i = keys.length - 1; i >= 0; i--) {
+    const k = parseSlideKey(keys[i]);
+    if (k) return { material: k.material, number: k.number };
+  }
+  return null;
+}
+
+/** The text of the latest assistant answer in the history. */
+function lastAnswer(history: ModelMessage[]): string {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const m = history[i];
+    if (m.role === "assistant" && typeof m.content === "string") return m.content;
+  }
+  return "";
+}
+
+/** Reads covering a page range of materials, at most 40 pages per call and WALKTHROUGH_PAGES in all. */
+function pageReads(courseCode: string, mats: { material_order: number; from: number; pages: number }[]) {
+  const out: { material: string; from: number; to: number }[] = [];
+  let budget = WALKTHROUGH_PAGES;
+  for (const m of mats) {
+    for (let from = m.from; from <= m.pages && budget > 0; from += 40) {
+      const to = Math.min(m.pages, from + 39, from + budget - 1);
+      out.push({ material: materialKey(courseCode, m.material_order), from, to });
+      budget -= to - from + 1;
+    }
+  }
+  return out;
+}
 
 export async function runChatTurn(turn: ChatTurn) {
   const db = adminClient();
@@ -240,9 +294,51 @@ export async function runChatTurn(turn: ChatTurn) {
       preCalls.push({ tool: getMaterialPages, input: { material: materialKey(turn.courseCode, m.material_order), from: 1, to: m.pages } });
     }
   }
-  if (!preCalls.length) {
-    preCalls.push({ tool: searchSlides, input: { query: preSearchQuery(turn), ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
+  // "Explain every slide": read the topic's lecture files in full first (not when the student names
+  // another week or lecture: the model finds that one with list_topics).
+  const walkthrough = asksForWalkthrough(turn.userMessage);
+  const namesOtherPart = /\b(week|lecture|wk|class)\s*0?\d+/i.test(turn.userMessage);
+  if (!preCalls.length && walkthrough && turn.topicId && !namesOtherPart) {
+    const mats = must(
+      await db.from("materials").select("material_order, page_count").eq("course_id", turn.courseId).eq("topic_id", turn.topicId).in("kind", ["slides", "notes"]).order("material_order"),
+    ) as { material_order: number; page_count: number }[];
+    for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })))) {
+      preCalls.push({ tool: getMaterialPages, input: r });
+    }
   }
+  // "Keep going": pick up after the last slide the previous answer cited, with those slides read
+  // (searching for the words "keep going" found nothing and lost the place).
+  const previous = lastAnswer(turn.history);
+  const continuing = !preCalls.length && isContinuation(turn.userMessage) && !!previous;
+  let resumeNote: string | null = null;
+  if (continuing) {
+    const at = lastCitedSlide(previous);
+    const order = at ? Number(at.material.split("-").pop()) : NaN;
+    if (at && Number.isFinite(order)) {
+      const mats = must(
+        await db.from("materials").select("material_order, page_count, topic_id, kind").eq("course_id", turn.courseId).order("material_order"),
+      ) as { material_order: number; page_count: number; topic_id: string | null; kind: string }[];
+      const here = mats.find((m) => m.material_order === order);
+      if (here) {
+        // The rest of this file, then the topic's later lecture files.
+        const later = mats.filter((m) => m.material_order > order && m.topic_id && m.topic_id === here.topic_id && (m.kind === "slides" || m.kind === "notes"));
+        const reads = pageReads(turn.courseCode, [
+          { material_order: order, from: at.number + 1, pages: here.page_count },
+          ...later.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })),
+        ]);
+        for (const r of reads) preCalls.push({ tool: getMaterialPages, input: r });
+        resumeNote = reads.length
+          ? `The student wants you to continue your previous answer. It ended at slide ${at.number} of ${at.material}. Carry on from slide ${at.number + 1} in the same style, without repeating, recapping or apologising, and finish everything that was asked.`
+          : `The student wants you to continue your previous answer. It already reached the last slide (${at.material}, slide ${at.number}). Finish any part of the request still missing (for example the learning objectives), or say in one sentence that everything has been covered and offer a next step.`;
+      }
+    }
+  }
+  if (!preCalls.length) {
+    // A bare "keep going" says nothing to search for: search with the earlier question instead.
+    const query = continuing ? preSearchQuery({ userMessage: "", history: turn.history }) || turn.userMessage : preSearchQuery(turn);
+    preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
+  }
+  const longAnswer = walkthrough || continuing;
   const pre = [];
   for (const [i, c] of preCalls.entries()) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
@@ -254,7 +350,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null)].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
@@ -266,7 +362,8 @@ export async function runChatTurn(turn: ChatTurn) {
     tools: buildTools(ctx),
     stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
-    prepareStep: () => (ctx.readMaterial || summaryAsked ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY } : {}),
+    prepareStep: () =>
+      longAnswer ? { maxOutputTokens: MAX_OUTPUT_TOKENS_WALKTHROUGH } : ctx.readMaterial || summaryAsked ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY } : {},
     providerOptions: {
       // Grounded answers from retrieved slides: thinking adds latency before the first word
       // (PRD target: p95 time to first token <= 3 s). Allowed on Haiku 5.5 at effort <= high.
@@ -278,6 +375,8 @@ export async function runChatTurn(turn: ChatTurn) {
       errors.push({ code: "model_error", detail: error instanceof Error ? error.message : String(error) });
     },
     onEnd: async (event) => {
+      // Ran out of room: logged, and the student sees "cut short" with a Continue button.
+      if (event.finishReason === "length") errors.push({ code: "truncated", detail: `stopped at the output limit (${event.usage.outputTokens ?? "?"} tokens)` });
       await finishTurn(event.usage).catch((e) => console.error("finishTurn failed", e));
     },
   });

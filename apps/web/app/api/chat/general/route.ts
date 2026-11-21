@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { myCourses } from "@/lib/study/my-courses";
 import { POST as courseChat } from "../route";
 
-export const maxDuration = 60;
+// A whole deck explained slide by slide takes Haiku about 3 minutes (lib/agent/run.ts).
+export const maxDuration = 300;
 
 // The general chat on the dashboard (owner, 20 Nov 2026: "search all my courses"). A first question
 // is matched against the slides of every course the student takes; the best-matching course gets a

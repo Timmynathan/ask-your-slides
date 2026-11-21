@@ -17,12 +17,15 @@ import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
+import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 
 type Meta = {
   citations?: CitationInfo[];
   fallback?: { topic: string; used: boolean } | null;
   remaining?: number;
   feedback?: Rating;
+  /** The answer hit the length limit (app/api/chat/route.ts). */
+  truncated?: boolean;
 };
 type Msg = UIMessage<Meta>;
 
@@ -427,6 +430,7 @@ export function ChatPanel({
                     onCite={onCite}
                     partnerName={p.name}
                   />
+                  {m.metadata?.truncated && m.id === last?.id && !busy && <CutShort onContinue={() => submit(CONTINUE_TEXT)} disabled={capped} />}
                   {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} />}
                   </div>
                 </li>

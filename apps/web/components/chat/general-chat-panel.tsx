@@ -14,11 +14,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Mascot } from "@/components/mascot/mascot";
 import { PartnerCast } from "./partner-cast";
+import { CONTINUE_TEXT, CutShort } from "./cut-short";
 import { Answer } from "@/components/study/answer";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import type { CitationInfo } from "@/lib/study/format";
 
-type Meta = { citations?: CitationInfo[]; fallback?: { topic: string; used: boolean } | null; remaining?: number };
+type Meta = { citations?: CitationInfo[]; fallback?: { topic: string; used: boolean } | null; remaining?: number; truncated?: boolean };
 type Msg = UIMessage<Meta>;
 interface Picked {
   conversationId: string;
@@ -223,6 +224,14 @@ export function GeneralChatPanel({
                     onCite={() => picked && router.push(picked.href)}
                     partnerName={p.name}
                   />
+                  {m.metadata?.truncated && m.id === messages.at(-1)?.id && !busy && (
+                    <CutShort
+                      onContinue={() => {
+                        clearError();
+                        void sendMessage({ text: CONTINUE_TEXT });
+                      }}
+                    />
+                  )}
                 </li>
               ),
             )}
