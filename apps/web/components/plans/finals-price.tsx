@@ -18,18 +18,18 @@ function useNow(enabled: boolean) {
   return now;
 }
 
-export function FinalsPrice({ offer, size = "lg" }: { offer: PlanOffer; size?: "lg" | "md" }) {
+export function FinalsPrice({ offer, size = "lg" }: { offer: PlanOffer; size?: "lg" | "md" | "sm" }) {
   const now = useNow(offer.early);
   const left = offer.early ? (now === null ? "" : timeLeft(offer.priceChangeAt, now)) : null;
   const early = offer.early && left !== null;
-  const big = size === "lg" ? "text-5xl" : "text-4xl";
+  const big = size === "lg" ? "text-5xl" : size === "md" ? "text-4xl" : "text-[26px] sm:text-4xl";
 
   return (
     <div>
-      <p className="flex items-baseline gap-3">
+      <p className="flex flex-wrap items-baseline gap-x-3">
         <span className={`font-heading ${big} font-semibold tracking-tight text-ink`}>{naira(early ? offer.earlyPrice : offer.fullPrice)}</span>
         {early && (
-          <s className="text-xl text-muted" aria-label={`was ${naira(offer.fullPrice)}`}>
+          <s className={`${size === "sm" ? "text-base sm:text-xl" : "text-xl"} text-muted`} aria-label={`was ${naira(offer.fullPrice)}`}>
             {naira(offer.fullPrice)}
           </s>
         )}

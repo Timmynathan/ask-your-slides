@@ -15,6 +15,7 @@ import {
   PREMIUM_FREE_FIRST_DAY,
   PRICE_CHANGE_DATE,
   TIME_ZONE,
+  UPLOADS_ALLOWED,
 } from "./config";
 import { earlyPriceActive, finalsPrice } from "./limits";
 
@@ -82,8 +83,15 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     { label: "Answers cite your actual slides", free: true, finals: true },
     { label: "Summaries", free: String(o.free.summaries), finals: "Unlimited" },
     { label: "Quiz mode", free: false, finals: true },
+    { label: "Chat across all your courses at once", free: true, finals: true },
+    { label: "Upload photos of your tests and notes", free: `Up to ${UPLOADS_ALLOWED.free}`, finals: `Up to ${UPLOADS_ALLOWED.finals}` },
   ];
-  if (!PAST_QUESTIONS_LIVE) return rows;
+  // How long and how to pay: last, after the features.
+  const terms = [
+    { label: "How long it lasts", free: "Always free", finals: `Until ${dayMonth.format(new Date(o.planEndAt))}, after your last paper` },
+    { label: "Payment", free: "Nothing to pay", finals: "One-time bank transfer, no subscription" },
+  ];
+  if (!PAST_QUESTIONS_LIVE) return [...rows, ...terms];
   return [
     ...rows,
     {
@@ -92,6 +100,7 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
       finals: "Every past question",
     },
     { label: "Model answers and marked practice", free: false, finals: true },
+    ...terms,
   ];
 }
 

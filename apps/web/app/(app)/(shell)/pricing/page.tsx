@@ -4,13 +4,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
-import { CompareTable } from "@/components/plans/compare-table";
 import { GetFinalsLink } from "@/components/plans/get-finals-link";
-import { PlanCards } from "@/components/plans/plan-cards";
+import { PlanTable } from "@/components/plans/plan-table";
 import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
-import { AppShell } from "@/components/nav/app-shell";
-import { shellData } from "@/lib/nav/shell-data";
 import { TIME_ZONE } from "@/lib/plans/config";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
@@ -30,7 +27,7 @@ async function Loaded() {
 
   const now = new Date();
   const db = adminClient();
-  const [state, latest, shell] = await Promise.all([planState(db, user.id, now), latestRequest(db, user.id), shellData(supabase, user)]);
+  const [state, latest] = await Promise.all([planState(db, user.id, now), latestRequest(db, user.id)]);
   const offer = planOffer(now);
 
   return (
@@ -52,7 +49,7 @@ async function Loaded() {
         </p>
 
         <div className="mt-10">
-          <PlanCards
+          <PlanTable
             offer={offer}
             current={state.plan}
             freeAction={
@@ -72,18 +69,12 @@ async function Loaded() {
               )
             }
           />
-          <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>
+          <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
           {state.plan === "free" && (
             <div className="mt-4 flex justify-center">
               <PromoCodeToCourses />
             </div>
           )}
-        </div>
-
-        <div className="mt-14">
-          <h2 className="sr-only">Compare the plans</h2>
-          <CompareTable offer={offer} />
-          <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
         </div>
       </main>
     </div>
