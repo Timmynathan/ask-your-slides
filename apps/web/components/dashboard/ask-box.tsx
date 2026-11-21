@@ -35,6 +35,8 @@ export function AskBox({ courses = [] }: { courses?: Course[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [choices, setChoices] = useState<Choice[] | null>(null);
+  // The topic is taught in more than one of the student's courses (not just an unclear question).
+  const [several, setSeveral] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   async function route(question: string, forcePick: boolean) {
@@ -51,6 +53,7 @@ export function AskBox({ courses = [] }: { courses?: Course[] }) {
         return; // keep "busy" until the course page takes over
       }
       setChoices(list);
+      setSeveral(!!body.several);
       setBusy(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
@@ -123,7 +126,7 @@ export function AskBox({ courses = [] }: { courses?: Course[] }) {
       {error && <p role="alert" className="mt-2 pl-5 text-[13.5px] text-red-700">{error}</p>}
       {choices && (
         <div className="pop-in mt-3 rounded-2xl bg-sunken/70 p-4">
-          <p className="text-[14px] text-ink">Which course is this for?</p>
+          <p className="text-[14px] text-ink">{several ? "This comes up in more than one of your courses. Which one?" : "Which course is this for?"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {choices.map((c) => (
               <button

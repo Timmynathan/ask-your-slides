@@ -128,3 +128,25 @@ describe("hasNoSubject (Ask anything: vague questions show the courses to pick f
   );
   it.each(["What is database normalisation?", "Explain the ethics of AI surveillance", "What are the types of networking cables"])("route: %s", (q) => expect(hasNoSubject(q)).toBe(false));
 });
+
+// Ask anything: open one course, or let the student pick (scores measured on CS 400 courses).
+describe("decide (which course a question opens in)", async () => {
+  const { decide } = await import("@/lib/study/question-subject");
+  const r = (...fits: [string, number][]) => fits.map(([id, fit]) => ({ id, label: id, href: `/study/${id}`, fit }));
+  it("opens the one course that covers it", () => {
+    expect(decide(r(["CSC420", 0.41], ["CSC402", 0.33], ["CSC419", 0.306]))).toMatchObject({ clear: true });
+    expect(decide(r(["CSC402", 0.558], ["CSC418", 0.324]))).toMatchObject({ clear: true });
+  });
+  it("asks, offering only the courses that cover a shared topic", () => {
+    const d = decide(r(["CSC402", 0.467], ["INS401", 0.45], ["CSC409", 0.42], ["CSC418", 0.3]));
+    expect(d).toMatchObject({ clear: false, several: true });
+    expect(d.choices.map((c) => c.id)).toEqual(["CSC402", "INS401", "CSC409"]);
+    expect(decide(r(["CSC402", 0.537], ["CSC418", 0.385], ["CSC409", 0.317])).choices.map((c) => c.id)).toEqual(["CSC402", "CSC418"]);
+  });
+  it("asks with the best three when no course clearly covers it", () => {
+    const d = decide(r(["CSC412", 0.353], ["CSC418", 0.348], ["CSC420", 0.347]));
+    expect(d.clear).toBe(false);
+    expect(d.several).toBeFalsy();
+    expect(d.choices).toHaveLength(3);
+  });
+});

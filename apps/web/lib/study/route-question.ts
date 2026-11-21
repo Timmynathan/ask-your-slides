@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { embedQuery } from "@/lib/agent/embed";
 import { matchSlides, type SlideHit } from "@/lib/agent/retrieval";
 import { adminClient } from "@/lib/supabase/admin";
-import { hasNoSubject } from "@/lib/study/question-subject";
+import { decide, hasNoSubject, type RouteChoice } from "@/lib/study/question-subject";
 import { myCourses, type MyCourse } from "@/lib/study/my-courses";
 
 // "Ask anything" on the dashboard (owner, 21 Nov 2026): which of the student's courses is a question
@@ -13,8 +13,7 @@ import { myCourses, type MyCourse } from "@/lib/study/my-courses";
 
 /** How many slides to compare per course. */
 const PER_COURSE = 3;
-/** The best course must beat the next by this much to be opened without asking. */
-export const CLEAR_LEAD = 0.03;
+
 
 /** A course's fit: the average similarity of its best PER_COURSE slides. One slide that happens to
  *  share a phrase shouldn't outrank a course whose slides are about the topic (20 Nov 2026). */
@@ -23,15 +22,9 @@ export function courseFit(hits: Pick<SlideHit, "similarity">[]): number {
   return top.length ? top.reduce((a, b) => a + b, 0) / PER_COURSE : 0;
 }
 
-export interface RouteChoice {
-  id: string;
-  label: string;
-  href: string;
-  fit: number;
-}
 
 /** The student's courses ranked for the question (best first, at most 3), and whether the first is a clear winner. */
-export async function routeQuestion(supabase: SupabaseClient, level: number | null, question: string): Promise<{ choices: RouteChoice[]; clear: boolean }> {
+export async function routeQuestion(supabase: SupabaseClient, level: number | null, question: string): Promise<{ choices: RouteChoice[]; clear: boolean; several?: boolean }> {
   const courses = await myCourses(supabase, level);
   const label = (c: MyCourse) => (c.shownCode ? `${c.shownCode} · ${c.title}` : c.title);
   if (courses.length <= 1) return { choices: courses.map((c) => ({ id: c.id, label: label(c), href: c.href, fit: 1 })), clear: true };
@@ -41,5 +34,5 @@ export async function routeQuestion(supabase: SupabaseClient, level: number | nu
   const db = adminClient();
   const fits = await Promise.all(courses.map(async (c) => courseFit(await matchSlides(db, { courseId: c.id, embedding, query: question, k: PER_COURSE }).catch(() => []))));
   const ranked = courses.map((c, i) => ({ id: c.id, label: label(c), href: c.href, fit: fits[i] })).sort((a, b) => b.fit - a.fit);
-  return { choices: ranked.slice(0, 3), clear: ranked[0].fit - (ranked[1]?.fit ?? 0) >= CLEAR_LEAD };
+  return decide(ranked);
 }
