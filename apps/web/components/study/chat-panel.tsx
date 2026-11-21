@@ -590,7 +590,7 @@ export function ChatPanel({
                 {photoError && <span className="text-[13px] text-red-700">{photoError}</span>}
               </div>
             )}
-            <div className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-2 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
+            <div data-laptop-tour="chatbox" className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-2 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
               {/* Add a photo (a test question, a diagram, notes): sent with this question. */}
               <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
               <button

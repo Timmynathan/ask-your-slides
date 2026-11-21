@@ -16,6 +16,7 @@ import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 import { SourcesPanel } from "./sources-panel";
 import { StudyTour, useStudyTour } from "./study-tour";
+import { LaptopTour, useLaptopTour } from "./laptop-tour";
 import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
 
 // Inside one course: the app's sidebar holds the course's topics (tablets up), then the chat with a
@@ -38,6 +39,8 @@ export function Workspace(data: WorkspaceData) {
   const [sourcesOpen, setSourcesOpen] = useState(false); // below xl; on wide screens Sources is always shown
   // First visit on a phone or iPad in portrait: a short tour of ☰ (topics) and Sources (study-tour.tsx).
   const tour = useStudyTour(data.user.id, !data.initialPast);
+  // Tablets and laptops: a guided walk of the page instead (laptop-tour.tsx).
+  const laptopTour = useLaptopTour(data.user.id, !data.initialPast && !data.initialAsk);
   const { advance } = tour;
   const openDrawer = () => {
     setDrawerOpen(true);
@@ -207,11 +210,11 @@ export function Workspace(data: WorkspaceData) {
                 Past questions
               </button>
             )}
-            <IconButton label="Sources" onClick={openSources} tour="sources" className="xl:hidden">
+            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className="xl:hidden">
               <path d="M7 3.5h7l4 4V20.5H7z" />
               <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
             </IconButton>
-            <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} quiet={tour.step !== null} />
+            <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} quiet={tour.step !== null || laptopTour.step !== null} />
           </div>
         </header>
 
@@ -327,17 +330,19 @@ export function Workspace(data: WorkspaceData) {
       )}
 
       <StudyTour step={tour.step} onSkip={tour.skip} onGotIt={(step) => (step === "drawer" ? closeDrawer() : closeSources())} />
+      <LaptopTour step={laptopTour.step} onNext={laptopTour.next} onSkip={laptopTour.finish} />
       {sheet && <PricingSheet code={sheet.code} resetsAt={sheet.resetsAt} offer={data.plan.offer} onClose={closeSheet} />}
     </div>
   );
 }
 
 /** Round, borderless icon button with a line icon (24px grid), as on My courses. */
-function IconButton({ label, onClick, className = "", tour, children }: { label: string; onClick(): void; className?: string; tour?: string; children: React.ReactNode }) {
+function IconButton({ label, onClick, className = "", tour, laptopTour, children }: { label: string; onClick(): void; className?: string; tour?: string; laptopTour?: string; children: React.ReactNode }) {
   return (
     <button
       type="button"
       data-tour={tour}
+      data-laptop-tour={laptopTour}
       onClick={onClick}
       aria-label={label}
       title={label}

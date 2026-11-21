@@ -348,6 +348,7 @@ export function AppShell({
             on hover (after a short pause, so passing the pointer over it doesn't flash it open). */}
         <div className="relative w-16 shrink-0">
           <div
+            data-laptop-tour="rail"
             className="group/rail absolute inset-y-0 left-0 z-[60] flex w-16 flex-col gap-1.5 bg-pau-900 px-2.5 py-4 transition-[width,box-shadow] delay-0 duration-200 ease-out hover:w-56 hover:shadow-2xl hover:delay-150"
           >
             <Link href="/" aria-label="Ask Your Slides home" className="mb-2 flex h-11 w-full items-center">
@@ -362,12 +363,10 @@ export function AppShell({
             <div className="mt-auto flex flex-col gap-3">
               {/* Feedback (owner, 20 Nov 2026), just above the account. */}
               <RailButton label="Give us feedback" onClick={() => setFeedback(true)} icon={PencilLine} />
-              <div className="flex h-11 w-full items-center">
-                <span className="grid h-11 w-11 shrink-0 place-items-center">
-                  <AccountMenu user={user} onChangePartner={onChangePartner} side menuClassName="bottom-0 left-[220px]" />
-                </span>
-                <span className={`${railLabel} truncate text-white/80`}>{user.displayName ?? "Account"}</span>
-              </div>
+              {/* Just the account icon, no name (owner, 21 Nov 2026). */}
+              <span className="grid h-11 w-11 shrink-0 place-items-center">
+                <AccountMenu user={user} onChangePartner={onChangePartner} side menuClassName="bottom-0 left-[220px]" />
+              </span>
             </div>
           </div>
         </div>
@@ -394,7 +393,7 @@ export function AppShell({
             {courseMenu ? (
               <div className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10">{courseMenu.body}</div>
             ) : (
-              <div ref={setSlot} className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10" />
+              <div ref={setSlot} data-laptop-tour="lectures" className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10" />
             )}
             {/* Drag the right edge to resize; far enough left closes the panel. */}
             {open && (
@@ -472,7 +471,6 @@ export function AppShell({
               </button>
               <div className="mt-2 flex items-center gap-3 border-t border-white/10 px-5 pt-4">
                 <AccountMenu user={user} onChangePartner={onChangePartner} side />
-                <span className="min-w-0 flex-1 truncate text-[13.5px] text-white/70">{user.displayName ?? user.email}</span>
               </div>
             </div>
           </div>
