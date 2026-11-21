@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, asksForWorking, matchesPart, namedPart, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -168,5 +168,15 @@ describe("namedPart / matchesPart ('week 7' finds the week 7 file)", () => {
     expect(matchesPart("05-PAU-CSC420-Lecture3-Functions-Procedures-Triggers.pdf", l3)).toBe(true);
     expect(matchesPart("07-COS409-Lecture-3-Notes.pdf", l3)).toBe(true);
     expect(matchesPart("03-CSC409-Lecture-0-Notes.pdf", l3)).toBe(false);
+  });
+});
+
+describe("plainSlideTalk (search talk said about the slides)", () => {
+  it("rewrites the phrases seen in real answers", () => {
+    expect(plainSlideTalk("The search didn't return anything on shares or share capital themselves, so I'll cover them.")).toBe("Your slides don't cover shares or share capital themselves, so I'll cover them.");
+    expect(plainSlideTalk("I can't find a detailed worked example for it in the materials I searched.")).toBe("I can't find a detailed worked example for it in your slides.");
+  });
+  it("leaves normal teaching alone", () => {
+    expect(plainSlideTalk("A binary search halves the range each step.")).toBe("A binary search halves the range each step.");
   });
 });

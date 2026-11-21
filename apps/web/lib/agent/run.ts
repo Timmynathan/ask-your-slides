@@ -19,6 +19,8 @@ const MAX_OUTPUT_TOKENS_SUMMARY = 12000; // once the agent has read whole materi
 // depth; Haiku writes it in about 3 minutes (the route allows 5). It only costs what is written.
 const MAX_OUTPUT_TOKENS_WALKTHROUGH = 32000;
 const WALKTHROUGH_PAGES = 120; // pages read before a walkthrough (40 per call)
+/** Below this best similarity, the first search found little (a second look is offered). */
+const WEAK_MATCH = 0.42;
 // Claude Haiku 5.5, prompts <= 100K tokens (check the provider page before launch).
 const USD_PER_MTOK = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 };
 
@@ -236,6 +238,21 @@ export function trimApologyOpening(text: string): string {
   return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "");
 }
 
+// Talk about the search, said about the slides instead (owner's review, 21 Nov 2026: about one answer
+// in 20 still said "the search didn't return…" despite the rule). Applied to the held-back end of
+// each block, so a phrase is whole when it is rewritten.
+const SEARCH_TALK: [RegExp, string][] = [
+  [/\b(?:in|from) the (?:materials|slides|results) I (?:searched|found|pulled|looked at)\b/gi, "in your slides"],
+  [/\bThe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "Your slides don't cover"],
+  [/\bthe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "your slides don't cover"],
+  [/\b[Tt]he search results\b/g, "your slides"],
+];
+export function plainSlideTalk(text: string): string {
+  let out = text;
+  for (const [re, by] of SEARCH_TALK) out = out.replace(re, by);
+  return out;
+}
+
 /** Drops a closing "…let me pull the slides too." from text written just before a tool call. */
 export function trimTrailingNarration(text: string): { text: string; dropped: string | null } {
   const m = text.match(NARRATION_END);
@@ -337,7 +354,7 @@ export async function runChatTurn(turn: ChatTurn) {
     const toTail = (controller: Ctrl, id: string, text: string) => {
       if (!text) return;
       const t = tails.get(id) ?? { text: "" };
-      t.text += text;
+      t.text = plainSlideTalk(t.text + text);
       tails.set(id, t);
       if (t.text.length > TAIL) {
         emit(controller, id, t.text.slice(0, -TAIL));
@@ -557,6 +574,17 @@ export async function runChatTurn(turn: ChatTurn) {
   for (const [i, c] of preCalls.entries()) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
   }
+  // A second look (owner's review, 21 Nov 2026: "shares" was said not to be in the slides, though a
+  // lecture is called Share Capital): when the first search finds little, the lecture list comes
+  // too, so the model can open a likely lecture before saying the slides don't cover it.
+  const firstSearch = ctx.toolLog.find((t) => t.name === "search_slides");
+  const sims = ((firstSearch?.detail as { similarities?: number[] } | undefined)?.similarities ?? []) as number[];
+  let lookAgainNote: string | null = null;
+  if (firstSearch && !pre.some((p) => p.name === "list_topics") && (sims.length === 0 || Math.max(...sims) < WEAK_MATCH)) {
+    pre.push({ id: `presearch_${turn.assistantMessageId}_topics`, name: listTopics.name, input: {}, output: await listTopics.run(ctx, {} as never) });
+    lookAgainNote =
+      "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
+  }
 
   const result = streamText({
     model: anthropic(CHAT_MODEL),
@@ -564,7 +592,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, lookAgainNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
