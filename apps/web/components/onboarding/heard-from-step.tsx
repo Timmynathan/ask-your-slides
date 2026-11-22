@@ -3,6 +3,7 @@
 // Sign-up step "How did you hear about us?" (owner, 20 Nov 2026): one tap on a card answers and
 // moves on. Layout after the owner's reference: a big question over a two-column grid of cards.
 import { HEARD_FROM, type HeardFrom } from "@/lib/heard-from";
+import { BackPill } from "./back-pill";
 
 function LineIcon({ d }: { d: string }) {
   return (
@@ -50,6 +51,9 @@ const ICONS: Record<HeardFrom, React.ReactNode> = {
 export function HeardFromStep({ value, onPick, onBack }: { value: HeardFrom | null; onPick(id: HeardFrom): void; onBack(): void }) {
   return (
     <div key="heard" className="panel-in w-full max-w-3xl text-center">
+      <div className="mb-6 text-left">
+        <BackPill onClick={onBack} />
+      </div>
       <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">How did you hear about us?</h1>
       <div role="radiogroup" aria-label="How did you hear about us?" className="mt-10 grid gap-3 sm:grid-cols-2 sm:gap-4">
         {HEARD_FROM.map((h, i) => {
@@ -72,9 +76,6 @@ export function HeardFromStep({ value, onPick, onBack }: { value: HeardFrom | nu
           );
         })}
       </div>
-      <button type="button" onClick={onBack} className="mt-8 text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
-        Back
-      </button>
     </div>
   );
 }

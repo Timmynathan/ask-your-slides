@@ -11,6 +11,7 @@ import type { PlanOffer } from "@/lib/plans/offer";
 import { FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { PlanStep } from "./plan-step";
+import { BackPill } from "./back-pill";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 import type { HeardFrom } from "@/lib/heard-from";
 import { HeardFromStep } from "./heard-from-step";
@@ -154,6 +155,11 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
 
         {step === "partner" && (
           <div key="partner" className="panel-in w-full max-w-5xl text-center">
+            {index > 0 && (
+              <div className="mb-6 text-left">
+                <BackPill onClick={() => setStep(steps[index - 1])} />
+              </div>
+            )}
             <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
@@ -227,6 +233,9 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
 
         {step === "hello" && chosen && (
           <div key="hello" className="panel-in flex w-full max-w-lg flex-col items-center text-center">
+            <div className="mb-6 self-start">
+              <BackPill onClick={() => setStep("partner")} />
+            </div>
             <div className="pop-in relative rounded-[22px] bg-card px-6 py-4 text-left text-[17px] leading-relaxed text-ink shadow-lg ring-1 ring-line">
               {fill(
                 HELLO[chosen.id],

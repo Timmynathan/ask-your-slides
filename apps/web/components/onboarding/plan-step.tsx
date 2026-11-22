@@ -8,7 +8,8 @@
 /* eslint-disable @next/next/no-img-element -- a small local photo */
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, Check, ChevronDown, Minus, X } from "lucide-react";
+import { Check, ChevronDown, Minus, X } from "lucide-react";
+import { BackPill } from "./back-pill";
 import { comparisonRows } from "@/lib/plans/offer";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
 import testimonials from "@/content/testimonials.json";
@@ -41,10 +42,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
   return (
     <div key="plan" className="panel-in w-full max-w-5xl">
       <div className="flex items-center justify-between">
-        <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[14px] text-brand ring-1 ring-line transition hover:bg-sunken">
-          <ArrowLeft size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
-          Back
-        </button>
+        <BackPill onClick={onBack} />
         <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:opacity-80">
           Skip for now
         </button>
