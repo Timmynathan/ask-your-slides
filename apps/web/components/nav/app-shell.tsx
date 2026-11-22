@@ -7,8 +7,8 @@
 // questions, Upload and My files don't belong on the dashboard).
 // Inside a course: a panel beside the rail with the course name, Upload, and the course's own menu
 // (past questions, topics, chats), filled in by the course page through a portal (useShellCourse).
-// The panel's button sits at the right of its title: click to keep it open or close it; while closed,
-// hovering the button slides it out over the page. A pinned panel can be dragged narrower by its right
+// The panel's button sits at the right of its title: click to open or close it (no hover peek; picking
+// a lecture closes it for a wider study view). A pinned panel can be dragged narrower by its right
 // edge; far enough closes it. Open/closed and width are remembered in this browser.
 // Phones have no rail: the dashboard's menu button opens a drawer with the same items.
 // Icons: Lucide (owner, 21 Nov 2026: no hand-drawn icons).
@@ -195,11 +195,7 @@ export function AppShell({
   const [uploading, setUploading] = useState(false);
   const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
   const [pinned, setPinned] = useState(true);
-  const [peek, setPeek] = useState(false);
-  const collapse = useCallback(() => {
-    setPinned(false);
-    setPeek(false);
-  }, []);
+  const collapse = useCallback(() => setPinned(false), []);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   // Smaller laptops: panel + chat + an open slide leave the chat too narrow, so the panel tucks away
   // (still a hover away) while a slide is open, and comes back when it closes.
@@ -283,16 +279,12 @@ export function AppShell({
   const courseKey = courseMenu ? "menu" : (openCourse?.id ?? null);
   useEffect(() => {
     if (!courseKey) return;
-    const id = setTimeout(() => {
-      setPinned(true);
-      setPeek(false);
-    }, 0);
+    const id = setTimeout(() => setPinned(true), 0);
     return () => clearTimeout(id);
   }, [courseKey]);
   const autoTucked = tucked && narrow && !untuck;
   const open = pinned && !autoTucked;
   const togglePin = () => {
-    setPeek(false);
     if (open) {
       setPinned(false);
     } else {
@@ -330,21 +322,12 @@ export function AppShell({
     remember({ width: w });
   }
 
-  const shown = hasPanel && (open || peek);
+  const shown = hasPanel && open;
   const panelW = Math.max(MIN_W, width);
-  // While peeking, the panel hides once the pointer goes past its right edge (sturdier than mouseleave
-  // when it slid out under a pointer that was already there).
-  useEffect(() => {
-    if (!peek || open) return;
-    const onMove = (e: PointerEvent) => e.clientX > RAIL + panelW + 12 && setPeek(false);
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
-  }, [peek, open, panelW]);
   const rowCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] text-white/75 transition hover:bg-white/8 hover:text-white";
   return (
     <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (hasPanel ? (open ? panelW : 52) : 0)}px` }}>
-      {/* Leaving the whole sidebar (rail and panel) ends a hover peek. */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main" onMouseLeave={() => setPeek(false)}>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden md:flex" aria-label="Main">
         {/* Rail: a 64 px slot; the rail itself sits over the page and the course panel, and opens
             on hover (after a short pause, so passing the pointer over it doesn't flash it open). */}
         <div className="relative w-16 shrink-0">
@@ -373,10 +356,10 @@ export function AppShell({
           </div>
         </div>
 
-        {/* The course panel: beside the page when open, over it while peeking */}
+        {/* The course panel, beside the page when open */}
         {shown && (
           <div
-            className={`relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white ${open ? "" : "slide-in-left shadow-2xl"}`}
+            className="relative flex h-full flex-col border-r border-white/10 bg-navy pb-4 pt-[18px] text-white"
             style={{ width: panelW }}
           >
             <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={panelTitle}>
@@ -403,24 +386,21 @@ export function AppShell({
             )}
           </div>
         )}
-        {/* Closed panel: a thin strip along its edge; the pointer coming near slides the panel back out
-            (owner, 22 Nov 2026), and leaving the sidebar hides it again. */}
-        {hasPanel && !shown && <div aria-hidden className="absolute inset-y-0 z-40 w-4" style={{ left: RAIL }} onMouseEnter={() => setPeek(true)} />}
-        {/* The panel's button, beside its title: always here in a course, open or closed. Hover
-            peeks while closed; click keeps the panel open, or closes it. */}
+        {/* The panel's button, beside its title: always here in a course, open or closed. Click only
+            (owner, 22 Nov 2026: hover-to-peek vanished on the way down to a lecture): opens or closes it. */}
         {hasPanel && (
-          <div className="group absolute top-[18px] z-50" style={{ left: shown ? RAIL + panelW - 46 : RAIL + 10 }} onMouseEnter={() => !open && setPeek(true)}>
+          <div className="group absolute top-[18px] z-50" style={{ left: shown ? RAIL + panelW - 46 : RAIL + 10 }}>
             <button
               type="button"
               onClick={togglePin}
-              aria-label={open ? "Close sidebar" : "Keep sidebar open"}
+              aria-label={open ? "Close sidebar" : "Open sidebar"}
               aria-pressed={open}
               className={`grid h-9 w-9 place-items-center rounded-lg transition active:scale-90 ${shown ? "text-white/80 hover:bg-white/10 hover:text-white" : "text-ink hover:bg-sunken"}`}
             >
               <PanelLeft size={19} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
             </button>
             <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-[12.5px] text-white opacity-0 shadow-lg ring-1 ring-white/15 transition-opacity delay-200 group-hover:opacity-100">
-              {open ? "Close sidebar" : "Keep sidebar open"}
+              {open ? "Close sidebar" : "Open sidebar"}
             </span>
           </div>
         )}
