@@ -6,7 +6,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function PromoCodeForm({ onRedeemed }: { onRedeemed(): void }) {
+export function PromoCodeForm({ onRedeemed, plain = false }: { onRedeemed(): void; /** Black text, no tint (onboarding's plan step, owner 22 Nov 2026). */ plain?: boolean }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,7 +37,11 @@ export function PromoCodeForm({ onRedeemed }: { onRedeemed(): void }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full bg-pau-50 px-4 py-2 text-[15px] font-medium text-brand ring-1 ring-pau-200 transition hover:bg-pau-100 active:scale-[0.98]"
+        className={
+          plain
+            ? "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[14.5px] text-[#191919] underline-offset-4 transition hover:underline active:scale-[0.98] dark:text-ink"
+            : "inline-flex items-center gap-2 rounded-full bg-pau-50 px-4 py-2 text-[15px] font-medium text-brand ring-1 ring-pau-200 transition hover:bg-pau-100 active:scale-[0.98]"
+        }
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M3.5 8.5V6a1.5 1.5 0 0 1 1.5-1.5h14A1.5 1.5 0 0 1 20.5 6v2.5a2.5 2.5 0 0 0 0 5V16a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 16v-2.5a2.5 2.5 0 0 0 0-5Z" />

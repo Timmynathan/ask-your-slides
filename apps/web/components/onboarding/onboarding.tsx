@@ -253,7 +253,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
             freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
             onBack={() => setStep("hello")}
             onFree={finish}
-            promo={<PromoCodeForm onRedeemed={finish} />}
+            promo={<PromoCodeForm onRedeemed={finish} plain />}
           />
         )}
 
