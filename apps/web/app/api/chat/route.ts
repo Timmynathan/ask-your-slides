@@ -84,7 +84,19 @@ export async function POST(request: Request) {
   const db = adminClient();
   // Plan limits (PRD F12), on the server: quiz/summary locks, daily and premium-course caps.
   const gate = await admitChatTurn(db, { userId: auth.user.id, courseId: convo.course_id, premium: course.premium, message });
-  if (!gate.ok) return NextResponse.json(gate.refusal.body, { status: gate.refusal.status });
+  if (!gate.ok) {
+    // A brand-new chat whose first question was refused (a limit, or quiz on Free) would sit in the
+    // chat list as an empty "New chat" (owner, 22 Nov 2026): it goes, and the page drops it too.
+    let chatRemoved = false;
+    if (convo.title === "New chat") {
+      const { count } = await db.from("messages").select("id", { count: "exact", head: true }).eq("conversation_id", convo.id);
+      if (count === 0) {
+        const { error } = await db.from("conversations").delete().eq("id", convo.id).eq("user_id", auth.user.id);
+        chatRemoved = !error;
+      }
+    }
+    return NextResponse.json({ ...gate.refusal.body, ...(chatRemoved ? { chat_removed: true } : {}) }, { status: gate.refusal.status });
+  }
   const admitted = gate.turn;
 
   let editsFirstQuestion = false;

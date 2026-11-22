@@ -181,6 +181,11 @@ export function Workspace(data: WorkspaceData) {
     setChatId(chat.id);
   }, []);
 
+  const onChatRemoved = useCallback((id: string) => {
+    setChats((prev) => prev.filter((c) => c.id !== id));
+    setChatId((cur) => (cur === id ? null : cur));
+  }, []);
+
   const onChatActive = useCallback((id: string) => {
     setChats((prev) => {
       const i = prev.findIndex((c) => c.id === id);
@@ -317,6 +322,7 @@ export function Workspace(data: WorkspaceData) {
               onRemaining={onRemaining}
               onChatCreated={onChatCreated}
               onChatActive={onChatActive}
+              onChatRemoved={onChatRemoved}
               onCite={setPreview}
               prefill={prefill}
               pulseDue={!pulseClosed && questions >= 10}

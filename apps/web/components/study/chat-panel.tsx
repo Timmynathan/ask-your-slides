@@ -50,6 +50,8 @@ interface Props {
   onRemaining(remaining: number): void;
   onChatCreated(chat: ChatItem): void;
   onChatActive(id: string): void;
+  /** An empty new chat was deleted (its first question was refused). */
+  onChatRemoved(id: string): void;
   onCite(slideKey: string): void;
   prefill: { text: string; n: number; slideKey?: string } | null;
   /** "Is this helping you study?": due after the 10th question, until answered (or "Not now"). */
@@ -81,11 +83,11 @@ function textOf(m: Msg | undefined): string {
 }
 
 /** The server's refusal code (lib/plans/gate.ts), if this error is a plan limit or lock. */
-function limitOf(e: Error | undefined): { code: LimitCode; resetsAt: string | null } | null {
+function limitOf(e: Error | undefined): { code: LimitCode; resetsAt: string | null; chatRemoved: boolean } | null {
   if (!e) return null;
   try {
-    const j = JSON.parse(e.message) as { code?: string; resets_at?: string | null };
-    return LIMIT_CODES.includes(j.code as LimitCode) ? { code: j.code as LimitCode, resetsAt: j.resets_at ?? null } : null;
+    const j = JSON.parse(e.message) as { code?: string; resets_at?: string | null; chat_removed?: boolean };
+    return LIMIT_CODES.includes(j.code as LimitCode) ? { code: j.code as LimitCode, resetsAt: j.resets_at ?? null, chatRemoved: !!j.chat_removed } : null;
   } catch {
     return null;
   }
@@ -121,6 +123,7 @@ export function ChatPanel({
   onRemaining,
   onChatCreated,
   onChatActive,
+  onChatRemoved,
   onCite,
   prefill,
   pulseDue,
@@ -299,6 +302,11 @@ export function ChatPanel({
     // A plan limit or lock (PRD F12): the server refused before answering. Quiz and summary
     // requests leave nothing behind (the question wasn't saved); a reached cap stays shown.
     onLimit(limit.code, limit.resetsAt);
+    // The server deleted the empty new chat this question would have opened: forget it here too.
+    if (limit.chatRemoved && conversationId.current) {
+      onChatRemoved(conversationId.current);
+      conversationId.current = null;
+    }
     if (limit.code === "quiz" || limit.code === "summary") {
       setMessages((prev) => (prev.at(-1)?.role === "user" ? prev.slice(0, -1) : prev));
       clearError();
