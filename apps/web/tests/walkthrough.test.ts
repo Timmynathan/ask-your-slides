@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -178,5 +178,22 @@ describe("plainSlideTalk (search talk said about the slides)", () => {
   });
   it("leaves normal teaching alone", () => {
     expect(plainSlideTalk("A binary search halves the range each step.")).toBe("A binary search halves the range each step.");
+  });
+});
+
+describe("memory aids (owner's review, 22 Nov 2026)", () => {
+  it("spots a memory-aid request", () => {
+    for (const m of ["give memory aids", "give me memory aids for each topic so i remember definitions and content", "any mnemonics for this?", "help me remember the defences"]) expect(asksForMemoryAids(m), m).toBe(true);
+    for (const m of ["What is fair comment?", "Summarise lecture 3", "remember to cite"]) expect(asksForMemoryAids(m), m).toBe(false);
+  });
+  it("drops an opening comment on what the slides lack, keeps the rest", () => {
+    expect(trimApologyOpening("Hey Chineze, the course has no memory-aid slides as such, so I'll give you aids built on the key lists in your lectures. Oya, let's start.")).toBe("Oya, let's start.");
+    expect(trimApologyOpening("Your slides don't have any worked examples, so here's one. First, …")).toBe("First, …");
+    // Kept: what the slides do have, and rule 6's exact opening.
+    expect(trimApologyOpening("Your slides have a clear list of the four defences.")).toBe("Your slides have a clear list of the four defences.");
+    expect(trimApologyOpening("Your slides don't cover this, but here's the idea:")).toBe("Your slides don't cover this, but here's the idea:");
+  });
+  it("drops a stray CJK character", () => {
+    expect(dropStrayCjk("Facts, public interest,面 Fine to recognise")).toBe("Facts, public interest, Fine to recognise");
   });
 });

@@ -11,6 +11,7 @@ import { parseSlideKey } from "@/lib/study/course-code";
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
 export const HISTORY_LIMIT = 12; // PRD §10.6
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
+const MEMORY_AID_TOPICS = 16; // whole-course memory aids: topics searched up front (4 slides each)
 const MAX_STEPS_CALCULATION = 10; // plus calculate (sometimes twice, after a fix) and optimize
 const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
 const MAX_OUTPUT_TOKENS_SUMMARY = 12000; // once the agent has read whole materials (3000, then 6000, cut summaries short)
@@ -234,8 +235,21 @@ const APOLOGY_START = /^\s*((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?
 // "You're right, Leko. My last answer rushed the steps." — the same, over two sentences.
 const APOLOGY_TWO = /^\s*(?:you'?re|you are) (?:right|correct)(?:,\s*[\p{L}'-]+)?[.!]\s*(?:my|the|that) (?:last|previous|earlier|first) (?:answer|reply|explanation|response|attempt)[^.!?\n]*[.!?]+\s*/iu;
 
+// "Hey Chineze, the course has no memory-aid slides as such, so I'll…" (owner's review, 22 Nov 2026):
+// a comment on what the slides lack, which rule 5 forbids. Only "has no / doesn't have any": a
+// sentence about what the slides do have is kept, and so is rule 6's "Your slides don't cover this".
+const LACKS_START = /^\s*(?:(?:hey|hi|hello|okay|ok|alright|right)\b[^.!?\n,]{0,30}[,!.]\s*)?(?:the|this|your) (?:course|slides|notes|lectures?|materials?|decks?)\b[^.!?\n]{0,40}?\b(?:ha(?:s|ve) no|(?:doesn'?t|does not|don'?t|do not) (?:have|include|contain) (?:any|a|specific|dedicated)|contains? no)\b[^.!?\n]*[.!?]+\s*/iu;
+
 export function trimApologyOpening(text: string): string {
-  return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "");
+  return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "").replace(LACKS_START, "");
+}
+
+// A stray Chinese, Japanese or Korean character in an English answer (owner's review, 22 Nov 2026:
+// "Fine 面 to recognise"): a model slip, dropped as the answer streams. A course in one of those
+// languages would need this off.
+const STRAY_CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]+/g;
+export function dropStrayCjk(text: string): string {
+  return text.replace(STRAY_CJK, "");
 }
 
 // Talk about the search, said about the slides instead (owner's review, 21 Nov 2026: about one answer
@@ -247,13 +261,18 @@ const SEARCH_TALK: [RegExp, string][] = [
   [/\bthe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "your slides don't cover"],
   [/\b[Tt]he search results\b/g, "your slides"],
 ];
+/** "Give me memory aids", "mnemonics for each topic", "help me remember the definitions". */
+export function asksForMemoryAids(message: string): boolean {
+  return /\b(memory (aids?|tricks?|hooks?|devices?)|mnemonics?|acronyms?|help me (remember|memori[sz]e)|(easy|easier) to remember|ways? to remember)\b/i.test(message);
+}
+
 /** "Draw…", "plot…", "explain it graphically", "a flowchart of…": the student wants a picture. */
 export function asksToDraw(message: string): boolean {
   return /\b(draw|drawing|plot|sketch|graph(s|ically|ical)?|chart|flow ?chart|visual(ly|i[sz]e)?|illustrate)\b/i.test(message);
 }
 
 export function plainSlideTalk(text: string): string {
-  let out = text;
+  let out = dropStrayCjk(text);
   for (const [re, by] of SEARCH_TALK) out = out.replace(re, by);
   return out;
 }
@@ -513,8 +532,16 @@ export async function runChatTurn(turn: ChatTurn) {
   }
   // A whole-course walkthrough ("all the notes from initiation to risk", "every slide of week 3") or
   // overview: the course's topic list first, so the model reads the right decks, middle ones included.
-  if (!preCalls.length && (walkthrough || (summaryAsked && !turn.topicId)) && (!turn.topicId || namesOtherPart)) {
+  // Memory aids on Whole course (owner, 22 Nov 2026): topic by topic, so the topic list first too.
+  const memoryAids = asksForMemoryAids(turn.userMessage);
+  if (!preCalls.length && (walkthrough || ((summaryAsked || memoryAids) && !turn.topicId)) && (!turn.topicId || namesOtherPart)) {
     preCalls.push({ tool: listTopics, input: {} });
+    // Memory aids for the whole course: each topic's key slides found up front, so every point has a
+    // slide to cite (one answer cited 8 slides it had never opened, and they were dropped).
+    if (memoryAids && !walkthrough) {
+      const topics = must(await db.from("topics").select("title").eq("course_id", turn.courseId).order("topic_order").limit(MEMORY_AID_TOPICS)) as { title: string }[];
+      for (const t of topics) preCalls.push({ tool: searchSlides, input: { query: `${t.title}: definition, meaning, types and key points`, k: 4 } });
+    }
   }
   // "Keep going": pick up after the last slide the previous answer cited, with those slides read
   // (searching for the words "keep going" found nothing and lost the place).
@@ -561,6 +588,11 @@ export async function runChatTurn(turn: ChatTurn) {
   const drawNote = asksToDraw(turn.userMessage)
     ? "The student asked to see this visually. Include one small diagram as a mermaid code block (rule 23): a flowchart for a process, or an xychart-beta graph for a curve, trend or plot (for a plot, draw an example with the numbers from your explanation). Then say in words what it shows."
     : null;
+  // Memory aids (owner's review, 22 Nov 2026): one answer gave aids for five random lists instead of each
+  // topic, with acronyms whose letters didn't match; an earlier one cited 16 slides it never opened.
+  const memoryNote = memoryAids
+    ? `The student wants memory aids. ${turn.topicId ? "Cover this lecture's key definitions and lists." : "Go topic by topic, in the order of the topic list, and cover every topic; each topic's key slides were searched for you above."} For each topic: a bold heading; the key definition or list in a line or two, cited, using only slide keys that appear in the results above (a point without such a slide gets no citation); then one memory aid inside <general>. For a list, prefer a sentence with one word per item, each word starting with that item's first letter, in the same order ("My Dear Wise Cat Thinks" for Modernisation, Dependency, World-systems, Cultural imperialism, Technological determinism); for an idea, a vivid picture or comparison. Check the letters and their order silently before writing; never print the check, and never call an aid awkward: if no sentence fits, use a picture instead. Name only what you then give. Keep each topic short, about four lines.`
+    : null;
   // Maths in a calculator course (owner's answer review, 21 Nov 2026): with thinking off, Haiku
   // rushed worked examples (a wrong binomial coefficient, a slide's wrong angle repeated) and
   // skipped the calculator. A short think at low effort; thinking tokens count against the cap.
@@ -603,7 +635,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, lookAgainNote, drawNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
@@ -624,7 +656,7 @@ export async function runChatTurn(turn: ChatTurn) {
     prepareStep: () =>
       longAnswer || thinkMaths
         ? { maxOutputTokens: longAnswer ? MAX_OUTPUT_TOKENS_WALKTHROUGH : MAX_OUTPUT_TOKENS_SUMMARY + 8000 }
-        : ctx.readMaterial || summaryAsked
+        : ctx.readMaterial || summaryAsked || memoryAids
           ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY }
           : {},
     providerOptions: {
