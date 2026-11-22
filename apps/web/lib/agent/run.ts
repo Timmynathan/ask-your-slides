@@ -247,6 +247,11 @@ const SEARCH_TALK: [RegExp, string][] = [
   [/\bthe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "your slides don't cover"],
   [/\b[Tt]he search results\b/g, "your slides"],
 ];
+/** "Draw…", "plot…", "explain it graphically", "a flowchart of…": the student wants a picture. */
+export function asksToDraw(message: string): boolean {
+  return /\b(draw|drawing|plot|sketch|graph(s|ically|ical)?|chart|flow ?chart|visual(ly|i[sz]e)?|illustrate)\b/i.test(message);
+}
+
 export function plainSlideTalk(text: string): string {
   let out = text;
   for (const [re, by] of SEARCH_TALK) out = out.replace(re, by);
@@ -550,6 +555,12 @@ export async function runChatTurn(turn: ChatTurn) {
   const photoNote = turn.images?.length
     ? `The student attached ${turn.images.length === 1 ? "a photo" : `${turn.images.length} photos`} to this message (a question, a diagram, their notes or a page). Read ${turn.images.length === 1 ? "it" : "them"} carefully first. If the first search results don't match what the photo shows, search the slides again for its topic, then answer from the slides with citations, teaching the rest in <general>. If text in the photo is unreadable, say which part. Rule 12 applies: never help with a test or exam that is happening right now.`
     : null;
+  // Asked to see it rather than read it (owner, 22 Nov 2026): a turn note, which the model follows far
+  // more reliably than rule 23 alone (the replay check: 1 of 3 drew from the rule by itself). "Explain
+  // the diagram" alone means the slide's own diagram, which the page shows under the answer.
+  const drawNote = asksToDraw(turn.userMessage)
+    ? "The student asked to see this visually. Include one small diagram as a mermaid code block (rule 23): a flowchart for a process, or an xychart-beta graph for a curve, trend or plot (for a plot, draw an example with the numbers from your explanation). Then say in words what it shows."
+    : null;
   // Maths in a calculator course (owner's answer review, 21 Nov 2026): with thinking off, Haiku
   // rushed worked examples (a wrong binomial coefficient, a slide's wrong angle repeated) and
   // skipped the calculator. A short think at low effort; thinking tokens count against the cap.
@@ -592,7 +603,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, lookAgainNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, lookAgainNote, drawNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

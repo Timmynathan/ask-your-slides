@@ -78,3 +78,14 @@ describe("asksForCodeOverview (read every practical file first)", () => {
     expect(asksForCodeOverview("Explain lines 1–61 of the code in this topic")).toBe(false);
   });
 });
+
+describe("asksToDraw", () => {
+  it("picks up requests to see something", async () => {
+    const { asksToDraw } = await import("@/lib/agent/run");
+    for (const q of ["how do draw a normal propabilityplot", "Explain slide 19 graphically and practically", "can you show it as a flowchart", "plot the demand curve", "explain it visually"]) expect(asksToDraw(q), q).toBe(true);
+  });
+  it("leaves ordinary questions and the slide's own diagram alone", async () => {
+    const { asksToDraw } = await import("@/lib/agent/run");
+    for (const q of ["what is resource leveling and smoothing and explain the diagram", "What happened in the Chike Obi case?", "5"]) expect(asksToDraw(q), q).toBe(false);
+  });
+});
