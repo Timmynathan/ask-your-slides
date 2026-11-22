@@ -1,4 +1,14 @@
 [
-  {"text": "It's great at breaking down complex topics.", "name": "Oluwatimilehin Ilesanmi", "detail": "Computer Science, Pan-Atlantic University", "photo": "/testimonials/oluwatimilehin-ilesanmi.webp"},
-  {"text": "It's helped me ace my tests.", "name": "Seyi O.", "detail": "Economics, Pan-Atlantic University", "initial": "S"}
+  {
+    "text": "It's great at breaking down complex topics.",
+    "name": "Oluwatimilehin Ilesanmi",
+    "detail": "Computer Science, Pan-Atlantic University",
+    "photo": "/testimonials/oluwatimilehin-ilesanmi.webp"
+  },
+  {
+    "text": "It makes revising my slides so much quicker.",
+    "name": "Chidi Mbama",
+    "detail": "Information Science and Media Studies, Pan-Atlantic University",
+    "photo": "/testimonials/chidi-mbama.webp"
+  }
 ]
