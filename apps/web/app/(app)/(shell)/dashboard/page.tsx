@@ -99,11 +99,21 @@ async function Loaded() {
     };
   }
 
-  // Recent lectures (owner, 22 Nov 2026): the topics of the latest chats, newest first, each with its
-  // first slide as a picture (signed, expiring URL) and a link back into that chat.
-  const seenTopics = new Set<string>();
-  const recentChats = chatRows.filter((ch) => ch.topic_id && list.some((c) => c.id === ch.course_id) && !seenTopics.has(ch.topic_id) && seenTopics.add(ch.topic_id)).slice(0, 8);
-  const recentLectures = await recentLectureCards(supabase, db, recentChats, (courses ?? []) as CourseRow[], (allCourses ?? []) as { code: string; programme: string }[]);
+  // Recent lectures (owner, 22 Nov 2026): the lectures the student was last in, newest first, each with
+  // its first slide as a picture (signed, expiring URL) and a link back to exactly where they were: the
+  // chat they had open, or a new chat on that lecture if they hadn't asked anything yet. Visits come
+  // from topic_visits (a lecture counts once it's opened); chats cover the time before that table.
+  const { data: visitRows } = await supabase.from("topic_visits").select("topic_id, chat_id, visited_at, topics(course_id)").order("visited_at", { ascending: false }).limit(40);
+  const latest = new Map<string, { topic_id: string; course_id: string; chat_id: string | null; at: string }>();
+  const note = (e: { topic_id: string; course_id: string; chat_id: string | null; at: string }) => {
+    const cur = latest.get(e.topic_id);
+    if (!cur || e.at > cur.at) latest.set(e.topic_id, e);
+  };
+  for (const v of (visitRows ?? []) as unknown as { topic_id: string; chat_id: string | null; visited_at: string; topics: { course_id: string } | null }[])
+    if (v.topics) note({ topic_id: v.topic_id, course_id: v.topics.course_id, chat_id: v.chat_id, at: v.visited_at });
+  for (const ch of chatRows) if (ch.topic_id) note({ topic_id: ch.topic_id, course_id: ch.course_id, chat_id: ch.id, at: ch.updated_at });
+  const recentPlaces = [...latest.values()].filter((e) => list.some((c) => c.id === e.course_id)).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
+  const recentLectures = await recentLectureCards(supabase, db, recentPlaces, (courses ?? []) as CourseRow[], (allCourses ?? []) as { code: string; programme: string }[]);
 
   // Study streak: Lagos days in a row with a question asked, ending today (or yesterday, if today has
   // none yet). The same days as the leaderboard (lib/study/streak.ts).
@@ -135,12 +145,12 @@ type CourseRow = { id: string; code: string; programme: string; title: string };
 async function recentLectureCards(
   supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
   db: ReturnType<typeof adminClient>,
-  chats: { id: string; course_id: string; topic_id: string | null }[],
+  chats: { topic_id: string; course_id: string; chat_id: string | null }[],
   courses: CourseRow[],
   all: { code: string; programme: string }[],
 ) {
   if (chats.length === 0) return [];
-  const topicIds = chats.map((c) => c.topic_id!) ;
+  const topicIds = chats.map((c) => c.topic_id);
   const [{ data: topics }, { data: mats }] = await Promise.all([
     supabase.from("topics").select("id, topic_order, title").in("id", topicIds),
     supabase.from("materials").select("topic_id, material_order, kind").in("topic_id", topicIds).in("kind", ["slides", "notes"]).order("material_order"),
@@ -153,10 +163,10 @@ async function recentLectureCards(
     if (!t || !c) return [];
     const order = firstMat.get(t.id);
     return [{
-      id: ch.id,
+      id: ch.topic_id,
       title: t.title,
       course: c.title,
-      href: courseHref(c, all, { topic: String(t.topic_order), chat: ch.id }),
+      href: courseHref(c, all, ch.chat_id ? { topic: String(t.topic_order), chat: ch.chat_id } : { topic: String(t.topic_order) }),
       courseId: c.id,
       slideKey: order === undefined ? null : `${c.code}-${String(order).padStart(2, "0")}-1`,
     }];

@@ -174,6 +174,13 @@ export function Workspace(data: WorkspaceData) {
     setPast(null);
   }, [firstSlide, closeDrawer]);
 
+  // Recent lectures (owner, 22 Nov 2026): note the lecture and chat the student is in, even a new chat
+  // with nothing asked yet, so the dashboard can bring them back to exactly here.
+  useEffect(() => {
+    if (!topicId) return;
+    void fetch("/api/visits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic_id: topicId, chat_id: chatId }) }).catch(() => {});
+  }, [topicId, chatId]);
+
   const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
   const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
 
