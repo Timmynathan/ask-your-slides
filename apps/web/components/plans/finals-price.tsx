@@ -18,7 +18,7 @@ function useNow(enabled: boolean) {
   return now;
 }
 
-export function FinalsPrice({ offer, size = "lg" }: { offer: PlanOffer; size?: "lg" | "md" | "sm" }) {
+export function FinalsPrice({ offer, size = "lg", onDark = false }: { offer: PlanOffer; size?: "lg" | "md" | "sm"; /** White text, on the navy Finals header. */ onDark?: boolean }) {
   const now = useNow(offer.early);
   const left = offer.early ? (now === null ? "" : timeLeft(offer.priceChangeAt, now)) : null;
   const early = offer.early && left !== null;
@@ -27,9 +27,9 @@ export function FinalsPrice({ offer, size = "lg" }: { offer: PlanOffer; size?: "
   return (
     <div>
       <p className="flex flex-wrap items-baseline gap-x-3">
-        <span className={`font-heading ${big} font-semibold tracking-tight text-ink`}>{naira(early ? offer.earlyPrice : offer.fullPrice)}</span>
+        <span className={`font-heading ${big} font-semibold tracking-tight ${onDark ? "text-white" : "text-ink"}`}>{naira(early ? offer.earlyPrice : offer.fullPrice)}</span>
         {early && (
-          <s className={`${size === "sm" ? "text-base sm:text-xl" : "text-xl"} text-muted`} aria-label={`was ${naira(offer.fullPrice)}`}>
+          <s className={`${size === "sm" ? "text-base sm:text-xl" : "text-xl"} ${onDark ? "text-white/60" : "text-muted"}`} aria-label={`was ${naira(offer.fullPrice)}`}>
             {naira(offer.fullPrice)}
           </s>
         )}
@@ -37,14 +37,14 @@ export function FinalsPrice({ offer, size = "lg" }: { offer: PlanOffer; size?: "
       {early && (
         <>
           {left && (
-            <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-pau-100 px-2.5 py-0.5 text-[12px] font-medium text-pau-800 dark:text-pau-400">
+            <p className={`mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 text-[12px] font-medium ${size === "sm" ? "rounded-lg leading-snug sm:rounded-full" : "rounded-full"} ${onDark ? "bg-white/15 text-white" : "bg-pau-100 text-pau-800 dark:text-pau-400"}`}>
               <ClockIcon />
               Price goes up in {left}
             </p>
           )}
         </>
       )}
-      {!early && <p className="mt-2 text-sm text-muted">One-time payment</p>}
+      {!early && <p className={`mt-2 text-sm ${onDark ? "text-white/70" : "text-muted"}`}>One-time payment</p>}
     </div>
   );
 }

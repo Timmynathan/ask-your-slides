@@ -83,7 +83,6 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     { label: "Answers cite your actual slides", free: true, finals: true },
     { label: "Summaries", free: String(o.free.summaries), finals: "Unlimited" },
     { label: "Quiz mode", free: false, finals: true },
-    { label: "Chat across all your courses at once", free: true, finals: true },
     { label: "Upload photos of your tests and notes", free: `Up to ${UPLOADS_ALLOWED.free}`, finals: `Up to ${UPLOADS_ALLOWED.finals}` },
   ];
   // How long and how to pay: last, after the features.

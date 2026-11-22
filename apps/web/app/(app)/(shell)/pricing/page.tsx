@@ -8,7 +8,8 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanTable } from "@/components/plans/plan-table";
 import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
-import { TIME_ZONE } from "@/lib/plans/config";
+import { EXAMS_START, PLAN_END_DATE, TIME_ZONE } from "@/lib/plans/config";
+import { CalendarDays, CalendarRange, Quote, Wallet } from "lucide-react";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
 import { latestRequest, paymentsOpen } from "@/lib/plans/manual-pay";
@@ -29,6 +30,7 @@ async function Loaded() {
   const db = adminClient();
   const [state, latest] = await Promise.all([planState(db, user.id, now), latestRequest(db, user.id)]);
   const offer = planOffer(now);
+  const daysToExams = Math.max(0, Math.ceil((EXAMS_START.getTime() - now.getTime()) / 86_400_000));
 
   return (
     <>
@@ -41,12 +43,23 @@ async function Loaded() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-5">
-        <h1 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Plans</h1>
-        <p className="mx-auto mt-3 max-w-md text-center text-muted">
-          {state.plan === "finals" && state.endsAt
-            ? `You're on Finals until ${longDate.format(state.endsAt)}.`
-            : "Start free. Get Finals when exams are close."}
-        </p>
+        {/* A warmer top (owner, 22 Nov 2026): the exam countdown, a headline with a reason to act. */}
+        <div className="text-center">
+          {daysToExams > 0 && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#BBEEF0] px-3 py-1 text-[13px] font-medium text-brand">
+              <CalendarDays size={15} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
+              Exams start {longDate.format(EXAMS_START)} · {daysToExams} {daysToExams === 1 ? "day" : "days"} to go
+            </span>
+          )}
+          <h1 className="mx-auto mt-4 max-w-2xl font-heading text-[32px] font-semibold leading-tight tracking-tight text-ink sm:text-[44px]">
+            {state.plan === "finals" ? "You're on Finals" : "Walk into your exams ready"}
+          </h1>
+          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-muted sm:text-[16px]">
+            {state.plan === "finals" && state.endsAt
+              ? `Everything is unlocked until ${longDate.format(state.endsAt)}.`
+              : "Start free. When exams get close, Finals gives you more questions every day, quiz mode, and real past questions with worked answers."}
+          </p>
+        </div>
 
         <div className="mt-10">
           <PlanTable
@@ -69,7 +82,23 @@ async function Loaded() {
               )
             }
           />
-          <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
+          {/* Three short reassurances under the table. */}
+          <ul className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-3">
+            {[
+              { Icon: Wallet, title: "Pay once", body: "One bank transfer. No subscription, nothing renews." },
+              { Icon: CalendarRange, title: "Lasts through exams", body: `Until ${longDate.format(PLAN_END_DATE)}, after your last paper.` },
+              { Icon: Quote, title: "Your own slides", body: "Every answer points to the exact PAU slide it came from." },
+            ].map(({ Icon, title, body }) => (
+              <li key={title} className="flex items-start gap-3 rounded-2xl bg-sunken/60 px-4 py-4">
+                <Icon size={20} absoluteStrokeWidth strokeWidth={1.5} className="mt-0.5 shrink-0 text-brand" aria-hidden />
+                <span>
+                  <span className="block text-[14.5px] font-medium text-ink">{title}</span>
+                  <span className="mt-0.5 block text-[13px] leading-snug text-muted">{body}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
           {state.plan === "free" && (
             <div className="mt-4 flex justify-center">
               <PromoCodeToCourses />

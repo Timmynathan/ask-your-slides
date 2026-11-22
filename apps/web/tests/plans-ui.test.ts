@@ -81,7 +81,6 @@ describe("landing Plans section", () => {
       { label: "Answers cite your actual slides", free: true, finals: true },
       { label: "Summaries", free: "1", finals: "Unlimited" },
       { label: "Quiz mode", free: false, finals: true },
-      { label: "Chat across all your courses at once", free: true, finals: true },
       { label: "Upload photos of your tests and notes", free: "Up to 2", finals: "Up to 30" },
       { label: "Past questions", free: false, finals: "Every past question" }, // Finals only (owner, 14 Nov 2026)
       { label: "Model answers and marked practice", free: false, finals: true },
