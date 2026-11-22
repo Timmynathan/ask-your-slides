@@ -43,6 +43,9 @@ export function Workspace(data: WorkspaceData) {
   // it (a Sources button brings it back); an open slide never closes by dragging, only with its X.
   const [rightW, setRightW] = useState({ sources: 240, slide: 520 }); // Sources narrower (owner, 21 Nov 2026)
   const [sourcesClosed, setSourcesClosed] = useState(false);
+  // Whole course (owner, 22 Nov 2026): Sources starts closed every time, since the lectures are already
+  // listed on the left; the Sources button opens it. A lecture keeps the setting above.
+  const [wholeSourcesOpen, setWholeSourcesOpen] = useState(false);
   const dragFrom = useRef(0);
   useEffect(() => {
     try {
@@ -72,9 +75,10 @@ export function Workspace(data: WorkspaceData) {
     advance("drawer");
   }, [advance]);
   const openSources = () => {
-    // Laptops: the Sources column was dragged closed, so this brings it back.
+    // Laptops: the Sources column is closed (Whole course, or dragged closed), so this brings it back.
     if (window.matchMedia("(min-width: 80rem)").matches) {
-      setSourcesClosed(false);
+      if (topicId === null) setWholeSourcesOpen(true);
+      else setSourcesClosed(false);
       return;
     }
     setSourcesOpen(true);
@@ -115,6 +119,13 @@ export function Workspace(data: WorkspaceData) {
   const course = useMemo(() => data.courses.find((c) => c.id === courseId)!, [data.courses, courseId]);
   const topics = useMemo(() => data.topics.filter((t) => t.course_id === courseId), [data.topics, courseId]);
   const topic = useMemo(() => topics.find((t) => t.id === topicId) ?? null, [topics, topicId]);
+  const sourcesHidden = topic ? sourcesClosed : !wholeSourcesOpen;
+  // Back on Whole course: Sources is closed again.
+  const [wholeFor, setWholeFor] = useState(topicId);
+  if (wholeFor !== topicId) {
+    setWholeFor(topicId);
+    if (topicId === null) setWholeSourcesOpen(false);
+  }
 
   // Keep the URL shareable/reloadable without a navigation.
   useEffect(() => {
@@ -236,7 +247,7 @@ export function Workspace(data: WorkspaceData) {
                 Past questions
               </button>
             )}
-            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className={sourcesClosed && !preview && !past ? "" : "xl:hidden"}>
+            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className={sourcesHidden && !preview && !past ? "" : "xl:hidden"}>
               <path d="M7 3.5h7l4 4V20.5H7z" />
               <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
             </IconButton>
@@ -324,7 +335,7 @@ export function Workspace(data: WorkspaceData) {
       {/* Right, full height with square edges (owner, 21 Nov 2026): Sources, or the slide being viewed
           (which replaces it until closed). Hidden while past questions are open: the original paper
           takes that room instead. */}
-      {!preview && !past && !sourcesClosed && (
+      {!preview && !past && !sourcesHidden && (
         <ResizeHandle
           label="Resize sources"
           onStart={() => {
@@ -335,7 +346,8 @@ export function Workspace(data: WorkspaceData) {
             // Dragged far enough right: it closes there and then, without letting go, keeping the
             // width it had before (owner, 21 Nov 2026).
             if (w < 170) {
-              setSourcesClosed(true);
+              if (topic) setSourcesClosed(true);
+              else setWholeSourcesOpen(false);
               setRightW((r) => ({ ...r, sources: dragFrom.current }));
               return;
             }
@@ -352,7 +364,7 @@ export function Workspace(data: WorkspaceData) {
       )}
       <div className={preview ? "contents xl:hidden" : past ? "hidden" : "contents"}>
         <SourcesPanel
-          collapsed={sourcesClosed}
+          collapsed={sourcesHidden}
           courseId={course.id}
           courseCode={course.code}
           topics={topics}

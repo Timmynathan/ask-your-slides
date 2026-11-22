@@ -6,7 +6,7 @@
 //
 //   lectures  the course panel's list of lectures (and past questions)
 //   chatbox   the chat box: ask anything, + to send a photo
-//   sources   the slides and notes (the Sources column, or its button on smaller screens)
+//   sources   the slides and notes (the Sources column, or its button when Sources is closed: click it)
 //   rail      the slim bar: hover for the names, Dashboard and recent chats
 //
 // Shown once per account in this browser. A step whose area isn't on screen is skipped.
@@ -23,6 +23,8 @@ const TIPS: Record<LaptopStep, { title: string; body: string }> = {
   sources: { title: "Your slides", body: "This course's slides and notes are here. Every answer links to the exact slide it came from." },
   rail: { title: "Getting around", body: "Hover over this bar to see its names: your dashboard, recent chats, feedback and your account." },
 };
+
+const SOURCES_BUTTON = { title: "Your PAU slides", body: "Click this icon to open your lecture slides and notes for this course. Every answer links to the exact slide it came from." };
 
 /** The step's element: the first match that is actually on screen. */
 function target(step: LaptopStep): HTMLElement | null {
@@ -92,7 +94,11 @@ export function LaptopTour({ step, onNext, onSkip }: { step: LaptopStep | null; 
   }, [step, onSkip]);
 
   if (!step || !rect) return null;
-  const tip = TIPS[step];
+  // Sources closed (Whole course): the icon is lit and is the one thing that works. Clicking it opens
+  // the student's slides and moves the tour on (owner, 22 Nov 2026).
+  const el = target(step);
+  const press = el?.tagName === "BUTTON" ? el : null;
+  const tip = step === "sources" && press ? SOURCES_BUTTON : TIPS[step];
   const index = STEPS.indexOf(step);
   const last = !STEPS.slice(index + 1).some((s) => target(s));
   const pad = 6;
@@ -113,6 +119,18 @@ export function LaptopTour({ step, onNext, onSkip }: { step: LaptopStep | null; 
     <>
       {/* Takes every click while the tour is on: the page is for looking at, Next moves on. */}
       <div aria-hidden className="fixed inset-0 z-[70]" />
+      {press && (
+        <button
+          type="button"
+          aria-label={press.getAttribute("aria-label") ?? tip.title}
+          onClick={() => {
+            press.click();
+            onNext();
+          }}
+          className="fixed z-[71] cursor-pointer rounded-2xl"
+          style={{ top: hole.top, left: hole.left, width: hole.width, height: hole.height }}
+        />
+      )}
       <div
         aria-hidden
         className="pointer-events-none fixed z-[70] rounded-2xl shadow-[0_0_0_200vmax_rgb(0_0_0/0.45)] transition-all duration-300 ease-out"
