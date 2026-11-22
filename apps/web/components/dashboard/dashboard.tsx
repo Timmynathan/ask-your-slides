@@ -226,9 +226,11 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         )}
       </div>
       <aside className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Your plan and progress">
-        {price !== null ? <UpgradeCard freePast={freePast} /> : <EncourageCard name={user.displayName} examsInDays={examsInDays} />}
+        {/* Encouragement for everyone (owner, 22 Nov 2026); the payment option sits below the progress cards. */}
+        <EncourageCard name={user.displayName} examsInDays={examsInDays} onFinals={price === null} />
         <ExamsCard days={examsInDays} startLabel={EXAMS_START_LABEL} />
         <StreakCard days={streak.days} today={streak.today} />
+        {price !== null && <UpgradeCard freePast={freePast} />}
       </aside>
       </main>
       </div>

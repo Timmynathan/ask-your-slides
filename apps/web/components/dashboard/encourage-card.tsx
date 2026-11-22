@@ -1,6 +1,6 @@
 "use client";
 
-// Finals students get this in place of the Upgrade card (owner, 22 Nov 2026): the same teal, with a
+// Every student's dashboard (owner, 22 Nov 2026; Free students too, as "Today's boost"): teal, with a
 // short word of encouragement that's different on every visit and gently rotates every few seconds
 // (fade and lift, like the best study apps' daily nudges). Dots let the student flip through. With
 // "reduce motion" on, it changes without the movement and doesn't rotate on its own.
@@ -26,7 +26,7 @@ const LINES: ((name: string, days: number) => string)[] = [
 ];
 const ROTATE_MS = 7000;
 
-export function EncourageCard({ name, examsInDays }: { name: string | null; examsInDays: number }) {
+export function EncourageCard({ name, examsInDays, onFinals }: { name: string | null; examsInDays: number; onFinals: boolean }) {
   const first = (name ?? "").trim().split(/\s+/)[0] ?? "";
   const lines = useMemo(() => LINES.map((f) => f(first, examsInDays)), [first, examsInDays]);
   // A different starting line on every visit (picked after hydration, so server and browser agree).
@@ -60,7 +60,7 @@ export function EncourageCard({ name, examsInDays }: { name: string | null; exam
       <span aria-hidden className="encourage-glow pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/40 blur-2xl" />
       <p className="relative flex items-center gap-2 text-[12.5px] font-semibold uppercase tracking-wide text-brand/70">
         <Sparkles size={16} absoluteStrokeWidth strokeWidth={1.6} className="encourage-twinkle" aria-hidden />
-        Finals mode
+        {onFinals ? "Finals mode" : "Today's boost"}
       </p>
       <p aria-live="polite" className="relative mt-3 min-h-[3.4em] font-heading text-[22px] leading-snug">
         <span key={i} className={shown ? "encourage-in inline-block" : "opacity-0"}>

@@ -57,19 +57,20 @@ export function RecentLectures({ lectures }: { lectures: RecentLecture[] }) {
   );
 }
 
-// "Upgrade now", not the price (owner, 22 Nov 2026): the price is on the pricing page.
+// The payment option, moved below the progress cards (owner, 22 Nov 2026: the teal card is now the
+// encouragement for everyone). "Upgrade now", not the price: the price is on the pricing page.
 export function UpgradeCard({ freePast = false }: { /** Past questions are already free in this programme. */ freePast?: boolean }) {
   return (
-    <div className="rounded-3xl bg-[#BBEEF0] p-6 text-brand">
-      <h2 className="flex items-center gap-2.5 font-heading text-[21px] font-normal">
-        <CircleArrowUp {...icon} size={22} />
-        Upgrade to Finals
-      </h2>
-      <p className="mt-3 text-[14px] leading-relaxed text-brand/80">
-        {freePast ? "More questions every day, unlimited summaries and quiz mode, until your last paper." : "More questions every day, quiz mode, and past questions with worked answers, until your last paper."}
-      </p>
-      <Link href="/pricing" className="mt-5 flex h-11 items-center justify-center rounded-full bg-brand text-[15px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]">
-        Upgrade now
+    <div className="flex items-center gap-4 rounded-3xl bg-card px-5 py-4 ring-1 ring-line">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-pau-100 text-brand">
+        <CircleArrowUp {...icon} size={20} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-medium text-ink">Upgrade to Finals</p>
+        <p className="text-[12.5px] leading-snug text-muted">{freePast ? "More questions, quiz mode, summaries." : "More questions, quiz mode, past questions."}</p>
+      </div>
+      <Link href="/pricing" className="shrink-0 rounded-full bg-brand px-4 py-2 text-[13.5px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]">
+        Upgrade
       </Link>
     </div>
   );
