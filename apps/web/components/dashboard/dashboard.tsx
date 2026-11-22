@@ -216,7 +216,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         )}
       </div>
       <aside className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Your plan and progress">
-        {price !== null && <UpgradeCard price={price} freePast={freePast} />}
+        {price !== null && <UpgradeCard freePast={freePast} />}
         <ExamsCard days={examsInDays} startLabel={EXAMS_START_LABEL} />
         <StreakCard days={streak.days} today={streak.today} />
       </aside>

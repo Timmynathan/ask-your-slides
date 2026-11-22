@@ -72,14 +72,17 @@ export async function loadStreakBoard(db: import("@supabase/supabase-js").Supaba
     if (!data || data.length < 1000) break;
   }
   const ids = [...byUser.keys()];
-  const profiles: { id: string; display_name: string | null; email: string | null; study_partner: string | null; programme: string | null }[] = [];
+  const profiles: { id: string; display_name: string | null; email: string | null; study_partner: string | null; programme: string | null; show_on_leaderboard?: boolean }[] = [];
   for (let i = 0; i < ids.length; i += 150) {
-    const { data } = await db.from("profiles").select("id, display_name, email, study_partner, programme").in("id", ids.slice(i, i + 150));
-    profiles.push(...((data ?? []) as typeof profiles));
+    const chunk = ids.slice(i, i + 150);
+    // show_on_leaderboard arrives with migration 20261122000001; until then everyone is shown.
+    const withFlag = await db.from("profiles").select("id, display_name, email, study_partner, programme, show_on_leaderboard").in("id", chunk);
+    const rows = withFlag.error ? (await db.from("profiles").select("id, display_name, email, study_partner, programme").in("id", chunk)).data : withFlag.data;
+    profiles.push(...((rows ?? []) as typeof profiles));
   }
   const admins = new Set((process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
   return profiles
-    .filter((p) => !admins.has((p.email ?? "").toLowerCase()))
+    .filter((p) => !admins.has((p.email ?? "").toLowerCase()) && p.show_on_leaderboard !== false)
     .map((p) => {
       const days = byUser.get(p.id)!;
       return { userId: p.id, name: boardName(p.display_name, p.email), partner: p.study_partner, programme: p.programme, current: currentStreak(days, now), best: longestStreak(days) };

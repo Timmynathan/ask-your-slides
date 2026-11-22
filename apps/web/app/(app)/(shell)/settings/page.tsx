@@ -16,11 +16,17 @@ const day = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", ti
 // the account menu, so it isn't one tap away).
 async function Loaded() {
   const { supabase, user } = await requireUser();
-  const [state, shell] = await Promise.all([planState(adminClient(), user.id, new Date()), shellData(supabase, user)]);
+  const [state, shell, { data: board }] = await Promise.all([
+    planState(adminClient(), user.id, new Date()),
+    shellData(supabase, user),
+    // Missing until migration 20261122000001 is pushed: then everyone is shown.
+    supabase.from("profiles").select("show_on_leaderboard").eq("id", user.id).maybeSingle(),
+  ]);
   return (
     <SettingsView
       email={user.email ?? ""}
       shell={shell}
+      onLeaderboard={(board as { show_on_leaderboard?: boolean } | null)?.show_on_leaderboard ?? true}
       plan={{ id: state.plan, name: PLAN_NAMES[state.plan], endsAt: state.endsAt ? day.format(state.endsAt) : null }}
     />
   );

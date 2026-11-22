@@ -8,8 +8,8 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanTable } from "@/components/plans/plan-table";
 import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
-import { EXAMS_START, FREE_PAST_PROGRAMMES, PLAN_END_DATE, TIME_ZONE } from "@/lib/plans/config";
-import { CalendarDays, CalendarRange, Quote, Wallet } from "lucide-react";
+import { EXAMS_START, FREE_PAST_PROGRAMMES, TIME_ZONE } from "@/lib/plans/config";
+import { CalendarDays } from "lucide-react";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
 import { latestRequest, paymentsOpen } from "@/lib/plans/manual-pay";
@@ -85,23 +85,7 @@ async function Loaded() {
               )
             }
           />
-          {/* Three short reassurances under the table. */}
-          <ul className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-3">
-            {[
-              { Icon: Wallet, title: "Pay once", body: "One bank transfer. No subscription, nothing renews." },
-              { Icon: CalendarRange, title: "Lasts through exams", body: `Until ${longDate.format(PLAN_END_DATE)}, after your last paper.` },
-              { Icon: Quote, title: "Your own slides", body: "Every answer points to the exact PAU slide it came from." },
-            ].map(({ Icon, title, body }) => (
-              <li key={title} className="flex items-start gap-3 rounded-2xl bg-sunken/60 px-4 py-4">
-                <Icon size={20} absoluteStrokeWidth strokeWidth={1.5} className="mt-0.5 shrink-0 text-brand" aria-hidden />
-                <span>
-                  <span className="block text-[14.5px] font-medium text-ink">{title}</span>
-                  <span className="mt-0.5 block text-[13px] leading-snug text-muted">{body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-6 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
+          <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
           {state.plan === "free" && (
             <div className="mt-4 flex justify-center">
               <PromoCodeToCourses />

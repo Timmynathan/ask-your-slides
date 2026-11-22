@@ -320,6 +320,7 @@ export function Workspace(data: WorkspaceData) {
               onChatActive={onChatActive}
               onChatRemoved={onChatRemoved}
               onCite={setPreview}
+              slideOpen={preview !== null}
               prefill={prefill}
               pulseDue={!pulseClosed && questions >= 10}
               onQuestion={onQuestion}

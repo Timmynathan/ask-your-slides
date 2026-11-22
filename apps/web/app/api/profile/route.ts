@@ -5,7 +5,7 @@ import { programmeChoices } from "@/lib/programmes";
 import { createClient } from "@/lib/supabase/server";
 
 // Runs as the student: RLS + column grants allow only display_name, onboarded, study_partner,
-// department, programme, level and heard_from. A programme + level must be one the catalog offers (PRD F11).
+// department, programme, level, heard_from and show_on_leaderboard. A programme + level must be one the catalog offers (PRD F11).
 const Body = z
   .object({
     display_name: z.string().trim().max(60).nullable().optional(),
@@ -14,6 +14,7 @@ const Body = z
     programme: z.string().trim().min(1).max(80).optional(),
     level: z.number().int().min(100).max(900).optional(),
     heard_from: z.enum(HEARD_FROM_IDS).optional(),
+    show_on_leaderboard: z.boolean().optional(),
   })
   .strict()
   .refine((b) => (b.programme === undefined) === (b.level === undefined), "Choose a programme and a level.");

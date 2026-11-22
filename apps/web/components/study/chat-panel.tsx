@@ -18,6 +18,7 @@ import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
 import { Typewriter } from "@/components/ui/typewriter";
+import { firstCited, SlideThumb, VISUAL_ASK } from "./slide-thumb";
 import { asksForQuiz, asksForSummary } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
@@ -53,6 +54,8 @@ interface Props {
   /** An empty new chat was deleted (its first question was refused). */
   onChatRemoved(id: string): void;
   onCite(slideKey: string): void;
+  /** The slide viewer is open beside the chat (then no slide pictures under answers). */
+  slideOpen: boolean;
   prefill: { text: string; n: number; slideKey?: string } | null;
   /** "Is this helping you study?": due after the 10th question, until answered (or "Not now"). */
   pulseDue: boolean;
@@ -127,6 +130,7 @@ export function ChatPanel({
   onChatActive,
   onChatRemoved,
   onCite,
+  slideOpen,
   prefill,
   pulseDue,
   onQuestion,
@@ -488,7 +492,7 @@ export function ChatPanel({
           )}
 
           <ol className="space-y-6">
-            {messages.map((m) =>
+            {messages.map((m, mi) =>
               m.role === "user" ? (
                 <li key={m.id} data-message="user" className="flex flex-col items-end gap-2">
                   {photosOf(m).length > 0 && (
@@ -516,6 +520,10 @@ export function ChatPanel({
                     onCite={onCite}
                     partnerName={p.name}
                   />
+                  {/* A visual question with the viewer closed: the cited slide itself, under the answer. */}
+                  {!slideOpen && !(busy && m.id === last?.id) && VISUAL_ASK.test(textOf(messages[mi - 1])) && firstCited(textOf(m)) && (
+                    <SlideThumb courseId={course.id} slideKey={firstCited(textOf(m))!} onOpen={onCite} />
+                  )}
                   {m.metadata?.truncated && m.id === last?.id && !busy && <CutShort onContinue={() => submit(CONTINUE_TEXT)} disabled={capped} />}
                   {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} />}
                   </div>

@@ -3,6 +3,7 @@
 import { memo, type ReactNode } from "react";
 import "katex/dist/katex.min.css";
 import ReactMarkdown, { type Components } from "react-markdown";
+import { Diagram } from "./diagram";
 import { MATH_REHYPE, MATH_REMARK } from "@/lib/study/math";
 import {
   chipLabel,
@@ -73,11 +74,12 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
     h2: ({ children }) => <h3 className="mb-2 mt-5 font-semibold first:mt-0">{children}</h3>,
     h3: ({ children }) => <h4 className="mb-1.5 mt-4 font-semibold first:mt-0">{children}</h4>,
     code: ({ children }) => <code className="rounded bg-sunken px-1 py-0.5 font-mono text-[13px]">{children}</code>,
-    pre: ({ children }) => (
-      <pre className="my-3 overflow-x-auto rounded-lg bg-sunken p-3 font-mono text-[13px] leading-relaxed [&_code]:bg-transparent [&_code]:p-0">
-        {children}
-      </pre>
-    ),
+    pre: ({ children }) => {
+      // A ```mermaid block is a diagram to draw (owner, 22 Nov 2026), not code to show.
+      const child = (Array.isArray(children) ? children[0] : children) as { props?: { className?: string; children?: unknown } } | undefined;
+      if (child?.props?.className?.includes("language-mermaid")) return <Diagram code={[child.props.children ?? ""].flat().join("").trim()} />;
+      return <PreBlock>{children}</PreBlock>;
+    },
     table: ({ children }) => (
       <div className="my-3 overflow-x-auto">
         <table className="w-full border-collapse text-sm">{children}</table>
@@ -118,3 +120,7 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
     </div>
   );
 });
+
+function PreBlock({ children }: { children: ReactNode }) {
+  return <pre className="my-3 overflow-x-auto rounded-lg bg-sunken p-3 font-mono text-[13px] leading-relaxed [&_code]:bg-transparent [&_code]:p-0">{children}</pre>;
+}

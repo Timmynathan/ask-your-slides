@@ -9,8 +9,24 @@ import { PageFrame } from "./page-frame";
 import type { ShellData } from "@/lib/nav/shell-data";
 
 // Settings: your plan, sign out, and (last, quiet) delete account.
-export function SettingsView({ email, plan, shell }: { email: string; plan: { id: PlanId; name: string; endsAt: string | null }; shell: ShellData }) {
+export function SettingsView({ email, plan, onLeaderboard }: { email: string; plan: { id: PlanId; name: string; endsAt: string | null }; shell: ShellData; onLeaderboard: boolean }) {
   const [deleting, setDeleting] = useState(false);
+  // "Show me on the leaderboard" (owner, 22 Nov 2026): saved as soon as it is flipped.
+  const [shown, setShown] = useState(onLeaderboard);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  async function toggleBoard() {
+    const next = !shown;
+    setShown(next);
+    setSaving(true);
+    setSaveError(null);
+    const res = await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ show_on_leaderboard: next }) }).catch(() => null);
+    setSaving(false);
+    if (!res?.ok) {
+      setShown(!next);
+      setSaveError("Couldn't save. Try again.");
+    }
+  }
   const card = "mt-4 rounded-[22px] bg-card p-6 ring-1 ring-line";
   return (
     <PageFrame title="Settings">
@@ -31,6 +47,28 @@ export function SettingsView({ email, plan, shell }: { email: string; plan: { id
             </Link>
           )}
         </div>
+      </section>
+
+      <section className={card}>
+        <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted">Leaderboard</h2>
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[15px] text-ink">Show me on the leaderboard</p>
+            <p className="text-[13.5px] text-muted">Your first name, programme and study streak. Turn it off to hide from other students.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={shown}
+            aria-label="Show me on the leaderboard"
+            onClick={toggleBoard}
+            disabled={saving}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-70 ${shown ? "bg-brand" : "bg-line-strong"}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-[left] ${shown ? "left-6" : "left-1"}`} />
+          </button>
+        </div>
+        {saveError && <p role="alert" className="mt-2 text-[13.5px] text-red-700">{saveError}</p>}
       </section>
 
       <section className={card}>
