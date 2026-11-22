@@ -63,6 +63,9 @@ const ShellCourseCtx = createContext<{
   slot: HTMLElement | null;
   /** A slide is open beside the chat: on smaller laptops the panel tucks away until it closes. */
   setTucked(tucked: boolean): void;
+  /** A lecture was picked (owner, 22 Nov 2026): close the panel for a wider study view; it slides back
+   *  out when the pointer comes near the left edge, and its button keeps it open again. */
+  collapse(): void;
 } | null>(null);
 export function useShellCourse() {
   return useContext(ShellCourseCtx);
@@ -191,6 +194,12 @@ export function AppShell({
   const page: ShellPage = pageProp ?? (pathname.startsWith("/chat") ? "chat" : pathname.startsWith("/dashboard") ? "dashboard" : "account");
   const [uploading, setUploading] = useState(false);
   const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
+  const [pinned, setPinned] = useState(true);
+  const [peek, setPeek] = useState(false);
+  const collapse = useCallback(() => {
+    setPinned(false);
+    setPeek(false);
+  }, []);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   // Smaller laptops: panel + chat + an open slide leave the chat too narrow, so the panel tucks away
   // (still a hover away) while a slide is open, and comes back when it closes.
@@ -211,7 +220,7 @@ export function AppShell({
       mq.removeEventListener("change", sync);
     };
   }, []);
-  const courseCtx = useMemo(() => ({ setCourse, slot, setTucked }), [slot, setTucked]);
+  const courseCtx = useMemo(() => ({ setCourse, slot, setTucked, collapse }), [slot, setTucked, collapse]);
   // Only on a course's own page: leaving for the dashboard drops the panel at once, rather than when
   // the course page has finished unmounting (owner, 22 Nov 2026: it stayed wide until the page loaded).
   const inCourse = !!courseMenu || (!!openCourse && pathname.startsWith("/study"));
@@ -250,8 +259,6 @@ export function AppShell({
     } catch {}
     setDrawer(true);
   };
-  const [pinned, setPinned] = useState(true);
-  const [peek, setPeek] = useState(false);
   const [width, setWidth] = useState(DEFAULT_W);
   const [dragging, setDragging] = useState(false);
   const start = useRef<{ x: number; w: number } | null>(null);
@@ -325,6 +332,14 @@ export function AppShell({
 
   const shown = hasPanel && (open || peek);
   const panelW = Math.max(MIN_W, width);
+  // While peeking, the panel hides once the pointer goes past its right edge (sturdier than mouseleave
+  // when it slid out under a pointer that was already there).
+  useEffect(() => {
+    if (!peek || open) return;
+    const onMove = (e: PointerEvent) => e.clientX > RAIL + panelW + 12 && setPeek(false);
+    window.addEventListener("pointermove", onMove);
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [peek, open, panelW]);
   const rowCls = "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-[14.5px] text-white/75 transition hover:bg-white/8 hover:text-white";
   return (
     <div className="min-h-dvh bg-page" style={{ ["--shell-pad" as string]: `${RAIL + (hasPanel ? (open ? panelW : 52) : 0)}px` }}>
@@ -388,6 +403,9 @@ export function AppShell({
             )}
           </div>
         )}
+        {/* Closed panel: a thin strip along its edge; the pointer coming near slides the panel back out
+            (owner, 22 Nov 2026), and leaving the sidebar hides it again. */}
+        {hasPanel && !shown && <div aria-hidden className="absolute inset-y-0 z-40 w-4" style={{ left: RAIL }} onMouseEnter={() => setPeek(true)} />}
         {/* The panel's button, beside its title: always here in a course, open or closed. Hover
             peeks while closed; click keeps the panel open, or closes it. */}
         {hasPanel && (

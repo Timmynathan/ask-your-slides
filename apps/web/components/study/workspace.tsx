@@ -32,6 +32,7 @@ import { PricingSheet, type LimitCode } from "@/components/plans/pricing-sheet";
 // stays put and the chat area animates in (.panel-in in globals.css).
 export function Workspace(data: WorkspaceData) {
   const courseId = data.initialCourseId;
+  const shellCtx = useShellCourse();
   const [chats, setChats] = useState<ChatItem[]>(data.chats);
   const [topicId, setTopicId] = useState<string | null>(data.initialTopicId);
   const [chatId, setChatId] = useState<string | null>(data.initialChatId);
@@ -190,8 +191,23 @@ export function Workspace(data: WorkspaceData) {
     return () => clearTimeout(t);
   }, [topicId, chatId, noteVisit]);
 
-  const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
-  const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
+  // Picking a lecture (or one of its chats) closes the course panel for a wider study view (owner,
+  // 22 Nov 2026); it slides back out from the left edge. Whole course leaves it as it is.
+  const collapseShell = shellCtx?.collapse;
+  const openScope = useCallback(
+    (id: string | null) => {
+      if (id) collapseShell?.();
+      show({ courseId, topicId: id, chatId: null });
+    },
+    [show, courseId, collapseShell],
+  );
+  const openChat = useCallback(
+    (chat: ChatItem) => {
+      if (chat.topic_id) collapseShell?.();
+      show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id });
+    },
+    [show, collapseShell],
+  );
 
   const onChatCreated = useCallback((chat: ChatItem) => {
     setChats((prev) => [chat, ...prev]);
@@ -221,7 +237,7 @@ export function Workspace(data: WorkspaceData) {
 
   // The shared sidebar (app/(app)/(shell)/layout.tsx) stays mounted; this page tells it which course
   // is open and puts the topics into its panel (owner, 21 Nov 2026: no blank flash from the dashboard).
-  const shell = useShellCourse();
+  const shell = shellCtx;
   const setShellCourse = shell?.setCourse;
   // A slide open beside the chat: on smaller laptops the panel tucks away until it closes.
   const setShellTucked = shell?.setTucked;
