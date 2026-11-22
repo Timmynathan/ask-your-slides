@@ -23,7 +23,7 @@ async function Loaded() {
   const [{ data: allCourses }, { data: profile, error: profileError }, { data: chats }, { data: enrolments }, { data: removals }] = await Promise.all([
     supabase.from("courses").select("id, code, code_confirmed, programme, level, title, department, sort_order, elective, premium, materials(kind)").order("sort_order"),
     supabase.from("profiles").select("display_name, onboarded, study_partner, programme, level").eq("id", user.id).single(),
-    supabase.from("conversations").select("id, course_id, title, updated_at").order("updated_at", { ascending: false }).limit(500),
+    supabase.from("conversations").select("id, course_id, title, topic_id, updated_at").order("updated_at", { ascending: false }).limit(500),
     // Extra courses the student added (retakes, extras). Missing before the migration: then none.
     supabase.from("course_enrollments").select("course_id"),
     // Own-level courses the student removed (carryovers). Missing before the migration: then none.
@@ -54,7 +54,7 @@ async function Loaded() {
     return Math.max(0, Math.min(l.daily - usedToday, l.course - (usedIn.get(courseId) ?? 0)));
   };
 
-  const chatRows = (chats ?? []) as { id: string; course_id: string; title: string; updated_at: string }[];
+  const chatRows = (chats ?? []) as { id: string; course_id: string; title: string; topic_id: string | null; updated_at: string }[];
   const list: DashboardCourse[] = (courses ?? [])
     .map((c) => {
       const mine = chatRows.filter((ch) => ch.course_id === c.id); // newest first
@@ -81,9 +81,26 @@ async function Loaded() {
     .filter((c) => c.materials > 0) // a course with no material yet has nothing to study
     .filter((c) => c.extraLevel !== null || !removed.has(c.id)); // removed from My courses
 
+  // The dashboard's second speech bubble (owner, 22 Nov 2026): the course of the last chat, and a link
+  // straight back into that chat.
+  const lastChat = chatRows.find((ch) => list.some((c) => c.id === ch.course_id)) ?? null;
+  let lastStudied: { course: string; courseHref: string; chatHref: string } | null = null;
+  if (lastChat) {
+    const c = (courses ?? []).find((x) => x.id === lastChat.course_id)!;
+    const { data: t } = lastChat.topic_id ? await supabase.from("topics").select("topic_order").eq("id", lastChat.topic_id).maybeSingle() : { data: null };
+    const all = (allCourses ?? []) as { code: string; programme: string }[];
+    const extra: Record<string, string> = t ? { topic: String((t as { topic_order: number }).topic_order) } : {};
+    lastStudied = {
+      course: c.title as string,
+      courseHref: courseHref(c as { code: string; programme: string }, all),
+      chatHref: courseHref(c as { code: string; programme: string }, all, { ...extra, chat: lastChat.id }),
+    };
+  }
+
   return (
     <>
       <Dashboard
+        lastStudied={lastStudied}
         courses={list}
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}

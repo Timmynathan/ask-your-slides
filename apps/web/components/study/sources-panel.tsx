@@ -55,7 +55,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
         }`}
       >
         <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-5">
-          <h2 className="text-[14px] text-muted">Sources</h2>
+          <h2 className="text-[12px] text-muted">Sources</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-black/5 xl:hidden" aria-label="Close sources">
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
               <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" strokeLinecap="round" />
@@ -66,7 +66,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {groups.map((g) => (
             <section key={g.title ?? "topic"} className="mb-2">
-              {g.title && <h3 className="px-3 pb-1 pt-4 text-[14px] text-muted">{g.title}</h3>}
+              {g.title && <h3 className="px-3 pb-1 pt-4 text-[12px] text-muted">{g.title}</h3>}
               <ul className="space-y-0.5">
                 {g.items.map((m) => {
                   const kind = KIND[m.kind] ?? KIND.other;
@@ -85,8 +85,8 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
                           <path d="M14 3.5v4h4" />
                         </svg>
                         <span className="min-w-0">
-                          <span className="line-clamp-2 text-[14px] leading-snug text-ink">{m.title}</span>
-                          <span className="mt-0.5 block text-[14px] text-muted">
+                          <span className="line-clamp-2 text-[12px] leading-snug text-ink">{m.title}</span>
+                          <span className="mt-0.5 block text-[12px] text-muted">
                             {kind} · {m.page_count} {unit}
                           </span>
                         </span>

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ShellMenuButton } from "@/components/nav/app-shell";
 import { AskBox } from "./ask-box";
+import { PartnerGreeting } from "./partner-greeting";
 import { HoverLink } from "@/components/ui/hover-link";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -57,9 +58,11 @@ interface Props {
   partner: PartnerId;
   /** On Finals: no Upgrade button, a quiet "Finals" badge instead. */
   onFinals: boolean;
+  /** The course of the student's last chat, for the "jump back in" bubble (null: no chats yet). */
+  lastStudied: { course: string; courseHref: string; chatHref: string } | null;
 }
 
-export function Dashboard({ courses, user, partner: initialPartner, onFinals }: Props) {
+export function Dashboard({ courses, user, partner: initialPartner, onFinals, lastStudied }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -191,6 +194,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals }: 
         {/* One way in for "which course is this?" questions (owner, 21 Nov 2026): it opens inside the
             right course's chat, so there is no separate chat to keep track of. */}
         <div className="mx-auto max-w-3xl">
+          <PartnerGreeting partner={partner} name={user.displayName} lastStudied={lastStudied} />
           <AskBox courses={courses.map((c) => ({ code: c.code, shownCode: c.shownCode, title: c.title, href: c.href }))} />
         </div>
 

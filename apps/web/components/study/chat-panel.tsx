@@ -17,6 +17,7 @@ import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
+import { Typewriter } from "@/components/ui/typewriter";
 import { asksForQuiz } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
@@ -445,7 +446,8 @@ export function ChatPanel({
                 {topic ? topic.title : course.title}
               </h2>
               <p className="pop-in mx-auto mt-2 max-w-md text-[15px] leading-relaxed text-muted">
-                {fill(pick(p.greetings, `${course.id}-${topic?.id ?? ""}`), studentName)}
+                {/* Types itself out (owner, 22 Nov 2026). */}
+                <Typewriter parts={[fill(pick(p.greetings, `${course.id}-${topic?.id ?? ""}`), studentName)]} delay={250} />
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-2">
                 {starters.map((s) => (
