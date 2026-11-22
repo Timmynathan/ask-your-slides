@@ -8,8 +8,7 @@ import { BusyLabel } from "@/components/ui/spinner";
 import { fill, PARTNERS, PARTNER_IDS, type PartnerId } from "@/lib/partners";
 import type { ProgrammeChoice } from "@/lib/programmes";
 import type { PlanOffer } from "@/lib/plans/offer";
-import { GetFinalsLink } from "@/components/plans/get-finals-link";
-import { PlanCards } from "@/components/plans/plan-cards";
+import { FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 import type { HeardFrom } from "@/lib/heard-from";
@@ -243,30 +242,53 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
         )}
 
         {step === "plan" && (
-          <div key="plan" className="panel-in w-full max-w-4xl">
+          // Calm and minimal (owner, 22 Nov 2026): the point is to start free and get a feel for the app.
+          // One clear "Start studying free"; Free and Finals side by side in small plain boxes; Finals is a
+          // quiet link, no countdown.
+          <div key="plan" className="panel-in w-full max-w-xl">
             <div className="text-center">
-              <h1 className="font-heading text-3xl font-semibold tracking-tight text-ink sm:text-4xl">Try it free. Upgrade when exams are close.</h1>
-              <p className="mx-auto mt-2 max-w-lg text-muted">Everything works on Free, no card or payment needed. Finals is a one-time payment for exam season.</p>
+              <h1 className="font-heading text-[26px] font-normal tracking-tight text-ink sm:text-[30px]">Start free. Upgrade only if you need it.</h1>
+              <p className="mx-auto mt-2 max-w-md text-[15px] text-muted">Everything works on Free. No card needed.</p>
             </div>
-            <div className="mt-8">
-              <PlanCards
-                offer={offer}
-                current="free"
-                freeAction={
-                  <button
-                    type="button"
-                    onClick={finish}
-                    autoFocus
-                    className="inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium text-ink ring-1 ring-line-strong transition hover:bg-sunken"
-                  >
-                    Start free
-                  </button>
-                }
-                finalsAction={<GetFinalsLink offer={offer} open={!!offer.paymentsOpen} />}
-              />
+            <button
+              type="button"
+              onClick={finish}
+              autoFocus
+              className="mx-auto mt-7 flex w-full max-w-xs items-center justify-center rounded-full bg-brand px-6 py-3.5 text-[15px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]"
+            >
+              Start studying free
+            </button>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-card p-5 ring-1 ring-line">
+                <p className="flex items-baseline justify-between">
+                  <span className="text-[15px] font-semibold text-ink">Free</span>
+                  <span className="text-[13px] text-muted">Your plan</span>
+                </p>
+                <ul className="mt-3 space-y-1.5 text-[13.5px] leading-snug text-ink/80">
+                  <li>{offer.free.firstDay} questions today, then {offer.free.daily} a day</li>
+                  <li>Every course, answers from your slides</li>
+                  <li>Photos of questions and notes</li>
+                </ul>
+              </div>
+              <div className="rounded-2xl bg-card p-5 ring-1 ring-line">
+                <p className="flex items-baseline justify-between">
+                  <span className="text-[15px] font-semibold text-ink">Finals</span>
+                  <span className="text-[13px] text-muted">₦{offer.price.toLocaleString("en-NG")} once</span>
+                </p>
+                <ul className="mt-3 space-y-1.5 text-[13.5px] leading-snug text-ink/80">
+                  <li>{offer.finals.daily} questions a day</li>
+                  <li>Quiz mode and unlimited summaries</li>
+                  <li>{FREE_PAST_PROGRAMMES.includes(studying.programme ?? "") ? "Until your last paper" : "Past questions with worked answers"}</li>
+                </ul>
+                {offer.paymentsOpen && (
+                  <a href="/pay" className="mt-3 inline-block text-[13.5px] font-medium text-brand underline-offset-2 hover:underline">
+                    Get Finals
+                  </a>
+                )}
+              </div>
             </div>
-            <p className="mt-6 text-center text-sm text-muted">You&apos;re on Free now. Upgrade any time from your account menu.</p>
-            <div className="mt-4 flex justify-center">
+            <p className="mt-5 text-center text-[13px] text-muted">You can upgrade any time from your account.</p>
+            <div className="mt-3 flex justify-center">
               <PromoCodeForm onRedeemed={finish} />
             </div>
           </div>
