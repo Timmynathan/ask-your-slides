@@ -41,11 +41,11 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
   return (
     <div key="plan" className="panel-in w-full max-w-5xl">
       <div className="flex items-center justify-between">
-        <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[14px] text-ink ring-1 ring-line transition hover:bg-sunken">
+        <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2 text-[14px] text-brand ring-1 ring-line transition hover:bg-sunken">
           <ArrowLeft size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
           Back
         </button>
-        <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:text-ink">
+        <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:opacity-80">
           Skip for now
         </button>
       </div>
@@ -54,7 +54,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
         {/* Left: the study partner, then the testimonials. */}
         <div className="order-2 flex flex-col items-center lg:order-1">
           {/* A plain black line drawing (owner, 22 Nov 2026: minimalist, no colour): books, a cap, a star. */}
-          <svg viewBox="0 0 220 190" className="hidden h-48 w-56 text-[#191919] sm:block dark:text-ink" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg viewBox="0 0 220 190" className="hidden h-48 w-56 text-brand sm:block " fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             {/* Three stacked books */}
             <rect x="48" y="150" width="124" height="22" rx="3" />
             <path d="M60 150v22M160 150v22" />
@@ -74,7 +74,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
             <path d="M196 30h8M192 52l6 4M144 22l-6-5" />
           </svg>
           <figure className="mt-6 w-full max-w-md rounded-2xl bg-card p-5 ring-1 ring-line">
-            <blockquote key={q} className="encourage-in text-[15.5px] leading-relaxed text-ink">&ldquo;{quote.text}&rdquo;</blockquote>
+            <blockquote key={q} className="encourage-in text-[15.5px] leading-relaxed text-brand">&ldquo;{quote.text}&rdquo;</blockquote>
             <figcaption className="mt-4 flex items-center gap-3">
               {quote.photo ? (
                 <img src={quote.photo} alt="" width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
@@ -82,7 +82,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-pau-100 font-medium text-brand">{quote.initial}</span>
               )}
               <span>
-                <span className="block text-[14.5px] text-ink">{quote.name}</span>
+                <span className="block text-[14.5px] text-brand">{quote.name}</span>
                 <span className="block text-[12.5px] text-muted">{quote.detail}</span>
               </span>
             </figcaption>
@@ -94,7 +94,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
                 type="button"
                 onClick={() => setQ(i)}
                 aria-label={`Show ${x.name}'s quote`}
-                className={`h-1.5 rounded-full transition-all ${i === q ? "w-6 bg-ink" : "w-1.5 bg-line-strong hover:bg-muted"}`}
+                className={`h-1.5 rounded-full transition-all ${i === q ? "w-6 bg-brand" : "w-1.5 bg-line-strong hover:bg-muted"}`}
               />
             ))}
           </div>
@@ -102,25 +102,25 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
 
         {/* Right: the offer. */}
         <div className="order-1 lg:order-2">
-          <h1 className="font-heading text-[28px] font-normal leading-tight tracking-tight text-ink sm:text-[34px]">
+          <h1 className="font-heading text-[28px] font-normal leading-tight tracking-tight text-brand sm:text-[34px]">
             Join 100+ PAU students already studying with Ask Your Slides
           </h1>
           <p className="mt-2 text-[15px] text-muted">Start free. Get Finals when exams are close.</p>
 
-          <div className="mt-6 overflow-hidden rounded-2xl ring-2 ring-ink">
-            <p className="bg-ink py-1.5 text-center text-[12px] font-semibold uppercase tracking-wide text-page">One payment · until your last paper</p>
+          <div className="mt-6 overflow-hidden rounded-2xl ring-2 ring-brand">
+            <p className="bg-brand py-1.5 text-center text-[12px] font-semibold uppercase tracking-wide text-brand-ink">One payment · until your last paper</p>
             <div className="flex items-center gap-4 bg-card px-5 py-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[17px] font-semibold text-ink">Finals</p>
+                <p className="text-[17px] font-semibold text-brand">Finals</p>
                 <p className="text-[13.5px] text-muted">
                   {offer.finals.daily} questions a day, quiz mode{freePast ? ", summaries" : ", past questions"}
                 </p>
               </div>
               <p className="text-right">
-                <span className="font-heading text-[26px] font-semibold text-ink">{naira(offer.price)}</span>
+                <span className="font-heading text-[26px] font-semibold text-brand">{naira(offer.price)}</span>
                 {offer.early && <s className="ml-2 text-[14px] text-muted">{naira(offer.fullPrice)}</s>}
               </p>
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-ink text-page">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-brand-ink">
                 <Check size={15} absoluteStrokeWidth strokeWidth={2.2} aria-hidden />
               </span>
             </div>
@@ -130,7 +130,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            className="mx-auto mt-4 flex items-center gap-1.5 text-[14.5px] text-ink hover:text-brand"
+            className="mx-auto mt-4 flex items-center gap-1.5 text-[14.5px] text-brand hover:opacity-80"
           >
             See what&apos;s included
             <ChevronDown size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
@@ -138,7 +138,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
           {open && <IncludedPopup offer={offer} freePast={freePast} onClose={() => setOpen(false)} />}
 
           {offer.paymentsOpen ? (
-            <a href="/pay" className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-ink text-[15.5px] font-medium text-page shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] transition hover:opacity-90 active:scale-[0.99]">
+            <a href="/pay" className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-brand text-[15.5px] font-medium text-brand-ink shadow-[0_10px_30px_-12px_var(--brand)] transition hover:opacity-90 active:scale-[0.99]">
               Get Finals
             </a>
           ) : (
@@ -161,31 +161,31 @@ function IncludedPopup({ offer, freePast, onClose }: { offer: PlanOffer; freePas
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   const cell = (v: string | boolean) =>
-    v === true ? <Check size={16} absoluteStrokeWidth strokeWidth={2} className="mx-auto text-[#191919] dark:text-ink" aria-label="Included" />
-    : v === false ? <Minus size={16} absoluteStrokeWidth strokeWidth={1.6} className="mx-auto text-[#191919]/25 dark:text-ink/30" aria-label="Not included" />
-    : <span className="text-[12.5px] leading-snug text-[#191919] dark:text-ink">{v}</span>;
+    v === true ? <Check size={16} absoluteStrokeWidth strokeWidth={2} className="mx-auto text-brand " aria-label="Included" />
+    : v === false ? <Minus size={16} absoluteStrokeWidth strokeWidth={1.6} className="mx-auto text-brand/30 " aria-label="Not included" />
+    : <span className="text-[12.5px] leading-snug text-brand ">{v}</span>;
   // Rendered on <body>: the step's slide-in animation would otherwise trap the backdrop inside it.
   return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4" onClick={onClose}>
       <div role="dialog" aria-label="What's included" className="pop-in w-full max-w-md rounded-2xl bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <p className="text-[15px] font-semibold text-[#191919] dark:text-ink">What&apos;s included</p>
-          <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full text-[#191919] hover:bg-sunken dark:text-ink">
+          <p className="text-[15px] font-semibold text-brand ">What&apos;s included</p>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full text-brand hover:bg-sunken ">
             <X size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
           </button>
         </div>
         <table className="mt-3 w-full table-fixed text-left">
           <thead>
-            <tr className="border-b border-[#191919]/15 text-[12.5px] dark:border-ink/20">
-              <th className="w-[44%] pb-2 font-normal text-[#191919]/60 dark:text-ink/60">Feature</th>
-              <th className="pb-2 text-center font-semibold text-[#191919] dark:text-ink">Free</th>
-              <th className="pb-2 text-center font-semibold text-[#191919] dark:text-ink">Finals</th>
+            <tr className="border-b border-brand/20 text-[12.5px] ">
+              <th className="w-[44%] pb-2 font-normal text-brand/70 ">Feature</th>
+              <th className="pb-2 text-center font-semibold text-brand ">Free</th>
+              <th className="pb-2 text-center font-semibold text-brand ">Finals</th>
             </tr>
           </thead>
           <tbody>
             {comparisonRows(offer, { freePast }).map((r) => (
-              <tr key={r.label} className="border-b border-[#191919]/10 last:border-0 dark:border-ink/15">
-                <th scope="row" className="py-2 pr-2 text-[12.5px] font-normal leading-snug text-[#191919] dark:text-ink">{r.label}</th>
+              <tr key={r.label} className="border-b border-brand/10 last:border-0 ">
+                <th scope="row" className="py-2 pr-2 text-[12.5px] font-normal leading-snug text-brand ">{r.label}</th>
                 <td className="px-1 py-2 text-center">{cell(r.free)}</td>
                 <td className="px-1 py-2 text-center">{cell(r.finals)}</td>
               </tr>

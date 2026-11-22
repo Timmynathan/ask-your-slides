@@ -39,7 +39,7 @@ export function PromoCodeForm({ onRedeemed, plain = false }: { onRedeemed(): voi
         onClick={() => setOpen(true)}
         className={
           plain
-            ? "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[14.5px] text-[#191919] underline-offset-4 transition hover:underline active:scale-[0.98] dark:text-ink"
+            ? "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[14.5px] text-brand underline-offset-4 transition hover:underline active:scale-[0.98]"
             : "inline-flex items-center gap-2 rounded-full bg-pau-50 px-4 py-2 text-[15px] font-medium text-brand ring-1 ring-pau-200 transition hover:bg-pau-100 active:scale-[0.98]"
         }
       >
