@@ -26,7 +26,7 @@ export function RecentLectures({ lectures }: { lectures: RecentLecture[] }) {
       <h2 id="recent-lectures" className="mb-3 font-heading text-[24px] font-normal tracking-tight text-ink sm:text-[26px]">
         Recent lectures
       </h2>
-      <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:px-6 [scrollbar-width:thin]">
+      <ul className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 pt-1 sm:-mx-6 sm:px-6 [scrollbar-width:thin]">
         {lectures.map((l) => (
           <li key={l.id} className="group relative w-[176px] shrink-0 snap-start rounded-2xl bg-card p-2 ring-1 ring-line transition hover:shadow-md hover:ring-line-strong">
             <HoverLink href={l.href} className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Continue ${l.title} (${l.course})`} />
