@@ -398,6 +398,15 @@ def find_reuse(store, job: Job, course_id: str, manual_only: bool = False) -> tu
     ).fetchall()
     for r in rows:
         dump = REPORTS / "past_papers" / f"{r['code']}-{Path(r['source_file']).stem}.json"
+        # The dump is keyed by code + file name, which several programmes share for DIFFERENT files
+        # (MTH101 2023-2024_exam.pdf is a CA in one programme, an exam in another): only trust it when
+        # no other file has that code and name (owner's review, 22 Nov 2026), else read afresh.
+        clash = store.db.execute(
+            """select 1 from past_papers p join courses c on c.id = p.course_id
+               where c.code = %s and p.source_file like %s and p.file_hash <> %s limit 1""",
+            (r["code"], f"%/{Path(r['source_file']).name}", job.file_hash)).fetchone()
+        if clash:
+            continue
         if dump.is_file():
             src_review = (DATA / r["source_file"]).with_name(Path(r["source_file"]).stem + ".review.yaml")
             review = yaml.safe_load(src_review.read_text()) if src_review.is_file() else None
