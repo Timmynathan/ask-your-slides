@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -195,5 +195,18 @@ describe("memory aids (owner's review, 22 Nov 2026)", () => {
   });
   it("drops a stray CJK character", () => {
     expect(dropStrayCjk("Facts, public interest,面 Fine to recognise")).toBe("Facts, public interest, Fine to recognise");
+  });
+});
+
+describe("planning and search talk (owner's review, 22 Nov 2026)", () => {
+  it("recognises the model planning to itself", () => {
+    expect(PLANNING.test("I need the course materials for the exam questions. The student's photos cover several questions, so I'll answer the ones I can ground in the slides.")).toBe(true);
+    expect(PLANNING.test("Defamation is judged by whether the words tend to lower the claimant in the estimation of reasonable people.")).toBe(false);
+    expect(PLANNING.test("I'll explain each step, then give an example.")).toBe(false);
+  });
+  it("drops whole sentences about searching", () => {
+    expect(plainSlideTalk("I searched the slides for press freedom and NBC regulation, and the materials give a framework. Section 39 applies.")).toBe("Section 39 applies.");
+    expect(plainSlideTalk("Facts first.\nI didn't find slides that deal with a study lounge. The defamation notes are closest.")).toBe("Facts first.\nThe defamation notes are closest.");
+    expect(plainSlideTalk("The court searched the slides? No.")).toBe("The court searched the slides? No.");
   });
 });

@@ -15,6 +15,15 @@ function run(chunks: string[], allowed: string[]) {
 }
 
 describe("citation filter", () => {
+  it("repairs a marker closed with one bracket, however the stream splits it", () => {
+    const text = "Implied meaning counts. [[s:ISM413-07-10]\n\nNext. [[s:ISM413-07-4]] End [[s:ISM413-07-9]";
+    for (let size = 1; size <= 9; size++) {
+      const chunks = text.match(new RegExp(`[\\s\\S]{1,${size}}`, "g"))!;
+      const r = run(chunks, ["ISM413-07-10", "ISM413-07-4", "ISM413-07-9"]);
+      expect(r.text).toBe("Implied meaning counts. [[s:ISM413-07-10]]\n\nNext. [[s:ISM413-07-4]] End [[s:ISM413-07-9]]");
+    }
+  });
+
   it("keeps valid markers and drops invalid ones", () => {
     const r = run(["Indexes speed up reads. [[s:CSC420-02-21]] Made up. [[s:CSC420-99-1]]"], ["CSC420-02-21"]);
     expect(r.text).toBe("Indexes speed up reads. [[s:CSC420-02-21]] Made up. ");

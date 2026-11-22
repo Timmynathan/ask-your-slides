@@ -11,6 +11,7 @@ import { parseSlideKey } from "@/lib/study/course-code";
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
 export const HISTORY_LIMIT = 12; // PRD §10.6
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
+const MAX_STEPS_PAPER = 9; // a photographed paper: a search or two per question before the answer
 const MEMORY_AID_TOPICS = 16; // whole-course memory aids: topics searched up front (4 slides each)
 const MAX_STEPS_CALCULATION = 10; // plus calculate (sometimes twice, after a fix) and optimize
 const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
@@ -225,6 +226,9 @@ export function citedRanges(content: string, budget = 40): { material: string; f
   return out;
 }
 
+/** Words the model uses when planning to itself, never in an answer to the student. */
+export const PLANNING = /\b(the student'?s?\b|I need (?:the|to (?:pull|fetch|get|read|check|look|search|find))|let me (?:pull|fetch|grab|gather|get|check|look|search|read|load|open|find)|I'?ll (?:pull|fetch|grab|gather|search|look up|load)\b|I'?ll answer the ones)/i;
+
 const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
 
 const APOLOGY_START = /^\s*((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?re|you are) (?:right|correct)\b[^.!?\n]*\b(my|last|previous|earlier|answer|reply|explanation|response|skimm|missed|skipped)\b)[^.!?\n]*[.!?]+\s*/i;
@@ -260,7 +264,14 @@ const SEARCH_TALK: [RegExp, string][] = [
   [/\bThe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "Your slides don't cover"],
   [/\bthe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "your slides don't cover"],
   [/\b[Tt]he search results\b/g, "your slides"],
+  // Whole sentences about the looking (owner's review, 22 Nov 2026): "I searched the slides for press
+  // freedom and NBC regulation, and…", "I didn't find slides that deal with…". Dropped.
+  [/(?<=^|[.!?]\s+|\n)I (?:searched|looked through|went through|checked|scanned) (?:the|your) (?:course )?(?:slides|materials|notes)\b[^.!?\n]*[.!?]\s*/g, ""],
+  [/(?<=^|[.!?]\s+|\n)I (?:didn'?t|did not|couldn'?t|could not) find (?:any )?(?:slides?|materials?|notes|anything)\b[^.!?\n]*[.!?]\s*/g, ""],
 ];
+/** "Answer these", "question by question", "ILAC": photos of a paper to work through. */
+const PAPER_WORDS = /\b(answer (?:these|them|all|each|every|the questions?)|question by question|each question|all (?:the )?questions|past (?:paper|questions?)|test questions?|exam questions?|ILAC|IRAC|IPAC)\b/i;
+
 /** "Give me memory aids", "mnemonics for each topic", "help me remember the definitions". */
 export function asksForMemoryAids(message: string): boolean {
   return /\b(memory (aids?|tricks?|hooks?|devices?)|mnemonics?|acronyms?|help me (remember|memori[sz]e)|(easy|easier) to remember|ways? to remember)\b/i.test(message);
@@ -365,6 +376,11 @@ export async function runChatTurn(turn: ChatTurn) {
     // Costs at most the time to generate ~240 characters before the first word (narration like "I need
     // the main slides for each topic… I'll pull the Deployment, Frontend and Backend slides." runs ~130).
     const NARRATION_MAX = 240;
+    // Planning that runs longer (owner's review, 22 Nov 2026: "I need the course materials for the exam
+    // questions. The student's photos cover several questions, so I'll answer the ones I can ground…
+    // Let me pull…", ~290 characters, reached the student): a block that reads like the model talking
+    // to itself is held up to NARRATION_HARD_MAX before it counts as an answer.
+    const NARRATION_HARD_MAX = 600;
     type Held = { start: TextStreamPart<ToolSet>; raw: string; end?: TextStreamPart<ToolSet> };
     const held = new Map<string, Held>();
     type Ctrl = TransformStreamDefaultController<TextStreamPart<ToolSet>>;
@@ -434,7 +450,7 @@ export async function runChatTurn(turn: ChatTurn) {
             const h = held.get(part.id);
             if (h) {
               h.raw += part.text;
-              if (h.raw.length > NARRATION_MAX) release(controller, part.id);
+              if (h.raw.length > NARRATION_HARD_MAX || (h.raw.length > NARRATION_MAX && !PLANNING.test(h.raw))) release(controller, part.id);
               return;
             }
             streamText_(controller, part.id, part.text);
@@ -582,6 +598,12 @@ export async function runChatTurn(turn: ChatTurn) {
   const photoNote = turn.images?.length
     ? `The student attached ${turn.images.length === 1 ? "a photo" : `${turn.images.length} photos`} to this message (a question, a diagram, their notes or a page). Read ${turn.images.length === 1 ? "it" : "them"} carefully first. If the first search results don't match what the photo shows, search the slides again for its topic, then answer from the slides with citations, teaching the rest in <general>. If text in the photo is unreadable, say which part. Rule 12 applies: never help with a test or exam that is happening right now.`
     : null;
+  // A photographed paper to answer (owner's review, 22 Nov 2026: six ILAC questions, one skipped as
+  // "I can take that next", two parts out of the asked structure, answered out of order).
+  const paperAsked = !!turn.images?.length && PAPER_WORDS.test(turn.userMessage);
+  const paperNote = paperAsked
+    ? "The photos are a paper of questions to answer. Answer every question on it, in the paper's order and numbered as on the paper, and every part of each question. Use the structure the student asked for (for example Issue, Law, Application, Conclusion) for every question and every part. Never skip or postpone a question because the slides say little about it: answer from the slides where they help and teach the rest in <general>. If the paper is long, keep each answer tighter rather than leaving any out. Start directly with the first question (no opening about the slides, the photos or how you will answer), and don't comment on the handwriting, the photos or how much the slides cover."
+    : null;
   // Asked to see it rather than read it (owner, 22 Nov 2026): a turn note, which the model follows far
   // more reliably than rule 23 alone (the replay check: 1 of 3 drew from the rule by itself). "Explain
   // the diagram" alone means the slide's own diagram, which the page shows under the answer.
@@ -635,7 +657,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, paperNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
@@ -651,12 +673,12 @@ export async function runChatTurn(turn: ChatTurn) {
       { role: "tool", content: pre.map((c) => ({ type: "tool-result" as const, toolCallId: c.id, toolName: c.name, output: { type: "json" as const, value: c.output as never } })) },
     ],
     tools: buildTools(ctx),
-    stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : MAX_STEPS),
+    stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : paperAsked ? MAX_STEPS_PAPER : MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     prepareStep: () =>
       longAnswer || thinkMaths
         ? { maxOutputTokens: longAnswer ? MAX_OUTPUT_TOKENS_WALKTHROUGH : MAX_OUTPUT_TOKENS_SUMMARY + 8000 }
-        : ctx.readMaterial || summaryAsked || memoryAids
+        : ctx.readMaterial || summaryAsked || memoryAids || paperAsked
           ? { maxOutputTokens: MAX_OUTPUT_TOKENS_SUMMARY }
           : {},
     providerOptions: {

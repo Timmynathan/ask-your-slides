@@ -6,6 +6,9 @@
 // set is known by the time a marker is written. The student never sees an invalid chip.
 
 export const MARKER = /\[\[s:([A-Za-z0-9-]{1,40})\]\]/;
+// A marker the model closed with one bracket ("[[s:ISM413-07-10]" then a newline, owner's review
+// 22 Nov 2026): taken as the marker once the next character shows it isn't the second "]".
+const ONE_BRACKET = /^\[\[s:([A-Za-z0-9-]{1,40})\](?=[^\]]|$)/;
 // A string that could still grow into a marker: "[", "[[", "[[s", "[[s:", "[[s:CSC4", "[[s:CSC401-04-12]".
 const PARTIAL = /^\[(?:\[(?:s(?::[A-Za-z0-9-]{0,40}\]?)?)?)?$/;
 
@@ -46,7 +49,13 @@ export function createCitationFilter(events: CitationFilterEvents) {
       }
       keep(pending.slice(0, open));
       pending = pending.slice(open);
-      const m = pending.match(MARKER);
+      let m = pending.match(MARKER);
+      if (!(m && m.index === 0)) {
+        // One closing bracket: only when more text follows it (or the block ends), so "[[s:KEY]" that
+        // is still waiting for its second "]" isn't cut short.
+        const one = pending.match(ONE_BRACKET);
+        if (one && (final || pending.length > one[0].length)) m = one;
+      }
       if (m && m.index === 0) {
         const key = normalizeKey(m[1]);
         const claim = claimFor();
