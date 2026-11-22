@@ -11,6 +11,7 @@ import { planState } from "@/lib/plans/entitlement";
 import { FinalsWelcome } from "@/components/plans/finals-welcome";
 import { EXAMS_START, FINALS_DAILY } from "@/lib/plans/config";
 import { finalsPrice, lagosDay, limitsFor } from "@/lib/plans/limits";
+import { currentStreak } from "@/lib/study/streak";
 import { adminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "My courses · Ask Your Slides" };
@@ -104,12 +105,10 @@ async function Loaded() {
   const recentLectures = await recentLectureCards(supabase, db, recentChats, (courses ?? []) as CourseRow[], (allCourses ?? []) as { code: string; programme: string }[]);
 
   // Study streak: Lagos days in a row with a question asked, ending today (or yesterday, if today has
-  // none yet).
-  const since = new Date(now.getTime() - 120 * 86_400_000).toISOString();
-  const { data: asked } = await supabase.from("messages").select("created_at").eq("role", "user").gte("created_at", since).order("created_at", { ascending: false }).limit(1000);
-  const days = new Set(((asked ?? []) as { created_at: string }[]).map((m) => lagosDay(new Date(m.created_at))));
-  let streak = 0;
-  for (let d = days.has(today) ? 0 : 1; days.has(lagosDay(new Date(now.getTime() - d * 86_400_000))); d++) streak++;
+  // none yet). The same days as the leaderboard (lib/study/streak.ts).
+  const { data: asked } = await db.from("usage_daily").select("day").eq("user_id", user.id).gt("message_count", 0).order("day", { ascending: false }).limit(400);
+  const days = new Set(((asked ?? []) as { day: string }[]).map((r) => r.day));
+  const streak = currentStreak(days, now);
 
   return (
     <>

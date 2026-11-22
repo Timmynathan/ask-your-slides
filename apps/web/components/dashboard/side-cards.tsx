@@ -95,9 +95,14 @@ export function ExamsCard({ days, startLabel }: { days: number; startLabel: stri
 export function StreakCard({ days, today }: { days: number; today: boolean }) {
   return (
     <div className="flex items-center gap-3 rounded-3xl bg-sunken/70 px-6 py-5">
-      <Flame {...icon} size={22} className={days > 0 ? "text-orange-500" : "text-muted"} />
-      <div className="min-w-0">
-        <p className="font-heading text-[20px] text-ink">{days > 0 ? `${days} day streak` : "Start a streak"}</p>
+      <Flame {...icon} size={22} className={`shrink-0 ${days > 0 ? "text-orange-500" : "text-muted"}`} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="font-heading text-[20px] text-ink">{days > 0 ? `${days} day streak` : "Start a streak"}</p>
+          <Link href="/leaderboard" className="text-[13px] font-medium text-ink underline decoration-[1.5px] underline-offset-[3px] hover:text-brand">
+            View leaderboard
+          </Link>
+        </div>
         <p className="text-[13px] text-muted">{days === 0 ? "Ask one question today to begin." : today ? "You studied today. See you tomorrow." : "Ask a question today to keep it going."}</p>
       </div>
     </div>
