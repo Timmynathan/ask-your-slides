@@ -9,7 +9,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Minus, X } from "lucide-react";
-import { BackPill } from "./back-pill";
 import { comparisonRows } from "@/lib/plans/offer";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
 import testimonials from "@/content/testimonials.json";
@@ -19,10 +18,9 @@ type Quote = { text: string; name: string; detail: string; photo?: string; initi
 const QUOTES = testimonials as Quote[];
 const ROTATE_MS = 2500;
 
-export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
+export function PlanStep({ offer, freePast, onFree, promo }: {
   offer: PlanOffer & { paymentsOpen?: boolean };
   freePast: boolean;
-  onBack(): void;
   onFree(): void;
   promo: ReactNode;
 }) {
@@ -41,8 +39,7 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
 
   return (
     <div key="plan" className="panel-in w-full max-w-5xl">
-      <div className="flex items-center justify-between">
-        <BackPill onClick={onBack} />
+      <div className="flex items-center justify-end">
         <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:opacity-80">
           Skip for now
         </button>
@@ -71,11 +68,16 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
             </g>
             <path d="M196 30h8M192 52l6 4M144 22l-6-5" />
           </svg>
-          <figure className="mt-6 w-full max-w-md rounded-2xl bg-card p-5 ring-1 ring-line">
-            <blockquote key={q} className="encourage-in text-[15.5px] leading-relaxed text-brand">&ldquo;{quote.text}&rdquo;</blockquote>
+          {/* Every photo is loaded up front (hidden), so a switch never waits on an image: the quote, name and
+              photo change together (owner, 22 Nov 2026). */}
+          <div className="hidden" aria-hidden>
+            {QUOTES.map((x) => x.photo && <img key={x.name} src={x.photo} alt="" loading="eager" />)}
+          </div>
+          <figure key={q} className="encourage-in mt-6 w-full max-w-md rounded-2xl bg-card p-5 ring-1 ring-line">
+            <blockquote className="text-[15.5px] leading-relaxed text-brand">&ldquo;{quote.text}&rdquo;</blockquote>
             <figcaption className="mt-4 flex items-center gap-3">
               {quote.photo ? (
-                <img src={quote.photo} alt="" width={40} height={40} className="h-10 w-10 rounded-full object-cover" />
+                <img src={quote.photo} alt="" width={40} height={40} loading="eager" decoding="sync" className="h-10 w-10 rounded-full object-cover" />
               ) : (
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-pau-100 font-medium text-brand">{quote.initial}</span>
               )}

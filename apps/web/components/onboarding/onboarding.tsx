@@ -233,9 +233,6 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
 
         {step === "hello" && chosen && (
           <div key="hello" className="panel-in flex w-full max-w-lg flex-col items-center text-center">
-            <div className="mb-6 self-start">
-              <BackPill onClick={() => setStep("partner")} />
-            </div>
             <div className="pop-in relative rounded-[22px] bg-card px-6 py-4 text-left text-[17px] leading-relaxed text-ink shadow-lg ring-1 ring-line">
               {fill(
                 HELLO[chosen.id],
@@ -260,7 +257,6 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
           <PlanStep
             offer={offer}
             freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
-            onBack={() => setStep("hello")}
             onFree={finish}
             promo={<PromoCodeForm onRedeemed={finish} plain />}
           />
