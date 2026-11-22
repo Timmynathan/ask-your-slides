@@ -51,12 +51,13 @@ function Cell({ value, plan }: { value: string | boolean; plan: "Free" | "Finals
   return <span className={`text-[13px] leading-snug sm:text-[14px] ${plan === "Finals" ? "font-medium text-ink" : "text-ink/80"}`}>{value}</span>;
 }
 
-export function PlanTable({ offer, current, freeAction, finalsAction, freePast = false }: { offer: PlanOffer; current: "free" | "finals"; freeAction: ReactNode; finalsAction: ReactNode; /** Past questions are free in this student's programme. */ freePast?: boolean }) {
+export function PlanTable({ offer, current, freeAction, finalsAction, freePast = false, compact = false }: { offer: PlanOffer; current: "free" | "finals"; freeAction: ReactNode; finalsAction: ReactNode; /** Past questions are free in this student's programme. */ freePast?: boolean; /** Smaller type and no countdown (onboarding, owner 22 Nov 2026). */ compact?: boolean }) {
   const rows = comparisonRows(offer, { freePast });
   const finalsCol = "bg-pau-50 dark:bg-white/[0.04]";
-  const pad = "px-3 py-3.5 sm:px-6 sm:py-4";
+  const pad = compact ? "px-3 py-2.5 sm:px-5 sm:py-3" : "px-3 py-3.5 sm:px-6 sm:py-4";
+  const planName = compact ? "font-heading text-lg font-semibold sm:text-xl" : "font-heading text-xl font-semibold sm:text-2xl";
   return (
-    <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-[28px] bg-card shadow-[0_24px_60px_-30px_rgb(15_23_80/0.35)] ring-1 ring-line">
+    <div className={`mx-auto w-full ${compact ? "max-w-3xl" : "max-w-4xl"} overflow-hidden rounded-[28px] bg-card shadow-[0_24px_60px_-30px_rgb(15_23_80/0.35)] ring-1 ring-line`}>
       <table className="w-full table-fixed text-left">
         <caption className="sr-only">Free and Finals: prices and everything included</caption>
         <colgroup>
@@ -67,30 +68,30 @@ export function PlanTable({ offer, current, freeAction, finalsAction, freePast =
         <thead>
           <tr className="align-top">
             {/* Starts level with the plan names (owner, 22 Nov 2026). */}
-            <th scope="col" className={`${pad} border-r border-line pt-7 align-top sm:pt-8`}>
-              <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Features</span>
+            <th scope="col" className={`${pad} border-r border-line ${compact ? "pt-5" : "pt-7 sm:pt-8"} align-top`}>
+              <span className={`${planName} text-ink`}>Features</span>
               <span className="mt-1 hidden text-[13px] font-normal text-muted sm:block">What each plan gives you</span>
             </th>
-            <th scope="col" className={`${pad} border-b border-line pt-7 font-normal sm:pt-8`}>
+            <th scope="col" className={`${pad} border-b border-line ${compact ? "pt-5" : "pt-7 sm:pt-8"} font-normal`}>
               <span className="flex flex-wrap items-center gap-2">
-                <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Free</span>
+                <span className={`${planName} text-ink`}>Free</span>
                 {current === "free" && <span className="rounded-full bg-sunken px-2.5 py-0.5 text-[11.5px] font-semibold text-ink">Your plan</span>}
               </span>
-              <span className="mt-3 block font-heading text-[26px] font-semibold tracking-tight text-ink sm:text-4xl">{naira(0)}</span>
+              <span className={`mt-2 block font-heading font-semibold tracking-tight text-ink ${compact ? "text-[22px] sm:text-[26px]" : "text-[26px] sm:text-4xl"}`}>{naira(0)}</span>
               <span className="mt-2 block text-sm text-muted">Free forever</span>
             </th>
             {/* Finals stands out: navy, with the price in white. */}
-            <th scope="col" className={`${pad} relative bg-navy pt-7 font-normal text-white sm:pt-8`}>
+            <th scope="col" className={`${pad} relative bg-navy ${compact ? "pt-5" : "pt-7 sm:pt-8"} font-normal text-white`}>
               <span className="flex flex-wrap items-center gap-2">
-                <span className="font-heading text-xl font-semibold sm:text-2xl">Finals</span>
+                <span className={planName}>Finals</span>
                 {current === "finals" ? (
                   <span className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-brand">Your plan</span>
                 ) : (
-                  <span className="hidden rounded-full bg-[#BBEEF0] px-2.5 py-0.5 text-[11.5px] font-semibold text-brand sm:inline">Most students pick this</span>
+                  !compact && <span className="hidden rounded-full bg-[#BBEEF0] px-2.5 py-0.5 text-[11.5px] font-semibold text-brand sm:inline">Most students pick this</span>
                 )}
               </span>
               <span className="mt-3 block">
-                <FinalsPrice offer={offer} size="sm" onDark />
+                <FinalsPrice offer={offer} size={compact ? "xs" : "sm"} onDark timer={!compact} />
               </span>
             </th>
           </tr>
@@ -101,7 +102,7 @@ export function PlanTable({ offer, current, freeAction, finalsAction, freePast =
             return (
               <tr key={r.label} className="border-b border-line/70">
                 <th scope="row" className={`${pad} border-r border-line font-normal`}>
-                  <span className="flex items-start gap-2.5 text-[13px] leading-snug text-ink sm:text-[14.5px]">
+                  <span className={`flex items-start gap-2.5 text-[13px] leading-snug text-ink ${compact ? "sm:text-[13.5px]" : "sm:text-[14.5px]"}`}>
                     {Icon && <Icon size={18} absoluteStrokeWidth strokeWidth={1.5} className="mt-px hidden shrink-0 text-brand sm:block" aria-hidden />}
                     {r.label}
                   </span>

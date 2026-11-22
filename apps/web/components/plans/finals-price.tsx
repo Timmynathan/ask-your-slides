@@ -18,11 +18,11 @@ function useNow(enabled: boolean) {
   return now;
 }
 
-export function FinalsPrice({ offer, size = "lg", onDark = false }: { offer: PlanOffer; size?: "lg" | "md" | "sm"; /** White text, on the navy Finals header. */ onDark?: boolean }) {
+export function FinalsPrice({ offer, size = "lg", onDark = false, timer = true }: { offer: PlanOffer; size?: "lg" | "md" | "sm" | "xs"; /** White text, on the navy Finals header. */ onDark?: boolean; /** The "Price goes up in…" countdown (off in onboarding, owner 22 Nov 2026). */ timer?: boolean }) {
   const now = useNow(offer.early);
   const left = offer.early ? (now === null ? "" : timeLeft(offer.priceChangeAt, now)) : null;
   const early = offer.early && left !== null;
-  const big = size === "lg" ? "text-5xl" : size === "md" ? "text-4xl" : "text-[26px] sm:text-4xl";
+  const big = size === "lg" ? "text-5xl" : size === "md" ? "text-4xl" : size === "xs" ? "text-[22px] sm:text-[26px]" : "text-[26px] sm:text-4xl";
 
   return (
     <div>
@@ -36,7 +36,7 @@ export function FinalsPrice({ offer, size = "lg", onDark = false }: { offer: Pla
       </p>
       {early && (
         <>
-          {left && (
+          {left && timer && (
             <p className={`mt-2 inline-flex items-center gap-1 px-2.5 py-0.5 text-[12px] font-medium ${size === "sm" ? "rounded-lg leading-snug sm:rounded-full" : "rounded-full"} ${onDark ? "bg-white/15 text-white" : "bg-pau-100 text-pau-800 dark:text-pau-400"}`}>
               <ClockIcon />
               Price goes up in {left}
