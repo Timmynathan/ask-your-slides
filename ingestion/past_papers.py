@@ -426,8 +426,22 @@ def revalidate(store, course_id: str, job: Job) -> bool:
     row = store.db.execute(
         """select p.extraction_model, exists (select 1 from past_questions q where q.paper_id = p.id and q.model_answer is not null) as answered
            from past_papers p where p.course_id = %s and p.source_file = %s""", (course_id, job.paper.rel_file)).fetchone()
+    if not row or row["answered"] or row["extraction_model"] == "manual":
+        return False
+    # This exact file's own saved reply first: the reply cache is keyed by the request (its page
+    # images), so it can't be another paper's. The report dump is keyed by code + file name, which
+    # several programmes share for different files (IOH-VENTURE-CREATION 2025-2026_ca is three
+    # different papers): use it only when no other stored paper has that name (owner's review, 22 Nov 2026).
+    reply = batch.cached(job.params) if row["extraction_model"] == job.model else None
+    if reply is not None and reply.text and not reply.error:
+        job.reuse, job.reuse_model = json.loads(reply.text), row["extraction_model"]
+        return True
     dump = REPORTS / "past_papers" / f"{job.course.code}-{Path(job.paper.rel_file).stem}.json"
-    if not row or row["answered"] or row["extraction_model"] == "manual" or not dump.is_file():
+    clash = store.db.execute(
+        """select 1 from past_papers p join courses c on c.id = p.course_id
+           where c.code = %s and p.source_file like %s and p.file_hash <> %s limit 1""",
+        (job.course.code, f"%/{Path(job.paper.rel_file).name}", job.file_hash)).fetchone()
+    if clash or not dump.is_file():
         return False
     job.reuse, job.reuse_model = json.loads(dump.read_text())["raw"], row["extraction_model"]
     return True
@@ -625,7 +639,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-store", action="store_true", help="extract and report only; don't write the database")
     ap.add_argument("--force", action="store_true", help="re-store papers even if unchanged (with --analyse: re-answer questions)")
     ap.add_argument("--revalidate", action="store_true",
-                    help="re-check stored, unanswered papers from their saved replies (no model call), e.g. after a validator fix")
+                    help="re-check stored, unanswered papers from their saved replies (no model call), e.g. after a validator fix or a new review file")
     ap.add_argument("--flagged", action="store_true", help=f"rewrite {FLAGGED.relative_to(ROOT)} from the database and stop")
     ap.add_argument("--analyse", action="store_true", help="step 2: slides, topics, relevance, model answers for stored papers")
     ap.add_argument("--recheck", action="store_true", help="with --analyse: redo partial/general answers whose search now finds new slides")
@@ -669,7 +683,9 @@ def main(argv: list[str] | None = None) -> int:
         unchanged = [j for j in jobs if is_unchanged(store, course_ids[j.course.key], j)
                      and not (j.file_hash in hand and j.manual is None)]
         if args.revalidate:
-            again = [j for j in unchanged if revalidate(store, course_ids[j.course.key], j)]
+            # Papers with a changed review file too (owner's review, 22 Nov 2026): the review was written
+            # against the saved reading, so re-check that reading, never a fresh one.
+            again = [j for j in jobs if (j in unchanged or j.manual is None) and revalidate(store, course_ids[j.course.key], j)]
             print(f"  {len(again)} stored paper(s) re-checked from their saved replies (no model call)")
             unchanged = [j for j in unchanged if j not in again]
         for j in unchanged:
