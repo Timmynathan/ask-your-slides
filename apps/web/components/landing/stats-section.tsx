@@ -19,7 +19,7 @@ function Label({ children, onMedia = false }: { children: React.ReactNode; onMed
 }
 
 export function StatsSection() {
-  const big = "font-heading text-[44px] font-normal leading-none tracking-tight sm:text-[52px]";
+  const big = "font-heading text-[44px] font-normal leading-none tracking-tight lg:text-[52px]";
   return (
     <section aria-labelledby="numbers" className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
       <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14">
@@ -27,14 +27,16 @@ export function StatsSection() {
           The trusted AI learning platform for PAU students
         </h2>
 
-        {/* Phones: a simple grid. From lg: two cards side by side, the video card in front overlapping both. */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:relative lg:block lg:h-[470px]">
-          <div className="flex aspect-square flex-col justify-between rounded-[22px] bg-pau-100 p-5 text-ink lg:absolute lg:left-0 lg:top-0 lg:aspect-auto lg:h-[250px] lg:w-[290px]">
+        {/* Phones: a simple grid. From tablets (owner, 22 Nov 2026: iPads too): two cards side by side, the
+            video card in front overlapping both; widths are shares of the space, so it shrinks a little on
+            a tablet and keeps the same look. */}
+        <div className="grid grid-cols-2 gap-3 sm:relative sm:mx-auto sm:block sm:h-[430px] sm:w-full sm:max-w-[620px] lg:h-[470px] lg:max-w-none">
+          <div className="flex aspect-square flex-col justify-between rounded-[22px] bg-pau-100 p-5 text-ink sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
             <p className={big}>{STATS.students}</p>
             <Label>PAU students signed up</Label>
           </div>
 
-          <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy lg:absolute lg:left-[38%] lg:top-[150px] lg:z-10 lg:h-[310px] lg:w-[250px] lg:ring-4 lg:ring-page">
+          <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:h-[290px] sm:w-[40%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
             <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-4 text-white">
               <p className={big}>{STATS.gradeImprovement}</p>
@@ -42,7 +44,7 @@ export function StatsSection() {
             </div>
           </div>
 
-          <div className="flex aspect-square flex-col justify-between rounded-[22px] bg-navy p-5 text-white lg:absolute lg:right-0 lg:top-0 lg:justify-start lg:gap-3 lg:aspect-auto lg:h-[250px] lg:w-[290px]">
+          <div className="flex aspect-square flex-col justify-between rounded-[22px] bg-navy p-5 text-white sm:absolute sm:right-0 sm:top-0 sm:justify-start sm:gap-3 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
             <p className={big}>{STATS.courses}</p>
             <Label>PAU courses with their slides already loaded</Label>
           </div>
