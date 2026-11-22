@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ShellMenuButton } from "@/components/nav/app-shell";
 import { PartnerGreeting } from "./partner-greeting";
+import { EncourageCard } from "./encourage-card";
 import { EXAMS_START, TIME_ZONE } from "@/lib/plans/config";
 
 /** "7 December" (Lagos), from the plans config. */
@@ -225,7 +226,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         )}
       </div>
       <aside className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Your plan and progress">
-        {price !== null && <UpgradeCard freePast={freePast} />}
+        {price !== null ? <UpgradeCard freePast={freePast} /> : <EncourageCard name={user.displayName} examsInDays={examsInDays} />}
         <ExamsCard days={examsInDays} startLabel={EXAMS_START_LABEL} />
         <StreakCard days={streak.days} today={streak.today} />
       </aside>
