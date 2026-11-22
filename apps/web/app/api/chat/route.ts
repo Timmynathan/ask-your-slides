@@ -176,7 +176,11 @@ export async function POST(request: Request) {
         part.type === "finish"
           ? { ...summary(), remaining: admitted.remaining, plan: admitted.state.plan, truncated: part.finishReason === "length" }
           : undefined,
-      onError: () => "Something went wrong while answering. Please try again.",
+      // The real cause goes to the server log (Vercel); the student sees a plain message.
+      onError: (e) => {
+        console.error("chat stream error", e);
+        return "Something went wrong while answering. Please try again.";
+      },
     }),
   });
 }

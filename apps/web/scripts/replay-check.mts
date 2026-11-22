@@ -68,7 +68,7 @@ async function run(c: Case) {
     const answer: string = tr?.output_text ?? "";
     const fails: string[] = [];
     if (!r.ok) fails.push(`http ${r.status}: ${body.slice(0, 120)}`);
-    if (!answer.trim()) fails.push("no answer");
+    if (!answer.trim()) fails.push(`no answer: ${body.match(/"errorText":"([^"]+)"/)?.[1] ?? "empty"}`);
     for (const g of GENERAL) if (g.bad.test(answer)) fails.push(g.label);
     const warnings = WARN.filter((w) => w.bad.test(answer)).map((w) => w.label);
     for (const p of c.must ?? []) if (!new RegExp(p, "i").test(answer)) fails.push(`missing /${p}/`);
