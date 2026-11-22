@@ -15,6 +15,9 @@ import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
 import { FileText, Menu, type LucideIcon } from "lucide-react";
+
+/** A lecture counts as visited (Recent lectures) after this long on it, unless a question comes first. */
+const VISIT_AFTER_MS = 30_000;
 import { SourcesPanel } from "./sources-panel";
 import { ResizeHandle } from "./resize-handle";
 import { StudyTour, useStudyTour } from "./study-tour";
@@ -175,11 +178,17 @@ export function Workspace(data: WorkspaceData) {
   }, [firstSlide, closeDrawer]);
 
   // Recent lectures (owner, 22 Nov 2026): note the lecture and chat the student is in, even a new chat
-  // with nothing asked yet, so the dashboard can bring them back to exactly here.
+  // with nothing asked yet, so the dashboard can bring them back to exactly here. Only once they've
+  // really used it: 30 seconds on the lecture, or a question asked (owner: clicking through lectures
+  // shouldn't fill Recent lectures).
+  const noteVisit = useCallback((topic: string, chat: string | null) => {
+    void fetch("/api/visits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic_id: topic, chat_id: chat }) }).catch(() => {});
+  }, []);
   useEffect(() => {
     if (!topicId) return;
-    void fetch("/api/visits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic_id: topicId, chat_id: chatId }) }).catch(() => {});
-  }, [topicId, chatId]);
+    const t = setTimeout(() => noteVisit(topicId, chatId), VISIT_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [topicId, chatId, noteVisit]);
 
   const openScope = useCallback((id: string | null) => show({ courseId, topicId: id, chatId: null }), [show, courseId]);
   const openChat = useCallback((chat: ChatItem) => show({ courseId: chat.course_id, topicId: chat.topic_id, chatId: chat.id }), [show]);
@@ -187,7 +196,8 @@ export function Workspace(data: WorkspaceData) {
   const onChatCreated = useCallback((chat: ChatItem) => {
     setChats((prev) => [chat, ...prev]);
     setChatId(chat.id);
-  }, []);
+    if (chat.topic_id) noteVisit(chat.topic_id, chat.id); // a question asked: counts at once
+  }, [noteVisit]);
 
   const onChatRemoved = useCallback((id: string) => {
     setChats((prev) => prev.filter((c) => c.id !== id));
@@ -195,12 +205,13 @@ export function Workspace(data: WorkspaceData) {
   }, []);
 
   const onChatActive = useCallback((id: string) => {
+    if (topicId) noteVisit(topicId, id); // a question asked: counts at once
     setChats((prev) => {
       const i = prev.findIndex((c) => c.id === id);
       if (i <= 0) return prev;
       return [{ ...prev[i], updated_at: new Date().toISOString() }, ...prev.slice(0, i), ...prev.slice(i + 1)];
     });
-  }, []);
+  }, [topicId, noteVisit]);
 
   const remaining = Math.max(0, data.usage.cap - used);
   const onRemaining = useCallback((r: number) => setUsed(data.usage.cap - r), [data.usage.cap]);
