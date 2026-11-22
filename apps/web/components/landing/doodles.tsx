@@ -72,3 +72,54 @@ export function BooksDoodle({ className = "" }: { className?: string }) {
     </svg>
   );
 }
+
+/** Closing section (owner, 22 Nov 2026): a student at a desk with a laptop, seen from the side, with a few
+ *  maths symbols floating above. Light lines on the navy; `bg` fills shapes that sit in front of others. */
+export function DeskSceneDoodle({ className = "", bg = "var(--color-pau-900)" }: { className?: string; bg?: string }) {
+  const line = { ...ink, strokeWidth: 2.4 };
+  return (
+    <svg viewBox="0 0 520 380" className={className} aria-hidden>
+      {/* floating symbols */}
+      <text x="250" y="62" fontFamily="Georgia, serif" fontSize="26" fill="currentColor" transform="rotate(-8 250 62)">a² + b²</text>
+      <text x="392" y="98" fontFamily="Georgia, serif" fontSize="34" fill="currentColor">∑</text>
+      <text x="196" y="104" fontFamily="Georgia, serif" fontSize="30" fill="currentColor" fontStyle="italic">∫</text>
+      <g transform="translate(340 60)">
+        <ellipse rx="22" ry="8" {...line} strokeWidth={1.8} />
+        <ellipse rx="22" ry="8" {...line} strokeWidth={1.8} transform="rotate(60)" />
+        <ellipse rx="22" ry="8" {...line} strokeWidth={1.8} transform="rotate(-60)" />
+        <circle r="3" fill="currentColor" />
+      </g>
+      <path d="M452 40 l2.5 7 7 2.5 -7 2.5 -2.5 7 -2.5 -7 -7 -2.5 7 -2.5 Z" fill="currentColor" />
+      <path d="M160 70 v10 M155 75 h10" {...line} strokeWidth={1.8} />
+      <path d="M430 132 v8 M426 136 h8" {...line} strokeWidth={1.8} />
+
+      {/* chair */}
+      <path d="M128 168 L146 252" {...line} />
+      <path d="M140 252 h92 v10 h-92 Z" fill="currentColor" />
+      <path d="M150 262 L138 352 M224 262 L236 352" {...line} />
+
+      {/* student */}
+      <path d="M196 252 L290 250 L296 336" {...line} fill="none" />
+      <path d="M206 262 L282 262 L284 340" {...line} fill="none" />
+      <path d="M284 340 h26 a6 6 0 0 1 0 10 h-30 Z M294 336 h24 a6 6 0 0 1 0 10 h-26 Z" {...line} fill={bg} />
+      <path d="M162 256 c-4 -40 0 -86 30 -100 c22 -8 42 4 48 28 l10 52 c2 12 -6 20 -18 20 Z" {...line} fill={bg} />
+      <path d="M184 160 c6 18 18 26 34 26" {...line} />
+      <path d="M226 178 c16 26 38 38 70 40" {...line} />
+      <circle cx="212" cy="122" r="24" {...line} fill={bg} />
+      <path d="M190 116 c-4 -24 16 -38 36 -30 c14 6 16 22 8 30 c-6 -10 -20 -12 -30 -6 c-4 8 -8 10 -14 6 Z" fill="currentColor" />
+      <path d="M232 128 l6 4 -6 2" {...line} strokeWidth={1.8} />
+
+      {/* desk, laptop, books */}
+      <path d="M250 226 h232 v9 h-232 Z" fill="currentColor" />
+      <path d="M262 235 V352 M470 235 V352" {...line} strokeWidth={6} />
+      <path d="M300 226 L352 226 L360 220 L308 220 Z" {...line} fill={bg} />
+      <path d="M352 222 L338 152 L408 146 L420 218 Z" {...line} fill={bg} />
+      <path d="M352 168 l44 -4 M354 180 l30 -3" {...line} strokeWidth={1.8} />
+      <rect x="356" y="190" width="40" height="18" rx="3" transform="rotate(-5 376 199)" {...line} strokeWidth={1.8} />
+      <path d="M430 226 h44 v-12 h-44 Z M434 214 h38 v-12 h-38 Z" {...line} fill={bg} />
+
+      {/* floor */}
+      <path d="M100 356 H500" {...line} strokeWidth={1.6} opacity={0.5} />
+    </svg>
+  );
+}

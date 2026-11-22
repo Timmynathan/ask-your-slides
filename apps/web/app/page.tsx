@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, Mail, MessageSquareText, UsersRound } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Banner } from "@/components/landing/banner";
 import { ChatDemo } from "@/components/landing/chat-demo";
@@ -7,13 +8,12 @@ import { FeatureDeck } from "@/components/landing/feature-deck";
 import { CoursePills } from "@/components/landing/course-pills";
 import { StretchNav } from "@/components/landing/stretch-nav";
 import { HeroActions, NavActions } from "@/components/landing/auth-actions";
+import { Testimonials } from "@/components/landing/testimonials";
 import { StatsSection } from "@/components/landing/stats-section";
 import { ScrollCue, SeeHowItWorks } from "@/components/landing/see-how";
-import { BooksDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
-import { Mascot } from "@/components/mascot/mascot";
+import { BooksDoodle, DeskSceneDoodle, StudyDeskDoodle } from "@/components/landing/doodles";
 import { directSignupEnabled } from "@/lib/auth/signup-mode";
 import { getCatalog } from "@/lib/catalog";
-import { PARTNERS, PARTNER_IDS } from "@/lib/partners";
 
 export const metadata: Metadata = {
   title: "Ask Your Slides: stop uploading slides to ChatGPT",
@@ -24,7 +24,6 @@ export const metadata: Metadata = {
 // Structure follows studyfetch.com: banner, nav, hero, PAU courses, numbers, why us, how it works (demo), steps, partners, closing call to action, footer. Sections with
 // no honest content for us (ratings, research claims) are left out.
 
-const pill = "inline-flex items-center justify-center rounded-full px-6 py-3 text-[15px] font-medium";
 
 export default async function Landing() {
   // Departments, courses and counts come from the database (cached hourly), not from the copy.
@@ -40,7 +39,7 @@ export default async function Landing() {
         <div className="hidden items-center gap-8 md:flex">
           <a href="#why" className="type-menu hover:opacity-70">Why us</a>
           <a href="#demo" className="type-menu hover:opacity-70">How it works</a>
-          <a href="#partners" className="type-menu hover:opacity-70">Study partners</a>
+          <a href="#reviews" className="type-menu hover:opacity-70">Reviews</a>
         </div>
         <NavActions />
       </StretchNav>
@@ -153,66 +152,56 @@ export default async function Landing() {
           </div>
         </section>
 
-        {/* Steps */}
-        <section className="mx-auto max-w-6xl px-5 py-20">
-          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Start studying in seconds</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-muted">No downloading decks, no uploading files, no starting over in a new chat.</p>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+        {/* From here down the page is navy (owner, 22 Nov 2026), running into the closing section and footer. */}
+        <div className="bg-pau-900 text-white">
+        {/* Steps (owner, 22 Nov 2026: as simple as possible): the heading, then one rounded panel with the three
+            steps, each a line icon and a few words. */}
+        <section className="mx-auto max-w-6xl px-5 pb-20 pt-20 sm:pt-24">
+          <h2 className="text-center font-heading text-4xl font-normal tracking-tight text-white sm:text-6xl">
+            Start studying in <em className="italic">seconds</em>
+          </h2>
+          <ol className="mt-12 grid gap-5 rounded-[28px] bg-[#141b66] px-6 py-9 ring-1 ring-white/10 sm:px-10 md:grid-cols-3 md:gap-0 md:divide-x md:divide-white/10 md:py-12">
             {[
-              directSignupEnabled()
-                ? ["1", "Sign up with your PAU email", "Your PAU email and a password. That's it: it takes seconds."]
-                : ["1", "Sign in with your PAU email", "One code to confirm it's you, then a password for next time."],
-              ["2", "Choose your study partner", "Tobi, Ada, Dr. Musa or Zara: same slides, four ways of explaining."],
-              ["3", "Ask, summarise, quiz", "Pick a course or a topic and ask anything. Every point links to its slide."],
-            ].map(([n, title, body]) => (
-              <div key={n} className="rounded-[25px] bg-card p-7 ring-1 ring-line">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-pau-100 font-heading text-lg font-semibold text-pau-800 dark:text-pau-400">{n}</span>
-                <h3 className="mt-5 font-heading text-xl font-semibold text-ink">{title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>
-              </div>
+              { Icon: Mail, title: directSignupEnabled() ? "Sign up with your PAU email" : "Sign in with your PAU email" },
+              { Icon: UsersRound, title: "Pick your study partner" },
+              { Icon: MessageSquareText, title: "Ask about any slide" },
+            ].map(({ Icon, title }) => (
+              <li key={title} className="flex items-center gap-4 md:flex-col md:gap-5 md:px-6 md:text-center">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 text-white md:h-14 md:w-14">
+                  <Icon size={22} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+                </span>
+                <span className="text-[16px] text-white md:text-[17px]">{title}</span>
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
 
-        {/* Partners */}
-        <section id="partners" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20">
-          <h2 className="text-center font-heading text-4xl font-semibold tracking-tight text-ink">Meet your study partners</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-muted">
-            Pick the style you enjoy and switch any time. Every partner answers from your school slides and cites every point.
-          </p>
-          <div className="mx-auto mt-10 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {PARTNER_IDS.map((id) => {
-              const p = PARTNERS[id];
-              return (
-                <div key={id} className="flex flex-col items-center rounded-[20px] bg-card p-4 text-center ring-1 ring-line">
-                  <Mascot partner={id} size={60} mood="happy" />
-                  <h3 className="mt-2.5 font-heading text-lg font-semibold text-ink">{p.name}</h3>
-                  <p className="text-[13px] text-muted">{p.role}</p>
-                  <p className={`mt-2 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${p.accent.bg} ${p.accent.text}`}>Best for: {p.bestFor}</p>
-                  <p className={`mt-3 rounded-xl px-3 py-2 text-[13px] leading-snug ${p.accent.soft} text-ink`}>“{p.sample}”</p>
-                  <div className="mt-3 flex flex-wrap justify-center gap-1">
-                    {p.traits.map((t) => (
-                      <span key={t} className="rounded-full bg-page px-2 py-0.5 text-[11px] font-medium text-muted ring-1 ring-line">{t}</span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <Testimonials />
+        </div>
 
         {/* No prices on the landing page (owner, 20 Nov 2026): plans show after sign-up (/pricing, /pay). */}
 
-        {/* Closing call to action: full width in the footer's navy, so the two read as one block (owner, 20 Nov 2026). */}
+        {/* Closing call to action (owner, 22 Nov 2026, modelled on a calm two-column close): the question and two
+            buttons on the left, a light line drawing on the right, on the same navy as the footer. */}
         <section className="bg-pau-900 text-white">
-          <div className="mx-auto flex max-w-6xl flex-col items-center gap-8 px-5 pb-14 pt-20 text-center md:flex-row md:justify-between md:text-left">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 border-t border-white/10 px-5 py-20 md:grid-cols-2 md:py-24">
             <div>
-              <h2 className="font-heading text-2xl font-normal tracking-tight text-white md:text-3xl">Ready to transform how you study?</h2>
-              <p className="mt-3 text-white/75">Pick a partner and ask your first question in under a minute.</p>
-              <Link href="/sign-up" className={`${pill} mt-6 bg-white text-pau-900 hover:bg-white/90`}>
-                Get started free
-              </Link>
+              <h2 className="max-w-sm font-heading text-4xl font-normal leading-[1.1] tracking-tight text-white sm:text-[44px]">
+                Ready to transform how you study?
+              </h2>
+              <p className="mt-8 max-w-[17rem] text-[14.5px] leading-relaxed text-white/65">
+                Pick a partner and ask your first question in under a minute.
+              </p>
+              <div className="mt-10 flex flex-wrap gap-3">
+                <Link href="/sign-up" className="inline-flex h-14 items-center gap-2.5 rounded-full bg-[#faf9f5] px-8 text-[15px] font-medium text-pau-900 transition hover:bg-white">
+                  Start for free <ArrowRight size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
+                </Link>
+                <Link href="/sign-in" className="inline-flex h-14 items-center rounded-full px-8 text-[15px] font-medium text-white ring-1 ring-white/40 transition hover:bg-white/10">
+                  Log in
+                </Link>
+              </div>
             </div>
+            <DeskSceneDoodle className="mx-auto w-full max-w-[480px] text-[#faf9f5]" />
           </div>
         </section>
       </main>
@@ -231,7 +220,7 @@ export default async function Landing() {
             <div className="space-y-2">
               <p className="font-medium text-white">Product</p>
               <a href="#demo" className="block text-white/75 hover:text-white">How it works</a>
-              <a href="#partners" className="block text-white/75 hover:text-white">Study partners</a>
+              <a href="#reviews" className="block text-white/75 hover:text-white">Reviews</a>
             </div>
             <div className="space-y-2">
               <p className="font-medium text-white">Account</p>
