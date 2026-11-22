@@ -12,12 +12,11 @@ import { Mascot } from "@/components/mascot/mascot";
 import { PlanTable } from "@/components/plans/plan-table";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
 import type { PartnerId } from "@/lib/partners";
+import testimonials from "@/content/testimonials.json";
 
 type Quote = { text: string; name: string; detail: string; photo?: string; initial?: string };
-const QUOTES: Quote[] = [
-  { text: "It's great at breaking down complex topics.", name: "Oluwatimilehin Ilesanmi", detail: "Computer Science, Pan-Atlantic University", photo: "/testimonials/oluwatimilehin-ilesanmi.webp" },
-  { text: "It's helped me ace my tests.", name: "Seyi O.", detail: "Pan-Atlantic University", initial: "S" },
-];
+// Real students' words, edited in content/testimonials.json (data, not code: names stay out of the app's code).
+const QUOTES = testimonials as Quote[];
 const ROTATE_MS = 6000;
 
 export function PlanStep({ offer, partner, freePast, onBack, onFree, promo }: {
