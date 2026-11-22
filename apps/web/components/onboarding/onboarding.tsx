@@ -197,9 +197,14 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                     <span className="mt-3 font-heading text-xl font-semibold text-ink sm:mt-4 sm:text-2xl">{p.name}</span>
                     {/* One line and the trait pills (owner, 20 Nov 2026). */}
                     <span className="mt-1 text-[13px] leading-snug text-muted sm:text-[15px]">{p.bestFor}</span>
-                    <span className="mt-3 flex flex-wrap justify-center gap-1.5">
-                      {p.traits.map((t) => (
-                        <span key={t} className="rounded-full bg-page px-2.5 py-1 text-[11px] font-medium text-muted ring-1 ring-line sm:text-xs">{t}</span>
+                    {/* Two pills on top, one below, on every card (owner, 22 Nov 2026). Phones may wrap the pair. */}
+                    <span className="mt-3 flex flex-col items-center gap-1.5">
+                      {[p.traits.slice(0, 2), p.traits.slice(2)].filter((row) => row.length).map((row, i) => (
+                        <span key={i} className="flex flex-wrap justify-center gap-1.5 sm:flex-nowrap">
+                          {row.map((t) => (
+                            <span key={t} className="whitespace-nowrap rounded-full bg-page px-2 py-1 text-[11px] font-medium text-muted ring-1 ring-line sm:px-2.5 sm:text-xs xl:px-2 xl:text-[11.5px]">{t}</span>
+                          ))}
+                        </span>
                       ))}
                     </span>
                   </button>
