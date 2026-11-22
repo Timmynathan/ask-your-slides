@@ -6,6 +6,7 @@ import { AskView } from "@/components/chat/ask-view";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
 import { myCourses } from "@/lib/study/my-courses";
+import { ASK_ANYTHING_ON } from "@/lib/ask-feature";
 
 export const metadata: Metadata = { title: "Ask anything · Ask Your Slides" };
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = { title: "Ask anything · Ask Your Slides" };
 // so every conversation still lives in exactly one course. Typing a course's code or name opens it.
 // Under it, four general question chips (components/chat/ask-view.tsx) that ask which course first.
 async function Loaded() {
+  if (!ASK_ANYTHING_ON) redirect("/dashboard"); // paused (lib/ask-feature.ts)
   const { supabase, user } = await requireUser();
   const { data: profile } = await supabase.from("profiles").select("display_name, onboarded, study_partner, level").eq("id", user.id).single();
   if (!profile?.onboarded || !isPartnerId(profile.study_partner)) redirect("/welcome");

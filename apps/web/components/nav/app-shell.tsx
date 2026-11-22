@@ -14,6 +14,7 @@
 // Icons: Lucide (owner, 21 Nov 2026: no hand-drawn icons).
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ASK_ANYTHING_ON } from "@/lib/ask-feature";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { History, House, Menu, MessageCircle, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
@@ -356,7 +357,7 @@ export function AppShell({
             </Link>
             <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
             {/* Ask anything (owner, 22 Nov 2026): a question opens in the right course's chat. */}
-            <RailButton label="Ask anything" href="/chat" active={page === "chat"} icon={MessageCircle} />
+            {ASK_ANYTHING_ON && <RailButton label="Ask anything" href="/chat" active={page === "chat"} icon={MessageCircle} />}
             <RecentChats recent={recent} />
             <div className="mt-auto flex flex-col gap-3">
               {/* Feedback (owner, 20 Nov 2026), just above the account. */}
@@ -440,10 +441,12 @@ export function AppShell({
                 <House size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
                 Dashboard
               </Link>
-              <Link href="/chat" aria-current={page === "chat" ? "page" : undefined} className={`${rowCls} ${page === "chat" ? "bg-white/12 text-white" : ""}`}>
-                <MessageCircle size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
-                Ask anything
-              </Link>
+              {ASK_ANYTHING_ON && (
+                <Link href="/chat" aria-current={page === "chat" ? "page" : undefined} className={`${rowCls} ${page === "chat" ? "bg-white/12 text-white" : ""}`}>
+                  <MessageCircle size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+                  Ask anything
+                </Link>
+              )}
             </nav>
             <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Recent chats</p>
             {recent.length === 0 ? (
