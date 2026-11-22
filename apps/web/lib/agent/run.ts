@@ -269,6 +269,10 @@ const SEARCH_TALK: [RegExp, string][] = [
   [/(?<=^|[.!?]\s+|\n)I (?:searched|looked through|went through|checked|scanned) (?:the|your) (?:course )?(?:slides|materials|notes)\b[^.!?\n]*[.!?]\s*/g, ""],
   [/(?<=^|[.!?]\s+|\n)I (?:didn'?t|did not|couldn'?t|could not) find (?:any )?(?:slides?|materials?|notes|anything)\b[^.!?\n]*[.!?]\s*/g, ""],
 ];
+/** "My upload", "the PDF I uploaded", "my test", "my notes": the student means their own pages. */
+const MENTIONS_UPLOAD = /\b(upload(?:ed|s)?|my (?:test|notes?|paper|pdf|file|document|scan|worksheet|pages?)|the (?:pdf|file|document|scan) I)\b/i;
+const UPLOAD_TEXT_MAX = 24000; // characters of an upload handed to the model (a 20-page PDF fits)
+
 /** "Answer these", "question by question", "ILAC": photos of a paper to work through. */
 const PAPER_WORDS = /\b(answer (?:these|them|all|each|every|the questions?)|question by question|each question|all (?:the )?questions|past (?:paper|questions?)|test questions?|exam questions?|ILAC|IRAC|IPAC)\b/i;
 
@@ -639,6 +643,24 @@ export async function runChatTurn(turn: ChatTurn) {
   for (const [i, c] of preCalls.entries()) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
   }
+  // The student's own uploads in this course (owner, 22 Nov 2026: the + takes PDFs). Search finds their
+  // pages only when they match the question's words, so "what's question 4 in my uploaded test?" missed
+  // them and the model said nothing was uploaded. Now it always knows what they uploaded, and when
+  // they refer to it, the latest upload's pages come with the turn.
+  const uploads = must(
+    await db.from("user_uploads").select("id, title, pages, created_at").eq("user_id", turn.userId).eq("course_id", turn.courseId).eq("status", "ready").order("created_at", { ascending: false }).limit(5),
+  ) as { id: string; title: string; pages: number | null; created_at: string }[];
+  let uploadsNote: string | null = null;
+  if (uploads.length) {
+    const list = uploads.map((u) => `"${u.title}"${u.pages ? ` (${u.pages} page${u.pages === 1 ? "" : "s"})` : ""}`).join(", ");
+    uploadsNote = `The student has uploaded their own pages in this course: ${list}. Search results may include them as your_notes (rule 17).`;
+    if (MENTIONS_UPLOAD.test(turn.userMessage)) {
+      const named = uploads.find((u) => turn.userMessage.toLowerCase().includes(u.title.toLowerCase())) ?? uploads[0];
+      const pages = must(await db.from("user_upload_chunks").select("page, chunk_text").eq("upload_id", named.id).order("page")) as { page: number; chunk_text: string }[];
+      const text = pages.map((p) => p.chunk_text).join("\n\n").slice(0, UPLOAD_TEXT_MAX);
+      uploadsNote += ` They are asking about their upload "${named.title}". Its pages, as read from their file (their own material, not the lecturer's slides; use it as rule 17 says and answer from the slides as usual):\n<<<\n${text}\n>>>`;
+    }
+  }
   // A second look (owner's review, 21 Nov 2026: "shares" was said not to be in the slides, though a
   // lecture is called Share Capital): when the first search finds little, the lecture list comes
   // too, so the model can open a likely lecture before saying the slides don't cover it.
@@ -657,7 +679,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, paperNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

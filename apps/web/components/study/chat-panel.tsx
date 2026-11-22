@@ -22,6 +22,7 @@ import { firstCited, SlideThumb, VISUAL_ASK } from "./slide-thumb";
 import { asksForQuiz, asksForSummary } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
+import { saveUpload, uploadStatus, type UploadStatus } from "@/lib/uploads/client";
 import { BookOpen, FileText, GraduationCap, Lightbulb, MessageCircleQuestion, Plus, X, type LucideIcon } from "lucide-react";
 
 type Meta = {
@@ -405,9 +406,35 @@ export function ChatPanel({
   const [photos, setPhotos] = useState<{ id: string; url: string }[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
+  // A PDF from the + (owner, 22 Nov 2026): not sent with the question like a photo but saved as the
+  // student's own pages (Uploads): read once in the background, then searched in this course's chats
+  // as "your notes". The chip shows its progress; the student can keep asking meanwhile.
+  const [pdfs, setPdfs] = useState<{ key: string; name: string; status: UploadStatus; note?: string }[]>([]);
+  const setPdf = (key: string, patch: Partial<{ status: UploadStatus; note: string }>) =>
+    setPdfs((list) => list.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+  async function addPdf(file: File) {
+    const key = crypto.randomUUID();
+    const name = file.name.replace(/\.pdf$/i, "") || "My PDF";
+    setPdfs((list) => [...list, { key, name, status: "uploading" }]);
+    try {
+      const id = await saveUpload(course.id, name, [file]);
+      setPdf(key, { status: "reading" });
+      // Reading takes about a minute; check every few seconds, for up to five minutes.
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const now = await uploadStatus(id);
+        if (now.status === "ready") return setPdf(key, { status: "ready", note: now.pages ? `${now.pages} page${now.pages === 1 ? "" : "s"}` : undefined });
+        if (now.status === "failed") return setPdf(key, { status: "failed", note: now.error ?? undefined });
+      }
+    } catch (e) {
+      setPdf(key, { status: "failed", note: e instanceof Error ? e.message : "Couldn't upload it." });
+    }
+  }
   async function addPhotos(list: FileList | null) {
     setPhotoError(null);
-    const chosen = Array.from(list ?? []).filter((f) => f.type.startsWith("image/"));
+    const files = Array.from(list ?? []);
+    for (const f of files.filter((f) => f.type === "application/pdf").slice(0, 1)) void addPdf(f);
+    const chosen = files.filter((f) => f.type.startsWith("image/"));
     if (!chosen.length) return;
     const room = MAX_PHOTOS - photos.length;
     if (chosen.length > room) setPhotoError(`Up to ${MAX_PHOTOS} photos per question.`);
@@ -607,8 +634,29 @@ export function ChatPanel({
             submit(input);
           }}
         >
-            {(photos.length > 0 || photoError) && (
+            {(photos.length > 0 || pdfs.length > 0 || photoError) && (
               <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
+                {pdfs.map((d) => (
+                  <span key={d.key} className="relative flex max-w-[280px] items-center gap-2.5 rounded-xl bg-card py-2 pl-2.5 pr-8 ring-1 ring-line" role="status">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-pau-100 text-brand">
+                      {d.status === "uploading" || d.status === "reading" ? <Spinner /> : <FileText size={17} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] text-ink" title={d.name}>{d.name}</span>
+                      <span className={`block text-[12px] leading-snug ${d.status === "failed" ? "text-red-700" : "text-muted"}`}>
+                        {d.status === "uploading" ? "Uploading…" : d.status === "reading" ? "Reading your pages…" : d.status === "ready" ? `Ready${d.note ? ` · ${d.note}` : ""}: ask about it` : d.note ?? "Couldn't read it"}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPdfs((list) => list.filter((x) => x.key !== d.key))}
+                      aria-label="Hide"
+                      className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full text-muted transition hover:bg-sunken hover:text-ink"
+                    >
+                      <X size={13} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+                    </button>
+                  </span>
+                ))}
                 {photos.map((p) => (
                   <span key={p.id} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element -- a local preview (data URL) */}
@@ -627,14 +675,15 @@ export function ChatPanel({
               </div>
             )}
             <div data-laptop-tour="chatbox" className="flex items-end gap-1.5 rounded-[28px] bg-sunken/70 py-2 pl-2 pr-2 transition focus-within:bg-sunken focus-within:ring-2 focus-within:ring-pau-200">
-              {/* Add a photo (a test question, a diagram, notes): sent with this question. */}
-              <input ref={photoInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
+              {/* Add a photo (a test question, a diagram, notes): sent with this question. Or a PDF: saved
+                  as the student's own pages and read in the background (addPdf). */}
+              <input ref={photoInput} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
               <button
                 type="button"
                 onClick={() => photoInput.current?.click()}
                 disabled={busy || photos.length >= MAX_PHOTOS}
-                aria-label="Add a photo"
-                title="Add a photo"
+                aria-label="Add a photo or PDF"
+                title="Add a photo or PDF"
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink/70 transition hover:bg-black/5 hover:text-ink active:scale-90 disabled:opacity-40"
               >
                 <Plus size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
