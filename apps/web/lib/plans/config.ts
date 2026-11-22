@@ -33,6 +33,8 @@ export const FINALS_PRICE_EARLY = 3_000;
 export const FINALS_PRICE = 5_000;
 /** The early price ends here: 27 Nov 2026, 23:59 Lagos (₦5,000 from 23:59:00). Moved from 22 Nov by the owner (22 Nov 2026). */
 export const PRICE_CHANGE_DATE = new Date("2026-11-27T23:59:00+01:00");
+/** First exam day of the semester (owner: "exams from 5 Dec 2026"): the dashboard's countdown. */
+export const EXAMS_START = new Date("2026-12-05T00:00:00+01:00");
 /** Finals ends here: the last first-semester paper. OWNER: set the real date before launch
  *  (go-live checklist). Plans already sold keep the end date they were granted with. */
 export const PLAN_END_DATE = new Date("2026-12-23T23:59:00+01:00");

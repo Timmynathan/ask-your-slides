@@ -9,8 +9,8 @@ import { countMain, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course
 import { courseHref } from "@/lib/study/course-link";
 import { planState } from "@/lib/plans/entitlement";
 import { FinalsWelcome } from "@/components/plans/finals-welcome";
-import { FINALS_DAILY } from "@/lib/plans/config";
-import { lagosDay, limitsFor } from "@/lib/plans/limits";
+import { EXAMS_START, FINALS_DAILY } from "@/lib/plans/config";
+import { finalsPrice, lagosDay, limitsFor } from "@/lib/plans/limits";
 import { adminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "My courses · Ask Your Slides" };
@@ -97,10 +97,28 @@ async function Loaded() {
     };
   }
 
+  // Recent lectures (owner, 22 Nov 2026): the topics of the latest chats, newest first, each with its
+  // first slide as a picture (signed, expiring URL) and a link back into that chat.
+  const seenTopics = new Set<string>();
+  const recentChats = chatRows.filter((ch) => ch.topic_id && list.some((c) => c.id === ch.course_id) && !seenTopics.has(ch.topic_id) && seenTopics.add(ch.topic_id)).slice(0, 8);
+  const recentLectures = await recentLectureCards(supabase, db, recentChats, (courses ?? []) as CourseRow[], (allCourses ?? []) as { code: string; programme: string }[]);
+
+  // Study streak: Lagos days in a row with a question asked, ending today (or yesterday, if today has
+  // none yet).
+  const since = new Date(now.getTime() - 120 * 86_400_000).toISOString();
+  const { data: asked } = await supabase.from("messages").select("created_at").eq("role", "user").gte("created_at", since).order("created_at", { ascending: false }).limit(1000);
+  const days = new Set(((asked ?? []) as { created_at: string }[]).map((m) => lagosDay(new Date(m.created_at))));
+  let streak = 0;
+  for (let d = days.has(today) ? 0 : 1; days.has(lagosDay(new Date(now.getTime() - d * 86_400_000))); d++) streak++;
+
   return (
     <>
       <Dashboard
         lastStudied={lastStudied}
+        recentLectures={recentLectures}
+        streak={{ days: streak, today: days.has(today) }}
+        examsInDays={Math.max(0, Math.ceil((EXAMS_START.getTime() - now.getTime()) / 86_400_000))}
+        price={state.plan === "free" ? finalsPrice(now) : null}
         courses={list}
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}
@@ -109,6 +127,48 @@ async function Loaded() {
       {state.welcome && <FinalsWelcome id={state.welcome.id} endsAt={state.welcome.endsAt} daily={FINALS_DAILY} trial={state.welcome.trial} />}
     </>
   );
+}
+
+type CourseRow = { id: string; code: string; programme: string; title: string };
+
+async function recentLectureCards(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  db: ReturnType<typeof adminClient>,
+  chats: { id: string; course_id: string; topic_id: string | null }[],
+  courses: CourseRow[],
+  all: { code: string; programme: string }[],
+) {
+  if (chats.length === 0) return [];
+  const topicIds = chats.map((c) => c.topic_id!) ;
+  const [{ data: topics }, { data: mats }] = await Promise.all([
+    supabase.from("topics").select("id, topic_order, title").in("id", topicIds),
+    supabase.from("materials").select("topic_id, material_order, kind").in("topic_id", topicIds).in("kind", ["slides", "notes"]).order("material_order"),
+  ]);
+  const firstMat = new Map<string, number>();
+  for (const m of (mats ?? []) as { topic_id: string; material_order: number }[]) if (!firstMat.has(m.topic_id)) firstMat.set(m.topic_id, m.material_order);
+  const cards = chats.flatMap((ch) => {
+    const t = ((topics ?? []) as { id: string; topic_order: number; title: string }[]).find((x) => x.id === ch.topic_id);
+    const c = courses.find((x) => x.id === ch.course_id);
+    if (!t || !c) return [];
+    const order = firstMat.get(t.id);
+    return [{
+      id: ch.id,
+      title: t.title,
+      course: c.title,
+      href: courseHref(c, all, { topic: String(t.topic_order), chat: ch.id }),
+      courseId: c.id,
+      slideKey: order === undefined ? null : `${c.code}-${String(order).padStart(2, "0")}-1`,
+    }];
+  });
+  const keys = cards.flatMap((c) => (c.slideKey ? [c.slideKey] : []));
+  const { data: slides } = keys.length ? await supabase.from("slides").select("course_id, slide_key, image_path").in("slide_key", keys) : { data: [] };
+  const paths = ((slides ?? []) as { course_id: string; slide_key: string; image_path: string | null }[]).filter((s) => s.image_path);
+  const { data: signed } = paths.length ? await db.storage.from("slides").createSignedUrls(paths.map((s) => s.image_path!), 60 * 60) : { data: [] };
+  return cards.map(({ slideKey, courseId, ...card }) => {
+    const row = paths.find((s) => s.slide_key === slideKey && s.course_id === courseId);
+    const url = row ? signed?.find((x) => x.path === row.image_path && !x.error)?.signedUrl ?? null : null;
+    return { ...card, image: url };
+  });
 }
 
 export default function DashboardPage() {

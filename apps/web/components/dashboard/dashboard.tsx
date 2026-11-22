@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ShellMenuButton } from "@/components/nav/app-shell";
 import { PartnerGreeting } from "./partner-greeting";
+import { ExamsCard, RecentLectures, StreakCard, UpgradeCard, type RecentLecture } from "./side-cards";
 import { HoverLink } from "@/components/ui/hover-link";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -59,9 +60,16 @@ interface Props {
   onFinals: boolean;
   /** The course of the student's last chat, for the "jump back in" bubble (null: no chats yet). */
   lastStudied: { course: string; courseHref: string; chatHref: string } | null;
+  /** The lectures of the latest chats, with their first slide as a picture. */
+  recentLectures: RecentLecture[];
+  /** Lagos days in a row with a question asked; today = asked one today already. */
+  streak: { days: number; today: boolean };
+  examsInDays: number;
+  /** Free students: today's Finals price (naira); null on Finals. */
+  price: number | null;
 }
 
-export function Dashboard({ courses, user, partner: initialPartner, onFinals, lastStudied }: Props) {
+export function Dashboard({ courses, user, partner: initialPartner, onFinals, lastStudied, recentLectures, streak, examsInDays, price }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -120,23 +128,6 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
             <Logo size={26} />
           </span>
         </Link>
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Filter courses">
-          {(
-            [
-              ["all", "All courses"],
-              ["recent", "Recently studied"],
-            ] as [Tab, string][]
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
-              aria-pressed={tab === id}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition active:scale-95 ${tab === id ? "bg-sunken font-medium text-ink" : "text-ink hover:bg-sunken/60"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="View">
@@ -168,38 +159,19 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
-        {/* Phone: tabs and search under the bar */}
-        <div className="mb-5 flex flex-col gap-3 md:hidden">
-          <div className="flex gap-1">
-            {(
-              [
-                ["all", "All courses"],
-                ["recent", "Recently studied"],
-              ] as [Tab, string][]
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                aria-pressed={tab === id}
-                className={`whitespace-nowrap rounded-full px-3 py-2 text-sm transition active:scale-95 ${tab === id ? "bg-sunken font-medium text-ink" : "text-ink"}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
+      {/* Two columns on wide screens (owner, 22 Nov 2026): the greeting, recent lectures and courses on
+          the left; Finals, the exam countdown and the streak on the right. */}
+      <main className="mx-auto grid max-w-[1280px] gap-8 px-4 pb-16 pt-4 sm:px-6 sm:pt-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0">
         {/* The study partner's greeting (owner, 22 Nov 2026). The "Ask anything" box was removed the
             same day: questions are asked inside a course, so everything stays organised by course. */}
-        <div className="mx-auto max-w-3xl">
-          <PartnerGreeting partner={partner} name={user.displayName} lastStudied={lastStudied} />
-        </div>
+        <PartnerGreeting partner={partner} name={user.displayName} lastStudied={lastStudied} />
+        <RecentLectures lectures={recentLectures} />
 
         <div className="mb-6 flex flex-wrap items-end gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-[28px] font-normal tracking-tight text-ink sm:text-[32px]">{tab === "all" ? "My courses" : "Recently studied"}</h1>
+              <h1 className="font-heading text-[24px] font-normal tracking-tight text-ink sm:text-[26px]">My courses</h1>
               <SortMenu sort={sort} onSort={setSort} />
             </div>
             <p className="mt-1 text-sm text-muted">
@@ -224,7 +196,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         {shown.length === 0 ? (
           <Empty tab={tab} onAll={() => setTab("all")} />
         ) : view === "grid" ? (
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4" aria-label="Courses">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Courses">
             {shown.map((c) => (
               <CourseCard key={c.id} course={c} />
             ))}
@@ -236,6 +208,12 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
             ))}
           </ul>
         )}
+      </div>
+      <aside className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Your plan and progress">
+        {price !== null && <UpgradeCard price={price} />}
+        <ExamsCard days={examsInDays} />
+        <StreakCard days={streak.days} today={streak.today} />
+      </aside>
       </main>
       </div>
       {enrolling && <EnrollDialog onClose={() => setEnrolling(false)} />}
@@ -299,29 +277,35 @@ function meta(c: DashboardCourse) {
 }
 
 function CourseCard({ course: c }: { course: DashboardCourse }) {
+  // A white card with the course's icon on a soft tile (owner, 22 Nov 2026).
   return (
-    <li className="group relative flex min-h-[150px] flex-col rounded-[22px] bg-navy p-4 text-white sm:min-h-[170px] sm:p-5 transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
-      {/* The whole card is the link; the menu sits above it. */}
-      {/* The course loads in full as soon as the pointer is over the card (or a finger touches it), so
-          the click opens it at once (owner, 21 Nov 2026: "it takes a while for the chat to show"). */}
-      <HoverLink href={c.href} className="absolute inset-0 z-0 rounded-[22px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
-      <div className="flex items-start justify-between">
-        <CourseIcon title={c.title} size={26} className="mt-0.5" light />
-        <CardMenu course={c} onDark />
+    <li className="group relative flex flex-col rounded-2xl bg-card p-4 sm:min-h-[132px] ring-1 ring-line transition hover:shadow-md hover:ring-line-strong has-[a:active]:scale-[0.985]">
+      {/* The whole card is the link; the menu sits above it. The course loads in full as soon as the
+          pointer is over the card (or a finger touches it), so the click opens it at once. */}
+      <HoverLink href={c.href} className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand" aria-label={`Open ${c.shownCode ? `${c.shownCode}, ` : ""}${c.title}`} />
+      <div className="flex items-start gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#BBEEF0] text-brand">
+          <CourseIcon title={c.title} size={22} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="line-clamp-2 text-[15px] font-medium leading-snug text-ink" title={c.title}>
+            {c.title}
+          </h2>
+          <p className="mt-0.5 truncate text-[12.5px] text-muted">
+            {meta(c)}
+            {c.lastStudied && ` · Studied ${c.lastStudied}`}
+          </p>
+        </div>
+        <div className="-mr-2 -mt-1">
+          <CardMenu course={c} />
+        </div>
       </div>
-      <div className="mt-auto">
-        {c.extraLevel !== null && <LevelTag level={c.extraLevel} onDark />}
-        {c.elective && <ElectiveTag onDark />}
-        {c.limited && <LimitedTag onDark />}
-        {c.premiumLeft !== null && <PremiumTag onDark />}
-        <h2 className="line-clamp-2 text-[15px] leading-snug text-white sm:text-[17px]" title={c.title}>
-          {c.title}
-        </h2>
-        <p className="mt-1 truncate text-[12.5px] text-white/70 sm:text-[13px]">
-          {meta(c)}
-          {c.lastStudied && ` · Studied ${c.lastStudied}`}
-        </p>
-        {c.premiumLeft !== null && <p className="mt-1 text-[13px] text-white/80">{freeLeft(c.premiumLeft)}</p>}
+      <div className="mt-auto [&>span:first-child]:ml-0 [&:not(:empty)]:pt-3">
+        {c.extraLevel !== null && <LevelTag level={c.extraLevel} />}
+        {c.elective && <ElectiveTag />}
+        {c.limited && <LimitedTag />}
+        {c.premiumLeft !== null && <PremiumTag />}
+        {c.premiumLeft !== null && <p className="mt-1.5 text-[12.5px] text-muted">{freeLeft(c.premiumLeft)}</p>}
       </div>
     </li>
   );
