@@ -182,6 +182,9 @@ body {
 .pill-swap { animation: pill-swap 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 /* Landing Plans section: cards rise in once, on the pills' curve (components/landing/reveal.tsx). */
 .reveal-wait { opacity: 0; }
+/* The dashboard greeting's second message (partner-greeting.tsx). */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
 @keyframes reveal-in {
   0% { opacity: 0; transform: translateY(18px); filter: blur(2px); }
   100% { opacity: 1; transform: none; filter: none; }

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ShellMenuButton } from "@/components/nav/app-shell";
-import { AskBox } from "./ask-box";
 import { PartnerGreeting } from "./partner-greeting";
 import { HoverLink } from "@/components/ui/hover-link";
 import { PartnerSwitch } from "@/components/study/partner-switch";
@@ -191,11 +190,10 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
           </div>
         </div>
 
-        {/* One way in for "which course is this?" questions (owner, 21 Nov 2026): it opens inside the
-            right course's chat, so there is no separate chat to keep track of. */}
+        {/* The study partner's greeting (owner, 22 Nov 2026). The "Ask anything" box was removed the
+            same day: questions are asked inside a course, so everything stays organised by course. */}
         <div className="mx-auto max-w-3xl">
           <PartnerGreeting partner={partner} name={user.displayName} lastStudied={lastStudied} />
-          <AskBox courses={courses.map((c) => ({ code: c.code, shownCode: c.shownCode, title: c.title, href: c.href }))} />
         </div>
 
         <div className="mb-6 flex flex-wrap items-end gap-3">
