@@ -27,7 +27,9 @@ export function courseNamed(text: string, courses: Course[]): Course | null {
 
 import { askHref } from "@/lib/study/course-link";
 
-export function AskBox({ courses = [] }: { courses?: Course[] }) {
+/** `pinned`: the box sits at the bottom of the screen (Ask anything), so its notes and the course
+ *  choices show above it instead of below. */
+export function AskBox({ courses = [], pinned = false }: { courses?: Course[]; pinned?: boolean }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -88,7 +90,7 @@ export function AskBox({ courses = [] }: { courses?: Course[] }) {
   };
 
   return (
-    <div className="mb-8">
+    <div className={pinned ? "flex flex-col-reverse gap-2" : "mb-8"}>
       <form onSubmit={submit} className="relative">
         <label htmlFor="ask-anything" className="sr-only">
           Ask anything across your courses
