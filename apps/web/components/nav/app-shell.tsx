@@ -224,7 +224,9 @@ export function AppShell({
     };
   }, []);
   const courseCtx = useMemo(() => ({ setCourse, slot, setTucked }), [slot, setTucked]);
-  const inCourse = !!courseMenu || !!openCourse;
+  // Only on a course's own page: leaving for the dashboard drops the panel at once, rather than when
+  // the course page has finished unmounting (owner, 22 Nov 2026: it stayed wide until the page loaded).
+  const inCourse = !!courseMenu || (!!openCourse && pathname.startsWith("/study"));
   const hasPanel = inCourse && !railOnly;
   const panelTitle = courseMenu?.title ?? openCourse?.title ?? "";
   const [feedback, setFeedback] = useState(false);

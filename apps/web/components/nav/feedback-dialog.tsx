@@ -44,11 +44,6 @@ export function FeedbackDialog({ onClose }: { onClose(): void }) {
 
   const support = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi, I need help with Ask Your Slides.")}`;
   const pill = (on: boolean) => `inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] transition active:scale-95 ${on ? "bg-brand text-brand-ink" : "bg-card text-ink ring-1 ring-line-strong hover:ring-brand"}`;
-  const Thumb = ({ down = false }: { down?: boolean }) => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={down ? "rotate-180" : ""}>
-      <path d="M7 10v10H4V10h3zM7 10l4-7a2 2 0 0 1 2.8 2.4L12.5 10H19a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7" />
-    </svg>
-  );
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4" onClick={onClose}>
@@ -120,5 +115,13 @@ export function FeedbackDialog({ onClose }: { onClose(): void }) {
         )}
       </div>
     </div>
+  );
+}
+
+function Thumb({ down = false }: { down?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={down ? "rotate-180" : ""}>
+      <path d="M7 10v10H4V10h3zM7 10l4-7a2 2 0 0 1 2.8 2.4L12.5 10H19a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 17.8 20H7" />
+    </svg>
   );
 }

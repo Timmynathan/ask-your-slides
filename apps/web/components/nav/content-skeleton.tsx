@@ -14,21 +14,6 @@ export function ContentSkeleton() {
   );
 }
 
-/** First load only, before the sidebar's data arrives: the rail and panel as quiet blocks. */
-export function ShellSkeleton() {
-  return (
-    <div className="min-h-dvh bg-page">
-      <div className="fixed inset-y-0 left-0 hidden md:flex" aria-hidden>
-        <div className="w-16 bg-pau-900" />
-        <div className="w-[252px] bg-navy" />
-      </div>
-      <div className="md:pl-[316px]">
-        <ContentSkeleton />
-      </div>
-    </div>
-  );
-}
-
 /** A course loading inside the sidebar (owner, 21 Nov 2026): a top bar, an empty chat and the Sources
  *  column, so the page never flashes blank between the dashboard and a course. */
 export function CourseSkeleton() {

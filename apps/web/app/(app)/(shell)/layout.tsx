@@ -1,6 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/nav/app-shell";
-import { ShellSkeleton } from "@/components/nav/content-skeleton";
+import { ShellSkeleton } from "@/components/nav/shell-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { shellData } from "@/lib/nav/shell-data";
 

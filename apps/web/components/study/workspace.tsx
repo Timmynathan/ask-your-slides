@@ -408,7 +408,9 @@ export function Workspace(data: WorkspaceData) {
           onClose={() => setPreview(null)}
           onAsk={(text, slideKey) => {
             setPrefill({ text, n: Date.now(), slideKey });
-            setPreview(null);
+            // The slide stays open beside the chat on tablets and laptops (owner, 22 Nov 2026); only on
+            // phones, where it covers the chat, does it close so the question can be typed.
+            if (!window.matchMedia("(min-width: 48rem)").matches) setPreview(null);
           }}
         />
       )}
