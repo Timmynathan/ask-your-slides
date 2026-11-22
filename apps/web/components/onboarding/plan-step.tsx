@@ -7,8 +7,9 @@
 // something that student said.
 /* eslint-disable @next/next/no-img-element -- a small local photo */
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowLeft, Check, ChevronDown } from "lucide-react";
-import { PlanTable } from "@/components/plans/plan-table";
+import { createPortal } from "react-dom";
+import { ArrowLeft, Check, ChevronDown, Minus, X } from "lucide-react";
+import { comparisonRows } from "@/lib/plans/offer";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
 import testimonials from "@/content/testimonials.json";
 
@@ -131,14 +132,10 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
             aria-expanded={open}
             className="mx-auto mt-4 flex items-center gap-1.5 text-[14.5px] text-ink hover:text-brand"
           >
-            {open ? "Hide what's included" : "See what's included"}
-            <ChevronDown size={16} absoluteStrokeWidth strokeWidth={1.6} className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden />
+            See what&apos;s included
+            <ChevronDown size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
           </button>
-          {open && (
-            <div className="pop-in mt-4">
-              <PlanTable compact offer={offer} current="free" freePast={freePast} freeAction={null} finalsAction={null} />
-            </div>
-          )}
+          {open && <IncludedPopup offer={offer} freePast={freePast} onClose={() => setOpen(false)} />}
 
           {offer.paymentsOpen ? (
             <a href="/pay" className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-ink text-[15.5px] font-medium text-page shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] transition hover:opacity-90 active:scale-[0.99]">
@@ -152,5 +149,51 @@ export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
         </div>
       </div>
     </div>
+  );
+}
+
+/** "See what's included" (owner, 22 Nov 2026): a small pop-up, black and grey only, one compact row per
+ *  feature: Free and Finals side by side, a tick or a dash or the short value. */
+function IncludedPopup({ offer, freePast, onClose }: { offer: PlanOffer; freePast: boolean; onClose(): void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  const cell = (v: string | boolean) =>
+    v === true ? <Check size={16} absoluteStrokeWidth strokeWidth={2} className="mx-auto text-[#191919] dark:text-ink" aria-label="Included" />
+    : v === false ? <Minus size={16} absoluteStrokeWidth strokeWidth={1.6} className="mx-auto text-[#191919]/25 dark:text-ink/30" aria-label="Not included" />
+    : <span className="text-[12.5px] leading-snug text-[#191919] dark:text-ink">{v}</span>;
+  // Rendered on <body>: the step's slide-in animation would otherwise trap the backdrop inside it.
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4" onClick={onClose}>
+      <div role="dialog" aria-label="What's included" className="pop-in w-full max-w-md rounded-2xl bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <p className="text-[15px] font-semibold text-[#191919] dark:text-ink">What&apos;s included</p>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full text-[#191919] hover:bg-sunken dark:text-ink">
+            <X size={16} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
+          </button>
+        </div>
+        <table className="mt-3 w-full table-fixed text-left">
+          <thead>
+            <tr className="border-b border-[#191919]/15 text-[12.5px] dark:border-ink/20">
+              <th className="w-[44%] pb-2 font-normal text-[#191919]/60 dark:text-ink/60">Feature</th>
+              <th className="pb-2 text-center font-semibold text-[#191919] dark:text-ink">Free</th>
+              <th className="pb-2 text-center font-semibold text-[#191919] dark:text-ink">Finals</th>
+            </tr>
+          </thead>
+          <tbody>
+            {comparisonRows(offer, { freePast }).map((r) => (
+              <tr key={r.label} className="border-b border-[#191919]/10 last:border-0 dark:border-ink/15">
+                <th scope="row" className="py-2 pr-2 text-[12.5px] font-normal leading-snug text-[#191919] dark:text-ink">{r.label}</th>
+                <td className="px-1 py-2 text-center">{cell(r.free)}</td>
+                <td className="px-1 py-2 text-center">{cell(r.finals)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>,
+    document.body,
   );
 }
