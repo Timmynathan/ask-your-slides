@@ -25,9 +25,7 @@ export function courseNamed(text: string, courses: Course[]): Course | null {
   return byTitle.length === 1 ? byTitle[0] : null;
 }
 
-export function askHref(href: string, question: string) {
-  return `${href}${href.includes("?") ? "&" : "?"}ask=${encodeURIComponent(question)}`;
-}
+import { askHref } from "@/lib/study/course-link";
 
 export function AskBox({ courses = [] }: { courses?: Course[] }) {
   const router = useRouter();

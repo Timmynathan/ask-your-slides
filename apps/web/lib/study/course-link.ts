@@ -34,3 +34,8 @@ export function resolveCourse<T extends LinkableCourse & { department: string }>
     matches[0]
   );
 }
+
+/** The course page that opens with this question asked in its whole-course chat (?ask=). */
+export function askHref(href: string, question: string) {
+  return `${href}${href.includes("?") ? "&" : "?"}ask=${encodeURIComponent(question)}`;
+}

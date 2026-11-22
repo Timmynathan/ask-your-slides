@@ -15,7 +15,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { History, House, Menu, MessageCircleQuestion, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
+import { History, House, Menu, MessageCircle, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { useClickAway } from "@/lib/ui/use-click-away";
@@ -356,7 +356,7 @@ export function AppShell({
             </Link>
             <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
             {/* Ask anything (owner, 22 Nov 2026): a question opens in the right course's chat. */}
-            <RailButton label="Ask anything" href="/chat" active={page === "chat"} icon={MessageCircleQuestion} />
+            <RailButton label="Ask anything" href="/chat" active={page === "chat"} icon={MessageCircle} />
             <RecentChats recent={recent} />
             <div className="mt-auto flex flex-col gap-3">
               {/* Feedback (owner, 20 Nov 2026), just above the account. */}
@@ -441,7 +441,7 @@ export function AppShell({
                 Dashboard
               </Link>
               <Link href="/chat" aria-current={page === "chat" ? "page" : undefined} className={`${rowCls} ${page === "chat" ? "bg-white/12 text-white" : ""}`}>
-                <MessageCircleQuestion size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+                <MessageCircle size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
                 Ask anything
               </Link>
             </nav>
