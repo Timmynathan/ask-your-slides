@@ -70,7 +70,7 @@ export function UpgradeCard({ price }: { price: number }) {
   );
 }
 
-export function ExamsCard({ days }: { days: number }) {
+export function ExamsCard({ days, startLabel }: { days: number; startLabel: string }) {
   return (
     <div className="rounded-3xl bg-sunken/70 p-6">
       <h2 className="flex items-center gap-2.5 font-heading text-[21px] font-normal text-ink">
@@ -83,7 +83,7 @@ export function ExamsCard({ days }: { days: number }) {
             {days}
             <span className="ml-2 align-baseline text-[16px] text-muted">{days === 1 ? "day to go" : "days to go"}</span>
           </p>
-          <p className="mt-3 text-[14px] text-muted">Exams start on 5 December. A little every day adds up.</p>
+          <p className="mt-3 text-[14px] text-muted">Exams start on {startLabel}. A little every day adds up.</p>
         </>
       ) : (
         <p className="mt-4 text-[15px] text-ink">Exams are on. Good luck: you&apos;ve got this.</p>
