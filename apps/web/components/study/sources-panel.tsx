@@ -57,7 +57,8 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
       >
         <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-5">
           <h2 className="text-[12px] text-muted">Sources</h2>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-black/5 xl:hidden" aria-label="Close sources">
+          {/* On every screen (owner, 22 Nov 2026): no dragging needed to close it on laptops. */}
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-black/5 hover:text-ink" aria-label="Close sources" title="Close">
             <X size={16} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
           </button>
         </div>

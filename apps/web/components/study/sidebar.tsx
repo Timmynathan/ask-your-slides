@@ -72,14 +72,14 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
     <nav className="flex h-full flex-col" aria-label="Topics and chats">
       {/* Past questions first: real PAU papers by year (replaced "Search the web", owner 14 Nov 2026). */}
       {past && (
-        <div className="shrink-0 px-3 pt-2">
+        <div data-laptop-tour="past" className="shrink-0 px-3 pt-2">
           <PastBox papers={past.papers} total={past.total} active={pastActive} onOpenPaper={onOpenPast} onOpenMap={() => onOpenPast(null)} />
         </div>
       )}
 
       {/* Whole course on its own, above the lectures (owner, 21 Nov 2026): it isn't a lecture. One
           scrolling list holds both. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">
+      <div data-laptop-tour="lectures" className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 pt-3">
         <ul>{scopes.slice(0, 1).map(scopeItem)}</ul>
         <div className="flex items-center justify-between pb-1 pl-2 pt-4">
           <h2 className="text-[13px] text-white/60">Lectures</h2>

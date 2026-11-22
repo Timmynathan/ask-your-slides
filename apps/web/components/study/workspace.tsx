@@ -393,7 +393,14 @@ export function Workspace(data: WorkspaceData) {
           materials={data.materials}
           topic={topic}
           open={sourcesOpen}
-          onClose={closeSources}
+          onClose={() => {
+            // Laptops: close the column (Whole course, or a lecture); smaller screens: the slide-in panel.
+            if (window.matchMedia("(min-width: 80rem)").matches) {
+              if (topicId === null) setWholeSourcesOpen(false);
+              else setSourcesClosed(true);
+            }
+            closeSources();
+          }}
           onOpenSource={(key) => {
             closeSources();
             setPreview(key);

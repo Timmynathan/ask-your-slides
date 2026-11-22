@@ -4,7 +4,8 @@
 // own tour (study-tour.tsx). Everything is already on screen here, so it is a guided walk: the page
 // dims, one area is lit, and a note beside it explains it, with Next, Skip and "1 of 4".
 //
-//   lectures  the course panel's list of lectures (and past questions)
+//   lectures  the course panel's list of lectures (Whole course first)
+//   past      the Past questions card (owner, 22 Nov 2026: its own step); skipped in courses without papers
 //   chatbox   the chat box: ask anything, + to send a photo
 //   sources   the slides: when Sources is closed, a pointer "clicks" its icon and Sources opens by
 //             itself; Next closes it again (owner, 22 Nov 2026: show it, don't just say it)
@@ -15,14 +16,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { MousePointer2 } from "lucide-react";
 
-const STEPS = ["lectures", "chatbox", "sources"] as const;
+const STEPS = ["lectures", "past", "chatbox", "sources"] as const;
 export type LaptopStep = (typeof STEPS)[number];
 const KEY = "ays-laptop-tour-seen";
 const keyFor = (account: string) => `${KEY}:${account.toLowerCase()}`;
 
 const TIPS: Record<LaptopStep, { title: string; body: string }> = {
-  lectures: { title: "Your PAU lectures", body: "Pick a lecture to focus the chat on it, or stay on Whole course. Past questions from real PAU papers are at the top." },
-  chatbox: { title: "Ask anything", body: "Type your question here. Tap + to add a photo." },
+  lectures: { title: "Your PAU lectures", body: "Pick a lecture to focus the chat on it, or stay on Whole course." },
+  past: { title: "Past questions", body: "Real questions from past PAU papers, to practise with." },
+  chatbox: { title: "Ask anything", body: "Type your question here." },
   sources: { title: "Your slides", body: "All your lecture slides live here." },
 };
 

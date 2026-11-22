@@ -371,7 +371,7 @@ export function AppShell({
             {courseMenu ? (
               <div className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10">{courseMenu.body}</div>
             ) : (
-              <div ref={setSlot} data-laptop-tour="lectures" className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10" />
+              <div ref={setSlot} className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10" />
             )}
             {/* Drag the right edge to resize; far enough left closes the panel. */}
             {open && (
