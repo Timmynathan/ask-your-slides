@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { Dashboard, type DashboardCourse } from "@/components/dashboard/dashboard";
 import { requireUser } from "@/lib/auth/session";
 import { isPartnerId } from "@/lib/partners";
-import { countMain, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
+import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/study/course-code";
 import { courseHref } from "@/lib/study/course-link";
 import { planState } from "@/lib/plans/entitlement";
 import { FinalsWelcome } from "@/components/plans/finals-welcome";
@@ -92,7 +92,8 @@ async function Loaded() {
     const all = (allCourses ?? []) as { code: string; programme: string }[];
     const extra: Record<string, string> = t ? { topic: String((t as { topic_order: number }).topic_order) } : {};
     lastStudied = {
-      course: c.title as string,
+      // The code ("CSC 402") keeps the message short enough for one line on laptops (owner, 22 Nov 2026).
+      course: courseName(c as { code: string; code_confirmed: boolean; title: string }),
       courseHref: courseHref(c as { code: string; programme: string }, all),
       chatHref: courseHref(c as { code: string; programme: string }, all, { ...extra, chat: lastChat.id }),
     };

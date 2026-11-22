@@ -175,7 +175,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         <div className="mb-6 flex flex-wrap items-end gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-[24px] font-normal tracking-tight text-ink sm:text-[26px]">My courses</h1>
+              <h1 className="font-heading text-[24px] font-semibold tracking-tight text-ink sm:text-[26px]">My courses</h1>
               <SortMenu sort={sort} onSort={setSort} />
             </div>
             <p className="mt-1 text-sm text-muted">

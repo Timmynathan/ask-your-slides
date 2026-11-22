@@ -54,11 +54,14 @@ export function PartnerGreeting({ partner, name, lastStudied }: Props) {
 
   // The width of the message on show, measured from the invisible copy (null until measured).
   const measure = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState<number | null>(null);
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   useLayoutEffect(() => {
     const el = measure.current;
     if (!el) return;
-    const sync = () => setWidth(Math.ceil(el.getBoundingClientRect().width));
+    const sync = () => {
+      const r = el.getBoundingClientRect();
+      setSize({ width: Math.ceil(r.width), height: Math.ceil(r.height) });
+    };
     sync();
     const ro = new ResizeObserver(sync);
     ro.observe(el);
@@ -94,8 +97,9 @@ export function PartnerGreeting({ partner, name, lastStudied }: Props) {
       {/* The partner on their own, no ring around them (owner, 22 Nov 2026). */}
       <Mascot partner={partner} size={44} mood="happy" animated={false} className="shrink-0" />
       <div className="relative min-w-0 flex-1">
-        {/* The bubble is as wide as its message (owner, 22 Nov 2026), and glides to the next one's
-            width while the words are faded out. An invisible copy measures that width. */}
+        {/* The bubble is the size of its message (owner, 22 Nov 2026), and glides to the next one's size
+            while the words are faded out, so the hidden words reflowing never jolt it. An invisible copy
+            measures that size. */}
         <div ref={measure} aria-hidden className={`${bubble} invisible absolute left-0 top-0 w-max max-w-full`}>
           {text(msg)}
         </div>
@@ -104,8 +108,8 @@ export function PartnerGreeting({ partner, name, lastStudied }: Props) {
           onPointerLeave={() => setHeld(false)}
           onFocus={() => setHeld(true)}
           onBlur={() => setHeld(false)}
-          className={`${bubble} max-w-full ${width === null ? "w-max" : ""} transition-[width] ease-out motion-reduce:transition-none`}
-          style={width === null ? undefined : { width, transitionDuration: `${WIDTH_MS}ms` }}
+          className={`${bubble} max-w-full overflow-hidden ${size === null ? "w-max" : ""} transition-[width,height] ease-out motion-reduce:transition-none`}
+          style={size === null ? undefined : { width: size.width, height: size.height, transitionDuration: `${WIDTH_MS}ms` }}
         >
           <p
             className={`transition-opacity ease-out motion-reduce:transition-none motion-reduce:[animation:none] ${fading ? "opacity-0" : "opacity-100 [animation:fade-in_300ms_ease-out]"}`}
