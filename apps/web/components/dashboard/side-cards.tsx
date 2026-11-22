@@ -85,7 +85,7 @@ export function ExamsCard({ days, startLabel }: { days: number; startLabel: stri
             {days}
             <span className="ml-2 align-baseline text-[16px] text-muted">{days === 1 ? "day to go" : "days to go"}</span>
           </p>
-          <p className="mt-3 text-[14px] text-muted">Exams start on {startLabel}. A little every day adds up.</p>
+          <p className="mt-3 text-[14px] text-muted">Exams start on {startLabel}. A little study sesh every day adds up.</p>
         </>
       ) : (
         <p className="mt-4 text-[15px] text-ink">Exams are on. Good luck: you&apos;ve got this.</p>
