@@ -7,8 +7,8 @@
 // questions, Upload and My files don't belong on the dashboard).
 // Inside a course: a panel beside the rail with the course name, Upload, and the course's own menu
 // (past questions, topics, chats), filled in by the course page through a portal (useShellCourse).
-// The panel's button sits at the right of its title: click to open or close it (no hover peek; picking
-// a lecture closes it for a wider study view). A pinned panel can be dragged narrower by its right
+// The panel's button sits at the right of its title: click to open or close it (no hover peek). Like
+// ChatGPT's chat list, it stays open while the student moves between lectures (owner, 22 Nov 2026). A pinned panel can be dragged narrower by its right
 // edge; far enough closes it. Open/closed and width are remembered in this browser.
 // Phones have no rail: the dashboard's menu button opens a drawer with the same items.
 // Icons: Lucide (owner, 21 Nov 2026: no hand-drawn icons).
@@ -63,9 +63,6 @@ const ShellCourseCtx = createContext<{
   slot: HTMLElement | null;
   /** A slide is open beside the chat: on smaller laptops the panel tucks away until it closes. */
   setTucked(tucked: boolean): void;
-  /** A lecture was picked (owner, 22 Nov 2026): close the panel for a wider study view; it slides back
-   *  out when the pointer comes near the left edge, and its button keeps it open again. */
-  collapse(): void;
 } | null>(null);
 export function useShellCourse() {
   return useContext(ShellCourseCtx);
@@ -195,7 +192,6 @@ export function AppShell({
   const [uploading, setUploading] = useState(false);
   const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
   const [pinned, setPinned] = useState(true);
-  const collapse = useCallback(() => setPinned(false), []);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   // Smaller laptops: panel + chat + an open slide leave the chat too narrow, so the panel tucks away
   // (still a hover away) while a slide is open, and comes back when it closes.
@@ -216,7 +212,7 @@ export function AppShell({
       mq.removeEventListener("change", sync);
     };
   }, []);
-  const courseCtx = useMemo(() => ({ setCourse, slot, setTucked, collapse }), [slot, setTucked, collapse]);
+  const courseCtx = useMemo(() => ({ setCourse, slot, setTucked }), [slot, setTucked]);
   // Only on a course's own page: leaving for the dashboard drops the panel at once, rather than when
   // the course page has finished unmounting (owner, 22 Nov 2026: it stayed wide until the page loaded).
   const inCourse = !!courseMenu || (!!openCourse && pathname.startsWith("/study"));
