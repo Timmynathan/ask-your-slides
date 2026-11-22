@@ -17,6 +17,7 @@ import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
+import { asksForQuiz } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
 import { BookOpen, FileText, GraduationCap, Lightbulb, MessageCircleQuestion, Plus, X, type LucideIcon } from "lucide-react";
@@ -310,6 +311,12 @@ export function ChatPanel({
     const attached = photos;
     const text = raw.trim() || (attached.length ? (attached.length === 1 ? "Explain this photo." : "Explain these photos.") : "");
     if (!text || busy) return;
+    // Quiz mode is Finals only: on Free, show the Finals pop-up at once instead of starting an
+    // answer the server would refuse (owner, 22 Nov 2026). The server still enforces it.
+    if (plan === "free" && asksForQuiz(text)) {
+      onLimit("quiz", null);
+      return;
+    }
     if (capped) {
       setCapNotes((n) => [...n, { id: `cap-${Date.now()}`, text, reply: capReply(lastCap.code, lastCap.resetsAt, Date.now()) }]);
       setInput("");
