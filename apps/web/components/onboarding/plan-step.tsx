@@ -7,11 +7,9 @@
 // something that student said.
 /* eslint-disable @next/next/no-img-element -- a small local photo */
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowLeft, Check, ChevronDown, Sparkles } from "lucide-react";
-import { Mascot } from "@/components/mascot/mascot";
+import { ArrowLeft, Check, ChevronDown } from "lucide-react";
 import { PlanTable } from "@/components/plans/plan-table";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
-import type { PartnerId } from "@/lib/partners";
 import testimonials from "@/content/testimonials.json";
 
 type Quote = { text: string; name: string; detail: string; photo?: string; initial?: string };
@@ -19,9 +17,8 @@ type Quote = { text: string; name: string; detail: string; photo?: string; initi
 const QUOTES = testimonials as Quote[];
 const ROTATE_MS = 6000;
 
-export function PlanStep({ offer, partner, freePast, onBack, onFree, promo }: {
+export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
   offer: PlanOffer & { paymentsOpen?: boolean };
-  partner: PartnerId;
   freePast: boolean;
   onBack(): void;
   onFree(): void;
@@ -55,10 +52,26 @@ export function PlanStep({ offer, partner, freePast, onBack, onFree, promo }: {
       <div className="mt-8 grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
         {/* Left: the study partner, then the testimonials. */}
         <div className="order-2 flex flex-col items-center lg:order-1">
-          <div className="relative hidden h-44 w-44 place-items-center sm:grid">
-            <Mascot partner={partner} size={150} mood="happy" animated={false} />
-            <Sparkles size={26} absoluteStrokeWidth strokeWidth={1.5} className="encourage-twinkle absolute -right-1 top-2 text-brand" aria-hidden />
-          </div>
+          {/* A plain black line drawing (owner, 22 Nov 2026: minimalist, no colour): books, a cap, a star. */}
+          <svg viewBox="0 0 220 190" className="hidden h-48 w-56 text-[#191919] sm:block dark:text-ink" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {/* Three stacked books */}
+            <rect x="48" y="150" width="124" height="22" rx="3" />
+            <path d="M60 150v22M160 150v22" />
+            <rect x="58" y="128" width="108" height="22" rx="3" />
+            <path d="M70 128v22" />
+            <rect x="52" y="106" width="116" height="22" rx="3" />
+            <path d="M156 106v22M64 117h40" />
+            {/* Graduation cap */}
+            <path d="M110 70 70 86l40 16 40-16-40-16Z" />
+            <path d="M88 93v10c0 5 10 9 22 9s22-4 22-9V93" />
+            <path d="M150 86v18" />
+            <circle cx="150" cy="107" r="2.5" />
+            {/* Star, gently twinkling */}
+            <g className="encourage-twinkle" style={{ transformOrigin: "170px 34px" }}>
+              <path d="m170 18 4.6 9.6 10.4 1.4-7.6 7.2 1.9 10.3-9.3-5-9.3 5 1.9-10.3-7.6-7.2 10.4-1.4L170 18Z" />
+            </g>
+            <path d="M196 30h8M192 52l6 4M144 22l-6-5" />
+          </svg>
           <figure className="mt-6 w-full max-w-md rounded-2xl bg-card p-5 ring-1 ring-line">
             <blockquote key={q} className="encourage-in text-[15.5px] leading-relaxed text-ink">&ldquo;{quote.text}&rdquo;</blockquote>
             <figcaption className="mt-4 flex items-center gap-3">

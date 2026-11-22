@@ -250,7 +250,6 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
         {step === "plan" && (
           <PlanStep
             offer={offer}
-            partner={partner ?? DEFAULT_PARTNER}
             freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
             onBack={() => setStep("hello")}
             onFree={finish}
