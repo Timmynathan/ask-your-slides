@@ -9,7 +9,7 @@ import { Sparkles } from "lucide-react";
 
 const LINES: ((name: string, days: number) => string)[] = [
   (n) => `You've got this${n ? `, ${n}` : ""}.`,
-  () => "One lecture today beats five tomorrow.",
+  () => "One study session today beats five tomorrow.",
   () => "Small steps every day. That's how A's are built.",
   () => "You don't have to be perfect. Just keep showing up.",
   () => "Future you is already thanking you.",
