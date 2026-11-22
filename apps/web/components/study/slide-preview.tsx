@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { highlightLine, TOKEN_CLASS } from "@/lib/study/highlight";
+import { Spinner } from "@/components/ui/spinner";
 import { loadSlide, pageKey, prefetchSlide, type SlidePreviewData, type SlideView } from "@/lib/study/slide-cache";
 
 type Preview = SlidePreviewData;
@@ -33,6 +34,8 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
   const [data, setData] = useState<Preview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showText, setShowText] = useState(false);
+  // The image shown so far: until the new one has arrived, a spinner sits where it will appear.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
 
   useEffect(() => {
     // One component per material (keyed in Workspace): a new page replaces the old one once it arrives.
@@ -82,7 +85,11 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
       >
         <div className="flex h-16 shrink-0 items-center justify-between gap-3 px-5">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{data?.material.title ?? "Loading…"}</p>
+            {data ? (
+              <p className="truncate text-sm font-semibold">{data.material.title}</p>
+            ) : (
+              <div aria-hidden className="h-3.5 w-40 animate-pulse rounded-full bg-sunken" />
+            )}
             {data && (
               <p className="truncate text-xs text-muted">
                 {kindLabel} · {data.label ?? `${unit} ${data.slide_number} of ${data.material.page_count}`}
@@ -99,19 +106,28 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {error && <p role="alert" className="text-sm text-red-700 dark:text-red-400">{error}</p>}
-          {!data && !error && <div className="aspect-[4/3] w-full animate-pulse rounded-lg bg-sunken" />}
+          {!data && !error && <SlideLoading />}
           {data && (
             <>
               {data.view ? (
                 <SourceView view={data.view} />
               ) : data.image_url ? (
-                // Signed, expiring Supabase URL (PRD §16); next/image would need a remote pattern per project.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={data.image_url}
-                  alt={data.title ? `${unit} ${data.slide_number}: ${data.title}` : `${unit} ${data.slide_number}`}
-                  className="w-full rounded-xl bg-card shadow-[0_1px_3px_rgb(0_0_0/0.08)]"
-                />
+                <div className="relative">
+                  {loadedSrc !== data.image_url && <SlideLoading />}
+                  {/* Signed, expiring Supabase URL (PRD §16); next/image would need a remote pattern per project. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={data.image_url}
+                    src={data.image_url}
+                    ref={(el) => {
+                      if (el?.complete && el.naturalWidth > 0 && loadedSrc !== data.image_url) setLoadedSrc(data.image_url);
+                    }}
+                    onLoad={() => setLoadedSrc(data.image_url)}
+                    onError={() => setLoadedSrc(data.image_url)}
+                    alt={data.title ? `${unit} ${data.slide_number}: ${data.title}` : `${unit} ${data.slide_number}`}
+                    className={`w-full rounded-xl bg-card shadow-[0_1px_3px_rgb(0_0_0/0.08)] transition-opacity duration-200 ${loadedSrc === data.image_url ? "opacity-100" : "pointer-events-none absolute inset-x-0 top-0 opacity-0"}`}
+                  />
+                </div>
               ) : (
                 <p className="text-sm text-muted">No image for this {unit}.</p>
               )}
@@ -179,6 +195,15 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
         </div>
       </aside>
     </>
+  );
+}
+
+/** Where the slide will appear: a soft card with a spinner in its centre (owner, 22 Nov 2026). */
+function SlideLoading() {
+  return (
+    <div role="status" aria-label="Loading slide" className="grid aspect-[4/3] w-full place-items-center rounded-xl bg-card shadow-[0_1px_3px_rgb(0_0_0/0.08)]">
+      <Spinner className="!h-9 !w-9 text-brand" />
+    </div>
   );
 }
 
