@@ -4,6 +4,7 @@
 // opens the course's study workspace. Tabs (all / recently studied), search, sort, and a grid/list
 // toggle (remembered per browser). The course list is data: new courses and departments just appear.
 import Link from "next/link";
+import { Crown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
@@ -146,7 +147,15 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
           </div>
           {/* Always in view (owner, 20 Nov 2026): Upgrade for Free students in its own bright aqua (#BBEEF0), a quiet badge on Finals. */}
           {onFinals ? (
-            <span className="hidden rounded-full bg-pau-100 px-3 py-1.5 text-[13px] font-medium text-brand sm:inline">Finals</span>
+            // A premium crown instead of a text badge (owner, 22 Nov 2026), on phones too.
+            <Link
+              href="/pricing"
+              title="You're on Finals"
+              aria-label="You're on Finals"
+              className="grid h-10 w-10 place-items-center rounded-full bg-[#BBEEF0] text-brand ring-1 ring-[#8fdde1] transition hover:bg-[#a5e7ea] active:scale-95"
+            >
+              <Crown size={19} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
+            </Link>
           ) : (
             <Link
               href="/pricing"
