@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
+import { FINALS_DAILY, PREMIUM_COURSES_ON } from "@/lib/plans/config";
 
 // Minimal line icons (24px grid, 1.6 stroke), matching the app's other icons.
 const ICONS = {
@@ -85,7 +86,7 @@ export function FinalsWelcome({ id, endsAt, daily, trial = false }: { id: string
   const daysLeft = Math.max(1, Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000));
   const perks: { icon: string; text: string }[] = [
     { icon: ICONS.chat, text: `${daily} messages a day` },
-    { icon: ICONS.books, text: "All your courses, no limits on premium courses" },
+    { icon: ICONS.books, text: PREMIUM_COURSES_ON ? "All your courses, no limits on premium courses" : `All your courses, ${FINALS_DAILY} questions a day` },
     ...(PAST_QUESTIONS_LIVE ? [{ icon: ICONS.paper, text: "Every past question, with model answers and marked practice" }] : []),
     { icon: ICONS.spark, text: "Unlimited summaries" },
     { icon: ICONS.target, text: "Quiz mode: get quizzed on any topic" },

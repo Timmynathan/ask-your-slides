@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { naira, type PlanOffer } from "@/lib/plans/offer";
+import { PREMIUM_COURSES_ON } from "@/lib/plans/config";
 import { FinalsPrice } from "./finals-price";
 
 export function PlanCards({
@@ -21,7 +22,7 @@ export function PlanCards({
   const freeList = [
     `${offer.free.firstDay} messages on your first day, then ${offer.free.daily} a day`,
     "All your courses",
-    `Premium courses: ${offer.free.premiumDaily} questions a day`,
+    ...(PREMIUM_COURSES_ON ? [`Premium courses: ${offer.free.premiumDaily} questions a day`] : []),
     `${offer.free.summaries} summary`,
   ];
   const finalsList = [

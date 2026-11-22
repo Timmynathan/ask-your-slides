@@ -9,6 +9,7 @@ import {
   FREE_DAILY,
   FREE_FIRST_DAY,
   PLAN_END_DATE,
+  PREMIUM_COURSES_ON,
   PREMIUM_FREE_DAILY,
   PREMIUM_FREE_FIRST_DAY,
   PRICE_CHANGE_DATE,
@@ -25,7 +26,8 @@ const DAY2 = at("2026-11-17T09:00:00+01:00");
 
 describe("plan config", () => {
   it("has the launch numbers", () => {
-    expect([FREE_FIRST_DAY, FREE_DAILY, PREMIUM_FREE_FIRST_DAY, PREMIUM_FREE_DAILY, FINALS_DAILY]).toEqual([20, 5, 8, 2, 40]);
+    expect([FREE_FIRST_DAY, FREE_DAILY, PREMIUM_FREE_FIRST_DAY, PREMIUM_FREE_DAILY, FINALS_DAILY]).toEqual([20, 10, 8, 2, 40]);
+    expect(PREMIUM_COURSES_ON).toBe(false); // owner, 22 Nov 2026: every course open within the daily limit
     expect([FINALS_PRICE_EARLY, FINALS_PRICE]).toEqual([3000, 5000]);
   });
 });
@@ -52,11 +54,11 @@ describe("Lagos days", () => {
 });
 
 describe("limits", () => {
-  it("Free: 20 on day one, then 5; premium 8 then 2 (inside the daily cap); 1 summary; no quiz", () => {
+  it("Free: 20 on day one, then 10; premium courses have no own limit (switched off); 1 summary; no quiz", () => {
     expect(limitsFor("free", { createdAt: CREATED, now: DAY1, premium: false })).toEqual({ plan: "free", daily: 20, course: null, summaries: 1, quiz: false });
-    expect(limitsFor("free", { createdAt: CREATED, now: DAY1, premium: true })).toMatchObject({ daily: 20, course: 8 });
-    expect(limitsFor("free", { createdAt: CREATED, now: DAY2, premium: false })).toMatchObject({ daily: 5, course: null });
-    expect(limitsFor("free", { createdAt: CREATED, now: DAY2, premium: true })).toMatchObject({ daily: 5, course: 2 });
+    expect(limitsFor("free", { createdAt: CREATED, now: DAY1, premium: true })).toMatchObject({ daily: 20, course: null });
+    expect(limitsFor("free", { createdAt: CREATED, now: DAY2, premium: false })).toMatchObject({ daily: 10, course: null });
+    expect(limitsFor("free", { createdAt: CREATED, now: DAY2, premium: true })).toMatchObject({ daily: 10, course: null });
   });
 
   it("Finals: 40 a day, no premium limit, unlimited summaries, quiz", () => {
@@ -188,25 +190,22 @@ async function sendUntilRefused(db: never, now: Date, premium: boolean, courseId
 }
 
 describe("server gate (admitChatTurn)", () => {
-  it("Free day one: 20 messages; premium course 8, inside the 20", async () => {
+  it("Free day one: 20 messages, all of them in a premium course if the student likes", async () => {
     const { db, t } = fakeDb({ createdAt: CREATED });
     const premium = await sendUntilRefused(db, DAY1, true, "premium");
-    expect(premium.n).toBe(8);
-    expect(premium.refusal).toMatchObject({ status: 429, body: { code: "premium_cap", resets_at: "2026-11-16T23:00:00.000Z" } });
-    const rest = await sendUntilRefused(db, DAY1, false, "other");
-    expect(rest.n).toBe(12);
-    expect(rest.refusal.body.code).toBe("daily_cap");
-    expect(t.limit_events.map((e) => e.feature)).toEqual(["premium_cap", "daily_cap"]);
+    expect(premium.n).toBe(20);
+    expect(premium.refusal).toMatchObject({ status: 429, body: { code: "daily_cap", resets_at: "2026-11-16T23:00:00.000Z" } });
+    expect(t.limit_events.map((e) => e.feature)).toEqual(["daily_cap"]);
     expect(t.limit_events[0]).toMatchObject({ user_id: "u1", plan: "free", course_id: "premium" });
   });
 
-  it("Free day two: 5 messages, premium 2 inside them; resets at Lagos midnight", async () => {
+  it("Free day two: 10 messages in any courses; resets at Lagos midnight", async () => {
     const { db } = fakeDb({ createdAt: CREATED });
-    expect((await sendUntilRefused(db, DAY2, true, "premium")).n).toBe(2);
-    expect((await sendUntilRefused(db, DAY2, false, "other")).n).toBe(3);
+    expect((await sendUntilRefused(db, DAY2, true, "premium")).n).toBe(10);
+    expect((await sendUntilRefused(db, DAY2, false, "other")).n).toBe(0);
     // 23:59 Lagos on day two: still refused. 00:00 on day three: a new allowance.
     expect((await admit(db, "hi", at("2026-11-17T23:59:59+01:00"))).ok).toBe(false);
-    expect((await sendUntilRefused(db, at("2026-11-18T00:00:00+01:00"), false)).n).toBe(5);
+    expect((await sendUntilRefused(db, at("2026-11-18T00:00:00+01:00"), false)).n).toBe(10);
   });
 
   it("Free: quiz refused before anything is counted", async () => {
@@ -255,6 +254,6 @@ describe("server gate (admitChatTurn)", () => {
     const { db } = fakeDb({ createdAt: CREATED, entitlements: ents });
     const after = new Date(PLAN_END_DATE.getTime() + 60_000);
     expect(await admit(db, "Quiz me", after)).toMatchObject({ ok: false, refusal: { body: { code: "quiz", plan: "free" } } });
-    expect((await sendUntilRefused(db, after, false)).n).toBe(5);
+    expect((await sendUntilRefused(db, after, false)).n).toBe(10);
   });
 });

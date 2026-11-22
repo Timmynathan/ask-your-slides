@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FinalsCta } from "@/components/plans/get-finals-link";
 import { PlanCards } from "@/components/plans/plan-cards";
 import type { PlanOffer } from "@/lib/plans/offer";
+import { PREMIUM_COURSES_ON } from "@/lib/plans/config";
 import { Reveal } from "./reveal";
 
 const pill = "inline-flex w-full items-center justify-center rounded-full px-6 py-3.5 text-[15px] font-medium transition active:scale-[0.98]";
@@ -31,7 +32,7 @@ export function PlansSection({ offer }: { offer: PlanOffer }) {
             }
           />
           <p className="mt-6 text-center text-sm text-muted">One-time payment. No subscription. Pay by bank transfer.</p>
-          <p className="mt-1 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
+          {PREMIUM_COURSES_ON && <p className="mt-1 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>}
         </Reveal>
       </div>
     </section>

@@ -8,8 +8,12 @@ export const TIME_ZONE = "Africa/Lagos";
 // ── Free (forever) ─────────────────────────────────────────────
 /** Messages on the account's first Lagos day. */
 export const FREE_FIRST_DAY = 20;
-/** Messages a day after that. */
-export const FREE_DAILY = 5;
+/** Messages a day after that (owner, 22 Nov 2026: 10, was 5). */
+export const FREE_DAILY = 10;
+/** Premium courses (a small per-course allowance on Free) are off (owner, 22 Nov 2026: students want to
+ *  study their heaviest courses most, so every course is open within the daily limit). The course.yaml
+ *  `premium` flags stay in the data; set this to true to bring the per-course limit back. */
+export const PREMIUM_COURSES_ON = false;
 /** Questions per premium course on the first day (inside the daily cap). */
 export const PREMIUM_FREE_FIRST_DAY = 8;
 /** Questions per premium course a day after that (inside the daily cap). */
@@ -25,7 +29,7 @@ export const FREE_PRACTICE_PER_COURSE = 0;
 export const FREE_PAST_PROGRAMMES: readonly string[] = ["mass-communication", "mechanical-engineering"];
 
 // ── Finals (one-time payment) ───────────────────────────────────
-/** Messages a day. No premium-course limit, unlimited summaries, quiz mode. */
+/** Messages a day. Unlimited summaries, quiz mode. */
 export const FINALS_DAILY = 40;
 /** Naira, before PRICE_CHANGE_DATE. */
 export const FINALS_PRICE_EARLY = 3_000;

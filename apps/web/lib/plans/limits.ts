@@ -7,6 +7,7 @@ import {
   FREE_DAILY,
   FREE_FIRST_DAY,
   FREE_SUMMARIES,
+  PREMIUM_COURSES_ON,
   PREMIUM_FREE_DAILY,
   PREMIUM_FREE_FIRST_DAY,
   PRICE_CHANGE_DATE,
@@ -55,7 +56,7 @@ export function limitsFor(plan: PlanId, opts: { createdAt: Date; now: Date; prem
   return {
     plan,
     daily: first ? FREE_FIRST_DAY : FREE_DAILY,
-    course: opts.premium ? (first ? PREMIUM_FREE_FIRST_DAY : PREMIUM_FREE_DAILY) : null,
+    course: PREMIUM_COURSES_ON && opts.premium ? (first ? PREMIUM_FREE_FIRST_DAY : PREMIUM_FREE_DAILY) : null,
     summaries: FREE_SUMMARIES,
     quiz: false,
   };

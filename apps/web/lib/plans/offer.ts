@@ -11,6 +11,7 @@ import {
   FREE_PRACTICE_PER_COURSE,
   FREE_SUMMARIES,
   PLAN_END_DATE,
+  PREMIUM_COURSES_ON,
   PREMIUM_FREE_DAILY,
   PREMIUM_FREE_FIRST_DAY,
   PRICE_CHANGE_DATE,
@@ -80,7 +81,7 @@ export function comparisonRows(o: PlanOffer, opts: { freePast?: boolean } = {}):
   const rows = [
     { label: "Daily messages", free: `${o.free.firstDay} on day one, then ${o.free.daily} a day`, finals: `${o.finals.daily} a day` },
     { label: "All your courses", free: true, finals: true },
-    { label: "Premium courses", free: `${o.free.premiumDaily} questions a day`, finals: "Unlimited" },
+    ...(PREMIUM_COURSES_ON ? [{ label: "Premium courses", free: `${o.free.premiumDaily} questions a day`, finals: "Unlimited" }] : []),
     { label: "Answers cite your actual slides", free: true, finals: true },
     { label: "Summaries", free: String(o.free.summaries), finals: "Unlimited" },
     { label: "Quiz mode", free: false, finals: true },

@@ -63,21 +63,18 @@ describe("landing Plans section", () => {
       "Valid until your last paper",
       "All your courses, no limits",
       "Unlimited summaries and quiz mode",
-      "20 messages on your first day, then 5 a day",
-      "Premium courses: 2 questions a day",
+      "20 messages on your first day, then 10 a day",
       "1 summary",
       "Start free",
       "Lock in Finals · ₦3,000",
       "Goes up to ₦5,000 after 27 Nov",
       "One-time payment. No subscription. Pay by bank transfer.",
-      "Premium courses are the heaviest courses in your programme.",
     ]) {
       expect(t, s).toContain(s);
     }
     expect(comparisonRows(planOffer(BEFORE))).toEqual([
-      { label: "Daily messages", free: "20 on day one, then 5 a day", finals: "40 a day" },
+      { label: "Daily messages", free: "20 on day one, then 10 a day", finals: "40 a day" },
       { label: "All your courses", free: true, finals: true },
-      { label: "Premium courses", free: "2 questions a day", finals: "Unlimited" },
       { label: "Answers cite your actual slides", free: true, finals: true },
       { label: "Summaries", free: "1", finals: "Unlimited" },
       { label: "Quiz mode", free: false, finals: true },

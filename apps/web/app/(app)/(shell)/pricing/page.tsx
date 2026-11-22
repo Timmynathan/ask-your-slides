@@ -8,7 +8,7 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanTable } from "@/components/plans/plan-table";
 import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
-import { EXAMS_START, FREE_PAST_PROGRAMMES, TIME_ZONE } from "@/lib/plans/config";
+import { EXAMS_START, FREE_PAST_PROGRAMMES, PREMIUM_COURSES_ON, TIME_ZONE } from "@/lib/plans/config";
 import { CalendarDays } from "lucide-react";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
@@ -85,7 +85,7 @@ async function Loaded() {
               )
             }
           />
-          <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>
+          {PREMIUM_COURSES_ON && <p className="mt-4 text-center text-sm text-muted">Premium courses are the heaviest courses in your programme.</p>}
           {state.plan === "free" && (
             <div className="mt-4 flex justify-center">
               <PromoCodeToCourses />
