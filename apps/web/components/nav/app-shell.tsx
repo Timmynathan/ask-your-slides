@@ -16,7 +16,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ASK_ANYTHING_ON } from "@/lib/ask-feature";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { History, House, Menu, MessageCircle, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
+import { History, House, Menu, MessageCircle, PanelLeft, PencilLine, X, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { useClickAway } from "@/lib/ui/use-click-away";
@@ -43,7 +43,6 @@ const ShellMenu = createContext<{ open(): void; tip: boolean; upload(): void } |
 /** Phones inside a course: My courses and Upload at the top of the course's topics drawer, so one
  *  menu holds everything (tablets up have the rail and panel instead). */
 export function ShellNavMini({ onNavigate }: { onNavigate?(): void }) {
-  const menu = useContext(ShellMenu);
   const link = "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[14.5px] text-white/80 transition hover:bg-white/10 hover:text-white";
   return (
     <div className="border-b border-white/10 px-2 pb-3 pt-3">
@@ -51,19 +50,7 @@ export function ShellNavMini({ onNavigate }: { onNavigate?(): void }) {
         <House size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
         My courses
       </Link>
-      {menu && (
-        <button
-          type="button"
-          onClick={() => {
-            onNavigate?.();
-            menu.upload();
-          }}
-          className={link}
-        >
-          <Upload size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
-          Upload
-        </button>
-      )}
+      {/* Upload removed (owner, 22 Nov 2026): the chat box's + covers it. menu.upload() still opens the dialog. */}
     </div>
   );
 }
@@ -240,8 +227,8 @@ export function AppShell({
       seen = !!localStorage.getItem(`${TIP_KEY}:${user.email.toLowerCase()}`);
     } catch {}
     if (seen || !window.matchMedia("(max-width: 47.98rem)").matches) return;
-    // After the study-partner hint (4 s), so the two never arrive together (owner, 22 Nov 2026).
-    const t = setTimeout(() => setTip(true), 9000);
+    // Quickly (owner, 22 Nov 2026: students may tap a course within seconds); the partner hint follows at 4 s.
+    const t = setTimeout(() => setTip(true), 1500);
     return () => clearTimeout(t);
   }, [user.email]);
   // Any tap hides the tip (a tap on the menu button also opens the menu).
@@ -380,16 +367,7 @@ export function AppShell({
             <p className="truncate pb-4 pl-5 pr-14 text-[15px] font-medium leading-9" title={panelTitle}>
               {panelTitle}
             </p>
-            <div className="px-3">
-              <button
-                type="button"
-                onClick={() => setUploading(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-white/12 py-2 text-[14px] font-medium text-white transition hover:bg-white/20 active:scale-[0.98]"
-              >
-                <Upload size={17} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
-                Upload
-              </button>
-            </div>
+            {/* Upload button removed (owner, 22 Nov 2026): the chat box's + covers it. */}
             {courseMenu ? (
               <div className="mt-3 min-h-0 flex-1 overflow-hidden border-t border-white/10">{courseMenu.body}</div>
             ) : (

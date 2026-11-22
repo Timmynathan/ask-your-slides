@@ -6,25 +6,27 @@
 //
 //   lectures  the course panel's list of lectures (and past questions)
 //   chatbox   the chat box: ask anything, + to send a photo
-//   sources   the slides and notes (the Sources column, or its button when Sources is closed: click it)
-//   rail      the slim bar: hover for the names, Dashboard and recent chats
+//   sources   the slides: when Sources is closed, a pointer "clicks" its icon and Sources opens by
+//             itself; Next closes it again (owner, 22 Nov 2026: show it, don't just say it)
+// The text is a short title and one plain line each; the old "rail" step was dropped (students know a
+// sidebar).
 //
 // Shown once per account in this browser. A step whose area isn't on screen is skipped.
 import { useCallback, useEffect, useState } from "react";
+import { MousePointer2 } from "lucide-react";
 
-const STEPS = ["lectures", "chatbox", "sources", "rail"] as const;
+const STEPS = ["lectures", "chatbox", "sources"] as const;
 export type LaptopStep = (typeof STEPS)[number];
 const KEY = "ays-laptop-tour-seen";
 const keyFor = (account: string) => `${KEY}:${account.toLowerCase()}`;
 
 const TIPS: Record<LaptopStep, { title: string; body: string }> = {
-  lectures: { title: "Your lectures", body: "Pick a lecture to focus the chat on it, or stay on Whole course. Past questions from real PAU papers are at the top." },
-  chatbox: { title: "Ask anything", body: "Ask in your own words. Tap + to send a photo of a question, a diagram or your notes." },
-  sources: { title: "Your slides", body: "This course's slides and notes are here. Every answer links to the exact slide it came from." },
-  rail: { title: "Getting around", body: "Hover over this bar to see its names: your dashboard, recent chats, feedback and your account." },
+  lectures: { title: "Your PAU lectures", body: "Pick a lecture to focus the chat on it, or stay on Whole course. Past questions from real PAU papers are at the top." },
+  chatbox: { title: "Ask anything", body: "Type your question here. Tap + to add a photo." },
+  sources: { title: "Your slides", body: "All your lecture slides live here." },
 };
 
-const SOURCES_BUTTON = { title: "Your PAU slides", body: "Click this icon to open your lecture slides and notes for this course. Every answer links to the exact slide it came from." };
+const SOURCES_BUTTON = { title: "Your slides", body: "Your lecture slides open from here." };
 
 /** The step's element: the first match that is actually on screen. */
 function target(step: LaptopStep): HTMLElement | null {
@@ -72,8 +74,17 @@ export function useLaptopTour(account: string, enabled: boolean) {
   return { step, next, finish };
 }
 
-export function LaptopTour({ step, onNext, onSkip }: { step: LaptopStep | null; onNext(): void; onSkip(): void }) {
+export function LaptopTour({ step, onNext, onSkip, onCloseSources }: {
+  step: LaptopStep | null;
+  onNext(): void;
+  onSkip(): void;
+  /** Close the Sources the demo opened, when the student moves on. */
+  onCloseSources(): void;
+}) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  // The slides step, when Sources is closed: a pointer glides to the icon and clicks it (owner, 22 Nov
+  // 2026), Sources opens, the tip moves onto it; moving on closes it again.
+  const [demo, setDemo] = useState<"idle" | "pointing" | "clicking" | "opened">("idle");
 
   useEffect(() => {
     if (!step) return;
@@ -83,37 +94,65 @@ export function LaptopTour({ step, onNext, onSkip }: { step: LaptopStep | null; 
       frame = requestAnimationFrame(() => setRect(target(step)?.getBoundingClientRect() ?? null));
     };
     measure();
+    const again = setTimeout(measure, 360); // after Sources has slid open
     window.addEventListener("resize", measure);
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onSkip();
     window.addEventListener("keydown", onKey);
     return () => {
       cancelAnimationFrame(frame);
+      clearTimeout(again);
       window.removeEventListener("resize", measure);
       window.removeEventListener("keydown", onKey);
     };
-  }, [step, onSkip]);
+  }, [step, onSkip, demo]);
+
+  // Run the pointer demo once, when the slides step starts on the closed icon.
+  useEffect(() => {
+    if (step !== "sources") return;
+    const el = target("sources");
+    if (el?.tagName !== "BUTTON") return;
+    let reduce = false;
+    try {
+      reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {}
+    const timers = [
+      setTimeout(() => setDemo("pointing"), 0),
+      setTimeout(() => setDemo("clicking"), reduce ? 0 : 1100),
+      setTimeout(() => {
+        target("sources")?.click();
+        setDemo("opened");
+      }, reduce ? 50 : 1450),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [step]);
+
+  const leaveSources = (then: () => void) => {
+    if (demo === "opened") onCloseSources();
+    setDemo("idle");
+    then();
+  };
 
   if (!step || !rect) return null;
-  // Sources closed (Whole course): the icon is lit and is the one thing that works. Clicking it opens
-  // the student's slides and moves the tour on (owner, 22 Nov 2026).
   const el = target(step);
-  const press = el?.tagName === "BUTTON" ? el : null;
+  const press = step === "sources" && demo !== "opened" && el?.tagName === "BUTTON" ? el : null;
   const tip = step === "sources" && press ? SOURCES_BUTTON : TIPS[step];
   const index = STEPS.indexOf(step);
   const last = !STEPS.slice(index + 1).some((s) => target(s));
   const pad = 6;
   const hole = { top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 };
-  const W = 300;
+  const W = 280;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   // The note goes beside the lit area: to its right, else its left, else above it.
-  const clampTop = (t: number) => Math.min(Math.max(16, t), vh - 220);
+  const clampTop = (t: number) => Math.min(Math.max(16, t), vh - 200);
   const pos =
     hole.left + hole.width + 16 + W < vw
       ? { left: hole.left + hole.width + 16, top: clampTop(hole.top + 12) }
       : hole.left - 16 - W > 0
         ? { left: hole.left - 16 - W, top: clampTop(hole.top + 12) }
-        : { left: Math.min(Math.max(16, hole.left + hole.width / 2 - W / 2), vw - W - 16), top: Math.max(16, hole.top - 200) };
+        : { left: Math.min(Math.max(16, hole.left + hole.width / 2 - W / 2), vw - W - 16), top: Math.max(16, hole.top - 180) };
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
 
   return (
     <>
@@ -125,11 +164,20 @@ export function LaptopTour({ step, onNext, onSkip }: { step: LaptopStep | null; 
           aria-label={press.getAttribute("aria-label") ?? tip.title}
           onClick={() => {
             press.click();
-            onNext();
+            setDemo("opened");
           }}
           className="fixed z-[71] cursor-pointer rounded-2xl"
           style={{ top: hole.top, left: hole.left, width: hole.width, height: hole.height }}
         />
+      )}
+      {press && (demo === "pointing" || demo === "clicking") && (
+        // The pointer glides in from below-left, then presses (a ripple) and the icon opens Sources.
+        <span aria-hidden className="pointer-events-none fixed z-[72]" style={{ left: cx, top: cy }}>
+          <span className={`tour-pointer absolute ${demo === "clicking" ? "tour-pointer-press" : ""}`}>
+            <MousePointer2 size={26} absoluteStrokeWidth strokeWidth={1.6} className="fill-white text-pau-900 drop-shadow" />
+          </span>
+          {demo === "clicking" && <span className="tour-ripple absolute -left-5 -top-5 h-10 w-10 rounded-full border-2 border-white" />}
+        </span>
       )}
       <div
         aria-hidden
@@ -152,14 +200,14 @@ export function LaptopTour({ step, onNext, onSkip }: { step: LaptopStep | null; 
         <div className="mt-4 flex items-center gap-2">
           <button
             type="button"
-            onClick={onNext}
+            onClick={() => (step === "sources" ? leaveSources(onNext) : onNext())}
             autoFocus
             className="rounded-full bg-white px-4 py-1.5 text-[13.5px] font-medium text-pau-900 transition hover:opacity-90 active:scale-95"
           >
             {last ? "Done" : "Next"}
           </button>
           {!last && (
-            <button type="button" onClick={onSkip} className="px-2 text-[13px] text-white/70 hover:text-white">
+            <button type="button" onClick={() => (step === "sources" ? leaveSources(onSkip) : onSkip())} className="px-2 text-[13px] text-white/70 hover:text-white">
               Skip tour
             </button>
           )}

@@ -438,7 +438,16 @@ export function Workspace(data: WorkspaceData) {
       )}
 
       <StudyTour step={tour.step} onSkip={tour.skip} onGotIt={(step) => (step === "drawer" ? closeDrawer() : closeSources())} />
-      <LaptopTour step={laptopTour.step} onNext={laptopTour.next} onSkip={laptopTour.finish} />
+      <LaptopTour
+        step={laptopTour.step}
+        onNext={laptopTour.next}
+        onSkip={laptopTour.finish}
+        onCloseSources={() => {
+          if (topicId === null) setWholeSourcesOpen(false);
+          else setSourcesClosed(true);
+          setSourcesOpen(false);
+        }}
+      />
       {sheet && <PricingSheet code={sheet.code} resetsAt={sheet.resetsAt} offer={data.plan.offer} onClose={closeSheet} />}
     </div>
   );
