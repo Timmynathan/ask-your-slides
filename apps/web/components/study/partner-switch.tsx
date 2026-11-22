@@ -3,7 +3,7 @@
 // Study partner switch (top bar of My courses and of every course). A pill with the partner's face,
 // name and a swap icon, so it reads as a control, not decoration; the first time a student sees it,
 // a small hint says what it does (remembered per browser). Opens the partner picker.
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Mascot } from "@/components/mascot/mascot";
 import { PARTNERS, type PartnerId } from "@/lib/partners";
 import { PartnerPicker } from "./partner-picker";
@@ -22,6 +22,8 @@ function subscribe(onChange: () => void) {
 }
 // Remembered per account (its id) on this browser, so a new account still gets the hint once:
 // a second student on a shared laptop, or the same email deleted and signed up again.
+/** The study-partner hint waits this long on a student's first visit. */
+const HINT_DELAY_MS = 4000;
 const keyFor = (account: string) => `${HINT_KEY}:${account.toLowerCase()}`;
 function readSeen(account: string): boolean {
   try {
@@ -51,7 +53,14 @@ export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account,
   const p = PARTNERS[partner];
   // Seen before? Read from this browser; the server (no storage) renders no hint.
   const seen = useSyncExternalStore(subscribe, () => readSeen(account), () => true);
-  const hint = !seen && !quiet;
+  // A few seconds after arriving, not straight away (owner, 22 Nov 2026: instant felt like too much).
+  const [due, setDue] = useState(false);
+  useEffect(() => {
+    if (seen) return;
+    const t = setTimeout(() => setDue(true), HINT_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [seen]);
+  const hint = !seen && !quiet && due;
   const dismissHint = () => markSeen(account);
 
   return (

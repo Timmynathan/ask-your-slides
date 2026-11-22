@@ -240,7 +240,8 @@ export function AppShell({
       seen = !!localStorage.getItem(`${TIP_KEY}:${user.email.toLowerCase()}`);
     } catch {}
     if (seen || !window.matchMedia("(max-width: 47.98rem)").matches) return;
-    const t = setTimeout(() => setTip(true), 1200);
+    // After the study-partner hint (4 s), so the two never arrive together (owner, 22 Nov 2026).
+    const t = setTimeout(() => setTip(true), 9000);
     return () => clearTimeout(t);
   }, [user.email]);
   // Any tap hides the tip (a tap on the menu button also opens the menu).
