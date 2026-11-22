@@ -16,7 +16,7 @@ import testimonials from "@/content/testimonials.json";
 type Quote = { text: string; name: string; detail: string; photo?: string; initial?: string };
 // Real students' words, edited in content/testimonials.json (data, not code: names stay out of the app's code).
 const QUOTES = testimonials as Quote[];
-const ROTATE_MS = 6000;
+const ROTATE_MS = 2500;
 
 export function PlanStep({ offer, freePast, onBack, onFree, promo }: {
   offer: PlanOffer & { paymentsOpen?: boolean };
