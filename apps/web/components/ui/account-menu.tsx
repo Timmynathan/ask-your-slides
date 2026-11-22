@@ -7,17 +7,16 @@
 // workspace and the admin page.
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
+import { CircleHelp, CreditCard, PencilLine, Settings, UserRound, type LucideIcon } from "lucide-react";
 import { FeedbackDialog } from "@/components/nav/feedback-dialog";
 import { WHATSAPP_NUMBER } from "@/lib/plans/config";
 import { useClickAway } from "@/lib/ui/use-click-away";
 
-function Row({ icon, children, href, onClick, external = false }: { icon: ReactNode; children: ReactNode; href?: string; onClick?(): void; external?: boolean }) {
+function Row({ icon: Icon, children, href, onClick, external = false }: { icon: LucideIcon; children: ReactNode; href?: string; onClick?(): void; external?: boolean }) {
   const cls = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] text-ink transition hover:bg-sunken";
   const inner = (
     <>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink" aria-hidden>
-        {icon}
-      </svg>
+      <Icon size={20} absoluteStrokeWidth strokeWidth={1.5} className="shrink-0 text-ink" aria-hidden />
       {children}
     </>
   );
@@ -66,18 +65,13 @@ export function AccountMenu({ user, side = false, menuClassName }: { user: { ema
         <div className={`pop-in absolute z-30 w-64 rounded-2xl bg-card p-2 text-sm shadow-lg ring-1 ring-line ${menuClassName ?? (side ? "bottom-0 left-14" : "right-0 top-12")}`}>
           {/* No name or email at the top (owner, 21 Nov 2026): straight to the options. */}
           <div>
-            <Row href="/profile" onClick={close} icon={<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20a7.5 7.5 0 0 1 15 0" />}>
+            <Row href="/profile" onClick={close} icon={UserRound}>
               Your profile
             </Row>
             <Row
               href="/settings"
               onClick={close}
-              icon={
-                <>
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-                </>
-              }
+              icon={Settings}
             >
               Settings
             </Row>
@@ -86,23 +80,18 @@ export function AccountMenu({ user, side = false, menuClassName }: { user: { ema
                 close();
                 setFeedback(true);
               }}
-              icon={<path d="M14.5 4.5l5 5L9 20H4v-5L14.5 4.5zM12.5 6.5l5 5" />}
+              icon={PencilLine}
             >
               Give us feedback
             </Row>
-            <Row href="/pricing" onClick={close} icon={<path d="M3.5 6.5h17v11h-17zM3.5 10h17M7 14.5h4" />}>
+            <Row href="/pricing" onClick={close} icon={CreditCard}>
               Plans and pricing
             </Row>
             <Row
               href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi, I need help with Ask Your Slides.")}`}
               external
               onClick={close}
-              icon={
-                <>
-                  <circle cx="12" cy="12" r="8.5" />
-                  <path d="M9.6 9.5a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5v.3M12 16.8v.2" />
-                </>
-              }
+              icon={CircleHelp}
             >
               Support
             </Row>

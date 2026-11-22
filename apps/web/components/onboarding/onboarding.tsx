@@ -50,7 +50,8 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
   // The partner names the chosen programme's department (from the data, never hard-coded).
   const department = choices.find((c) => c.programme === studying.programme)?.department ?? null;
   const [heardFrom, setHeardFrom] = useState<HeardFrom | null>(null);
-  const ready = !!studying.programme && !!studying.level;
+  // A name is required (owner, 22 Nov 2026): it greets the student and shows on the leaderboard.
+  const ready = name.trim().length > 0 && !!studying.programme && !!studying.level;
   // Zara (the all-rounder) is pre-selected so a student can just continue: least friction.
   const [partner, setPartner] = useState<PartnerId | null>(initialPartner ?? DEFAULT_PARTNER);
   const [busy, setBusy] = useState(false);
@@ -78,7 +79,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
   async function submitName(e: FormEvent) {
     e.preventDefault();
     if (!ready) return;
-    if (await save({ display_name: name.trim() || null, programme: studying.programme, level: studying.level })) setStep("heard");
+    if (await save({ display_name: name.trim(), programme: studying.programme, level: studying.level })) setStep("heard");
   }
 
   function pickHeardFrom(id: HeardFrom) {
@@ -137,6 +138,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               autoComplete="given-name"
               placeholder="e.g. Tolu"
               aria-label="Your name"
+              required
               className="mt-8 w-full rounded-full border border-line-strong bg-card px-6 py-3.5 text-center text-lg text-ink outline-none placeholder:text-muted/60 focus:border-brand focus:ring-4 focus:ring-pau-200"
             />
             <div className="mt-3">

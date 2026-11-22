@@ -55,14 +55,16 @@ export function RecentLectures({ lectures }: { lectures: RecentLecture[] }) {
   );
 }
 
-export function UpgradeCard({ price }: { price: number }) {
+export function UpgradeCard({ price, freePast = false }: { price: number; /** Past questions are already free in this programme. */ freePast?: boolean }) {
   return (
     <div className="rounded-3xl bg-[#BBEEF0] p-6 text-brand">
       <h2 className="flex items-center gap-2.5 font-heading text-[21px] font-normal">
         <CircleArrowUp {...icon} size={22} />
         Upgrade to Finals
       </h2>
-      <p className="mt-3 text-[14px] leading-relaxed text-brand/80">More questions every day, quiz mode, and past questions with worked answers, until your last paper.</p>
+      <p className="mt-3 text-[14px] leading-relaxed text-brand/80">
+        {freePast ? "More questions every day, unlimited summaries and quiz mode, until your last paper." : "More questions every day, quiz mode, and past questions with worked answers, until your last paper."}
+      </p>
       <Link href="/pricing" className="mt-5 flex h-11 items-center justify-center rounded-full bg-brand text-[15px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]">
         Upgrade for {naira(price)}
       </Link>

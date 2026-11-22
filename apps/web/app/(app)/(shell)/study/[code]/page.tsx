@@ -102,6 +102,7 @@ async function Loaded({ params, searchParams }: Props) {
           premiumLimited,
           binding: premiumLimited && plan.left < dailyLeft ? "premium_cap" : "daily_cap",
           resetsAt: nextLagosMidnight(now).toISOString(),
+          summariesLeft: plan.limits.summaries === null ? null : Math.max(0, plan.limits.summaries - plan.summariesUsed),
           offer: { ...planOffer(now), paymentsOpen: paymentsOpen() },
         }}
         pulse={{ questions: questionCount ?? 0, answered: !!pulseRow }}

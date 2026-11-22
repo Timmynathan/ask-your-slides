@@ -14,6 +14,7 @@ import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
 import { SlidePreview } from "./slide-preview";
+import { FileText, Menu, type LucideIcon } from "lucide-react";
 import { SourcesPanel } from "./sources-panel";
 import { ResizeHandle } from "./resize-handle";
 import { StudyTour, useStudyTour } from "./study-tour";
@@ -237,9 +238,7 @@ export function Workspace(data: WorkspaceData) {
         {/* Top bar (owner, 21 Nov 2026): no course name, tags or counts (the sidebar names the course);
             only the menu on phones, past questions on phones, Sources below xl and the study partner. */}
         <header className="flex h-14 shrink-0 items-center gap-1 px-3 sm:h-16 sm:gap-2 sm:px-5">
-          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </IconButton>
+          <IconButton label="Open topics" onClick={openDrawer} tour="menu" className="md:hidden" icon={Menu} />
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             {/* Phones: the Topics panel is a drawer, so the past questions get a bright button here. */}
             {!past && PAST_QUESTIONS_LIVE && data.past.total > 0 && (
@@ -252,10 +251,7 @@ export function Workspace(data: WorkspaceData) {
                 Past questions
               </button>
             )}
-            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className={sourcesHidden && !preview && !past ? "" : "xl:hidden"}>
-              <path d="M7 3.5h7l4 4V20.5H7z" />
-              <path d="M14 3.5v4h4M10 12h5M10 15.5h5" />
-            </IconButton>
+            <IconButton label="Sources" onClick={openSources} tour="sources" laptopTour="sources" className={sourcesHidden && !preview && !past ? "" : "xl:hidden"} icon={FileText} />
             <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={data.user.id} quiet={tour.step !== null || laptopTour.step !== null} />
           </div>
         </header>
@@ -284,7 +280,7 @@ export function Workspace(data: WorkspaceData) {
           {asked && !past && (
             <p className="mx-auto mt-1 w-full max-w-3xl px-4 text-[13px] text-muted lg:px-8">
               Answering in {courseName(course)}.{" "}
-              <a href={`/dashboard?ask=${encodeURIComponent(asked)}&pick=1`} className="font-medium text-brand underline-offset-2 hover:underline">
+              <a href={`/chat?ask=${encodeURIComponent(asked)}&pick=1`} className="font-medium text-brand underline-offset-2 hover:underline">
                 Wrong course?
               </a>
             </p>
@@ -329,6 +325,7 @@ export function Workspace(data: WorkspaceData) {
               onQuestion={onQuestion}
               onPulseDone={onPulseDone}
               plan={data.plan.id}
+              summariesLeft={data.plan.summariesLeft}
               premiumLimited={data.plan.premiumLimited}
               capCode={data.plan.binding}
               resetsAt={data.plan.resetsAt}
@@ -429,7 +426,7 @@ export function Workspace(data: WorkspaceData) {
 }
 
 /** Round, borderless icon button with a line icon (24px grid), as on My courses. */
-function IconButton({ label, onClick, className = "", tour, laptopTour, children }: { label: string; onClick(): void; className?: string; tour?: string; laptopTour?: string; children: React.ReactNode }) {
+function IconButton({ label, onClick, className = "", tour, laptopTour, icon: Icon }: { label: string; onClick(): void; className?: string; tour?: string; laptopTour?: string; icon: LucideIcon }) {
   return (
     <button
       type="button"
@@ -440,9 +437,7 @@ function IconButton({ label, onClick, className = "", tour, laptopTour, children
       title={label}
       className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-ink transition hover:bg-sunken active:scale-90 ${className}`}
     >
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        {children}
-      </svg>
+      <Icon size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
     </button>
   );
 }

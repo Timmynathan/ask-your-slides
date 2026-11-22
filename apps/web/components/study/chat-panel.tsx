@@ -18,7 +18,7 @@ import { useDictation } from "@/lib/ui/use-dictation";
 import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
 import { Typewriter } from "@/components/ui/typewriter";
-import { asksForQuiz } from "@/lib/plans/limits";
+import { asksForQuiz, asksForSummary } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
 import { BookOpen, FileText, GraduationCap, Lightbulb, MessageCircleQuestion, Plus, X, type LucideIcon } from "lucide-react";
@@ -60,6 +60,8 @@ interface Props {
   onPulseDone(answered: boolean): void;
   /** PRD F12. */
   plan: "free" | "finals";
+  /** Summaries still allowed (Free); null = no limit. */
+  summariesLeft: number | null;
   /** Free + premium course: "free questions" wording. */
   premiumLimited: boolean;
   /** The limit already reached, if the student arrives capped. */
@@ -130,6 +132,7 @@ export function ChatPanel({
   onQuestion,
   onPulseDone,
   plan,
+  summariesLeft,
   premiumLimited,
   capCode,
   resetsAt,
@@ -137,6 +140,7 @@ export function ChatPanel({
 }: Props) {
   const p = PARTNERS[partner];
   const conversationId = useRef<string | null>(chatId);
+  const summariesAsked = useRef(0); // summaries asked for in this chat panel
   const [loadingHistory, setLoadingHistory] = useState(!!chatId);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [left, setLeft] = useState(remaining);
@@ -326,6 +330,13 @@ export function ChatPanel({
       onLimit("quiz", null);
       return;
     }
+    // Same for a summary once the free ones are used up (counted here too, for this visit).
+    const wantsSummary = asksForSummary(text);
+    if (wantsSummary && summariesLeft !== null && summariesLeft - summariesAsked.current <= 0) {
+      onLimit("summary", null);
+      return;
+    }
+    if (wantsSummary) summariesAsked.current++;
     if (capped) {
       setCapNotes((n) => [...n, { id: `cap-${Date.now()}`, text, reply: capReply(lastCap.code, lastCap.resetsAt, Date.now()) }]);
       setInput("");

@@ -75,7 +75,8 @@ export function timeLeft(until: string, now: number): string | null {
 }
 
 /** One row per feature, Free vs Finals (landing comparison, pricing page). Only features that exist. */
-export function comparisonRows(o: PlanOffer): { label: string; free: string | boolean; finals: string | boolean }[] {
+/** `freePast`: the student's programme has its past questions open to everyone (FREE_PAST_PROGRAMMES). */
+export function comparisonRows(o: PlanOffer, opts: { freePast?: boolean } = {}): { label: string; free: string | boolean; finals: string | boolean }[] {
   const rows = [
     { label: "Daily messages", free: `${o.free.firstDay} on day one, then ${o.free.daily} a day`, finals: `${o.finals.daily} a day` },
     { label: "All your courses", free: true, finals: true },
@@ -92,10 +93,10 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     ...rows,
     {
       label: "Past questions",
-      free: o.free.practicePerCourse > 0 ? `${o.free.practicePerCourse} practice question${o.free.practicePerCourse === 1 ? "" : "s"} per course` : false,
+      free: opts.freePast ? "Every past question" : o.free.practicePerCourse > 0 ? `${o.free.practicePerCourse} practice question${o.free.practicePerCourse === 1 ? "" : "s"} per course` : false,
       finals: "Every past question",
     },
-    { label: "Model answers and marked practice", free: false, finals: true },
+    { label: "Model answers and marked practice", free: !!opts.freePast, finals: true },
   ];
 }
 

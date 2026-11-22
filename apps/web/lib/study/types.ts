@@ -67,6 +67,8 @@ export interface WorkspaceData {
     binding: "daily_cap" | "premium_cap";
     /** Next Lagos midnight. */
     resetsAt: string;
+    /** Summaries the student can still ask for (Free has a few in total); null = no limit. */
+    summariesLeft: number | null;
     offer: import("@/lib/plans/offer").PlanOffer;
   };
   /** For "Is this helping you study?": questions asked so far, and whether it has been answered. */

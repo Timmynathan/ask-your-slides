@@ -4,6 +4,7 @@
 // topic's materials; Whole course shows everything, grouped by topic, then course-level materials
 // (outline, other). A source opens in the slide viewer at its first page. On wide laptops it is a
 // fixed panel; below xl it slides in from the right (Sources button in the chat header).
+import { File, X } from "lucide-react";
 import { prefetchSlide } from "@/lib/study/slide-cache";
 import type { MaterialItem, TopicItem } from "@/lib/study/types";
 
@@ -57,9 +58,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
         <div className="flex shrink-0 items-center justify-between px-5 pb-1 pt-5">
           <h2 className="text-[12px] text-muted">Sources</h2>
           <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-black/5 xl:hidden" aria-label="Close sources">
-            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-              <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" strokeLinecap="round" />
-            </svg>
+            <X size={16} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
           </button>
         </div>
 
@@ -80,10 +79,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
                         className="flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-page active:scale-[0.99]"
                         title={`View ${m.title}`}
                       >
-                        <svg className="mt-0.5 shrink-0 text-ink" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                          <path d="M7 3.5h7l4 4V20.5H7z" />
-                          <path d="M14 3.5v4h4" />
-                        </svg>
+                        <File size={18} absoluteStrokeWidth strokeWidth={1.5} className="mt-0.5 shrink-0 text-ink" aria-hidden />
                         <span className="min-w-0">
                           <span className="line-clamp-2 text-[12px] leading-snug text-ink">{m.title}</span>
                           <span className="mt-0.5 block text-[12px] text-muted">

@@ -8,7 +8,7 @@ import { GetFinalsLink } from "@/components/plans/get-finals-link";
 import { PlanTable } from "@/components/plans/plan-table";
 import { PromoCodeToCourses } from "@/components/plans/promo-code-form";
 import { requireUser } from "@/lib/auth/session";
-import { EXAMS_START, PLAN_END_DATE, TIME_ZONE } from "@/lib/plans/config";
+import { EXAMS_START, FREE_PAST_PROGRAMMES, PLAN_END_DATE, TIME_ZONE } from "@/lib/plans/config";
 import { CalendarDays, CalendarRange, Quote, Wallet } from "lucide-react";
 import { planState } from "@/lib/plans/entitlement";
 import { planOffer } from "@/lib/plans/offer";
@@ -57,7 +57,9 @@ async function Loaded() {
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-muted sm:text-[16px]">
             {state.plan === "finals" && state.endsAt
               ? `Everything is unlocked until ${longDate.format(state.endsAt)}.`
-              : "Start free. When exams get close, Finals gives you more questions every day, quiz mode, and real past questions with worked answers."}
+              : FREE_PAST_PROGRAMMES.includes(profile.programme)
+                ? "Start free. When exams get close, Finals gives you more questions every day, unlimited summaries and quiz mode."
+                : "Start free. When exams get close, Finals gives you more questions every day, quiz mode, and real past questions with worked answers."}
           </p>
         </div>
 
@@ -65,6 +67,7 @@ async function Loaded() {
           <PlanTable
             offer={offer}
             current={state.plan}
+            freePast={FREE_PAST_PROGRAMMES.includes(profile.programme)}
             freeAction={
               state.plan === "free" ? (
                 <Link href="/dashboard" className={`${action} text-ink ring-1 ring-line-strong hover:bg-sunken`}>

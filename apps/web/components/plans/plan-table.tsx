@@ -51,8 +51,8 @@ function Cell({ value, plan }: { value: string | boolean; plan: "Free" | "Finals
   return <span className={`text-[13px] leading-snug sm:text-[14px] ${plan === "Finals" ? "font-medium text-ink" : "text-ink/80"}`}>{value}</span>;
 }
 
-export function PlanTable({ offer, current, freeAction, finalsAction }: { offer: PlanOffer; current: "free" | "finals"; freeAction: ReactNode; finalsAction: ReactNode }) {
-  const rows = comparisonRows(offer);
+export function PlanTable({ offer, current, freeAction, finalsAction, freePast = false }: { offer: PlanOffer; current: "free" | "finals"; freeAction: ReactNode; finalsAction: ReactNode; /** Past questions are free in this student's programme. */ freePast?: boolean }) {
+  const rows = comparisonRows(offer, { freePast });
   const finalsCol = "bg-pau-50 dark:bg-white/[0.04]";
   const pad = "px-3 py-3.5 sm:px-6 sm:py-4";
   return (

@@ -9,7 +9,7 @@ import { countMain, courseName, LIMITED_MAIN_MATERIALS, shownCode } from "@/lib/
 import { courseHref } from "@/lib/study/course-link";
 import { planState } from "@/lib/plans/entitlement";
 import { FinalsWelcome } from "@/components/plans/finals-welcome";
-import { EXAMS_START, FINALS_DAILY } from "@/lib/plans/config";
+import { EXAMS_START, FINALS_DAILY, FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { finalsPrice, lagosDay, limitsFor } from "@/lib/plans/limits";
 import { currentStreak } from "@/lib/study/streak";
 import { adminClient } from "@/lib/supabase/admin";
@@ -119,6 +119,7 @@ async function Loaded() {
         streak={{ days: streak, today: days.has(today) }}
         examsInDays={Math.max(0, Math.ceil((EXAMS_START.getTime() - now.getTime()) / 86_400_000))}
         price={state.plan === "free" ? finalsPrice(now) : null}
+        freePast={FREE_PAST_PROGRAMMES.includes(profile.programme as string)}
         courses={list}
         partner={profile.study_partner}
         onFinals={state.plan !== "free"}

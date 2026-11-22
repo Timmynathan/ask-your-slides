@@ -15,7 +15,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { History, House, Menu, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
+import { History, House, Menu, MessageCircleQuestion, PanelLeft, PencilLine, Upload, X, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { useClickAway } from "@/lib/ui/use-click-away";
@@ -200,7 +200,7 @@ export function AppShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const page: ShellPage = pageProp ?? (pathname.startsWith("/past-questions") ? "past" : pathname.startsWith("/dashboard") ? "dashboard" : "account");
+  const page: ShellPage = pageProp ?? (pathname.startsWith("/chat") ? "chat" : pathname.startsWith("/dashboard") ? "dashboard" : "account");
   const [uploading, setUploading] = useState(false);
   const [openCourse, setCourse] = useState<{ id: string; title: string } | null>(null);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
@@ -355,6 +355,8 @@ export function AppShell({
               <span className={`${railLabel} font-heading text-[16px] text-white`}>Ask Your Slides</span>
             </Link>
             <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
+            {/* Ask anything (owner, 22 Nov 2026): a question opens in the right course's chat. */}
+            <RailButton label="Ask anything" href="/chat" active={page === "chat"} icon={MessageCircleQuestion} />
             <RecentChats recent={recent} />
             <div className="mt-auto flex flex-col gap-3">
               {/* Feedback (owner, 20 Nov 2026), just above the account. */}
@@ -437,6 +439,10 @@ export function AppShell({
               <Link href="/dashboard" aria-current={page === "dashboard" ? "page" : undefined} className={`${rowCls} ${page === "dashboard" ? "bg-white/12 text-white" : ""}`}>
                 <House size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
                 Dashboard
+              </Link>
+              <Link href="/chat" aria-current={page === "chat" ? "page" : undefined} className={`${rowCls} ${page === "chat" ? "bg-white/12 text-white" : ""}`}>
+                <MessageCircleQuestion size={18} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
+                Ask anything
               </Link>
             </nav>
             <p className="px-5 pb-1 pt-5 text-[12.5px] font-medium uppercase tracking-wide text-white/45">Recent chats</p>

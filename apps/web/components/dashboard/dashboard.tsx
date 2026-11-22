@@ -71,9 +71,11 @@ interface Props {
   examsInDays: number;
   /** Free students: today's Finals price (naira); null on Finals. */
   price: number | null;
+  /** Past questions are free in the student's programme. */
+  freePast: boolean;
 }
 
-export function Dashboard({ courses, user, partner: initialPartner, onFinals, lastStudied, recentLectures, streak, examsInDays, price }: Props) {
+export function Dashboard({ courses, user, partner: initialPartner, onFinals, lastStudied, recentLectures, streak, examsInDays, price, freePast }: Props) {
   const [partner, setPartner] = useState<PartnerId>(initialPartner);
   const [pickingPartner, setPickingPartner] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
@@ -214,7 +216,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         )}
       </div>
       <aside className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Your plan and progress">
-        {price !== null && <UpgradeCard price={price} />}
+        {price !== null && <UpgradeCard price={price} freePast={freePast} />}
         <ExamsCard days={examsInDays} startLabel={EXAMS_START_LABEL} />
         <StreakCard days={streak.days} today={streak.today} />
       </aside>

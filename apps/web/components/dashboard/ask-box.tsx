@@ -1,7 +1,7 @@
 "use client";
 
-// "Ask anything across your courses" (owner, 21 Nov 2026), in place of the dashboard's separate chat
-// panel: a doorway, not a second chat. The question is matched to the right course (/api/ask) and
+// "Ask anything across your courses" (owner, 21 Nov 2026; since 22 Nov on its own page, /chat, opened
+// from the sidebar): a doorway, not a second chat. The question is matched to the right course (/api/ask) and
 // opens in that course's whole-course chat, so every conversation lives in exactly one course. When
 // two courses fit about equally, the student picks. "Wrong course?" in the course comes back here
 // with the question and the choices (?ask=…&pick=1).
