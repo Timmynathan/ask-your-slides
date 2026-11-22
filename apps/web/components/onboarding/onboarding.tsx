@@ -10,7 +10,7 @@ import type { ProgrammeChoice } from "@/lib/programmes";
 import type { PlanOffer } from "@/lib/plans/offer";
 import { FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
-import { PlanTable } from "@/components/plans/plan-table";
+import { PlanStep } from "./plan-step";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 import type { HeardFrom } from "@/lib/heard-from";
 import { HeardFromStep } from "./heard-from-step";
@@ -243,43 +243,14 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
         )}
 
         {step === "plan" && (
-          // The comparison table, at a comfortable size with no countdown (owner, 22 Nov 2026): start free and
-          // get a feel for the app; Finals is there for whoever wants it.
-          <div key="plan" className="panel-in w-full max-w-3xl">
-            <div className="text-center">
-              <h1 className="font-heading text-[26px] font-normal tracking-tight text-ink sm:text-[30px]">Start free. Upgrade only if you need it.</h1>
-              <p className="mx-auto mt-2 max-w-md text-[15px] text-muted">Everything works on Free. No card needed.</p>
-            </div>
-            <div className="mt-7">
-              <PlanTable
-                compact
-                offer={offer}
-                current="free"
-                freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
-                freeAction={
-                  <button
-                    type="button"
-                    onClick={finish}
-                    autoFocus
-                    className="inline-flex w-full items-center justify-center rounded-full bg-brand px-5 py-3 text-[14.5px] font-medium text-brand-ink transition hover:opacity-90 active:scale-[0.98]"
-                  >
-                    Start studying free
-                  </button>
-                }
-                finalsAction={
-                  offer.paymentsOpen ? (
-                    <a href="/pay" className="inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-[14.5px] font-medium text-ink ring-1 ring-line-strong transition hover:bg-card">
-                      Get Finals
-                    </a>
-                  ) : null
-                }
-              />
-            </div>
-            <p className="mt-5 text-center text-[13px] text-muted">You can upgrade any time from your account.</p>
-            <div className="mt-3 flex justify-center">
-              <PromoCodeForm onRedeemed={finish} />
-            </div>
-          </div>
+          <PlanStep
+            offer={offer}
+            partner={partner ?? DEFAULT_PARTNER}
+            freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
+            onBack={() => setStep("hello")}
+            onFree={finish}
+            promo={<PromoCodeForm onRedeemed={finish} />}
+          />
         )}
 
         {error && (
