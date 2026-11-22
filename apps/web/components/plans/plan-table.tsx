@@ -66,8 +66,9 @@ export function PlanTable({ offer, current, freeAction, finalsAction }: { offer:
         </colgroup>
         <thead>
           <tr className="align-top">
-            <th scope="col" className={`${pad} pt-7 align-bottom sm:pt-8`}>
-              <span className="font-heading text-[18px] font-medium text-ink sm:text-[22px]">Features</span>
+            {/* Starts level with the plan names (owner, 22 Nov 2026). */}
+            <th scope="col" className={`${pad} border-r border-line pt-7 align-top sm:pt-8`}>
+              <span className="font-heading text-xl font-semibold text-ink sm:text-2xl">Features</span>
               <span className="mt-1 hidden text-[13px] font-normal text-muted sm:block">What each plan gives you</span>
             </th>
             <th scope="col" className={`${pad} border-b border-line pt-7 font-normal sm:pt-8`}>
@@ -99,7 +100,7 @@ export function PlanTable({ offer, current, freeAction, finalsAction }: { offer:
             const Icon = ROW_ICONS[r.label];
             return (
               <tr key={r.label} className="border-b border-line/70">
-                <th scope="row" className={`${pad} font-normal`}>
+                <th scope="row" className={`${pad} border-r border-line font-normal`}>
                   <span className="flex items-start gap-2.5 text-[13px] leading-snug text-ink sm:text-[14.5px]">
                     {Icon && <Icon size={18} absoluteStrokeWidth strokeWidth={1.5} className="mt-px hidden shrink-0 text-brand sm:block" aria-hidden />}
                     {r.label}
@@ -118,7 +119,7 @@ export function PlanTable({ offer, current, freeAction, finalsAction }: { offer:
         <tfoot>
           {/* Wider screens: each button under its plan. Phones: both full width, Finals first. */}
           <tr className="hidden align-top sm:table-row">
-            <td className={pad} />
+            <td className={`${pad} border-r border-line`} />
             <td className={`${pad} pb-7 pt-5`}>{freeAction}</td>
             <td className={`${pad} ${finalsCol} pb-7 pt-5`}>{finalsAction}</td>
           </tr>

@@ -85,12 +85,9 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
     { label: "Quiz mode", free: false, finals: true },
     { label: "Upload photos of your tests and notes", free: `Up to ${UPLOADS_ALLOWED.free}`, finals: `Up to ${UPLOADS_ALLOWED.finals}` },
   ];
-  // How long and how to pay: last, after the features.
-  const terms = [
-    { label: "How long it lasts", free: "Always free", finals: `Until ${dayMonth.format(new Date(o.planEndAt))}, after your last paper` },
-    { label: "Payment", free: "Nothing to pay", finals: "One-time bank transfer, no subscription" },
-  ];
-  if (!PAST_QUESTIONS_LIVE) return [...rows, ...terms];
+  // "How long it lasts" and "Payment" rows removed (owner, 22 Nov 2026): the pricing page says both
+  // under the table.
+  if (!PAST_QUESTIONS_LIVE) return rows;
   return [
     ...rows,
     {
@@ -99,7 +96,6 @@ export function comparisonRows(o: PlanOffer): { label: string; free: string | bo
       finals: "Every past question",
     },
     { label: "Model answers and marked practice", free: false, finals: true },
-    ...terms,
   ];
 }
 

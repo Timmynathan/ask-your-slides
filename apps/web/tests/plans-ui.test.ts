@@ -84,8 +84,6 @@ describe("landing Plans section", () => {
       { label: "Upload photos of your tests and notes", free: "Up to 2", finals: "Up to 30" },
       { label: "Past questions", free: false, finals: "Every past question" }, // Finals only (owner, 14 Nov 2026)
       { label: "Model answers and marked practice", free: false, finals: true },
-      { label: "How long it lasts", free: "Always free", finals: "Until 23 Dec, after your last paper" },
-      { label: "Payment", free: "Nothing to pay", finals: "One-time bank transfer, no subscription" },
     ]);
   });
 
