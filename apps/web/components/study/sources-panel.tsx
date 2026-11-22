@@ -4,7 +4,8 @@
 // topic's materials; Whole course shows everything, grouped by topic, then course-level materials
 // (outline, other). A source opens in the slide viewer at its first page. On wide laptops it is a
 // fixed panel; below xl it slides in from the right (Sources button in the chat header).
-import { File, X } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, File, X } from "lucide-react";
 import { prefetchSlide } from "@/lib/study/slide-cache";
 import type { MaterialItem, TopicItem } from "@/lib/study/types";
 
@@ -38,6 +39,16 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
         { title: "Course materials", items: materials.filter((m) => m.topic_id === null) },
       ].filter((g) => g.items.length > 0);
   const count = groups.reduce((n, g) => n + g.items.length, 0);
+  // Whole course (owner, 22 Nov 2026: open by default, so keep it quiet): each lecture is one line,
+  // folded; a click shows its files.
+  const [unfolded, setUnfolded] = useState<Set<string>>(() => new Set());
+  const toggle = (t: string) =>
+    setUnfolded((u) => {
+      const n = new Set(u);
+      if (n.has(t)) n.delete(t);
+      else n.add(t);
+      return n;
+    });
   const firstPage = (m: MaterialItem) => `${courseCode}-${String(m.material_order).padStart(2, "0")}-1`;
   const open1 = (m: MaterialItem) => onOpenSource(firstPage(m));
 
@@ -65,8 +76,22 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {groups.map((g) => (
-            <section key={g.title ?? "topic"} className="mb-2">
-              {g.title && <h3 className="px-3 pb-1 pt-4 text-[12px] text-muted">{g.title}</h3>}
+            <section key={g.title ?? "topic"} className={g.title ? "" : "mb-2"}>
+              {g.title && (
+                <h3>
+                  <button
+                    type="button"
+                    onClick={() => toggle(g.title!)}
+                    aria-expanded={unfolded.has(g.title)}
+                    className="flex w-full items-center gap-1.5 rounded-xl px-2 py-2 text-left text-[12px] text-muted transition hover:bg-page hover:text-ink"
+                  >
+                    <ChevronRight size={14} absoluteStrokeWidth strokeWidth={1.5} className={`shrink-0 transition-transform ${unfolded.has(g.title) ? "rotate-90" : ""}`} aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{g.title}</span>
+                    <span className="shrink-0 tabular-nums text-muted/80">{g.items.length}</span>
+                  </button>
+                </h3>
+              )}
+              {(!g.title || unfolded.has(g.title)) && (
               <ul className="space-y-0.5">
                 {g.items.map((m) => {
                   const kind = KIND[m.kind] ?? KIND.other;
@@ -92,6 +117,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
                   );
                 })}
               </ul>
+              )}
             </section>
           ))}
           {count === 0 && <p className="px-2 py-6 text-sm text-muted">No materials here yet.</p>}

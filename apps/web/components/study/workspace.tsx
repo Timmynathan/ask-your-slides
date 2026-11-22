@@ -49,7 +49,8 @@ export function Workspace(data: WorkspaceData) {
   const [sourcesClosed, setSourcesClosed] = useState(false);
   // Whole course (owner, 22 Nov 2026): Sources starts closed every time, since the lectures are already
   // listed on the left; the Sources button opens it. A lecture keeps the setting above.
-  const [wholeSourcesOpen, setWholeSourcesOpen] = useState(false);
+  // Whole course: Sources starts open (owner, 22 Nov 2026), its lectures folded to one line each.
+  const [wholeSourcesOpen, setWholeSourcesOpen] = useState(true);
   const dragFrom = useRef(0);
   useEffect(() => {
     try {
@@ -124,12 +125,6 @@ export function Workspace(data: WorkspaceData) {
   const topics = useMemo(() => data.topics.filter((t) => t.course_id === courseId), [data.topics, courseId]);
   const topic = useMemo(() => topics.find((t) => t.id === topicId) ?? null, [topics, topicId]);
   const sourcesHidden = topic ? sourcesClosed : !wholeSourcesOpen;
-  // Back on Whole course: Sources is closed again.
-  const [wholeFor, setWholeFor] = useState(topicId);
-  if (wholeFor !== topicId) {
-    setWholeFor(topicId);
-    if (topicId === null) setWholeSourcesOpen(false);
-  }
 
   // Keep the URL shareable/reloadable without a navigation.
   useEffect(() => {
