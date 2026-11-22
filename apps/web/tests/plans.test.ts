@@ -68,10 +68,10 @@ describe("limits", () => {
 
 describe("price", () => {
   it("₦3,000 before PRICE_CHANGE_DATE, ₦5,000 from it", () => {
-    expect(PRICE_CHANGE_DATE.toISOString()).toBe("2026-11-22T22:59:00.000Z"); // 23:59 Lagos
+    expect(PRICE_CHANGE_DATE.toISOString()).toBe("2026-11-27T22:59:00.000Z"); // 23:59 Lagos
     expect(finalsPrice(at("2026-11-16T12:00:00+01:00"))).toBe(3000);
-    expect(finalsPrice(at("2026-11-22T23:58:59+01:00"))).toBe(3000);
-    expect(finalsPrice(at("2026-11-22T23:59:00+01:00"))).toBe(5000);
+    expect(finalsPrice(at("2026-11-27T23:58:59+01:00"))).toBe(3000);
+    expect(finalsPrice(at("2026-11-27T23:59:00+01:00"))).toBe(5000);
     expect(finalsPrice(at("2026-12-01T12:00:00+01:00"))).toBe(5000);
   });
 });

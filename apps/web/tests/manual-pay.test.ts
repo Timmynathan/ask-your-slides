@@ -128,10 +128,10 @@ describe("POST /api/pay/request", () => {
     expect(t.payment_requests.map((r) => r.reference)).toEqual(["AYS-7K3Q", "AYS-7K3Q"]);
   });
 
-  it("price lock: the amount is fixed when the request is made (₦3,000 to 22 Nov 23:58, ₦5,000 from 23:59)", async () => {
-    at("2026-11-22T23:58:59+01:00");
+  it("price lock: the amount is fixed when the request is made (₦3,000 to 27 Nov 23:58, ₦5,000 from 23:59)", async () => {
+    at("2026-11-27T23:58:59+01:00");
     expect((await (await send()).json()).amount).toBe(3000);
-    at("2026-11-22T23:59:00+01:00");
+    at("2026-11-27T23:59:00+01:00");
     expect((await (await send()).json()).amount).toBe(5000);
     expect(t.payment_requests.map((r) => r.amount_naira)).toEqual([3000, 5000]);
   });

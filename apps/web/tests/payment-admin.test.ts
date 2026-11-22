@@ -146,7 +146,7 @@ describe("approve", () => {
   });
 
   it("price lock: a ₦3,000 request approved after PRICE_CHANGE_DATE stays ₦3,000", async () => {
-    at("2026-11-25T12:00:00+01:00");
+    at("2026-11-29T12:00:00+01:00");
     expect((await call({ id: REQ, action: "approve" })).status).toBe(200);
     expect(t.payment_requests[0].amount_naira).toBe(3000);
     expect(t.entitlements).toHaveLength(1);

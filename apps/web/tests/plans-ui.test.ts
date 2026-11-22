@@ -20,13 +20,13 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "
 describe("plan offer = what the server charges", () => {
   it("before PRICE_CHANGE_DATE: ₦3,000 everywhere, with the full price and the date", () => {
     const o = planOffer(BEFORE);
-    expect(o).toMatchObject({ price: 3000, early: true, earlyPrice: 3000, fullPrice: 5000, priceChangeLabel: "22 Nov" });
+    expect(o).toMatchObject({ price: 3000, early: true, earlyPrice: 3000, fullPrice: 5000, priceChangeLabel: "27 Nov" });
     expect(o.price).toBe(finalsPrice(BEFORE)); // the checkout route uses finalsPrice
     const t = text(landing(BEFORE));
     expect(t).toContain("₦3,000");
     expect(t).toMatch(/<s|₦5,000/); // struck-through full price
-    expect(t).not.toContain("₦3,000 until 22 Nov"); // owner removed that line (13 Nov 2026)
-    expect(t).toContain("Goes up to ₦5,000 after 22 Nov"); // still under the button
+    expect(t).not.toContain("₦3,000 until 27 Nov"); // owner removed that line (13 Nov 2026)
+    expect(t).toContain("Goes up to ₦5,000 after 27 Nov"); // still under the button
   });
 
   it("after PRICE_CHANGE_DATE: ₦5,000 only, no early price, no countdown", () => {
@@ -68,7 +68,7 @@ describe("landing Plans section", () => {
       "1 summary",
       "Start free",
       "Lock in Finals · ₦3,000",
-      "Goes up to ₦5,000 after 22 Nov",
+      "Goes up to ₦5,000 after 27 Nov",
       "One-time payment. No subscription. Pay by bank transfer.",
       "Premium courses are the heaviest courses in your programme.",
     ]) {
