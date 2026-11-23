@@ -38,8 +38,10 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   (/api/chat/general) picks the best-matching course and forwards to /api/chat. Uploads (photos/PDF of a
   student's own test or notes, read by Claude into user_upload_chunks, searched as your_notes). Feedback
   dialog -> app_feedback. Pricing is one table (components/plans/plan-table.tsx).
-- Past-question extraction + answers ran 19–20 Nov: $3.74 of the $8 cap; 7,184 questions answered. 184
-  flagged papers wait for Sonnet re-reads (owner, after topping up).
+- Past-question extraction + answers ran 19–20 Nov: $3.74 of the $8 cap; 7,184 questions answered. Answers rerun
+  23 Nov (about 10,700 answered). Flagged papers: 0 of 606 (23 Nov). Before a Sonnet re-read of a flagged paper,
+  check for a <name>.review.yaml next to it: a re-read with a different question split breaks its `renumber`;
+  re-storing with the cached first read (--force, same PAST_Q_MODEL) is free and applies the review.
 - Answer quality (21 Nov 2026): all 132 real answers were reviewed against their slides. Fixed: whole-deck
   "explain every slide" in one answer (32K tokens, routes allow 300 s), "keep going" resumes after the last
   cited slide, follow-ups re-read the previous answer's slides, "5"/"b" resolved to the list item, quiz
