@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimPlanningOpening, trimTrailingNarration, isSmallTalk, asksAboutChat } = await import("@/lib/agent/run");
+const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, asksAboutApp, asksForMissedClass, trimApologyOpening, trimPlanningOpening, trimTrailingNarration, isSmallTalk, asksAboutChat } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -23,6 +23,38 @@ describe("asksForWalkthrough", () => {
     "This first slide like I missed class and make sure that the texts And boards that are bold Further explained",
     "quiz me",
   ])("no: %s", (m) => expect(asksForWalkthrough(m)).toBe(false));
+});
+
+describe("search talk: the search found no slides", () => {
+  it("drops it", () => {
+    expect(plainSlideTalk("Your course is about portfolios, and the search found no slides on cloud infrastructure. Next.")).toBe("Your course is about portfolios. Next.");
+    expect(plainSlideTalk("The search found no slides on it. Here is why.")).toBe("Here is why.");
+  });
+});
+
+describe("asksAboutApp", () => {
+  it.each(["Where can I find my recent chats in this app?", "how do i go back to the dashboard", "How to go back to dashboard in this app", "how do I upload a pdf"])("yes: %s", (m) => expect(asksAboutApp(m)).toBe(true));
+  it.each(["Where can I find the formula for NPV?", "how do I find the balance factor", "what is a dashboard in management accounting", "Explain the app development lifecycle"])("no: %s", (m) =>
+    expect(asksAboutApp(m)).toBe(false),
+  );
+});
+
+describe("not-covered opening, reworded", () => {
+  it("puts the exact line back", () => {
+    expect(trimApologyOpening("Hi Tolu, Kubernetes isn't part of this course, so your slides don't cover it. Here's the idea:\n\n<general>\nx")).toBe("Your slides don't cover this, but here's the idea:\n\n<general>\nx");
+    expect(trimApologyOpening("Hi Tolu! Kubernetes autoscaling isn't something your FIN410 slides cover. The course is about portfolios.\n\n<general>\nHere's the idea.")).toBe("Your slides don't cover this, but here's the idea:\n\n<general>\nHere's the idea.");
+    expect(trimApologyOpening("Hi Tolu, Kubernetes isn't covered in your FIN410 slides. The topics are markets.\n\nYour slides don't cover this, but here's the idea:\n\n<general>")).toBe("Your slides don't cover this, but here's the idea:\n\n<general>");
+    expect(trimApologyOpening("Your slides don't cover the proof, but they define it. [[s:X-1-2]]\n\n<general>\nmore")).toContain("[[s:X-1-2]]");
+    expect(trimApologyOpening("Your slides don't cover this, but here's the idea: x")).toBe("Your slides don't cover this, but here's the idea: x");
+    expect(trimApologyOpening("Kika, week 7 is about digital laws. Here's the idea: laws.")).toBe("Kika, week 7 is about digital laws. Here's the idea: laws.");
+  });
+});
+
+describe("asksForMissedClass", () => {
+  it.each(['Explain "Digital authoritarianism in africa" like I missed the class.', "explain it like i missed class", "I missed the lecture on AVL trees"])("yes: %s", (m) =>
+    expect(asksForMissedClass(m)).toBe(true),
+  );
+  it.each(["What is an AVL tree?", "Summarize the topic", "which class is this for"])("no: %s", (m) => expect(asksForMissedClass(m)).toBe(false));
 });
 
 describe("isContinuation", () => {

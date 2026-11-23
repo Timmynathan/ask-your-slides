@@ -24,6 +24,7 @@ const MAX_OUTPUT_TOKENS_SUMMARY = 12000; // once the agent has read whole materi
 // depth; Haiku writes it in about 3 minutes (the route allows 5). It only costs what is written.
 const MAX_OUTPUT_TOKENS_WALKTHROUGH = 32000;
 const WALKTHROUGH_PAGES = 120; // pages read before a walkthrough (40 per call)
+const MISSED_CLASS_PAGES = 80; // pages read before "explain like I missed class" (about 1 US cent more)
 /** Below this best similarity, the first search found little (a second look is offered). */
 const WEAK_MATCH = 0.42;
 // Claude Haiku 5.5, prompts <= 100K tokens (check the provider page before launch).
@@ -159,6 +160,11 @@ export function asksForWorking(message: string): boolean {
   return /\b(solve|calculat|comput|find|expand|example|work (it )?out|evaluat|differentiat|integrat|simplif|prove|coefficient|polar form|show me how|step by step)\w*/i.test(message) || /\d\s*[-+×x*/^=]\s*\d|[=^√∫]/.test(message);
 }
 
+/** "Explain … like I missed the class" (the topic button) or "I missed the lecture on …". */
+export function asksForMissedClass(message: string): boolean {
+  return /\b(like I missed (the )?class|missed (the |that |this )?(class|lecture))\b/i.test(message);
+}
+
 /** "Explain every slide", "slide by slide", "all the slides in detail", "explain the whole deck". */
 export function asksForWalkthrough(message: string): boolean {
   return (
@@ -267,10 +273,23 @@ export function trimPlanningOpening(text: string): string {
 
 // idea:"). Whatever comes before it in the first lines is a preamble saying the same thing: dropped.
 const NOT_COVERED = "Your slides don't cover this, but here's the idea:";
+/** An opening that says the slides don't cover it in other words ("Kubernetes isn't covered in your FIN410
+ *  slides", "your slides don't cover Kubernetes"). */
+export const NOT_COVERED_PREAMBLE =
+  /\b(?:slides?|course|materials)\b[^\n]{0,80}?\b(?:don'?t|do not|doesn'?t|does not|isn'?t|is not|aren'?t|are not)\b[^\n]{0,40}?\bcover|\b(?:isn'?t|is not|aren'?t|are not) (?:covered|part of|something)\b[^\n]{0,80}?\b(?:slides|course|materials)\b/i;
 
 export function trimApologyOpening(text: string): string {
   const at = text.indexOf(NOT_COVERED);
-  if (at > 0 && at < 400) return text.slice(at);
+  if (at === 0) return text;
+  if (at > 0 && at < 600) return text.slice(at);
+  // The same opening in other words, before the explanation ("Hi Tolu, Kubernetes isn't covered in your
+  // FIN410 slides. The course is about… \n\n<general>"): the exact line instead (behaviour check,
+  // 23 Nov 2026: 4 of 8 answers opened this way). Not when anything before it cites a slide.
+  const g = text.indexOf("<general>");
+  if (g > 0 && g <= 600) {
+    const before = text.slice(0, g);
+    if (NOT_COVERED_PREAMBLE.test(before) && !before.includes("[[s:")) return `${NOT_COVERED}\n\n${text.slice(g)}`;
+  }
   text = trimPlanningOpening(text);
   return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "").replace(LACKS_START, "").replace(WHERE_LACKS_START, "");
 }
@@ -292,6 +311,9 @@ const SEARCH_TALK: [RegExp, string][] = [
   [/\bThe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "Your slides don't cover"],
   [/\bthe search (?:didn'?t|did not) (?:return|find|turn up|bring up) (?:anything|much)(?: (?:on|about))?/g, "your slides don't cover"],
   [/\b[Tt]he search results\b/g, "your slides"],
+  // "…, and the search found no slides on cloud infrastructure." (behaviour check, 23 Nov 2026).
+  [/,? and the search (?:found|returned|turned up) no (?:slides|results|materials)\b[^.!?\n]*(?=[.!?])/g, ""],
+  [/(?<=^|[.!?]\s+|\n)The search (?:found|returned|turned up) no (?:slides|results|materials)\b[^.!?\n]*[.!?]\s*/g, ""],
   // Whole sentences about the looking (owner's review, 22 Nov 2026): "I searched the slides for press
   // freedom and NBC regulation, and…", "I didn't find slides that deal with…". Dropped.
   [/(?<=^|[.!?]\s+|\n)I (?:searched|looked through|went through|checked|scanned) (?:the|your) (?:course )?(?:slides|materials|notes)\b[^.!?\n]*[.!?]\s*/g, ""],
@@ -320,6 +342,18 @@ export function isSmallTalk(message: string): boolean {
 /** "what was my last question", "what did I ask", "what have we covered": about this chat, not the course. */
 export function asksAboutChat(message: string): boolean {
   return /\b(?:what (?:was|were|is|are) (?:my|the) (?:last|previous|earlier|first)(?: \d+| two| three)? (?:questions?|messages?)(?!\s+(?:on|in|from|of|for)\b)|what (?:did|have) i (?:ask|say|send)|(?:my|the) (?:last|previous) (?:\d+ |two |three )?(?:questions?|messages?) (?:i asked|i sent)|what (?:have|did) we (?:covered?|discuss(?:ed)?|talk(?:ed)? about)|summari[sz]e (?:our|this) (?:chat|conversation))\b/i.test(message);
+}
+
+/** "Where can I find my recent chats in this app?", "how do I go back to the dashboard", "how do I upload a
+ *  PDF": about Ask Your Slides itself (rule 17), not the course. Behaviour check: about 1 in 3 got the
+ *  not-covered opening and a <general> block (23 Nov 2026), so these skip the slides like small talk. */
+export function asksAboutApp(message: string): boolean {
+  const m = message.trim();
+  if (m.length > 160) return false;
+  return (
+    /\b(in|on|of|use|using) (this|the) (app|site|website|platform)\b|\bask ?your ?slides\b/i.test(m) ||
+    /\b(where (can|do) i (find|see|get to)|how (do|can) i (go back|get back|get to|find|open|see|change|delete|upload|log ?out|sign ?out|switch|add|pay|upgrade))\b.{0,40}\b(dashboard|recent chats?|chats? history|my chats|old chats|past questions|courses?|profile|settings|account|pdf|photo|plan|finals|password|partner|programme)\b/i.test(m)
+  );
 }
 
 export function asksForMemoryAids(message: string): boolean {
@@ -354,9 +388,8 @@ function lastAnswer(history: ModelMessage[]): string {
 }
 
 /** Reads covering a page range of materials, at most 40 pages per call and WALKTHROUGH_PAGES in all. */
-function pageReads(courseCode: string, mats: { material_order: number; from: number; pages: number }[]) {
+function pageReads(courseCode: string, mats: { material_order: number; from: number; pages: number }[], budget = WALKTHROUGH_PAGES) {
   const out: { material: string; from: number; to: number }[] = [];
-  let budget = WALKTHROUGH_PAGES;
   for (const m of mats) {
     for (let from = m.from; from <= m.pages && budget > 0; from += 40) {
       const to = Math.min(m.pages, from + 39, from + budget - 1);
@@ -499,7 +532,10 @@ export async function runChatTurn(turn: ChatTurn) {
             const h = held.get(part.id);
             if (h) {
               h.raw += part.text;
-              if (h.raw.length > NARRATION_HARD_MAX || (h.raw.length > NARRATION_MAX && !PLANNING.test(h.raw))) release(controller, part.id);
+              // An opening that says the slides don't cover it is held until its explanation starts, so
+              // the exact rule 4 line can replace it (trimApologyOpening).
+              const notCoveredPending = !output.trim() && NOT_COVERED_PREAMBLE.test(h.raw) && !h.raw.includes("<general>");
+              if (h.raw.length > NARRATION_HARD_MAX || (h.raw.length > NARRATION_MAX && !PLANNING.test(h.raw) && !notCoveredPending)) release(controller, part.id);
               return;
             }
             streamText_(controller, part.id, part.text);
@@ -562,8 +598,11 @@ export async function runChatTurn(turn: ChatTurn) {
   // earlier messages"). No slide lookups and no tools: a short reply from the conversation.
   const smallTalk = !turn.images?.length && !focus && isSmallTalk(turn.userMessage);
   const aboutChat = !turn.images?.length && !focus && asksAboutChat(turn.userMessage);
-  const chitChat = smallTalk || aboutChat;
-  const chatNote = smallTalk
+  const aboutApp = !turn.images?.length && !focus && !smallTalk && !aboutChat && asksAboutApp(turn.userMessage);
+  const chitChat = smallTalk || aboutChat || aboutApp;
+  const chatNote = aboutApp
+    ? "The student is asking how to use this app (Ask Your Slides), not about the course. Answer in one or two plain sentences from rule 17, then offer to help with the course. No slides, no citations, no <general> block, and not the rule 4 opening."
+    : smallTalk
     ? "The student's message is a greeting or small talk, not a question. Reply in one or two warm sentences in your voice and ask what they'd like to study in this course. No slides, no citations, no <general> block, no list of topics."
     : aboutChat
       ? "The student is asking about this conversation itself. Answer from the earlier messages above, which you can see: quote their questions briefly (the most recent first when they ask for the last ones), and include everything they asked for. Never say you can't see earlier messages. No slides, no citations, no <general> block."
@@ -580,11 +619,15 @@ export async function runChatTurn(turn: ChatTurn) {
   // another week or lecture: the model finds that one with list_topics).
   const walkthrough = asksForWalkthrough(turn.userMessage);
   const namesOtherPart = /\b(week|lecture|wk|class)\s*0?\d+/i.test(turn.userMessage);
-  if (!preCalls.length && walkthrough && turn.topicId && !namesOtherPart) {
+  // "Explain like I missed class" (owner's chat review, 23 Nov 2026): it used to answer from the 8 best
+  // search hits, out of order, and misread a slide whose "It" pointed back to the one before. Now the
+  // topic's lectures are read in order first, as for every-slide requests (up to MISSED_CLASS_PAGES).
+  const missedClass = !walkthrough && asksForMissedClass(turn.userMessage);
+  if (!preCalls.length && (walkthrough || missedClass) && turn.topicId && !namesOtherPart) {
     const mats = must(
       await db.from("materials").select("material_order, page_count").eq("course_id", turn.courseId).eq("topic_id", turn.topicId).in("kind", ["slides", "notes"]).order("material_order"),
     ) as { material_order: number; page_count: number }[];
-    for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })))) {
+    for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), missedClass ? MISSED_CLASS_PAGES : WALKTHROUGH_PAGES)) {
       preCalls.push({ tool: getMaterialPages, input: r });
     }
   }

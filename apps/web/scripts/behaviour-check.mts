@@ -34,6 +34,8 @@ interface Case {
   mustNot?: string[];
   /** The slide open in the viewer (sent as focus_slide, like a typed "this slide"). */
   focus?: string;
+  /** Ask inside this topic's chat (its title, case-insensitive) instead of the whole-course chat. */
+  topic?: string;
 }
 const only = process.argv.slice(2);
 const cases = (JSON.parse(readFileSync(path.join(import.meta.dirname, "../evals/behaviour/cases.json"), "utf8")) as Case[]).filter((c) => !only.length || only.includes(c.id));
@@ -66,7 +68,13 @@ async function run(c: Case): Promise<Result> {
     const cookie = res.headers.getSetCookie().map((x) => x.split(";")[0]).join("; ");
     const up = await db.from("profiles").update({ onboarded: true, display_name: "Tolu", study_partner: "zara", programme: c.programme, level: c.level }).eq("id", userId);
     if (up.error) throw up.error;
-    const { data: conv, error } = await db.from("conversations").insert({ user_id: userId, course_id: course.id }).select("id").single();
+    let topicId: string | null = null;
+    if (c.topic) {
+      const { data: t } = await db.from("topics").select("id").eq("course_id", course.id).ilike("title", c.topic).maybeSingle();
+      if (!t) throw new Error(`no topic "${c.topic}" in ${c.course}`);
+      topicId = t.id;
+    }
+    const { data: conv, error } = await db.from("conversations").insert({ user_id: userId, course_id: course.id, topic_id: topicId }).select("id").single();
     if (error) throw error;
     if (c.history?.length) {
       const start = Date.now() - 3600_000;

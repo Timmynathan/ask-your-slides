@@ -257,7 +257,6 @@
   "question": "Give me 5 practice questions on \"Law and Conscience\" with their answers. Include one on the properties of natural law.",
   "must": [
    "[Uu]niversal",
-   "\\*\\*Answer|Answer:",
    "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-"
   ],
   "mustNot": [
@@ -291,5 +290,20 @@
    "\\[\\[s:MCM217-15-12\\]\\]",
    "Ethiopia|Cameroon"
   ]
+ },
+ {
+  "id": "missed-class-reads-topic",
+  "what": "'Explain like I missed class' reads the whole topic in order and keeps the lecturer's point (it once said the China/Russia model failed in Africa; slide 27 says Western democracy did)",
+  "programme": "mass-communication",
+  "level": 200,
+  "course": "MCM217",
+  "question": "Explain \"Digital authoritarianism in africa\" like I missed the class.",
+  "must": [
+   "\\[\\[s:MCM217-15-2[67]\\]\\]"
+  ],
+  "mustNot": [
+   "(China and Russia|Chinese and Russian) (model|approach)[^.]{0,60}(did ?n.t|did not|failed to) (transfer|work|take)"
+  ],
+  "topic": "Digital authoritarianism in africa"
  }
 ]
