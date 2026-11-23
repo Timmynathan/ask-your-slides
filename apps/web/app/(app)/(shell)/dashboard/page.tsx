@@ -1,4 +1,6 @@
 import { ContentSkeleton } from "@/components/nav/content-skeleton";
+import { firstMaterial } from "@/lib/study/material-kind";
+import type { MaterialItem } from "@/lib/study/types";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -153,21 +155,24 @@ async function recentLectureCards(
   const topicIds = chats.map((c) => c.topic_id);
   const [{ data: topics }, { data: mats }] = await Promise.all([
     supabase.from("topics").select("id, topic_order, title").in("id", topicIds),
-    supabase.from("materials").select("topic_id, material_order, kind").in("topic_id", topicIds).in("kind", ["slides", "notes"]).order("material_order"),
+    supabase.from("materials").select("id, course_id, topic_id, material_order, kind, title, page_count").in("topic_id", topicIds),
   ]);
-  const firstMat = new Map<string, number>();
-  for (const m of (mats ?? []) as { topic_id: string; material_order: number }[]) if (!firstMat.has(m.topic_id)) firstMat.set(m.topic_id, m.material_order);
+  // The lecture's picture and icon come from the file that opens first (lib/study/material-kind.ts):
+  // slides, else notes, else a reading or practical (owner, 23 Nov 2026: reading-only lectures showed
+  // a plain book and no picture).
   const cards = chats.flatMap((ch) => {
     const t = ((topics ?? []) as { id: string; topic_order: number; title: string }[]).find((x) => x.id === ch.topic_id);
     const c = courses.find((x) => x.id === ch.course_id);
     if (!t || !c) return [];
-    const order = firstMat.get(t.id);
+    const first = firstMaterial((mats ?? []) as MaterialItem[], t.id);
+    const order = first?.material_order;
     return [{
       id: ch.topic_id,
       title: t.title,
       course: c.title,
       href: courseHref(c, all, ch.chat_id ? { topic: String(t.topic_order), chat: ch.chat_id } : { topic: String(t.topic_order) }),
       courseId: c.id,
+      kind: first?.kind ?? "slides",
       slideKey: order === undefined ? null : `${c.code}-${String(order).padStart(2, "0")}-1`,
     }];
   });

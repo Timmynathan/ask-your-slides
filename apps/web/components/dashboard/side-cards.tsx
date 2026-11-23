@@ -6,14 +6,17 @@
 import Link from "next/link";
 import { BookOpen, CalendarDays, CircleArrowUp, Flame } from "lucide-react";
 import { HoverLink } from "@/components/ui/hover-link";
+import { KIND_ICON } from "@/lib/study/material-kind";
 
 export interface RecentLecture {
   id: string;
   title: string;
   course: string;
   href: string;
-  /** The lecture's first slide (signed, expiring URL), or null when it has none. */
+  /** The first page of the file that opens first (signed, expiring URL), or null when it has none. */
   image: string | null;
+  /** That file's kind (slides, notes, reading, practical…): its icon (lib/study/material-kind.ts). */
+  kind?: string;
 }
 
 const icon = { size: 20, absoluteStrokeWidth: true, strokeWidth: 1.5, "aria-hidden": true } as const;
@@ -38,12 +41,19 @@ export function RecentLectures({ lectures }: { lectures: RecentLecture[] }) {
                 <img src={l.image} alt="" loading="lazy" className="h-full w-full object-cover object-top transition duration-300 group-hover:scale-[1.03]" />
               ) : (
                 <span className="grid h-full place-items-center text-muted">
-                  <BookOpen {...icon} size={28} />
+                  {(() => {
+                    const Kind = KIND_ICON[l.kind ?? "slides"] ?? BookOpen;
+                    return <Kind {...icon} size={28} />;
+                  })()}
                 </span>
               )}
             </div>
             <div className="flex items-start gap-2 px-1.5 pb-1 pt-2.5">
-              <BookOpen {...icon} size={16} className="mt-0.5 shrink-0 text-brand" />
+              {(() => {
+                // The same icon as in the course's lecture list: a book for a lecture, its own for a reading or practical.
+                const Kind = KIND_ICON[l.kind ?? "slides"] ?? BookOpen;
+                return <Kind {...icon} size={16} className="mt-0.5 shrink-0 text-brand" />;
+              })()}
               <span className="min-w-0">
                 <span className="line-clamp-2 text-[13.5px] leading-snug text-ink">{l.title}</span>
                 <span className="mt-0.5 block truncate text-[12px] text-muted">{l.course}</span>
