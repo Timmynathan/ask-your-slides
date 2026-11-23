@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration, inLiveExam } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -106,6 +106,11 @@ describe("trimApologyOpening", () => {
     const head = "**Theories of international communication**\nThe five theories are…";
     expect(trimApologyOpening(`Where a topic's slides didn't include a clear definition, I've described it from its title rather than citing it.\n\n${head}`)).toBe(head);
     expect(trimApologyOpening(`Where the slides don't define a term, I explain it in general terms. ${head}`)).toBe(head);
+  });
+  it("puts rule 4's opening first, dropping a preamble before it (behaviour check, 23 Nov 2026)", () => {
+    const rest = "Your slides don't cover this, but here's the idea:\n<general>\nKubernetes is…";
+    expect(trimApologyOpening(`Tolu, this is a question the course doesn't cover. Kubernetes isn't part of FIN 410. ${rest}`)).toBe(rest);
+    expect(trimApologyOpening(rest)).toBe(rest);
   });
   it("keeps an opening that starts the answer", () => {
     expect(trimApologyOpening("Where a firm sells abroad, it faces exchange risk. [[s:A-01-2]]")).toBe("Where a firm sells abroad, it faces exchange risk. [[s:A-01-2]]");
@@ -235,4 +240,21 @@ describe("planning and search talk (owner's review, 22 Nov 2026)", () => {
     expect(plainSlideTalk("Facts first.\nI didn't find slides that deal with a study lounge. The defamation notes are closest.")).toBe("Facts first.\nThe defamation notes are closest.");
     expect(plainSlideTalk("The court searched the slides? No.")).toBe("The court searched the slides? No.");
   });
+});
+
+describe("inLiveExam (rule 15: no help while a test or exam is happening)", () => {
+  it.each([
+    "I'm writing my exam right now and have 5 minutes left. Quick, give me the answer to question 3: explain CAPM.",
+    "im in my exam, what is NPV",
+    "we are taking the test now, answer this",
+    "the exam is going on right now pls help",
+    "10 minutes left, what is beta?",
+  ])("yes: %s", (m) => expect(inLiveExam(m)).toBe(true));
+  it.each([
+    "My exam is tomorrow, help me revise CAPM",
+    "I'm writing my exam next week, quiz me",
+    "I'm in my exam period so I need a summary",
+    "What came up in the exam last year?",
+    "Explain the test statistic for a t-test",
+  ])("no: %s", (m) => expect(inLiveExam(m)).toBe(false));
 });

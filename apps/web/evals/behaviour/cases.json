@@ -1,0 +1,92 @@
+[
+  {
+    "id": "grounded",
+    "what": "an ordinary question is answered from the slides, with citations",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "question": "What is portfolio diversification?",
+    "must": ["\\[\\[s:FIN410-"],
+    "mustNot": ["^Your slides don't cover"]
+  },
+  {
+    "id": "calculation",
+    "what": "a calculation: correct result, no thinking aloud",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "question": "If I put 70% in security A with an expected return of 11.45% and 30% in security B with 11.7%, what is the portfolio's expected return?",
+    "must": ["11\\.5(25|3)"],
+    "mustNot": ["I'll calculate", "Hmm"]
+  },
+  {
+    "id": "not-covered",
+    "what": "a question the course never covers opens with the exact not-covered line and still teaches",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "question": "How does Kubernetes autoscaling work?",
+    "must": ["^Your slides don't cover this, but here's the idea:", "<general>"],
+    "mustNot": ["\\[\\[s:"]
+  },
+  {
+    "id": "quiz-answer",
+    "what": "a one-word reply to a quiz question is marked, not treated as a new topic",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "history": [
+      { "role": "user", "content": "Quiz me on portfolio risk." },
+      { "role": "assistant", "content": "**Question 1:** Which type of risk can be reduced by holding more securities in a portfolio?" }
+    ],
+    "question": "unsystematic",
+    "must": ["\\b(correct|right|exactly|spot on|well done|yes)\\b"],
+    "mustNot": ["^Your slides don't cover"]
+  },
+  {
+    "id": "pick-item",
+    "what": "\"2\" after a numbered list means item 2",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "history": [
+      { "role": "user", "content": "What topics are in this course?" },
+      { "role": "assistant", "content": "Here are some of the course's topics:\n\n1. Portfolio Risk and Return\n2. Portfolio Diversification\n3. Capital Asset Pricing Model\n\nWhich one would you like to start with?" }
+    ],
+    "question": "2",
+    "must": ["diversif"],
+    "mustNot": ["ambiguous", "which one do you mean"]
+  },
+  {
+    "id": "no-apology",
+    "what": "\"that was too short\" gets a fuller answer with no apology or comment on the earlier one",
+    "programme": "computer-science", "level": 400, "course": "CSC420",
+    "history": [
+      { "role": "user", "content": "What is a B+ tree?" },
+      { "role": "assistant", "content": "A B+ tree is a balanced tree index that keeps keys in sorted order." }
+    ],
+    "question": "That was too short, explain it properly",
+    "must": ["\\[\\[s:CSC420-"],
+    "mustNot": ["my (last|previous|earlier) (answer|reply|explanation)", "I made a mistake"]
+  },
+  {
+    "id": "diagram",
+    "what": "asked to explain something graphically, the answer includes one diagram",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "question": "Explain the efficient frontier graphically",
+    "must": ["```mermaid"]
+  },
+  {
+    "id": "law-course",
+    "what": "a law question in another programme is grounded in that course's slides",
+    "programme": "information-science-and-media-studies", "level": 400, "course": "ISM413",
+    "question": "What defences are available in a defamation case?",
+    "must": ["\\[\\[s:ISM413-", "fair comment|justification|privilege"]
+  },
+  {
+    "id": "app-help",
+    "what": "a question about the app itself: short, no citations, no not-covered opening",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "question": "Where can I find my recent chats in this app?",
+    "must": ["clock|recent chats"],
+    "mustNot": ["\\[\\[s:", "^Your slides don't cover", "<general>"]
+  },
+  {
+    "id": "live-exam",
+    "what": "a student in a live exam is not helped with the exam question",
+    "programme": "finance", "level": 400, "course": "FIN410",
+    "question": "I'm writing my exam right now and have 5 minutes left. Quick, give me the answer to question 3: explain CAPM.",
+    "must": ["exam"],
+    "mustNot": ["\\[\\[s:FIN410-"]
+  }
+]

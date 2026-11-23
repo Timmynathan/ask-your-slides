@@ -12,6 +12,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { judge } from "../lib/evals/answer-rules.mts";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 process.loadEnvFile(path.join(ROOT, ".env"));
@@ -21,14 +22,6 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 type Case = { id: number; student: string; when: string; question: string; what: string; must?: string[]; mustNot?: string[] };
 const only = process.argv.slice(2).map(Number).filter(Boolean);
 const cases = (JSON.parse(readFileSync(path.join(ROOT, "data/evals/replay-cases.json"), "utf8")) as Case[]).filter((c) => !only.length || only.includes(c.id));
-
-const GENERAL: { label: string; bad: RegExp }[] = [
-  { label: "thin-slides opener", bad: /only outline this/i },
-  { label: "talks about searching", bad: /\b(the search|search (results|returned|pulled|gave)|I searched|let me (gather|pull|fetch|grab))\b/i },
-  { label: "apology opening", bad: /^\s*(you.?re right|i.?m sorry|sorry|apolog)/i },
-];
-// Reported but not failed: minor slips worth watching.
-const WARN: { label: string; bad: RegExp }[] = [{ label: "citation inside <general>", bad: /<general>(?:(?!<\/general>)[\s\S])*?\[\[s:/ }];
 
 async function run(c: Case) {
   // The original question, its conversation and everything said before it.
@@ -66,20 +59,7 @@ async function run(c: Case) {
     await new Promise((done) => setTimeout(done, 4000)); // the trace is written after the stream ends
     const { data: tr } = await db.from("traces").select("output_text, output_tokens, cost_usd, errors").eq("conversation_id", conv!.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     const answer: string = tr?.output_text ?? "";
-    const fails: string[] = [];
-    if (!r.ok) fails.push(`http ${r.status}: ${body.slice(0, 120)}`);
-    if (!answer.trim()) fails.push(`no answer: ${body.match(/"errorText":"([^"]+)"/)?.[1] ?? "empty"}`);
-    for (const g of GENERAL) if (g.bad.test(answer)) fails.push(g.label);
-    const warnings = WARN.filter((w) => w.bad.test(answer)).map((w) => w.label);
-    for (const p of c.must ?? []) if (!new RegExp(p, "i").test(answer)) fails.push(`missing /${p}/`);
-    for (const p of c.mustNot ?? []) if (new RegExp(p, "i").test(answer)) fails.push(`has /${p}/`);
-    const stripped = ((tr?.errors ?? []) as { code: string }[]).filter((e) => e.code === "citation_invalid").length;
-    const unsupported = ((tr?.errors ?? []) as { code: string }[]).filter((e) => e.code === "citation_unsupported").length;
-    if (unsupported > 2) fails.push(`${unsupported} citations to slides that don't say it`);
-    else if (unsupported) warnings.push(`${unsupported} citation(s) to a slide that doesn't say it, dropped`);
-    if (stripped > 1) fails.push(`${stripped} citations stripped`);
-    else if (stripped) warnings.push("1 citation stripped");
-    if (/"truncated":true/.test(body)) fails.push("cut short");
+    const { fails, warnings } = judge({ answer, httpOk: r.ok, body, errors: (tr?.errors ?? []) as { code: string }[], must: c.must, mustNot: c.mustNot });
     return { id: c.id, what: c.what, pass: !fails.length, fails, warnings, secs: Math.round((Date.now() - t0) / 1000), tokens: tr?.output_tokens, cost: tr?.cost_usd, question: c.question, answer };
   } finally {
     if (userId) await db.auth.admin.deleteUser(userId);

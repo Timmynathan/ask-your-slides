@@ -1,0 +1,73 @@
+# Behaviour check after each deploy that changes the bot (owner, 23 Nov 2026, option A).
+#
+# Vercel marks each commit with a "Vercel" status when its deploy finishes. When that status is a
+# success and the bot's prompt or logic changed since the last commit that passed this check, the
+# committed cases (apps/web/evals/behaviour/cases.json) are asked on the live site. A failing case
+# fails this workflow: the commit gets a red cross and GitHub emails the owner. About 5 US cents a run.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   NEXT_PUBLIC_SUPABASE_URL   the Supabase project address
+#   SUPABASE_SECRET_KEY        the Supabase secret key (to create and delete throwaway students)
+# Run it by hand any time: Actions → Behaviour check → Run workflow.
+name: Behaviour check
+
+on:
+  status:
+  workflow_dispatch:
+
+permissions:
+  contents: write # moves the behaviour-checked tag after a pass
+
+concurrency:
+  group: behaviour-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'Vercel' && github.event.state == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SHA: ${{ github.event.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.sha || github.sha }}
+          fetch-depth: 0
+
+      # Only when the bot changed since the last commit that passed (a failure keeps the old tag, so
+      # the next deploy is checked again). A manual run always checks.
+      - name: Did the bot change?
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git fetch --tags --force --quiet
+          if git rev-parse -q --verify refs/tags/behaviour-checked >/dev/null; then base=behaviour-checked; else base="$SHA~1"; fi
+          files=$(git diff --name-only "$base" "$SHA" -- apps/web/lib/agent apps/web/app/api/chat apps/web/lib/uploads apps/web/lib/evals apps/web/evals/behaviour)
+          if [ -n "$files" ]; then echo "Changed:"; echo "$files"; echo "run=true" >> "$GITHUB_OUTPUT"; else echo "No bot changes since $base: skipping."; echo "run=false" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.run == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install
+        if: steps.changed.outputs.run == 'true'
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+
+      - name: Ask the cases on the live site
+        if: steps.changed.outputs.run == 'true'
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: npm run check:behaviour
+
+      - name: Mark this commit as checked
+        if: steps.changed.outputs.run == 'true' && github.event_name != 'workflow_dispatch'
+        run: |
+          git tag -f behaviour-checked "$SHA"
+          git push -f origin refs/tags/behaviour-checked

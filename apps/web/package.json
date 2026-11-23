@@ -14,9 +14,10 @@
     "export:traces": "node scripts/export-traces.mts",
     "check:ui": "node scripts/ui-smoke.mts",
     "plans:comp": "node scripts/comp-grant.mts",
-    "check:walkthrough": "npx tsx scripts/walkthrough-check.mts",
-    "check:replay": "npx tsx scripts/replay-check.mts",
-    "check:retrieval": "npx tsx scripts/retrieval-check.mts"
+    "check:walkthrough": "tsx scripts/walkthrough-check.mts",
+    "check:replay": "tsx scripts/replay-check.mts",
+    "check:retrieval": "tsx scripts/retrieval-check.mts",
+    "check:behaviour": "tsx scripts/behaviour-check.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.99",
@@ -48,6 +49,7 @@
     "eslint-config-next": "16.4.5",
     "playwright": "^1.65.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   }
