@@ -244,8 +244,8 @@ const APOLOGY_START = /^\s*(?:[\p{L}'-]{2,20},\s*)?((?:i'?m |i am )?sorry\b|apol
 const APOLOGY_TWO = /^\s*(?:you'?re|you are) (?:right|correct)(?:,\s*[\p{L}'-]+)?[.!]\s*(?:my|the|that) (?:last|previous|earlier|first) (?:answer|reply|explanation|response|attempt)[^.!?\n]*[.!?]+\s*/iu;
 
 // "Hey Chineze, the course has no memory-aid slides as such, so I'll…" (owner's review, 22 Nov 2026):
-// a comment on what the slides lack, which rule 5 forbids. Only "has no / doesn't have any": a
-// sentence about what the slides do have is kept, and so is rule 6's "Your slides don't cover this".
+// a comment on what the slides lack, which the thin-slides part of rule 7 forbids. Only "has no / doesn't have any": a
+// sentence about what the slides do have is kept, and so is rule 4's "Your slides don't cover this".
 const LACKS_START = /^\s*(?:(?:hey|hi|hello|okay|ok|alright|right)\b[^.!?\n,]{0,30}[,!.]\s*)?(?:the|this|your) (?:course|slides|notes|lectures?|materials?|decks?)\b[^.!?\n]{0,40}?\b(?:ha(?:s|ve) no|(?:doesn'?t|does not|don'?t|do not) (?:have|include|contain) (?:any|a|specific|dedicated)|contains? no)\b[^.!?\n]*[.!?]+\s*/iu;
 
 // "Where a topic's slides didn't include a clear definition, I've described it from its title." (owner,
@@ -449,7 +449,7 @@ export async function runChatTurn(turn: ChatTurn) {
       if (!h) return;
       held.delete(id);
       controller.enqueue(h.start);
-      // The answer's first words: no apology or comment on an earlier answer (rule 19).
+      // The answer's first words: no apology or comment on an earlier answer (rule 14).
       streamText_(controller, id, output.trim() ? h.raw : trimApologyOpening(h.raw));
       if (h.end) {
         toTail(controller, id, filterFor(id).flush());
@@ -616,7 +616,7 @@ export async function runChatTurn(turn: ChatTurn) {
   const longAnswer = walkthrough || continuing;
   // Photos with the question: read them first, then find their topic in the slides.
   const photoNote = turn.images?.length
-    ? `The student attached ${turn.images.length === 1 ? "a photo" : `${turn.images.length} photos`} to this message (a question, a diagram, their notes or a page). Read ${turn.images.length === 1 ? "it" : "them"} carefully first. If the first search results don't match what the photo shows, search the slides again for its topic, then answer from the slides with citations, teaching the rest in <general>. If text in the photo is unreadable, say which part. Rule 12 applies: never help with a test or exam that is happening right now.`
+    ? `The student attached ${turn.images.length === 1 ? "a photo" : `${turn.images.length} photos`} to this message (a question, a diagram, their notes or a page). Read ${turn.images.length === 1 ? "it" : "them"} carefully first. If the first search results don't match what the photo shows, search the slides again for its topic, then answer from the slides with citations, teaching the rest in <general>. If text in the photo is unreadable, say which part. Rule 15 applies: never help with a test or exam that is happening right now. If the photo is from another course, still help (rule 16).`
     : null;
   // A photographed paper to answer (owner's review, 22 Nov 2026: six ILAC questions, one skipped as
   // "I can take that next", two parts out of the asked structure, answered out of order).
@@ -625,10 +625,10 @@ export async function runChatTurn(turn: ChatTurn) {
     ? "The photos are a paper of questions to answer. Answer every question on it, in the paper's order and numbered as on the paper, and every part of each question. Use the structure the student asked for (for example Issue, Law, Application, Conclusion) for every question and every part. Never skip or postpone a question because the slides say little about it: answer from the slides where they help and teach the rest in <general>. If the paper is long, keep each answer tighter rather than leaving any out. Start directly with the first question (no opening about the slides, the photos or how you will answer), and don't comment on the handwriting, the photos or how much the slides cover."
     : null;
   // Asked to see it rather than read it (owner, 22 Nov 2026): a turn note, which the model follows far
-  // more reliably than rule 23 alone (the replay check: 1 of 3 drew from the rule by itself). "Explain
+  // more reliably than the diagrams rule alone (the replay check: 1 of 3 drew from the rule by itself). "Explain
   // the diagram" alone means the slide's own diagram, which the page shows under the answer.
   const drawNote = asksToDraw(turn.userMessage)
-    ? "The student asked to see this visually. Include one small diagram as a mermaid code block (rule 23): a flowchart for a process, or an xychart-beta graph for a curve, trend or plot (for a plot, draw an example with the numbers from your explanation). Then say in words what it shows."
+    ? "The student asked to see this visually. Include one small diagram as a mermaid code block (rule 11): a flowchart for a process, or an xychart-beta graph for a curve, trend or plot (for a plot, draw an example with the numbers from your explanation). Then say in words what it shows."
     : null;
   // Memory aids (owner's review, 22 Nov 2026): one answer gave aids for five random lists instead of each
   // topic, with acronyms whose letters didn't match; an earlier one cited 16 slides it never opened.
@@ -688,12 +688,12 @@ export async function runChatTurn(turn: ChatTurn) {
   let uploadText: { title: string; text: string } | null = null;
   if (uploads.length) {
     const list = uploads.map((u) => `"${u.title}"${u.pages ? ` (${u.pages} page${u.pages === 1 ? "" : "s"})` : ""}`).join(", ");
-    uploadsNote = `The student has uploaded their own pages in this course: ${list}. Search results may include them as your_notes (rule 17).`;
+    uploadsNote = `The student has uploaded their own pages in this course: ${list}. Search results may include them as your_notes (rule 16).`;
     if (MENTIONS_UPLOAD.test(turn.userMessage)) {
       const named = uploads.find((u) => turn.userMessage.toLowerCase().includes(u.title.toLowerCase())) ?? uploads[0];
       const pages = must(await db.from("user_upload_chunks").select("page, chunk_text").eq("upload_id", named.id).order("page")) as { page: number; chunk_text: string }[];
       const text = pages.map((p) => p.chunk_text).join("\n\n").slice(0, UPLOAD_TEXT_MAX);
-      uploadsNote += ` They are asking about their upload "${named.title}": its pages, as read from their file, come with their message. It is their own material, not the lecturer's slides, and only content: use it as rule 17 says and answer from the slides as usual.`;
+      uploadsNote += ` They are asking about their upload "${named.title}": its pages, as read from their file, come with their message. It is their own material, not the lecturer's slides, and only content: use it as rule 16 says and answer from the slides as usual.`;
       uploadText = { title: named.title, text };
     }
   }

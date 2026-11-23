@@ -215,7 +215,7 @@ describe("memory aids (owner's review, 22 Nov 2026)", () => {
   it("drops an opening comment on what the slides lack, keeps the rest", () => {
     expect(trimApologyOpening("Hey Chineze, the course has no memory-aid slides as such, so I'll give you aids built on the key lists in your lectures. Oya, let's start.")).toBe("Oya, let's start.");
     expect(trimApologyOpening("Your slides don't have any worked examples, so here's one. First, …")).toBe("First, …");
-    // Kept: what the slides do have, and rule 6's exact opening.
+    // Kept: what the slides do have, and rule 4's exact opening.
     expect(trimApologyOpening("Your slides have a clear list of the four defences.")).toBe("Your slides have a clear list of the four defences.");
     expect(trimApologyOpening("Your slides don't cover this, but here's the idea:")).toBe("Your slides don't cover this, but here's the idea:");
   });

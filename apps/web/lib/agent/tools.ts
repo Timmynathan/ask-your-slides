@@ -163,7 +163,7 @@ function remember(
 
 const MAX_SEARCH_RESULTS = 8; // PRD §10.6
 // Below this, no result is about the question (unrelated matches score ~0.2; real ones 0.39+ across
-// the pilot courses): the materials don't cover it (rule 6, not the thin-slides rule 5).
+// the pilot courses): the materials don't cover it (rule 4, not the thin-slides part of rule 7).
 export const NO_MATCH_SIMILARITY = 0.3;
 
 export const searchSlides = defineTool({
