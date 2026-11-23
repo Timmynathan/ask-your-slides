@@ -35,6 +35,8 @@ export interface Overview {
     id: string; created_at: string; course: string | null; student: string | null; question: string; answer: string | null;
     cost_usd: number | null; ttft_ms: number | null; latency_ms: number | null; input_tokens: number | null; output_tokens: number | null;
     tools: string[]; cited: number; invalid_citations: number; errors: { code: string; detail?: string }[]; rating: 1 | -1 | null;
+    /** Why it needs a look (lib/admin/attention.ts), and when the question was asked: /admin Answers only. */
+    reasons?: string[]; asked_at?: string | null;
   }[];
   slowest: { created_at: string; course: string | null; question: string; latency_ms: number; ttft_ms: number | null; cost_usd: number | null }[];
   costliest: { created_at: string; course: string | null; question: string; cost_usd: number; input_tokens: number | null; output_tokens: number | null }[];

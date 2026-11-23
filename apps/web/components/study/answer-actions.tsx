@@ -23,7 +23,15 @@ async function save(body: object): Promise<boolean> {
   }
 }
 
-export function AnswerActions({ messageId, text, initial }: { messageId: string; text: string; initial: Rating }) {
+export function AnswerActions({ messageId, text, initial, ask = false, onRated }: {
+  messageId: string;
+  text: string;
+  initial: Rating;
+  /** Show "Was this helpful?" before the thumbs (lib/ui/use-helpful-ask.ts). */
+  ask?: boolean;
+  /** A rating was given (ends today's asks). */
+  onRated?(): void;
+}) {
   // Saves go out one after another: a quick "thumbs down → reason" must not let the first request
   // (no reason) land last and wipe the reason.
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -46,6 +54,7 @@ export function AnswerActions({ messageId, text, initial }: { messageId: string;
     setOther(null);
     setThanks(next?.rating === 1);
     const ok = await send({ message_id: messageId, rating: next ? rating : 0 });
+    if (ok && next) onRated?.();
     if (!ok) {
       setRated(prev);
       setAsking(false);
@@ -76,6 +85,7 @@ export function AnswerActions({ messageId, text, initial }: { messageId: string;
         <Action label={copied ? "Copied" : "Copy answer"} onClick={copy} active={copied}>
           {copied ? <path d="M5 12.5 10 17.5 19 7" /> : <path d="M8.5 8.5V5.5A1.5 1.5 0 0 1 10 4h8.5A1.5 1.5 0 0 1 20 5.5V14a1.5 1.5 0 0 1-1.5 1.5h-3M5.5 8.5H14a1.5 1.5 0 0 1 1.5 1.5v8.5A1.5 1.5 0 0 1 14 20H5.5A1.5 1.5 0 0 1 4 18.5V10a1.5 1.5 0 0 1 1.5-1.5Z" />}
         </Action>
+        {ask && !rated && <span className="pop-in ml-2 mr-0.5 text-[13px] text-ink/80">Was this helpful?</span>}
         <Action label="Good answer" onClick={() => rate(1)} active={rated?.rating === 1} pressed={rated?.rating === 1}>
           <path d="M7.5 10.5v9H5a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h2.5Zm0 0L11 4a2 2 0 0 1 2.5 2.4L12.8 10h5a2 2 0 0 1 2 2.3l-1 6a2 2 0 0 1-2 1.7H7.5" />
         </Action>

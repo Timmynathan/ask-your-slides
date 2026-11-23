@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { fill, PARTNERS, pick, type PartnerId } from "@/lib/partners";
 import { Answer } from "./answer";
 import { AnswerActions, type Rating } from "./answer-actions";
+import { useHelpfulAsk } from "@/lib/ui/use-helpful-ask";
 import { PulseCard } from "./pulse-card";
 import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
@@ -463,6 +464,12 @@ export function ChatPanel({
   // Once an answer has finished, its first cited slides load in the background, so a tap on a citation
   // opens at once. Touch screens have no hover to start loading early (owner, 23 Nov 2026).
   const lastAnswerText = status === "ready" && last?.role === "assistant" ? textOf(last) : "";
+  // "Was this helpful?" on the latest answer, a few times a day (lib/ui/use-helpful-ask.ts): not on an
+  // answer that is waiting for the student's reply (a quiz or check question), nor one already rated.
+  const helpful = useHelpfulAsk(
+    lastAnswerText ? last!.id : null,
+    !!lastAnswerText && !/\?\s*(<\/general>\s*)?$/.test(lastAnswerText.trim()) && !last?.metadata?.feedback,
+  );
   useEffect(() => {
     if (!lastAnswerText) return;
     const t = setTimeout(() => [...new Set(citedKeys(lastAnswerText))].slice(0, PREFETCH_CITED).forEach((k) => prefetchSlide(course.id, k)), 300);
@@ -564,7 +571,7 @@ export function ChatPanel({
                     <SlideThumb courseId={course.id} slideKey={firstCited(textOf(m))!} onOpen={onCite} />
                   )}
                   {m.metadata?.truncated && m.id === last?.id && !busy && <CutShort onContinue={() => submit(CONTINUE_TEXT)} disabled={capped} />}
-                  {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} />}
+                  {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} ask={m.id === helpful.askId} onRated={helpful.done} />}
                   </div>
                 </li>
               ),

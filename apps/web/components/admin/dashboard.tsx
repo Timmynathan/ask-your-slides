@@ -427,7 +427,8 @@ function Feedback({ data }: { data: Overview }) {
 function Answers({ range }: { range: Range }) {
   // One page at a time from /api/admin/answers: every student answer in the period, with the
   // filter and search applied to all of them (owner, 21 Nov 2026).
-  const [filter, setFilter] = useState<"all" | "down" | "errors" | "slow">("all");
+  // Opens on "Needs attention" (owner, 23 Nov 2026): the answers worth a look, each with its reasons.
+  const [filter, setFilter] = useState<"attention" | "all" | "down" | "errors" | "slow">("attention");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState(""); // the search, once typing pauses
   const [page, setPage] = useState(1);
@@ -466,6 +467,7 @@ function Answers({ range }: { range: Range }) {
       <div className="flex flex-wrap items-center gap-1.5">
         {(
           [
+            ["attention", "Needs attention"],
             ["all", "All"],
             ["down", "Thumbs down"],
             ["errors", "With problems"],
@@ -506,6 +508,11 @@ function Answers({ range }: { range: Range }) {
                     {r.rating === 1 ? <ThumbsUp size={14} absoluteStrokeWidth strokeWidth={1.5} aria-hidden /> : r.rating === -1 ? <ThumbsDown size={14} absoluteStrokeWidth strokeWidth={1.5} className="text-red-700" aria-hidden /> : "·"}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[15px]">{r.question}</span>
+                  {(r.reasons ?? []).map((why) => (
+                    <span key={why} className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                      {why}
+                    </span>
+                  ))}
                   {(() => {
                     const { problems, fixes } = splitErrors(r.errors);
                     return problems.length > 0 ? (
@@ -534,6 +541,7 @@ function Answers({ range }: { range: Range }) {
                     </ul>
                   )}
                   <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-sunken/50 p-3 font-sans text-[13.5px] leading-relaxed">{readable(r.answer) || "(no answer text: the turn failed)"}</pre>
+                  <ReplayCaseButton row={r} />
                 </div>
               </details>
             </li>
@@ -554,6 +562,43 @@ function Answers({ range }: { range: Range }) {
         </nav>
       )}
     </section>
+  );
+}
+
+/** Copies the answer as a replay case (data/evals/replay-cases.json), so a bad answer becomes a check
+ *  that proves the fix (owner, 23 Nov 2026). Paste it into that file and fill in must / mustNot. */
+function ReplayCaseButton({ row }: { row: Overview["recent"][number] }) {
+  const [copied, setCopied] = useState(false);
+  if (!row.asked_at) return null;
+  const asked = row.asked_at;
+  const caseJson = () =>
+    JSON.stringify(
+    {
+      id: Number(String(Date.now()).slice(-6)),
+      student: "Student",
+      when: asked.slice(0, 16),
+      question: row.question,
+      what: (row.reasons ?? []).join("; ") || "describe what a good answer does",
+      must: [],
+      mustNot: [],
+    },
+    null,
+    1,
+  );
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard.writeText(caseJson()).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+      className="rounded-full px-3 py-1.5 text-xs ring-1 ring-line transition hover:bg-sunken"
+      title="For data/evals/replay-cases.json: the replay check re-asks it on the live site"
+    >
+      {copied ? "Copied" : "Copy as replay case"}
+    </button>
   );
 }
 
