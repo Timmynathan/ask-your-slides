@@ -62,6 +62,19 @@ describe("citedRanges (the previous answer's slides, read again on a follow-up)"
   it("nothing when the answer cited nothing", () => expect(citedRanges("plain text")).toEqual([]));
 });
 
+describe("thinking aloud in calculation answers (owner's live check, 23 Nov 2026)", () => {
+  it("drops a bare 'Let me calculate it:' line and 'Hmm, check that again:'", () => {
+    expect(plainSlideTalk("Here W_a = 0.7.\n\nLet me calculate it:\n\n$$E = 11.525$$")).toBe("Here W_a = 0.7.\n\n\n$$E = 11.525$$");
+    expect(plainSlideTalk("It lands nearer 11.45%. Hmm, check that again: 11.525% is closer to 11.45%.")).toBe("It lands nearer 11.45%. 11.525% is closer to 11.45%.");
+  });
+  it("keeps ordinary sentences", () => {
+    expect(plainSlideTalk("Let me show you why the weights matter.")).toBe("Let me show you why the weights matter.");
+  });
+  it("cuts 'Let me calculate it:' before a tool call", () => {
+    expect(trimTrailingNarration("Here W_a = 0.7 and W_b = 0.3.\n\nLet me calculate it:").dropped).toBe("Let me calculate it:");
+  });
+});
+
 describe("trimTrailingNarration (before a tool call)", () => {
   it("drops the closing planning sentence the review caught", () => {
     const r = trimTrailingNarration("I've covered the cash book and the subsidiary books here; for the Journal and the Petty Cash Book, let me pull the slides too.\n\n");

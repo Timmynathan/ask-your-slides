@@ -229,9 +229,9 @@ export function citedRanges(content: string, budget = 40): { material: string; f
 }
 
 /** Words the model uses when planning to itself, never in an answer to the student. */
-export const PLANNING = /\b(the student'?s?\b|I need (?:the|to (?:pull|fetch|get|read|check|look|search|find))|let me (?:pull|fetch|grab|gather|get|check|look|search|read|load|open|find)|I'?ll (?:pull|fetch|grab|gather|search|look up|load)\b|I'?ll answer the ones)/i;
+export const PLANNING = /\b(the student'?s?\b|I need (?:the|to (?:pull|fetch|get|read|check|look|search|find))|let me (?:pull|fetch|grab|gather|get|check|look|search|read|load|open|find|calculate|compute|work (?:it|this|that) out)|I'?ll (?:pull|fetch|grab|gather|search|look up|load)\b|I'?ll answer the ones)/i;
 
-const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
+const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find|calculate|compute|work|verify)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
 
 // The student's name may come first ("Timmy, I'm sorry to say…": owner's live check, 23 Nov 2026).
 const APOLOGY_START = /^\s*(?:[\p{L}'-]{2,20},\s*)?((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?re|you are) (?:right|correct)\b[^.!?\n]*\b(my|last|previous|earlier|answer|reply|explanation|response|skimm|missed|skipped)\b)[^.!?\n]*[.!?]+\s*/iu;
@@ -276,6 +276,10 @@ const SEARCH_TALK: [RegExp, string][] = [
   // freedom and NBC regulation, and…", "I didn't find slides that deal with…". Dropped.
   [/(?<=^|[.!?]\s+|\n)I (?:searched|looked through|went through|checked|scanned) (?:the|your) (?:course )?(?:slides|materials|notes)\b[^.!?\n]*[.!?]\s*/g, ""],
   [/(?<=^|[.!?]\s+|\n)I (?:didn'?t|did not|couldn'?t|could not) find (?:any )?(?:slides?|materials?|notes|anything)\b[^.!?\n]*[.!?]\s*/g, ""],
+  // Thinking aloud (owner's live check, 23 Nov 2026): "Hmm, check that again:" and a bare "Let me
+  // calculate it:" line reached the student.
+  [/(?<=^|[.!?]\s+|\n)(?:Hmm+|Wait|Actually, wait)[,.]?\s+(?:let me |let's )?(?:check|recheck|re-check|double-check|look at) (?:that|this|it)(?: again)?[:.]\s*/g, ""],
+  [/(?<=^|\n)(?:Let me|Let's) (?:calculate|compute|work out|do the (?:maths?|calculation)) (?:it|this|that|them)?\s*[:.]\s*(?=\n|$)/g, ""],
 ];
 /** "My upload", "the PDF I uploaded", "my test", "my notes": the student means their own pages. */
 const MENTIONS_UPLOAD = /\b(upload(?:ed|s)?|my (?:test|notes?|paper|pdf|file|document|scan|worksheet|pages?)|the (?:pdf|file|document|scan) I)\b/i;
