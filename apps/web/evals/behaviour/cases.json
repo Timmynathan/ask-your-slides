@@ -172,5 +172,65 @@
       "not able to help",
       "wouldn'?t be fair"
     ]
+  },
+  {
+    "id": "greeting",
+    "what": "\"hey\" gets a short, warm reply and a question back, not a lesson",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "history": [
+      {
+        "role": "user",
+        "content": "What is portfolio diversification?"
+      },
+      {
+        "role": "assistant",
+        "content": "Diversification spreads money across securities so risk falls without giving up return. [[s:FIN410-06-3]]"
+      }
+    ],
+    "question": "hey",
+    "must": [
+      "\\?"
+    ],
+    "mustNot": [
+      "\\[\\[s:",
+      "<general>"
+    ]
+  },
+  {
+    "id": "chat-memory",
+    "what": "\"what were my last 2 questions\" is answered from the chat, never 'I can't see'",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "history": [
+      {
+        "role": "user",
+        "content": "What is portfolio diversification?"
+      },
+      {
+        "role": "assistant",
+        "content": "Diversification spreads money across securities so risk falls. [[s:FIN410-06-3]]"
+      },
+      {
+        "role": "user",
+        "content": "Explain systematic risk"
+      },
+      {
+        "role": "assistant",
+        "content": "Systematic risk affects the whole market and can't be diversified away. [[s:FIN410-06-3]]"
+      }
+    ],
+    "question": "what was the last 2 questions i asked",
+    "must": [
+      "systematic risk",
+      "diversification"
+    ],
+    "mustNot": [
+      "can'?t see",
+      "cannot see",
+      "\\[\\[s:"
+    ]
   }
 ]

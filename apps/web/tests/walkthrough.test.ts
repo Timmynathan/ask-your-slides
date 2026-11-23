@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration } = await import("@/lib/agent/run");
+const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration, isSmallTalk, asksAboutChat } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -240,4 +240,11 @@ describe("planning and search talk (owner's review, 22 Nov 2026)", () => {
     expect(plainSlideTalk("Facts first.\nI didn't find slides that deal with a study lounge. The defamation notes are closest.")).toBe("Facts first.\nThe defamation notes are closest.");
     expect(plainSlideTalk("The court searched the slides? No.")).toBe("The court searched the slides? No.");
   });
+});
+
+describe("greetings and questions about the chat (owner's chat review, 23 Nov 2026)", () => {
+  it.each(["hey", "Hi Zara!", "hello", "thanks", "thank you so much", "ok", "good morning", "heyyy"])("small talk: %s", (m) => expect(isSmallTalk(m)).toBe(true));
+  it.each(["hey what is NPV", "hi, explain IAS 2", "thanks, now quiz me", "ok next topic", "What is goodwill?"])("not small talk: %s", (m) => expect(isSmallTalk(m)).toBe(false));
+  it.each(["what was the last 2 questions i asked", "what did I ask before?", "what were my previous questions", "what have we covered so far", "summarise our chat"])("about the chat: %s", (m) => expect(asksAboutChat(m)).toBe(true));
+  it.each(["what was the last question on the 2023 paper?", "summarise this topic", "what did the lecturer say about IAS 16?"])("not about the chat: %s", (m) => expect(asksAboutChat(m)).toBe(false));
 });

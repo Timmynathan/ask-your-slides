@@ -301,6 +301,16 @@ const UPLOAD_TEXT_MAX = 24000; // characters of an upload handed to the model (a
 const PAPER_WORDS = /\b(answer (?:these|them|all|each|every|the questions?)|question by question|each question|all (?:the )?questions|past (?:paper|questions?)|test questions?|exam questions?|ILAC|IRAC|IPAC)\b/i;
 
 /** "Give me memory aids", "mnemonics for each topic", "help me remember the definitions". */
+/** "hey", "hi Zara", "thanks!", "ok", "good morning": nothing to look up. */
+export function isSmallTalk(message: string): boolean {
+  return /^\s*(?:hey+|hi+|hello+|hiya|yo|sup|good (?:morning|afternoon|evening|night)|thanks(?: (?:a lot|so much|very much))?|thank (?:you|u)(?: (?:so much|a lot|very much))?|thx|ok(?:ay)?|k|cool|alright|great|nice|lol|bye|goodnight)(?:\s+(?:zara|tobi|ada|dr\.? musa|musa|there|again))?[\s!.?,:)]*$/i.test(message);
+}
+
+/** "what was my last question", "what did I ask", "what have we covered": about this chat, not the course. */
+export function asksAboutChat(message: string): boolean {
+  return /\b(?:what (?:was|were|is|are) (?:my|the) (?:last|previous|earlier|first)(?: \d+| two| three)? (?:questions?|messages?)(?!\s+(?:on|in|from|of|for)\b)|what (?:did|have) i (?:ask|say|send)|(?:my|the) (?:last|previous) (?:\d+ |two |three )?(?:questions?|messages?) (?:i asked|i sent)|what (?:have|did) we (?:covered?|discuss(?:ed)?|talk(?:ed)? about)|summari[sz]e (?:our|this) (?:chat|conversation))\b/i.test(message);
+}
+
 export function asksForMemoryAids(message: string): boolean {
   return /\b(memory (aids?|tricks?|hooks?|devices?)|mnemonics?|acronyms?|help me (remember|memori[sz]e)|(easy|easier) to remember|ways? to remember)\b/i.test(message);
 }
@@ -536,6 +546,17 @@ export async function runChatTurn(turn: ChatTurn) {
   // "Explain the code in this topic": every practical file (scripts, notebooks) of the topic or
   // course is read first, so the answer covers each file, not just the best search matches.
   const focus = turn.focusSlide ? parseSlideKey(turn.focusSlide) : null;
+  // A greeting, or a question about this chat itself (owner's chat review, 23 Nov 2026: "hey" made it
+  // read three lecture files and re-teach a topic; "what were my last 2 questions" got "I can't see your
+  // earlier messages"). No slide lookups and no tools: a short reply from the conversation.
+  const smallTalk = !turn.images?.length && !focus && isSmallTalk(turn.userMessage);
+  const aboutChat = !turn.images?.length && !focus && asksAboutChat(turn.userMessage);
+  const chitChat = smallTalk || aboutChat;
+  const chatNote = smallTalk
+    ? "The student's message is a greeting or small talk, not a question. Reply in one or two warm sentences in your voice and ask what they'd like to study in this course. No slides, no citations, no <general> block, no list of topics."
+    : aboutChat
+      ? "The student is asking about this conversation itself. Answer from the earlier messages above, which you can see: quote their questions briefly (the most recent first when they ask for the last ones), and include everything they asked for. Never say you can't see earlier messages. No slides, no citations, no <general> block."
+      : null;
   const preCalls: { tool: typeof searchSlides | typeof getMaterialPages | typeof listTopics; input: Record<string, unknown> }[] = [];
   if (focus) {
     preCalls.push({ tool: getMaterialPages, input: { material: focus.material, from: focus.number, to: focus.number } });
@@ -616,7 +637,7 @@ export async function runChatTurn(turn: ChatTurn) {
       }
     }
   }
-  if (!preCalls.length) {
+  if (!preCalls.length && !chitChat) {
     // A bare "keep going" says nothing to search for: search with the earlier question instead.
     const query = picked ?? (continuing ? preSearchQuery({ userMessage: "", history: turn.history }) || turn.userMessage : preSearchQuery(turn));
     preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
@@ -660,7 +681,7 @@ export async function runChatTurn(turn: ChatTurn) {
   // cited are read again, so the model can check the student's answer against them and its
   // citations stay valid (they used to be stripped as citation_invalid, and the model said it
   // "couldn't confirm" a figure it had cited one turn earlier). Owner's review, 21 Nov 2026.
-  if (previous && !continuing && !walkthrough && !focus) {
+  if (previous && !continuing && !walkthrough && !focus && !chitChat) {
     for (const r of citedRanges(previous)) preCalls.push({ tool: getMaterialPages, input: r });
   }
   const pre = [];
@@ -671,7 +692,7 @@ export async function runChatTurn(turn: ChatTurn) {
   // about from the viewer; the top results of a question about a diagram, graph or chart; or top
   // results that are mostly picture. Not for long reads (walkthroughs, summaries, memory aids, papers):
   // too many slides. The model can still call view_slides itself.
-  if (!longAnswer && !summaryAsked && !memoryAids && !paperAsked) {
+  if (!longAnswer && !summaryAsked && !memoryAids && !paperAsked && !chitChat) {
     const found = ctx.toolLog.find((t) => t.name === "search_slides")?.slide_keys ?? [];
     const look = focus && turn.focusSlide
       ? [turn.focusSlide]
@@ -717,7 +738,7 @@ export async function runChatTurn(turn: ChatTurn) {
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, chat: chatNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -727,7 +748,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), chatNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
@@ -744,18 +765,23 @@ export async function runChatTurn(turn: ChatTurn) {
             : turn.userMessage,
         providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
       },
-      { role: "assistant", content: pre.map((c) => ({ type: "tool-call" as const, toolCallId: c.id, toolName: c.name, input: c.input })) },
-      {
-        role: "tool",
-        content: pre.map((c) => ({
-          type: "tool-result" as const,
-          toolCallId: c.id,
-          toolName: c.name,
-          output: c.name === viewSlides.name ? viewSlides.modelOutput!(c.output) : { type: "json" as const, value: c.output as never },
-        })),
-      },
+      // The server's own first steps, when there are any (a greeting or a question about the chat has none).
+      ...(pre.length
+        ? [
+            { role: "assistant" as const, content: pre.map((c) => ({ type: "tool-call" as const, toolCallId: c.id, toolName: c.name, input: c.input })) },
+            {
+              role: "tool" as const,
+              content: pre.map((c) => ({
+                type: "tool-result" as const,
+                toolCallId: c.id,
+                toolName: c.name,
+                output: c.name === viewSlides.name ? viewSlides.modelOutput!(c.output) : { type: "json" as const, value: c.output as never },
+              })),
+            },
+          ]
+        : []),
     ],
-    tools: buildTools(ctx),
+    tools: chitChat ? {} : buildTools(ctx),
     stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : paperAsked ? MAX_STEPS_PAPER : MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     prepareStep: () =>
