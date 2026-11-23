@@ -31,13 +31,14 @@ const TIPS: Record<LaptopStep, { title: string; body: string }> = {
 
 const SOURCES_BUTTON = { title: "Open your slides", body: "Click this icon to see your lecture slides." };
 
-/** The step's element: the first match that is actually on screen. */
+/** The step's element: the first match that is actually on screen. For the slides step the open Sources
+ *  panel wins over its icon: on tablets the icon stays visible under the slid-in panel (owner, 23 Nov 2026). */
 function target(step: LaptopStep): HTMLElement | null {
-  for (const el of document.querySelectorAll<HTMLElement>(`[data-laptop-tour="${step}"]`)) {
+  const shown = [...document.querySelectorAll<HTMLElement>(`[data-laptop-tour="${step}"]`)].filter((el) => {
     const r = el.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0 && r.right > 0 && r.left < window.innerWidth) return el;
-  }
-  return null;
+    return r.width > 0 && r.height > 0 && r.right > 0 && r.left < window.innerWidth;
+  });
+  return shown.find((el) => el.tagName !== "BUTTON") ?? shown[0] ?? null;
 }
 
 export function useLaptopTour(account: string, enabled: boolean) {
