@@ -9,7 +9,8 @@ import { adminClient, must } from "@/lib/supabase/admin";
 import { parseSlideKey } from "@/lib/study/course-code";
 
 export const CHAT_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
-export const HISTORY_LIMIT = 12; // PRD §10.6
+export const HISTORY_LIMIT = 20; // PRD §10.6 (was 12; owner, 23 Nov 2026: longer chats kept losing the thread)
+export const HISTORY_MAX_CHARS = 60_000; // about 15k tokens: a chat of long answers drops its oldest turns first
 const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
 const MAX_STEPS_PAPER = 9; // a photographed paper: a search or two per question before the answer
 const MEMORY_AID_TOPICS = 16; // whole-course memory aids: topics searched up front (4 slides each)
@@ -244,8 +245,13 @@ const APOLOGY_TWO = /^\s*(?:you'?re|you are) (?:right|correct)(?:,\s*[\p{L}'-]+)
 // sentence about what the slides do have is kept, and so is rule 6's "Your slides don't cover this".
 const LACKS_START = /^\s*(?:(?:hey|hi|hello|okay|ok|alright|right)\b[^.!?\n,]{0,30}[,!.]\s*)?(?:the|this|your) (?:course|slides|notes|lectures?|materials?|decks?)\b[^.!?\n]{0,40}?\b(?:ha(?:s|ve) no|(?:doesn'?t|does not|don'?t|do not) (?:have|include|contain) (?:any|a|specific|dedicated)|contains? no)\b[^.!?\n]*[.!?]+\s*/iu;
 
+// "Where a topic's slides didn't include a clear definition, I've described it from its title." (owner,
+// 23 Nov 2026): a note on method before the answer starts. Only a sentence that opens with "Where/When/If
+// a topic's (or the) slides didn't/don't…" and says what was done instead.
+const WHERE_LACKS_START = /^\s*(?:where|when|if|for topics where) (?:a|the|some|any) (?:topic|lecture|slide|deck)(?:'s|s'|s)? (?:slides? |notes |materials? )?(?:didn'?t|did not|don'?t|do not|doesn'?t|does not|lacked|lack)\b[^.!?\n]*[.!?]+\s*/iu;
+
 export function trimApologyOpening(text: string): string {
-  return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "").replace(LACKS_START, "");
+  return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "").replace(LACKS_START, "").replace(WHERE_LACKS_START, "");
 }
 
 // A stray Chinese, Japanese or Korean character in an English answer (owner's review, 22 Nov 2026:
@@ -617,7 +623,7 @@ export async function runChatTurn(turn: ChatTurn) {
   // Memory aids (owner's review, 22 Nov 2026): one answer gave aids for five random lists instead of each
   // topic, with acronyms whose letters didn't match; an earlier one cited 16 slides it never opened.
   const memoryNote = memoryAids
-    ? `The student wants memory aids. ${turn.topicId ? "Cover this lecture's key definitions and lists." : "Go topic by topic, in the order of the topic list, and cover every topic; each topic's key slides were searched for you above."} For each topic: a bold heading; the key definition or list in a line or two, cited, using only slide keys that appear in the results above (a point without such a slide gets no citation); then one memory aid inside <general>. For a list, prefer a sentence with one word per item, each word starting with that item's first letter, in the same order ("My Dear Wise Cat Thinks" for Modernisation, Dependency, World-systems, Cultural imperialism, Technological determinism); for an idea, a vivid picture or comparison. Check the letters and their order silently before writing; never print the check, and never call an aid awkward: if no sentence fits, use a picture instead. Name only what you then give. Keep each topic short, about four lines.`
+    ? `The student wants memory aids. ${turn.topicId ? "Cover this lecture's key definitions and lists." : "Go topic by topic, in the order of the topic list, and cover every topic; each topic's key slides were searched for you above."} For each topic: a bold heading; the key definition or list in a line or two, cited, using only slide keys that appear in the results above (a point without such a slide gets no citation); then one memory aid inside <general>. For a list, prefer a sentence with one word per item, each word starting with that item's first letter, in the same order ("My Dear Wise Cat Thinks" for Modernisation, Dependency, World-systems, Cultural imperialism, Technological determinism); for an idea, a vivid picture or comparison. Check the letters and their order silently before writing; never print the check, and never call an aid awkward: if no sentence fits, use a picture instead. Name only what you then give. Keep each topic short, about four lines. Start straight with the first topic's heading: no note on how you handled thin slides.`
     : null;
   // Maths in a calculator course (owner's answer review, 21 Nov 2026): with thinking off, Haiku
   // rushed worked examples (a wrong binomial coefficient, a slide's wrong angle repeated) and

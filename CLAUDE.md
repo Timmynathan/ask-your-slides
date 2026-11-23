@@ -25,11 +25,13 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   Live since 13 Nov 2026 (kill switch: NEXT_PUBLIC_PAST_QUESTIONS=0). The original papers show beside the questions: cleaned page images (npm run ingest:past:pages: straightened, ink and student details removed; papers with answers written in are never shown). BUA401 2024/25 CA blocked by the content filter.
 - Plans (PRD F12, Nov 2026): Free and Finals (one-time, manual bank transfer; Paystack was removed
   before launch). Every number/price/date lives in apps/web/lib/plans/config.ts; limits enforced on
-  the server (lib/plans/gate.ts); bank details + WhatsApp number are in that config too. Premium courses =
-  course.yaml `premium: true`, per programme. /pay records a pending payment_request and opens
+  the server (lib/plans/gate.ts); bank details + WhatsApp number are in that config too. Free is 10
+  questions a day (FREE_DAILY). Premium courses are OFF (owner, 22 Nov 2026: students felt shut out):
+  PREMIUM_COURSES_ON = false, so every course is open on Free and course.yaml `premium: true` has no
+  effect; the premium wording is hidden behind that flag. /pay records a pending payment_request and opens
   WhatsApp; Finals is granted ONLY by an admin approval (/admin/payments); no emails: the student sees a "You're on Finals" pop-up. Never grant
   automatically.
-- Launch to final-year students Mon 16 Nov 2026; price goes up 22 Nov 23:59; exams from 5 Dec 2026.
+- Launch to final-year students Mon 16 Nov 2026; price goes up 27 Nov 23:59 (moved from 22 Nov); exams from 7 Dec 2026.
 - App shell (20–21 Nov 2026): one sidebar (components/nav/app-shell.tsx) in the shared layout app/(app)/(shell)/
   for the dashboard, Chat, Past questions, pricing, profile, settings and the course page (the course page
   fills the panel with its topics through a portal, so the sidebar never remounts). General Chat
@@ -50,6 +52,17 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   maths turns there think briefly (adaptive, effort low); rules for complex numbers, term-by-term
   expansions, signs, LaTeX, and saying when a slide's worked result is wrong (MTH101-10-53 gives 345° for
   −3+3i; the bot now says 135°). Still for the owner: CAMA s.96 ratification on the Company Law slides.
+- 22–23 Nov 2026: memory aids go topic by topic (one slide search per topic; acronyms must match the
+  items' first letters); photographed papers answer every question in the asked structure (ILAC);
+  planning text, search talk, stray CJK characters and method-note openers are trimmed on the stream.
+  Chat memory: last 20 messages, capped at ~60,000 characters (HISTORY_LIMIT / HISTORY_MAX_CHARS in
+  lib/agent/run.ts); photos aren't kept but their text is (messages.photo_text, read by Haiku after the
+  answer, lib/uploads/read-photos.ts). The chat box's + takes photos or a PDF (saved as an upload).
+  Slides: cited slides of the latest answer load in the background, two pages ahead, signed image links
+  reused for 45 min. Recent chats: a full-height list beside the rail (components/nav/recent-chats-panel.tsx,
+  GET /api/conversations/recent). Tablets: dashboard side cards beside the courses from 768 px.
+- Past-question answers rerun 23 Nov: the first --analyse run lost its saves to an idle DB connection
+  (batch results were cached, so nothing was paid twice); ingestion now reconnects after every batch wait.
 
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.

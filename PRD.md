@@ -857,7 +857,7 @@ The server and the UI enforce the contract:
 
 ### 10.6 Context and cost controls
 
-- Send at most the last 12 messages of history.
+- Send at most the last 20 messages of history (was 12; owner, 23 Nov 2026), and at most about 60,000 characters of it: the oldest drop first. Text read from photos sent in the chat is kept on the message (`messages.photo_text`) and sent with it, since the photos themselves aren't kept.
 - Tool results: max 8 slides for search, 40 pages per material read.
 - Max output: 1,200 tokens (2,000 for summaries: when the message asks for a summary/overview or the agent reads whole materials).
 - Prompt caching: tools + core instructions are one shared cached prefix for every chat (Haiku 5.5 caches from 512 tokens); a second breakpoint on the new question serves the later steps of the same turn.

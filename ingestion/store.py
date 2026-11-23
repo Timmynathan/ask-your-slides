@@ -42,11 +42,24 @@ def vector_literal(v: list[float]) -> str:
 
 
 class Store:
+    @staticmethod
+    def _connect():
+        return psycopg.connect(env("DATABASE_URL"), row_factory=dict_row, autocommit=True)
+
+    def reconnect(self) -> None:
+        """A fresh connection after a long wait (a batch can take an hour): the pooler drops idle ones,
+        which once lost a whole run's saves (23 Nov 2026). The batch replies are cached either way."""
+        try:
+            self.db.close()
+        except Exception:
+            pass
+        self.db = self._connect()
+
     def __init__(self) -> None:
         # autocommit=True so each `with self.db.transaction()` is a real, committed transaction.
         # (With autocommit off, any earlier SELECT opens an implicit transaction, every later
         # transaction() block silently becomes a savepoint inside it, and nothing is committed.)
-        self.db = psycopg.connect(env("DATABASE_URL"), row_factory=dict_row, autocommit=True)
+        self.db = self._connect()
         key = env("SUPABASE_SECRET_KEY")
         self.http = httpx.Client(
             base_url=f"{env('NEXT_PUBLIC_SUPABASE_URL').rstrip('/')}/storage/v1",

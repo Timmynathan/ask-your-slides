@@ -1,7 +1,8 @@
 import { createUIMessageStreamResponse, toUIMessageStream, type ModelMessage } from "ai";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
-import { HISTORY_LIMIT, historyText, runChatTurn } from "@/lib/agent/run";
+import { HISTORY_LIMIT, HISTORY_MAX_CHARS, historyText, runChatTurn } from "@/lib/agent/run";
+import { readPhotos } from "@/lib/uploads/read-photos";
 import { isPartnerId, PARTNERS } from "@/lib/partners";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -112,17 +113,30 @@ export async function POST(request: Request) {
     must(await db.from("messages").delete().eq("conversation_id", conversationId).gte("created_at", editFrom.created_at));
   }
 
-  const recent = must(
-    await db
-      .from("messages")
-      .select("role, content")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: false })
-      .limit(HISTORY_LIMIT),
-  ) as { role: "user" | "assistant"; content: string }[];
-  const history: ModelMessage[] = recent
-    .reverse()
-    .map((m) => ({ role: m.role, content: m.role === "assistant" ? historyText(m.content) : m.content }));
+  // History (PRD §10.6): the last HISTORY_LIMIT messages, newest kept first until HISTORY_MAX_CHARS.
+  // A question sent with photos carries the text read from them (photo_text), so follow-ups still have
+  // the paper. Falls back to no photo_text until the column exists (migration 20261123000001).
+  const historyQuery = (cols: string) =>
+    db.from("messages").select(cols).eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(HISTORY_LIMIT);
+  let historyRows = await historyQuery("role, content, photo_text");
+  if (historyRows.error?.code === "42703") historyRows = await historyQuery("role, content");
+  const recent = must(historyRows) as unknown as { role: "user" | "assistant"; content: string; photo_text?: string | null }[];
+  const kept: ModelMessage[] = [];
+  let chars = 0;
+  for (const m of recent) {
+    const content =
+      m.role === "assistant"
+        ? historyText(m.content)
+        : m.photo_text
+          ? `${m.content}\n\n[Text read from the photos sent with this message]\n${m.photo_text}`
+          : m.content;
+    chars += content.length;
+    if (kept.length >= 2 && chars > HISTORY_MAX_CHARS) break;
+    kept.push({ role: m.role, content });
+  }
+  // Start on a question, not on an answer whose question was cut.
+  while (kept.length && kept.at(-1)!.role === "assistant") kept.pop();
+  const history: ModelMessage[] = kept.reverse();
 
   const row: { id?: string; conversation_id: string; user_id: string; role: "user"; content: string } = {
     conversation_id: conversationId,
@@ -167,6 +181,22 @@ export async function POST(request: Request) {
 
   // Finish (and save) the answer even if the student closes the tab mid-stream.
   result.consumeStream();
+
+  // Photos aren't kept, but their text is (chat memory, owner 23 Nov 2026): read once, after the
+  // response, and saved on the question so the next turns can still see the paper.
+  if (images.length) {
+    after(async () => {
+      try {
+        const { text, cost } = await readPhotos(images);
+        if (!text) return;
+        const { error } = await db.from("messages").update({ photo_text: text }).eq("id", userMessageId);
+        if (error) console.error("photo_text save failed", error.message);
+        else console.log(`photo_text saved: ${images.length} photo(s), ${text.length} chars, $${cost.toFixed(5)}`);
+      } catch (e) {
+        console.error("photo read failed", e);
+      }
+    });
+  }
 
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({

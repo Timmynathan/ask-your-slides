@@ -17,7 +17,7 @@ const READ_MODEL = process.env.CHAT_MODEL || "claude-haiku-5-5";
 // Same prices the chat uses (lib/agent/run.ts), per million tokens.
 const USD_PER_MTOK = { input: 0.1, output: 0.5 };
 
-const PROMPT = `These are a student's own pages: photos or a scan of a test, past paper, worksheet or notes, possibly handwritten.
+export const READ_PAGES_PROMPT = `These are a student's own pages: photos or a scan of a test, past paper, worksheet or notes, possibly handwritten.
 Write out the text of every page, in order, exactly as written. Do not answer, solve or correct anything.
 - Start each page with a line "=== Page N ===".
 - Keep question numbers, marks, headings and the student's own answers or working if present.
@@ -49,7 +49,7 @@ export async function readUpload(db: Db, uploadId: string): Promise<void> {
           ? ({ type: "file" as const, data: f.bytes, mediaType: "application/pdf" })
           : ({ type: "image" as const, image: f.bytes, mediaType: f.type }),
       ),
-      { type: "text" as const, text: PROMPT },
+      { type: "text" as const, text: READ_PAGES_PROMPT },
     ];
     const { text, usage } = await generateText({
       model: anthropic(READ_MODEL),

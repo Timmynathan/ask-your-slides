@@ -84,6 +84,14 @@ describe("trimApologyOpening", () => {
     expect(trimApologyOpening("Sorry about that, Leko. Let's slow down.")).toBe("Let's slow down.");
     expect(trimApologyOpening("You're right, Leko. My last answer rushed the steps. Let's slow down.")).toBe("Let's slow down.");
   });
+  it("drops a note on method before the answer (owner, 23 Nov 2026)", () => {
+    const head = "**Theories of international communication**\nThe five theories are…";
+    expect(trimApologyOpening(`Where a topic's slides didn't include a clear definition, I've described it from its title rather than citing it.\n\n${head}`)).toBe(head);
+    expect(trimApologyOpening(`Where the slides don't define a term, I explain it in general terms. ${head}`)).toBe(head);
+  });
+  it("keeps an opening that starts the answer", () => {
+    expect(trimApologyOpening("Where a firm sells abroad, it faces exchange risk. [[s:A-01-2]]")).toBe("Where a firm sells abroad, it faces exchange risk. [[s:A-01-2]]");
+  });
   it("keeps a quiz verdict and ordinary openings", () => {
     expect(trimApologyOpening("You're right, it's Planning. [[s:A-01-2]]")).toBe("You're right, it's Planning. [[s:A-01-2]]");
     expect(trimApologyOpening("A ledger groups entries by account.")).toBe("A ledger groups entries by account.");

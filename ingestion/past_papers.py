@@ -748,6 +748,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     replies = batch.run({j.custom_id: j.params for j in model_jobs}, label="extract") if model_jobs else {}
+    if store and model_jobs:
+        store.reconnect()  # idle during the batch
     REPORTS.mkdir(parents=True, exist_ok=True)
     sections = []
     matches: list[tuple[Job, str, str, str]] = []  # (job, verdict, detail, status)
@@ -871,6 +873,7 @@ def analyse(courses: list[Course], args) -> int:
             print("Cancelled.")
             return 1
     replies = batch.run({j.custom_id: j.params for j in all_jobs}, label="analyse") if all_jobs else {}
+    store.reconnect()  # the connection sat idle while the batch ran
 
     spent = 0.0
     lines = [f"# Past questions analysis — {datetime.now():%Y-%m-%d %H:%M}", "", f"Model: {PAST_ANSWER_MODEL} · analysis v{pa.ANALYSE_VERSION}", ""]
@@ -908,6 +911,7 @@ def analyse(courses: list[Course], args) -> int:
             repeat_jobs[f"rep-{cid}"] = (c, cid, pairs, pa.repeat_params(c, pairs))
     if repeat_jobs:
         rep = batch.run({k: v[3] for k, v in repeat_jobs.items()}, label="repeats")
+        store.reconnect()
         lines += ["## Repeats", ""]
         for k, (c, cid, pairs, _) in repeat_jobs.items():
             r = rep[k]

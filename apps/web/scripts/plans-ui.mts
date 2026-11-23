@@ -1,6 +1,7 @@
 // Plans in a real browser (PRD F12, phase 3), against a running app (default http://localhost:3000).
 // Signs in a temporary Computer Science student (no email sent), checks the Premium badge and
-// counts, the quiz lock and the premium-course cap (pricing sheet), the pricing page, /pay (bank
+// counts (or, with PREMIUM_COURSES_ON = false since 22 Nov 2026, that no course shows Premium), the
+// quiz lock and the premium-course cap (pricing sheet; skipped while premium is off), the pricing page, /pay (bank
 // transfer + WhatsApp handoff, pending state, nothing granted), and a comp grant; then deletes the student. No model calls: costs nothing.
 //
 //   npm run dev   (in another terminal)   then   node scripts/plans-ui.mts
@@ -9,7 +10,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium, type Page } from "playwright";
-import { FINALS_PRICE, FINALS_PRICE_EARLY, PLAN_END_DATE, PREMIUM_FREE_FIRST_DAY, PRICE_CHANGE_DATE } from "../lib/plans/config.ts";
+import { FINALS_PRICE, FINALS_PRICE_EARLY, PLAN_END_DATE, PREMIUM_COURSES_ON, PREMIUM_FREE_FIRST_DAY, PRICE_CHANGE_DATE } from "../lib/plans/config.ts";
 
 const ROOT_ENV = path.resolve(import.meta.dirname, "../../../.env");
 if (existsSync(ROOT_ENV)) process.loadEnvFile(ROOT_ENV);
@@ -61,16 +62,28 @@ try {
 
     // My courses: CSC402 is premium in Computer Science; a new account is on its first day.
     await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+    // The course page's walkthroughs (laptop and phone) would cover the buttons this script clicks.
+    await page.evaluate((id) => {
+      for (const k of ["ays-laptop-tour-seen", "ays-study-tour-seen"]) localStorage.setItem(`${k}:${id.toLowerCase()}`, "1");
+    }, userId);
     const card = page.locator("li:visible", { hasText: "CSC 402" }).first();
     check(csc402?.premium === true, "CSC402 is premium in Computer Science (database)");
-    check(await card.getByText("Premium", { exact: true }).isVisible(), "dashboard: Premium badge on CSC402");
-    check(await card.getByText(`${PREMIUM_FREE_FIRST_DAY} free questions left today`).isVisible(), `dashboard: ${PREMIUM_FREE_FIRST_DAY} free questions left today (first day)`);
+    if (PREMIUM_COURSES_ON) {
+      check(await card.getByText("Premium", { exact: true }).isVisible(), "dashboard: Premium badge on CSC402");
+      check(await card.getByText(`${PREMIUM_FREE_FIRST_DAY} free questions left today`).isVisible(), `dashboard: ${PREMIUM_FREE_FIRST_DAY} free questions left today (first day)`);
+    } else {
+      check((await page.getByText("Premium", { exact: true }).count()) === 0, "dashboard: no Premium badges (premium courses off)");
+    }
     await shot(page, `${label}-dashboard`);
 
     // The course: badge and count; Quiz me → pricing sheet, nothing counted.
     await page.goto(`${BASE}/study/CSC402`, { waitUntil: "networkidle" });
-    check(await page.getByText("Premium", { exact: true }).first().isVisible(), "workspace: Premium badge");
-    check((await page.getByText(`${PREMIUM_FREE_FIRST_DAY} free questions left today`).filter({ visible: true }).count()) > 0, "workspace: free questions left");
+    if (PREMIUM_COURSES_ON) {
+      check(await page.getByText("Premium", { exact: true }).first().isVisible(), "workspace: Premium badge");
+      check((await page.getByText(`${PREMIUM_FREE_FIRST_DAY} free questions left today`).filter({ visible: true }).count()) > 0, "workspace: free questions left");
+    } else {
+      check((await page.getByText("Premium", { exact: true }).count()) === 0, "workspace: no Premium badge (premium courses off)");
+    }
     await page.getByRole("button", { name: "Quiz me", exact: true }).click();
     const sheet = page.getByRole("dialog");
     await sheet.waitFor({ timeout: 15000 });
@@ -83,6 +96,7 @@ try {
     check(!used || used.message_count === 0, "quiz refusal counted nothing");
 
     // Premium cap reached: the box says so and Get Finals opens the sheet with the reset time.
+    if (PREMIUM_COURSES_ON) {
     await admin.from("usage_course_daily").upsert({ user_id: userId, day: lagosDay(), course_id: csc402!.id, message_count: PREMIUM_FREE_FIRST_DAY });
     await admin.from("usage_daily").upsert({ user_id: userId, day: lagosDay(), message_count: PREMIUM_FREE_FIRST_DAY });
     await page.reload({ waitUntil: "networkidle" });
@@ -93,6 +107,7 @@ try {
     await shot(page, `${label}-sheet-premium`);
     await admin.from("usage_course_daily").delete().eq("user_id", userId);
     await admin.from("usage_daily").delete().eq("user_id", userId);
+    }
 
     // Pricing page → /pay.
     await page.goto(`${BASE}/pricing`, { waitUntil: "networkidle" });
@@ -166,7 +181,7 @@ try {
   await ctx.addCookies(cookies);
   const page = await ctx.newPage();
   await page.goto(`${BASE}/pricing`, { waitUntil: "networkidle" });
-  check(await page.getByText(/You're on Finals until/).isVisible(), "pricing: on Finals");
+  check(await page.getByRole("heading", { name: "You're on Finals" }).first().isVisible(), "pricing: on Finals");
   await page.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
   const welcome = page.getByRole("dialog", { name: "You're on Finals" });
   check(await welcome.isVisible(), "pop-up: You're on Finals, after the plan is switched on");
