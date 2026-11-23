@@ -255,12 +255,23 @@ const WHERE_LACKS_START = /^\s*(?:where|when|if|for topics where) (?:a|the|some|
 
 // Rule 4's opening must be the first words (behaviour check, 23 Nov 2026: "Tolu, this is a question the
 // course doesn't cover. Kubernetes isn't part of FIN 410… Your slides don't cover this, but here's the
+/** A first paragraph that is the model planning to itself ("I need the course materials for the exam
+ *  questions. The student's photos cover several questions, so I'll answer…"), followed by the real
+ *  answer in the same block (no tool call in between, so the narration guard can't catch it): dropped.
+ *  Owner's chat review, 23 Nov 2026. Only when a real answer follows it. */
+export function trimPlanningOpening(text: string): string {
+  const m = text.match(/^\s*([^\n]{1,500})\n\s*\n(?=\s*\S)/);
+  if (!m || !PLANNING.test(m[1])) return text;
+  return text.slice(m[0].length);
+}
+
 // idea:"). Whatever comes before it in the first lines is a preamble saying the same thing: dropped.
 const NOT_COVERED = "Your slides don't cover this, but here's the idea:";
 
 export function trimApologyOpening(text: string): string {
   const at = text.indexOf(NOT_COVERED);
   if (at > 0 && at < 400) return text.slice(at);
+  text = trimPlanningOpening(text);
   return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "").replace(LACKS_START, "").replace(WHERE_LACKS_START, "");
 }
 

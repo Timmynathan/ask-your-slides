@@ -3,7 +3,7 @@
 // place. The messages below are hers, word for word where possible.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/supabase/admin", () => ({ adminClient: () => ({}), must: (r: { data: unknown }) => r.data }));
-const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimTrailingNarration, isSmallTalk, asksAboutChat } = await import("@/lib/agent/run");
+const { PLANNING, asksForMemoryAids, dropStrayCjk, asksForWalkthrough, asksForWorking, matchesPart, namedPart, plainSlideTalk, citedRanges, isContinuation, lastCitedSlide, lastQuestion, pickedItem, trimApologyOpening, trimPlanningOpening, trimTrailingNarration, isSmallTalk, asksAboutChat } = await import("@/lib/agent/run");
 
 describe("asksForWalkthrough", () => {
   it.each([
@@ -92,6 +92,19 @@ describe("trimTrailingNarration (before a tool call)", () => {
   it("leaves ordinary endings alone", () => {
     expect(trimTrailingNarration("Let me know if you want another example.").dropped).toBeNull();
     expect(trimTrailingNarration("So the balance b/d is 13,400.").dropped).toBeNull();
+  });
+});
+
+describe("trimPlanningOpening", () => {
+  it("drops a planning paragraph before the real answer", () => {
+    const t = "I need the course materials for the exam questions. The student's photos cover several questions, so I'll answer the ones I can ground in the slides.\n\nChineze, I've gone through the paper. Let's take them one by one.";
+    expect(trimPlanningOpening(t)).toBe("Chineze, I've gone through the paper. Let's take them one by one.");
+    expect(trimApologyOpening(t)).toBe("Chineze, I've gone through the paper. Let's take them one by one.");
+  });
+  it("keeps a normal opening, and planning-like text with nothing after it", () => {
+    const ok = "Kika, week 7 is about digital laws.\n\n**The laws**";
+    expect(trimPlanningOpening(ok)).toBe(ok);
+    expect(trimPlanningOpening("I need the exact figures from you.")).toBe("I need the exact figures from you.");
   });
 });
 
