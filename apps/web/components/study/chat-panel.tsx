@@ -551,7 +551,7 @@ export function ChatPanel({
                   )}
                   <UserMessage text={textOf(m)} canEdit={!busy && !capped && !photosOf(m).length} onEdit={(t) => editQuestion(m.id, t)} />
                 </li>
-              ) : (
+              ) : waitingForWords && m.id === last?.id ? null /* the "Thinking…" row stands in until the first words (one bot photo, not two) */ : (
                 <li key={m.id} data-message="assistant" className="flex gap-3">
                   <Mascot partner={partner} size={28} animated={false} className="mt-0.5 hidden sm:block" />
                   <div className="min-w-0 flex-1">
