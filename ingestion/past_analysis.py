@@ -101,14 +101,16 @@ class QuestionJob:
     query: str = ""
     slides: list[dict] = field(default_factory=list)
     params: dict | None = None
+    note: str = ""  # a re-answer's reason (past_papers.py --reask): what the earlier answer got wrong
 
     @property
     def custom_id(self) -> str:
         return f"q-{self.id}"
 
 
-def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False) -> list[QuestionJob]:
-    """Questions to answer: unanswered ones (all with force). recheck: only partial/general answers."""
+def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False, only: dict[str, str] | None = None) -> list[QuestionJob]:
+    """Questions to answer: unanswered ones (all with force). recheck: only partial/general answers.
+    only: question id → note: re-answer exactly these, each told what its earlier answer got wrong."""
     rows = store.db.execute(
         """select q.id, q.course_id, q.number, q.parent_id, q.text, q.marks, q.type, q.options, q.model_answer,
                   q.relevance, p.session, p.type as paper_type, p.status, p.problems
@@ -122,7 +124,10 @@ def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False)
     for r in rows:
         if str(r["id"]) in has_parts or r["status"] != "ok":
             continue
-        if recheck:
+        if only is not None:
+            if str(r["id"]) not in only:
+                continue
+        elif recheck:
             if not r["model_answer"] or r["relevance"] not in ("partial", "not_covered"):
                 continue
         elif r["model_answer"] and not force:
@@ -138,7 +143,7 @@ def load_jobs(store, course_id: str, force: bool = False, recheck: bool = False)
         jobs.append(QuestionJob(
             id=str(r["id"]), course_id=str(r["course_id"]), number=r["number"], text=r["text"],
             marks=float(r["marks"]) if r["marks"] is not None else None, type=r["type"], options=r["options"],
-            context=context, paper=f"{r['session']} {r['paper_type']}",
+            context=context, paper=f"{r['session']} {r['paper_type']}", note=(only or {}).get(str(r["id"]), ""),
         ))
     return jobs
 
@@ -192,6 +197,7 @@ def build_params(course, topics: list[dict], job: QuestionJob) -> dict:
         f"Context (the question's stem):\n{context}" if context else "",
         f"Question:\n{job.text}",
         f"Options:\n{options}" if options else "",
+        f"Note: {job.note}" if job.note else "",
     ] if x)
     return {
         "model": PAST_ANSWER_MODEL,

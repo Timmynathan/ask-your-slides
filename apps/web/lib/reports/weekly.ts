@@ -90,6 +90,16 @@ export async function weeklyReport(db: Db, now = new Date()): Promise<WeeklyRepo
   const rLast = ratings.filter((r) => isStudent(r.user_id) && inLast(r.created_at)).length;
   const studentComments = comments.filter((c) => isStudent(c.user_id));
 
+  // The recommend-us card (nps_responses; none until its migration is pushed). NPS = % 9-10 minus % 0-6.
+  const nps = await all<{ user_id: string; score: number; reason: string | null; created_at: string }>((a, b) =>
+    db.from("nps_responses").select("user_id, score, reason, created_at").gte("created_at", weekStart).range(a, b),
+  ).catch(() => []);
+  const npsWeek = nps.filter((r) => isStudent(r.user_id));
+  const npsLine = npsWeek.length
+    ? `Recommend score: ${npsWeek.length} answered, average ${(npsWeek.reduce((s, r) => s + r.score, 0) / npsWeek.length).toFixed(1)} of 10, NPS ${Math.round((100 * (npsWeek.filter((r) => r.score >= 9).length - npsWeek.filter((r) => r.score <= 6).length)) / npsWeek.length)}.`
+    : "Recommend score: nobody answered the card this week.";
+  const npsReasons = npsWeek.filter((r) => r.reason).slice(0, 5).map((r) => `${r.score}/10: "${r.reason!.replace(/\s+/g, " ").slice(0, 200)}"`);
+
   // Answers that need a look (lib/admin/attention.ts).
   const t = traces.filter((x) => isStudent(x.user_id));
   const tWeek = t.filter((x) => inWeek(x.created_at));
@@ -127,6 +137,22 @@ export async function weeklyReport(db: Db, now = new Date()): Promise<WeeklyRepo
   const cameBack = capped.filter((id) => q.some((m) => m.user_id === id && day(m.created_at) > day(firstCap.get(id)!))).length;
   const paidAfter = capped.filter((id) => entitlements.some((e) => e.user_id === id && e.plan === "finals" && e.created_at > firstCap.get(id)!) || payments.some((p) => p.user_id === id && p.created_at > firstCap.get(id)!)).length;
 
+  // New slides this week, and the past answers they might improve (owner, 23 Nov 2026): partly or not
+  // covered answers in those courses. The recheck re-answers only those whose search now finds new
+  // slides, so the cost is at most this (about $0.0005 an answer, the 23 Nov run's rate).
+  const newMaterials = await all<{ course_id: string }>((a, b) => db.from("materials").select("course_id").gte("ingested_at", weekStart).range(a, b));
+  const newCourses = [...new Set(newMaterials.map((m) => m.course_id))];
+  let recheckable = 0;
+  if (newCourses.length) {
+    const { count } = await db
+      .from("past_questions")
+      .select("id", { count: "exact", head: true })
+      .in("course_id", newCourses)
+      .in("relevance", ["partial", "not_covered"])
+      .not("model_answer", "is", null);
+    recheckable = count ?? 0;
+  }
+
   // Busiest courses and AI cost.
   const perCourse = new Map<string, number>();
   for (const x of tWeek) perCourse.set(courseName.get(x.course_id) ?? "?", (perCourse.get(courseName.get(x.course_id) ?? "?") ?? 0) + 1);
@@ -152,6 +178,8 @@ export async function weeklyReport(db: Db, now = new Date()): Promise<WeeklyRepo
     {
       title: "What students told us",
       lines: [
+        npsLine,
+        ...npsReasons,
         `Ratings: ${up} thumbs up, ${down.length} thumbs down (${rWeek.length} in all, ${change(rWeek.length, rLast)}).`,
         ...(down.length ? [`Thumbs-down reasons: ${[...new Set(down.map((d) => d.reason ?? "no reason"))].join(", ")}.`] : []),
         ...(studentComments.length ? studentComments.slice(0, 5).map((c) => `Comment: "${c.message.replace(/\s+/g, " ").slice(0, 200)}"`) : ["No written feedback this week."]),
@@ -177,6 +205,17 @@ export async function weeklyReport(db: Db, now = new Date()): Promise<WeeklyRepo
       lines: capped.length
         ? [`${capped.length} student${capped.length === 1 ? "" : "s"} ran out of free questions (${capWeek.length} times). Afterwards ${cameBack} came back on a later day and ${paidAfter} paid or asked to pay.`]
         : ["Nobody ran out of free questions."],
+    },
+    {
+      title: "New slides and past questions",
+      lines: newMaterials.length
+        ? [
+            `${newMaterials.length} new lecture file${newMaterials.length === 1 ? "" : "s"} in ${newCourses.length} course${newCourses.length === 1 ? "" : "s"} this week.`,
+            recheckable
+              ? `Up to ${recheckable} past answers in those courses could now draw on the new slides. A recheck costs at most about $${(recheckable * 0.0005).toFixed(2)}: ask Claude to run it (npm run ingest:past -- --analyse --recheck).`
+              : "No past answers in those courses need a recheck.",
+          ]
+        : ["No new lecture files this week."],
     },
     { title: "AI cost", lines: [`$${cost.toFixed(2)} this week (last week $${costLast.toFixed(2)}).`] },
   ];

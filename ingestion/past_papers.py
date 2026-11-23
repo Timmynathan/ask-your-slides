@@ -652,6 +652,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--flagged", action="store_true", help=f"rewrite {FLAGGED.relative_to(ROOT)} from the database and stop")
     ap.add_argument("--analyse", action="store_true", help="step 2: slides, topics, relevance, model answers for stored papers")
     ap.add_argument("--recheck", action="store_true", help="with --analyse: redo partial/general answers whose search now finds new slides")
+    ap.add_argument("--reask", action="store_true", help="with --analyse: re-answer the answers the report warned about (past_reask.py picks them)")
     args = ap.parse_args(argv)
 
     try:
@@ -829,11 +830,17 @@ def analyse(courses: list[Course], args) -> int:
     reused = rechecked = 0
     # CS before SEN: a Software Engineering copy reuses the CS answer once it exists.
     chosen.sort(key=lambda c: c.programme == "software-engineering")
+    # --reask (owner, 23 Nov 2026): the warned-about answers, each with a note on what to fix.
+    reask: dict[str, dict[str, str]] = {}
+    if args.reask:
+        import past_reask
+        reask = past_reask.pick(store)
+        print(f"Re-asking {sum(len(v) for v in reask.values())} answer(s) in {len(reask)} course(s).")
     for c in chosen:
         cid = store.course_id(c)
         if cid is None:
             continue
-        jobs = pa.load_jobs(store, cid, force=args.force, recheck=args.recheck)
+        jobs = pa.load_jobs(store, cid, force=args.force, recheck=args.recheck, only=reask.get(str(cid), {}) if args.reask else None)
         if not jobs:
             continue
         topics = pa.course_topics(store, cid)
@@ -844,7 +851,7 @@ def analyse(courses: list[Course], args) -> int:
                 if not j.slides or not pa.has_new_slides(store, j):
                     continue
                 rechecked += 1
-            src = pa.reuse_answer(store, j) if not args.recheck else None
+            src = pa.reuse_answer(store, j) if not args.recheck and not args.reask else None
             if src:
                 pa.save_reused(store, j, src, topics)
                 reused += 1

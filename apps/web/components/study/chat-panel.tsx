@@ -12,7 +12,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { fill, PARTNERS, pick, type PartnerId } from "@/lib/partners";
 import { Answer } from "./answer";
 import { AnswerActions, type Rating } from "./answer-actions";
-import { useHelpfulAsk } from "@/lib/ui/use-helpful-ask";
+import { useNpsAsk } from "@/lib/ui/use-helpful-ask";
+import { NpsCard } from "@/components/feedback/nps-card";
 import { PulseCard } from "./pulse-card";
 import { UserMessage } from "./user-message";
 import { useDictation } from "@/lib/ui/use-dictation";
@@ -464,12 +465,9 @@ export function ChatPanel({
   // Once an answer has finished, its first cited slides load in the background, so a tap on a citation
   // opens at once. Touch screens have no hover to start loading early (owner, 23 Nov 2026).
   const lastAnswerText = status === "ready" && last?.role === "assistant" ? textOf(last) : "";
-  // "Was this helpful?" on the latest answer, a few times a day (lib/ui/use-helpful-ask.ts): not on an
-  // answer that is waiting for the student's reply (a quiz or check question), nor one already rated.
-  const helpful = useHelpfulAsk(
-    lastAnswerText ? last!.id : null,
-    !!lastAnswerText && !/\?\s*(<\/general>\s*)?$/.test(lastAnswerText.trim()) && !last?.metadata?.feedback,
-  );
+  // The recommend-us card after the 3rd answer of a day (lib/ui/use-helpful-ask.ts): not after an answer
+  // that is waiting for the student's reply (a quiz or check question).
+  const nps = useNpsAsk(lastAnswerText ? last!.id : null, !!lastAnswerText && !/\?\s*(<\/general>\s*)?$/.test(lastAnswerText.trim()));
   useEffect(() => {
     if (!lastAnswerText) return;
     const t = setTimeout(() => [...new Set(citedKeys(lastAnswerText))].slice(0, PREFETCH_CITED).forEach((k) => prefetchSlide(course.id, k)), 300);
@@ -571,7 +569,7 @@ export function ChatPanel({
                     <SlideThumb courseId={course.id} slideKey={firstCited(textOf(m))!} onOpen={onCite} />
                   )}
                   {m.metadata?.truncated && m.id === last?.id && !busy && <CutShort onContinue={() => submit(CONTINUE_TEXT)} disabled={capped} />}
-                  {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} ask={m.id === helpful.askId} onRated={helpful.done} />}
+                  {!(busy && m.id === last?.id) && <AnswerActions messageId={m.id} text={textOf(m)} initial={m.metadata?.feedback ?? null} />}
                   </div>
                 </li>
               ),
@@ -609,18 +607,12 @@ export function ChatPanel({
             <PulseCard partner={partner} name={studentName} onDone={() => onPulseDone(true)} onLater={() => onPulseDone(false)} />
           )}
 
+          {nps.show && <NpsCard onClose={nps.close} />}
           {waitingForWords && (
             <p className="mt-6 flex items-center gap-3 text-sm text-muted" role="status">
               <Mascot partner={partner} size={28} mood="thinking" />
-              <span className="flex items-center gap-1.5">
-                {pick(p.thinking, String(messages.length))}
-                <span className="sr-only">Searching your slides…</span>
-                <span className="flex gap-0.5" aria-hidden>
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-muted [animation-delay:-0.2s]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-muted [animation-delay:-0.1s]" />
-                  <span className="h-1 w-1 animate-bounce rounded-full bg-muted" />
-                </span>
-              </span>
+              {/* Just "Thinking…" (owner, 23 Nov 2026: "Zara is pulling it together…" plus bouncing dots was too much). */}
+              <span>Thinking…</span>
             </p>
           )}
           {errText && !capped && (
