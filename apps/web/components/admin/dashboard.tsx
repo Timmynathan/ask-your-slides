@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { RANGES, TABS, type Overview, type Range, type Tab } from "@/lib/admin-shared";
+import { RANGES, TABS, type DeviceStats, type Overview, type Range, type Tab } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
 
 const tz = "Africa/Lagos";
@@ -61,7 +61,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, heardFrom, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, devices, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; devices: DeviceStats; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -198,6 +198,23 @@ export function AdminDashboard({ data, courses, plans, heardFrom, appFeedback, r
             <Card title="How they found us (sign-ups in this period)">
               <BarList rows={heardFrom} />
             </Card>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm text-muted">
+              Devices · {n(devices.students)} students seen in this period (recorded since 23 Nov 2026). A student who uses a phone and a laptop counts in both.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <Card title="Kind of device">
+                <BarList rows={devices.kinds} />
+              </Card>
+              <Card title="Operating system">
+                <BarList rows={devices.systems} />
+              </Card>
+              <Card title="Browser">
+                <BarList rows={devices.browsers} />
+              </Card>
+            </div>
           </div>
         </section>
 

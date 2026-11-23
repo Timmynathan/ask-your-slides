@@ -48,6 +48,14 @@ export interface Overview {
 }
 
 /** The /admin tabs (?tab=); Overview is the default. */
+/** Students per kind of device, system and browser in the period (app/admin/page.tsx deviceCounts). */
+export interface DeviceStats {
+  students: number;
+  kinds: { label: string; n: number }[];
+  systems: { label: string; n: number }[];
+  browsers: { label: string; n: number }[];
+}
+
 export const TABS = [
   { id: "overview", label: "Overview" },
   { id: "students", label: "Students" },

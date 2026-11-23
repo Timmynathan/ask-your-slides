@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AdminDashboard } from "@/components/admin/dashboard";
 import { isAdminEmail, rangeStart, RANGES, type Overview, type Range } from "@/lib/admin";
-import { TABS, type Tab } from "@/lib/admin-shared";
+import { TABS, type DeviceStats, type Tab } from "@/lib/admin-shared";
 import { requireUser } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 import { FREE_DAILY } from "@/lib/plans/config";
@@ -35,13 +35,14 @@ async function Loaded({ searchParams }: Props) {
   const db = adminClient();
   const from = rangeStart(range);
   // The overview's own cap count is superseded by limit_events (PRD F12); FREE_DAILY keeps it sensible.
-  const [{ data, error }, plans, courses, heardFrom, { data: appFeedbackRows }] = await Promise.all([
+  const [{ data, error }, plans, courses, heardFrom, { data: appFeedbackRows }, devices] = await Promise.all([
     loadOverview(db, from),
     planStats(db, from),
     db.from("courses").select("code, department").order("sort_order"),
     heardFromCounts(db, from),
     // General feedback from the Feedback button (missing before its migration: then none).
     db.from("app_feedback").select("id, created_at, message, sentiment, features, page, profiles(email)").order("created_at", { ascending: false }).limit(50),
+    deviceCounts(db, from),
   ]);
   const appFeedback = ((appFeedbackRows ?? []) as unknown as { id: string; created_at: string; message: string; sentiment: "good" | "bad" | null; features: string[]; page: string | null; profiles: { email: string } | null }[]).map((r) => ({
     id: r.id,
@@ -57,7 +58,7 @@ async function Loaded({ searchParams }: Props) {
   // admin_overview lists every course in sort_order (unique), so its rows line up with this list.
   const departments = (courses.data ?? []) as { code: string; department: string }[];
   const withDepartments = overview.courses.map((c, i) => ({ ...c, department: departments[i]?.code === c.code ? departments[i].department : "Other" }));
-  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} />;
+  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} devices={devices} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} />;
 }
 
 /** "How did you hear about us?" answers from students who signed up in the period (asked since 20 Nov 2026). */
@@ -73,6 +74,28 @@ async function heardFromCounts(db: ReturnType<typeof adminClient>, from: string 
   return rows.filter((r) => r.n > 0);
 }
 
+/** Students seen on each kind of device, system and browser in the period (table user_devices, recorded
+ *  since 23 Nov 2026). A student on a phone and a laptop counts once in each row. Admins are left out. */
+async function deviceCounts(db: ReturnType<typeof adminClient>, from: string | null): Promise<DeviceStats> {
+  const exclude = new Set((process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+  let q = db.from("user_devices").select("user_id, kind, os, browser, profiles(email)").limit(5000);
+  if (from) q = q.gte("last_seen", from);
+  const { data, error } = await q;
+  const rows = error ? [] : ((data ?? []) as unknown as { user_id: string; kind: string; os: string; browser: string; profiles: { email: string } | null }[]);
+  const kept = rows.filter((r) => !exclude.has((r.profiles?.email ?? "").toLowerCase()));
+  const tally = (pick: (r: (typeof kept)[number]) => string) => {
+    const by = new Map<string, Set<string>>();
+    for (const r of kept) by.set(pick(r), (by.get(pick(r)) ?? new Set()).add(r.user_id));
+    return [...by.entries()].map(([label, ids]) => ({ label, n: ids.size })).sort((a, b) => b.n - a.n);
+  };
+  const KIND: Record<string, string> = { phone: "Phone", tablet: "Tablet", laptop: "Laptop / desktop" };
+  return {
+    students: new Set(kept.map((r) => r.user_id)).size,
+    kinds: tally((r) => KIND[r.kind] ?? r.kind),
+    systems: tally((r) => r.os),
+    browsers: tally((r) => r.browser),
+  };
+}
 
 export default function AdminPage(props: Props) {
   return (
