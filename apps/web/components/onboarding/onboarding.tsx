@@ -154,7 +154,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
         {step === "heard" && <HeardFromStep value={heardFrom} onPick={pickHeardFrom} onBack={() => setStep("name")} />}
 
         {step === "partner" && (
-          <div key="partner" className="panel-in w-full max-w-5xl text-center">
+          <div key="partner" className="panel-in w-full max-w-5xl text-center sm:max-lg:max-w-2xl">
             {index > 0 && (
               <div className="mb-6 text-left">
                 <BackPill onClick={() => setStep(steps[index - 1])} />
@@ -164,7 +164,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               {firstName ? `${firstName}, who do you want to study with?` : "Who do you want to study with?"}
             </h1>
 
-            <div role="radiogroup" aria-label="Study partners" className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 xl:grid-cols-4">
+            <div role="radiogroup" aria-label="Study partners" className="mt-8 grid grid-cols-2 gap-3 sm:mt-10 sm:gap-4 lg:grid-cols-4">
               {ORDER.map((id) => {
                 const p = PARTNERS[id];
                 const selected = partner === id;
@@ -176,7 +176,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                     role="radio"
                     aria-checked={selected}
                     onClick={() => setPartner(id)}
-                    className={`group relative flex flex-col items-center rounded-[25px] bg-card px-3 pb-5 pt-6 text-center sm:p-6 ring-1 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                    className={`group relative flex flex-col items-center rounded-[25px] bg-card px-3 pb-5 pt-6 text-center sm:p-6 sm:max-lg:px-4 sm:max-lg:pb-5 sm:max-lg:pt-5 lg:max-xl:px-3 ring-1 transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
                       selected ? `ring-[3px] ${p.accent.ring} shadow-lg` : "ring-line"
                     }`}
                   >
@@ -196,11 +196,15 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                       <span className="sm:hidden">
                         <Mascot partner={id} size={76} mood={selected ? "happy" : "idle"} animated={false} />
                       </span>
-                      <span className="hidden sm:inline">
+                      {/* Tablets in portrait (owner, 23 Nov 2026: the cards filled the iPad screen). */}
+                      <span className="hidden sm:max-lg:inline">
+                        <Mascot partner={id} size={80} mood={selected ? "happy" : "idle"} animated={false} />
+                      </span>
+                      <span className="hidden lg:inline">
                         <Mascot partner={id} size={108} mood={selected ? "happy" : "idle"} animated={false} />
                       </span>
                     </span>
-                    <span className="mt-3 font-heading text-xl font-semibold text-ink sm:mt-4 sm:text-2xl">{p.name}</span>
+                    <span className="mt-3 font-heading text-xl font-semibold text-ink sm:mt-4 sm:text-2xl sm:max-lg:mt-3">{p.name}</span>
                     {/* One line and the trait pills (owner, 20 Nov 2026). */}
                     <span className="mt-1 text-[13px] leading-snug text-muted sm:text-[15px]">{p.bestFor}</span>
                     {/* Two pills on top, one below, on every card (owner, 22 Nov 2026). Phones may wrap the pair. */}
@@ -208,7 +212,7 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
                       {[p.traits.slice(0, 2), p.traits.slice(2)].filter((row) => row.length).map((row, i) => (
                         <span key={i} className="flex flex-wrap justify-center gap-1.5 sm:flex-nowrap">
                           {row.map((t) => (
-                            <span key={t} className="whitespace-nowrap rounded-full bg-page px-2 py-1 text-[11px] font-medium text-muted ring-1 ring-line sm:px-2.5 sm:text-xs xl:px-2 xl:text-[11.5px]">{t}</span>
+                            <span key={t} className="whitespace-nowrap rounded-full bg-page px-2 py-1 text-[11px] font-medium text-muted ring-1 ring-line sm:px-2.5 sm:text-xs lg:px-2 lg:text-[11.5px]">{t}</span>
                           ))}
                         </span>
                       ))}
