@@ -4,7 +4,8 @@ import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type T
 import { createCitationFilter } from "./citations";
 import { supportsClaim } from "./support";
 import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from "./prompt";
-import { buildTools, getMaterialPages, listTopics, materialKey, newContext, searchSlides, type AgentContext, type Citation } from "./tools";
+import { buildTools, getMaterialPages, listTopics, materialKey, newContext, searchSlides, viewSlides, type AgentContext, type Citation } from "./tools";
+import { ASKS_VISUAL, pictureSlides } from "./slide-images";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { parseSlideKey } from "@/lib/study/course-code";
 
@@ -649,6 +650,22 @@ export async function runChatTurn(turn: ChatTurn) {
   for (const [i, c] of preCalls.entries()) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
   }
+  // Slide images, only where they help (owner, 23 Nov 2026, option B; slide-images.ts): the slide asked
+  // about from the viewer; the top results of a question about a diagram, graph or chart; or top
+  // results that are mostly picture. Not for long reads (walkthroughs, summaries, memory aids, papers):
+  // too many slides. The model can still call view_slides itself.
+  if (!longAnswer && !summaryAsked && !memoryAids && !paperAsked) {
+    const found = ctx.toolLog.find((t) => t.name === "search_slides")?.slide_keys ?? [];
+    const look = focus && turn.focusSlide
+      ? [turn.focusSlide]
+      : ASKS_VISUAL.test(turn.userMessage)
+        ? found.slice(0, 2)
+        : (await pictureSlides(ctx, found.slice(0, 3))).slice(0, 2);
+    if (look.length) {
+      const input = { slide_keys: look };
+      pre.push({ id: `presearch_${turn.assistantMessageId}_view`, name: viewSlides.name, input, output: await viewSlides.run(ctx, input as never) });
+    }
+  }
   // The student's own uploads in this course (owner, 22 Nov 2026: the + takes PDFs). Search finds their
   // pages only when they match the question's words, so "what's question 4 in my uploaded test?" missed
   // them and the model said nothing was uploaded. Now it always knows what they uploaded, and when
@@ -698,7 +715,15 @@ export async function runChatTurn(turn: ChatTurn) {
         providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
       },
       { role: "assistant", content: pre.map((c) => ({ type: "tool-call" as const, toolCallId: c.id, toolName: c.name, input: c.input })) },
-      { role: "tool", content: pre.map((c) => ({ type: "tool-result" as const, toolCallId: c.id, toolName: c.name, output: { type: "json" as const, value: c.output as never } })) },
+      {
+        role: "tool",
+        content: pre.map((c) => ({
+          type: "tool-result" as const,
+          toolCallId: c.id,
+          toolName: c.name,
+          output: c.name === viewSlides.name ? viewSlides.modelOutput!(c.output) : { type: "json" as const, value: c.output as never },
+        })),
+      },
     ],
     tools: buildTools(ctx),
     stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : paperAsked ? MAX_STEPS_PAPER : MAX_STEPS),

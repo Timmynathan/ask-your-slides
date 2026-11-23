@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { tool, type Tool, type ToolSet } from "ai";
+import type { ToolResultOutput } from "@ai-sdk/provider-utils";
 import { z } from "zod";
 import { must } from "@/lib/supabase/admin";
 import { embedQuery } from "./embed";
@@ -8,6 +9,7 @@ import { chunkBody, decideFallback, DEFAULT_KINDS, matchSlides, type SlideHit } 
 import { MATERIAL_KEY_RE, parseMaterialKey } from "@/lib/study/course-code";
 import { calculate } from "./calculator";
 import { solveLp, solveTransport } from "./optimizer";
+import { MAX_SLIDE_IMAGES, slideImages, type SlideImage } from "./slide-images";
 
 // ── Context ──────────────────────────────────────────────────────────────────
 // course and topic come from the conversation row, never from the model (PRD §10.2): no tool
@@ -82,6 +84,8 @@ interface ToolDefinition<S extends z.ZodObject> {
   description: string;
   input: S;
   handler(ctx: AgentContext, input: z.infer<S>): Promise<ToolOutcome>;
+  /** What the model receives, when it isn't the result as JSON (view_slides sends images). */
+  modelOutput?(result: Record<string, unknown>): ToolResultOutput;
 }
 
 function refused(reason: string, messageForAgent: string): ToolOutcome {
@@ -131,6 +135,7 @@ function defineTool<S extends z.ZodObject>(def: ToolDefinition<S>) {
         description: def.description,
         inputSchema: def.input,
         execute: (input: z.infer<S>) => this.run(ctx, input),
+        ...(def.modelOutput ? { toModelOutput: ({ output }: { output: Record<string, unknown> }) => def.modelOutput!(output) } : {}),
       }) as Tool;
     },
   };
@@ -473,7 +478,49 @@ export const optimizeTool = defineTool({
   },
 });
 
-export const TOOLS = [searchSlides, listTopics, getMaterialPages];
+// ── view_slides ──────────────────────────────────────────────────────────────
+
+export const viewSlides = defineTool({
+  name: "view_slides",
+  purpose: "Look at slide images when the text isn't enough",
+  description:
+    `Shows you the images of up to ${MAX_SLIDE_IMAGES} slides you already have this turn (by slide_key). Use it only when the ` +
+    "text can't carry the answer: a diagram, chart, graph, labelled figure, table layout or equation the text describes " +
+    "poorly, or when the student asks what a slide shows. Plain text slides don't need it. Cite what you see as usual.",
+  input: z.object({
+    slide_keys: z.array(z.string().trim().min(3).max(40)).min(1).max(MAX_SLIDE_IMAGES).describe("slide_keys from this turn's results"),
+  }),
+  async handler(ctx, { slide_keys }) {
+    const keys = [...new Set(slide_keys.map((k) => k.toUpperCase()))].filter((k) => ctx.retrieved.has(k));
+    if (!keys.length) return refused("not_retrieved", "Only slides returned by search_slides or get_material_pages this turn can be viewed. Find the slide first.");
+    const images = await slideImages(ctx, keys);
+    if (!images.length) return { status: "not_found", result: { ok: false, message_for_agent: "These slides have no image (Word, notebook or code material). Use their text." } };
+    return {
+      status: "ok",
+      slideKeys: images.map((i) => i.key),
+      detail: { shown: images.map((i) => i.key) },
+      result: { ok: true, shown: images.map((i) => i.key), images },
+    };
+  },
+  modelOutput(result) {
+    const images = (result.images ?? []) as SlideImage[];
+    const { images: _drop, ...rest } = result;
+    void _drop;
+    if (!images.length) return { type: "json", value: rest as never };
+    return {
+      type: "content",
+      value: [
+        { type: "text", text: `Images of ${images.map((i) => i.key).join(", ")}, in that order. Cite them as usual.` },
+        ...images.flatMap((i) => [
+          { type: "text" as const, text: `[[s:${i.key}]]` },
+          { type: "file" as const, mediaType: i.mediaType, data: { type: "data" as const, data: i.data } },
+        ]),
+      ],
+    } as ToolResultOutput;
+  },
+});
+
+export const TOOLS = [searchSlides, listTopics, getMaterialPages, viewSlides];
 export const CALC_TOOLS = [calculateTool, optimizeTool];
 
 export function buildTools(ctx: AgentContext): ToolSet {
