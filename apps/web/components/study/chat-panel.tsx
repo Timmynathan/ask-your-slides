@@ -333,7 +333,9 @@ export function ChatPanel({
 
   async function submit(raw: string) {
     const attached = photos;
-    const text = raw.trim() || (attached.length ? (attached.length === 1 ? "Explain this photo." : "Explain these photos.") : "");
+    // "Ask about this slide" fills the box with `Explain slide 8 of "…": ` so a specific question can be
+    // typed after the colon; sent as it is, the colon is left hanging, so it becomes a full stop.
+    const text = raw.trim().replace(/:$/, ".") || (attached.length ? (attached.length === 1 ? "Explain this photo." : "Explain these photos.") : "");
     if (!text || busy) return;
     // Quiz mode is Finals only: on Free, show the Finals pop-up at once instead of starting an
     // answer the server would refuse (owner, 22 Nov 2026). The server still enforces it.
