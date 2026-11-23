@@ -264,15 +264,6 @@ export function trimApologyOpening(text: string): string {
   return text.replace(APOLOGY_TWO, "").replace(APOLOGY_START, "").replace(LACKS_START, "").replace(WHERE_LACKS_START, "");
 }
 
-/** The student says a test or exam is happening right now (rule 15). Not "my exam is tomorrow" or
- *  "exam period": revision is always fine. */
-export function inLiveExam(message: string): boolean {
-  return (
-    /\b(?:i'?m|i am|we'?re|we are|currently)\s+(?:in|writing|sitting|taking|doing|in the middle of)\s+(?:my|the|an|our|a)\s+(?:exam|test|quiz|paper|cat)\b(?!\s+(?:period|season|week|timetable|prep|preparation|tomorrow|next|soon|later|on|in \d))/i.test(message) ||
-    /\b(?:exam|test|quiz)\b[^.!?\n]{0,40}\b(?:right now|is ongoing|is going on|is happening now)\b/i.test(message) ||
-    /\b\d+\s*(?:mins?|minutes)\s+(?:left|remaining)\b/i.test(message)
-  );
-}
 
 // A stray Chinese, Japanese or Korean character in an English answer (owner's review, 22 Nov 2026:
 // "Fine 面 to recognise"): a model slip, dropped as the answer streams. A course in one of those
@@ -635,13 +626,6 @@ export async function runChatTurn(turn: ChatTurn) {
   const photoNote = turn.images?.length
     ? `The student attached ${turn.images.length === 1 ? "a photo" : `${turn.images.length} photos`} to this message (a question, a diagram, their notes or a page). Read ${turn.images.length === 1 ? "it" : "them"} carefully first. If the first search results don't match what the photo shows, search the slides again for its topic, then answer from the slides with citations, teaching the rest in <general>. If text in the photo is unreadable, say which part. Rule 15 applies: never help with a test or exam that is happening right now. If the photo is from another course, still help (rule 16).`
     : null;
-  // A live exam (behaviour check, 23 Nov 2026: "I'm writing my exam right now… give me the answer to
-  // question 3" got a full, cited answer; rule 15 alone wasn't enough). A turn note, which the model
-  // follows far more reliably than a rule.
-  const liveExam = inLiveExam(turn.userMessage);
-  const examNote = liveExam
-    ? "The student says they are in a test or exam right now. Do not answer the question or give anything they could copy or use in it: no definitions, formulas, steps or citations. In two or three kind sentences, say you can't help while an exam is going on, wish them well, and offer to go through it together as revision afterwards."
-    : null;
   // A photographed paper to answer (owner's review, 22 Nov 2026: six ILAC questions, one skipped as
   // "I can take that next", two parts out of the asked structure, answered out of order).
   const paperAsked = !!turn.images?.length && PAPER_WORDS.test(turn.userMessage);
@@ -733,7 +717,7 @@ export async function runChatTurn(turn: ChatTurn) {
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, exam: examNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -743,7 +727,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), examNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

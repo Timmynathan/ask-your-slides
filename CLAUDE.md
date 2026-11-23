@@ -99,7 +99,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   Thin slides = checklist of what to know, explained fully. Never refuse just because slides are thin.
 - Past questions: show counts ("asked in 2 of 3 papers"), never percentages; "based on past papers, not a
   prediction"; generated practice questions always labelled as not from a past paper.
-- No help during a live exam; normal revision always fine.
+- Revision is always helped, however close the exam ("I have an exam now, tell me what I need to know" gets full help; owner, 23 Nov 2026: no automatic exam blocking, it would misfire). Only a student plainly asking for answers while sitting the exam is declined (prompt rule 15).
 
 ## Ongoing operations
 - New slides arrive weekly until the semester ends. Sync = owner signs in to elearning.pau.edu.ng in Chrome,
