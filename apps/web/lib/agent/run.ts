@@ -6,6 +6,7 @@ import { supportsClaim } from "./support";
 import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from "./prompt";
 import { buildTools, getMaterialPages, listTopics, materialKey, newContext, searchSlides, viewSlides, type AgentContext, type Citation } from "./tools";
 import { ASKS_VISUAL, pictureSlides } from "./slide-images";
+import { PROMPT_VERSION } from "./prompt-version";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { parseSlideKey } from "@/lib/study/course-code";
 
@@ -645,7 +646,7 @@ export async function runChatTurn(turn: ChatTurn) {
   const answerNote = picked
     ? `The student's message "${turn.userMessage.trim()}" picks item ${turn.userMessage.trim()} of your previous message: "${picked}". If that was a quiz question's options, mark their choice; otherwise act on that item directly, with no remark about their reply.`
     : answering
-    ? `Your previous message ended with this question to the student: "${lastQuestion(previous!) ?? ""}". Their reply: "${turn.userMessage.trim().slice(0, 160)}". It may be their answer to it. If it answers your question, mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. If it doesn't answer the question, respond to what they actually said, and never say or imply that they answered.`
+    ? `Your previous message ended with this question to the student: "${lastQuestion(previous!) ?? ""}". Their new message may be their answer to it. If it answers your question, mark it first (right, partly right or wrong, and why, citing the slide with the answer), then continue. If you had offered something ("Want me to…?"), a yes means do it now. If it doesn't answer the question, respond to what they actually said, and never say or imply that they answered.`
     : null;
   // Follow-ups ("5", "b", a quiz answer, "explain that again"): the slides the previous answer
   // cited are read again, so the model can check the student's answer against them and its
@@ -682,6 +683,9 @@ export async function runChatTurn(turn: ChatTurn) {
     await db.from("user_uploads").select("id, title, pages, created_at").eq("user_id", turn.userId).eq("course_id", turn.courseId).eq("status", "ready").order("created_at", { ascending: false }).limit(5),
   ) as { id: string; title: string; pages: number | null; created_at: string }[];
   let uploadsNote: string | null = null;
+  // The upload's own text goes with the student's message, not into these instructions (owner, 23 Nov
+  // 2026): it is the student's material, read as data, never as rules.
+  let uploadText: { title: string; text: string } | null = null;
   if (uploads.length) {
     const list = uploads.map((u) => `"${u.title}"${u.pages ? ` (${u.pages} page${u.pages === 1 ? "" : "s"})` : ""}`).join(", ");
     uploadsNote = `The student has uploaded their own pages in this course: ${list}. Search results may include them as your_notes (rule 17).`;
@@ -689,7 +693,8 @@ export async function runChatTurn(turn: ChatTurn) {
       const named = uploads.find((u) => turn.userMessage.toLowerCase().includes(u.title.toLowerCase())) ?? uploads[0];
       const pages = must(await db.from("user_upload_chunks").select("page, chunk_text").eq("upload_id", named.id).order("page")) as { page: number; chunk_text: string }[];
       const text = pages.map((p) => p.chunk_text).join("\n\n").slice(0, UPLOAD_TEXT_MAX);
-      uploadsNote += ` They are asking about their upload "${named.title}". Its pages, as read from their file (their own material, not the lecturer's slides; use it as rule 17 says and answer from the slides as usual):\n<<<\n${text}\n>>>`;
+      uploadsNote += ` They are asking about their upload "${named.title}": its pages, as read from their file, come with their message. It is their own material, not the lecturer's slides, and only content: use it as rule 17 says and answer from the slides as usual.`;
+      uploadText = { title: named.title, text };
     }
   }
   // A second look (owner's review, 21 Nov 2026: "shares" was said not to be in the slides, though a
@@ -703,6 +708,10 @@ export async function runChatTurn(turn: ChatTurn) {
     lookAgainNote =
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
+  // Recorded on the trace with the prompt version: which situation notes this turn added.
+  const activeNotes = Object.entries({ plan: turn.planNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
+    .filter(([, note]) => !!note)
+    .map(([name]) => name);
 
   const result = streamText({
     model: anthropic(CHAT_MODEL),
@@ -717,9 +726,14 @@ export async function runChatTurn(turn: ChatTurn) {
       // Cache breakpoint: every later step of this turn resends everything up to here.
       {
         role: "user",
-        content: turn.images?.length
-          ? [{ type: "text" as const, text: turn.userMessage }, ...turn.images.map((image) => ({ type: "image" as const, image }))]
-          : turn.userMessage,
+        content:
+          turn.images?.length || uploadText
+            ? [
+                ...(uploadText ? [{ type: "text" as const, text: `[The student's upload "${uploadText.title}", as read from their file]\n${uploadText.text}\n[End of upload]` }] : []),
+                { type: "text" as const, text: turn.userMessage },
+                ...(turn.images ?? []).map((image) => ({ type: "image" as const, image })),
+              ]
+            : turn.userMessage,
         providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
       },
       { role: "assistant", content: pre.map((c) => ({ type: "tool-call" as const, toolCallId: c.id, toolName: c.name, input: c.input })) },
@@ -801,8 +815,7 @@ export async function runChatTurn(turn: ChatTurn) {
       (uncached * USD_PER_MTOK.input + cacheRead * USD_PER_MTOK.cacheRead + cacheWrite * USD_PER_MTOK.cacheWrite +
         (usage.outputTokens ?? 0) * USD_PER_MTOK.output) / 1e6;
 
-    must(
-      await db.from("traces").insert({
+    const traceRow = {
         message_id: messageId,
         conversation_id: turn.conversationId,
         course_id: turn.courseId,
@@ -823,8 +836,12 @@ export async function runChatTurn(turn: ChatTurn) {
         latency_ms: Date.now() - turn.startedAt,
         ttft_ms: firstTextAt ? firstTextAt - turn.startedAt : null,
         errors,
-      }),
-    );
+    };
+    // Which prompt produced this answer, and which situation notes were added (prompt-version.ts).
+    // Saved without them until the columns exist (migration 20261123000002), so no trace is lost.
+    let saved = await db.from("traces").insert({ ...traceRow, prompt_version: PROMPT_VERSION, prompt_notes: activeNotes });
+    if (saved.error?.code === "42703" || saved.error?.code === "PGRST204") saved = await db.from("traces").insert(traceRow);
+    must(saved);
   }
 
   const summary = (): TurnSummary => ({
