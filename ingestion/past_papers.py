@@ -35,6 +35,7 @@ Review file (optional), next to the paper: past_papers/<name>.review.yaml
 from __future__ import annotations
 
 import argparse
+import psycopg
 import base64
 import hashlib
 import json
@@ -846,18 +847,28 @@ def analyse(courses: list[Course], args) -> int:
         topics = pa.course_topics(store, cid)
         todo = []
         for j in jobs:
-            pa.retrieve(store, j)
-            if args.recheck:
-                if not j.slides or not pa.has_new_slides(store, j):
-                    continue
-                rechecked += 1
-            src = pa.reuse_answer(store, j) if not args.recheck and not args.reask else None
-            if src:
-                pa.save_reused(store, j, src, topics)
-                reused += 1
-                continue
-            j.params = pa.build_params(c, topics, j)
-            todo.append(j)
+            # Hours of one-at-a-time searches: a dropped database connection (23 Nov 2026, after ~4 hours)
+            # reconnects and retries this question instead of ending the run.
+            for attempt in (1, 2):
+                try:
+                    pa.retrieve(store, j)
+                    if args.recheck:
+                        if not j.slides or not pa.has_new_slides(store, j):
+                            break
+                        rechecked += 1
+                    src = pa.reuse_answer(store, j) if not args.recheck and not args.reask else None
+                    if src:
+                        pa.save_reused(store, j, src, topics)
+                        reused += 1
+                        break
+                    j.params = pa.build_params(c, topics, j)
+                    todo.append(j)
+                    break
+                except psycopg.OperationalError:
+                    if attempt == 2:
+                        raise
+                    print("  database connection dropped; reconnecting", flush=True)
+                    store.reconnect()
         if todo:
             work.append((c, topics, todo))
         elif jobs:
