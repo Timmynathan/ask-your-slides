@@ -1,7 +1,7 @@
-import { createUIMessageStreamResponse, toUIMessageStream, type ModelMessage } from "ai";
+import { createUIMessageStream, createUIMessageStreamResponse, toUIMessageStream, type ModelMessage } from "ai";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
-import { HISTORY_LIMIT, HISTORY_MAX_CHARS, historyText, runChatTurn } from "@/lib/agent/run";
+import { HISTORY_LIMIT, HISTORY_MAX_CHARS, historyText, inLiveExam, runChatTurn } from "@/lib/agent/run";
 import { readPhotos } from "@/lib/uploads/read-photos";
 import { isPartnerId, PARTNERS } from "@/lib/partners";
 import { adminClient, must } from "@/lib/supabase/admin";
@@ -83,6 +83,40 @@ export async function POST(request: Request) {
   const partner = isPartnerId(profile?.study_partner) ? PARTNERS[profile.study_partner] : null;
 
   const db = adminClient();
+
+  // A test or exam happening right now (rule 15). Enforced here, not left to the model: with the rule
+  // and a turn note, the model still wrote out a copyable answer (behaviour check, 23 Nov 2026). No
+  // model call, no slides, not counted against the daily limit: a fixed, kind reply, saved like any
+  // other so the chat reads normally. Revision ("my exam is tomorrow") never matches (inLiveExam).
+  if (!edit && inLiveExam(message)) {
+    const name = profile?.display_name?.split(/\s+/)[0];
+    const text = `${name ? `${name}, ` : ""}I can't help while a test or exam is going on: that wouldn't be fair to you or your classmates. Do your best and trust what you've revised. When it's over, come back and we can go through this question together as revision.`;
+    const userRow: { id?: string; conversation_id: string; user_id: string; role: "user"; content: string } = { conversation_id: conversationId, user_id: auth.user.id, role: "user", content: message };
+    let savedQ = await db.from("messages").insert(messageId ? { ...userRow, id: messageId } : userRow).select("id").single();
+    if (savedQ.error?.code === "23505") savedQ = await db.from("messages").insert(userRow).select("id").single();
+    must(savedQ);
+    const replyId = crypto.randomUUID();
+    must(await db.from("messages").insert({ id: replyId, conversation_id: conversationId, user_id: auth.user.id, role: "assistant", content: text, citations: [] }));
+    if (convo.title === "New chat") await db.from("conversations").update({ title: message.slice(0, 80) }).eq("id", conversationId);
+    await db.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
+    await db.from("traces").insert({
+      message_id: replyId, conversation_id: conversationId, course_id: convo.course_id, user_id: auth.user.id, user_message: message,
+      history_length: 0, tool_calls: [], retrieved_slide_ids: [], output_text: text, citations: [], invalid_citations: [],
+      cost_usd: 0, model: "none", latency_ms: Date.now() - startedAt, ttft_ms: 0, errors: [{ code: "live_exam", detail: "fixed reply, no model call" }],
+    });
+    return createUIMessageStreamResponse({
+      stream: createUIMessageStream({
+        execute: ({ writer }) => {
+          writer.write({ type: "start", messageId: replyId });
+          writer.write({ type: "text-start", id: "exam" });
+          writer.write({ type: "text-delta", id: "exam", delta: text });
+          writer.write({ type: "text-end", id: "exam" });
+          writer.write({ type: "finish", messageMetadata: { citations: [], fallback: null } });
+        },
+      }),
+    });
+  }
+
   // Plan limits (PRD F12), on the server: quiz/summary locks, daily and premium-course caps.
   const gate = await admitChatTurn(db, { userId: auth.user.id, courseId: convo.course_id, premium: course.premium, message });
   if (!gate.ok) {
