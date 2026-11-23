@@ -175,9 +175,9 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         </div>
       </header>
 
-      {/* Two columns on wide screens (owner, 22 Nov 2026): the greeting, recent lectures and courses on
+      {/* Two columns from 1024px, so landscape iPads see the side cards too (owner, 23 Nov 2026). Was: two columns on wide screens (owner, 22 Nov 2026): the greeting, recent lectures and courses on
           the left; Finals, the exam countdown and the streak on the right. */}
-      <main className="mx-auto grid max-w-[1280px] gap-8 px-4 pb-16 pt-4 sm:px-6 sm:pt-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <main className="mx-auto grid max-w-[1280px] gap-8 px-4 pb-16 pt-4 sm:px-6 sm:pt-6 md:grid-cols-[minmax(0,1fr)_220px] md:gap-5 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0">
         {/* The study partner's greeting (owner, 22 Nov 2026). The "Ask anything" box was removed the
             same day: questions are asked inside a course, so everything stays organised by course. */}
@@ -212,7 +212,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
         {shown.length === 0 ? (
           <Empty tab={tab} onAll={() => setTab("all")} />
         ) : view === "grid" ? (
-          <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3" aria-label="Courses">
+          <ul className="grid grid-cols-2 gap-3 xl:grid-cols-3" aria-label="Courses">
             {shown.map((c) => (
               <CourseCard key={c.id} course={c} />
             ))}
@@ -225,7 +225,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
           </ul>
         )}
       </div>
-      <aside className="grid content-start gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Your plan and progress">
+      <aside className="grid content-start gap-4 sm:grid-cols-2 md:grid-cols-1 md:max-lg:gap-3 md:max-lg:[&>*]:p-4" aria-label="Your plan and progress">
         {/* Encouragement for everyone (owner, 22 Nov 2026); the payment option sits below the progress cards. */}
         <EncourageCard name={user.displayName} examsInDays={examsInDays} onFinals={price === null} />
         <ExamsCard days={examsInDays} startLabel={EXAMS_START_LABEL} />
@@ -296,7 +296,7 @@ function meta(c: DashboardCourse) {
 
 function CourseCard({ course: c }: { course: DashboardCourse }) {
   return (
-    <li className="group relative flex min-h-[150px] flex-col rounded-[22px] bg-navy p-4 text-white sm:min-h-[170px] sm:p-5 transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
+    <li className="group relative flex min-h-[150px] flex-col rounded-[22px] bg-navy p-4 text-white sm:min-h-[170px] sm:p-5 md:max-lg:min-h-[140px] md:max-lg:p-4 transition hover:bg-navy-hover hover:shadow-lg has-[a:active]:scale-[0.985]">
       {/* The whole card is the link; the menu sits above it. */}
       {/* The course loads in full as soon as the pointer is over the card (or a finger touches it), so
           the click opens it at once (owner, 21 Nov 2026: "it takes a while for the chat to show"). */}
