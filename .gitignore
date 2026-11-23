@@ -9,3 +9,7 @@ __pycache__/
 .DS_Store
 # Trace exports contain student questions
 evals/exports/
+
+# Screenshots taken while testing (root only)
+/*.png
+/ipad-snapshots/

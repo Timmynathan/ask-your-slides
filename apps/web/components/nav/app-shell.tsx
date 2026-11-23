@@ -2,8 +2,8 @@
 
 // The app's sidebar (owner, 20–21 Nov 2026), in the shared layout app/(app)/(shell)/.
 //
-// Everywhere: a slim dark rail with the logo (landing page), Dashboard, search, Recent chats (a small
-// pop-out list), feedback and the account. Outside a course that rail is all there is (owner: Past
+// Everywhere: a slim dark rail with the logo (landing page), Dashboard, search, Recent chats (a full-height
+// list beside the rail, like ChatGPT's), feedback and the account. Outside a course that rail is all there is (owner: Past
 // questions, Upload and My files don't belong on the dashboard).
 // Inside a course: a panel beside the rail with the course name, Upload, and the course's own menu
 // (past questions, topics, chats), filled in by the course page through a portal (useShellCourse).
@@ -14,15 +14,16 @@
 // Icons: Lucide (owner, 21 Nov 2026: no hand-drawn icons).
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { ASK_ANYTHING_ON } from "@/lib/ask-feature";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { History, House, Menu, MessageCircle, PanelLeft, PencilLine, X, type LucideIcon } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { useClickAway } from "@/lib/ui/use-click-away";
 import { HoverLink } from "@/components/ui/hover-link";
 import { UploadDialog } from "./upload-dialog";
 import { FeedbackDialog } from "./feedback-dialog";
+import { RecentChatsPanel } from "./recent-chats-panel";
 
 export type ShellPage = "dashboard" | "chat" | "past" | "account";
 export interface ShellCourse {
@@ -35,6 +36,10 @@ export interface ShellChat {
   id: string;
   title: string;
   href: string;
+  /** The course's code (or title when the code is a placeholder), shown beside the chat. */
+  course?: string;
+  /** Last activity, for the day groups. */
+  at?: string;
 }
 
 /** Phones: the pages' menu button opens the sidebar as a drawer (ShellMenuButton). */
@@ -123,38 +128,26 @@ function RailButton({ label, active = false, href, onClick, icon: Icon }: { labe
   );
 }
 
-/** Recent chats from the rail: a small list that opens to the right of the rail. */
-function RecentChats({ recent }: { recent: ShellChat[] }) {
-  const [open, setOpen] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  useClickAway(root, open, () => setOpen(false));
+/** Recent chats from the rail: opens the full-height chat list beside it (recent-chats-panel.tsx). */
+function RecentChats({ recent, open, setOpen }: { recent: ShellChat[]; open: boolean; setOpen(v: boolean | ((o: boolean) => boolean)): void }) {
+  const close = useCallback(() => setOpen(false), [setOpen]);
   return (
-    <div ref={root} className="relative w-full">
+    <>
       <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Recent chats" aria-expanded={open} className={railCls(open)}>
         <span className="grid h-11 w-11 shrink-0 place-items-center">
           <History size={20} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
         </span>
         <span className={railLabel}>Recent chats</span>
       </button>
-      {open && (
-        <div className="pop-in absolute left-full top-0 z-50 ml-3 w-72 rounded-2xl bg-card p-2 shadow-xl ring-1 ring-line">
-          <p className="px-3 pb-1 pt-2 text-[12px] font-medium uppercase tracking-wide text-muted">Recent chats</p>
-          {recent.length === 0 ? (
-            <p className="px-3 pb-3 pt-1 text-[13.5px] text-muted">No chats yet. Open a course to start one.</p>
-          ) : (
-            <ul>
-              {recent.map((c) => (
-                <li key={c.id}>
-                  <HoverLink href={c.href} onClick={() => setOpen(false)} title={c.title} className="block truncate rounded-xl px-3 py-2 text-[14px] text-ink transition hover:bg-sunken">
-                    {c.title}
-                  </HoverLink>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
+      {/* Outside the rail (a portal): hovering the list mustn't widen the rail over it. */}
+      {open &&
+        createPortal(
+          <Suspense fallback={null}>
+            <RecentChatsPanel initial={recent} onClose={close} />
+          </Suspense>,
+          document.body,
+        )}
+    </>
   );
 }
 
@@ -220,6 +213,8 @@ export function AppShell({
   const panelTitle = courseMenu?.title ?? openCourse?.title ?? "";
   const [feedback, setFeedback] = useState(false);
   const [drawer, setDrawer] = useState(false);
+  // The chat list beside the rail; while it's open the rail stays narrow (no hover widening behind it).
+  const [chatsOpen, setChatsOpen] = useState(false);
   // Phones: a one-time tip pointing at the menu button.
   const [tip, setTip] = useState(false);
   useEffect(() => {
@@ -329,7 +324,7 @@ export function AppShell({
         <div className="relative w-16 shrink-0">
           <div
             data-laptop-tour="rail"
-            className="group/rail absolute inset-y-0 left-0 z-[60] flex w-16 flex-col gap-1.5 bg-pau-900 px-2.5 py-4 transition-[width,box-shadow] delay-0 duration-200 ease-out hover:w-56 hover:shadow-2xl hover:delay-150"
+            className={`absolute inset-y-0 left-0 z-[60] flex w-16 flex-col gap-1.5 bg-pau-900 px-2.5 py-4 transition-[width,box-shadow] delay-0 duration-200 ease-out ${chatsOpen ? "" : "group/rail hover:w-56 hover:shadow-2xl hover:delay-150"}`}
           >
             <Link href="/" aria-label="Ask Your Slides home" className="mb-2 flex h-11 w-full items-center">
               <span className="grid h-11 w-11 shrink-0 place-items-center">
@@ -340,7 +335,7 @@ export function AppShell({
             <RailButton label="Dashboard" href="/dashboard" active={page === "dashboard"} icon={House} />
             {/* Ask anything (owner, 22 Nov 2026): a question opens in the right course's chat. */}
             {ASK_ANYTHING_ON && <RailButton label="Ask anything" href="/chat" active={page === "chat"} icon={MessageCircle} />}
-            <RecentChats recent={recent} />
+            <RecentChats recent={recent} open={chatsOpen} setOpen={setChatsOpen} />
             <div className="mt-auto flex flex-col gap-3">
               {/* Feedback (owner, 20 Nov 2026), just above the account. */}
               <RailButton label="Give us feedback" onClick={() => setFeedback(true)} icon={PencilLine} />
