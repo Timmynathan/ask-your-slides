@@ -5,11 +5,14 @@
 // chats. Other courses aren't listed here: the logo goes back to My courses. Minimal: text rows, no
 // badges or counts. Navy panel with white text; the selected scope is a white pill.
 import type { ChatItem, TopicItem, WorkspaceData } from "@/lib/study/types";
-import { BookOpen, Library } from "lucide-react";
+import { Library } from "lucide-react";
+import { KIND_ICON, KIND_LABEL } from "@/lib/study/material-kind";
 import { PastBox } from "./past-box";
 
 interface Props {
   topics: TopicItem[]; // this course's topics
+  /** topic id → the kind that names it (slides, notes, reading, practical…), for its icon. */
+  topicKinds?: Record<string, string>;
   chats: ChatItem[]; // this course's chats, newest first
   topicId: string | null;
   chatId: string | null;
@@ -22,7 +25,7 @@ interface Props {
   onOpenPast(paperId: string | null): void; // null = the Exam map / all questions
 }
 
-export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenChat, pastActive, past, onOpenPast }: Props) {
+export function Sidebar({ topics, topicKinds = {}, chats, topicId, chatId, onOpenScope, onOpenChat, pastActive, past, onOpenPast }: Props) {
   const scopes: { id: string | null; label: string }[] = [
     { id: null, label: "Whole course" },
     ...topics.map((t) => ({ id: t.id, label: t.title })),
@@ -38,14 +41,14 @@ export function Sidebar({ topics, chats, topicId, chatId, onOpenScope, onOpenCha
           className={`flex w-full items-start gap-2.5 rounded-2xl px-3 py-2.5 text-left text-[12px] leading-snug transition-colors ${
             active ? "bg-white font-medium text-[#0e1664]" : "text-white/85 hover:bg-white/10 hover:text-white"
           }`}
-          title={sc.label}
+          title={sc.id && topicKinds[sc.id] && !["slides", "notes"].includes(topicKinds[sc.id]) ? `${KIND_LABEL[topicKinds[sc.id]] ?? "Material"}: ${sc.label}` : sc.label}
         >
-          {/* A book for each lecture, a library for the whole course (owner, 21 Nov 2026). */}
-          {sc.id === null ? (
-            <Library size={14} absoluteStrokeWidth strokeWidth={1.5} className="mt-px shrink-0" aria-hidden />
-          ) : (
-            <BookOpen size={14} absoluteStrokeWidth strokeWidth={1.5} className="mt-px shrink-0" aria-hidden />
-          )}
+          {/* A library for the whole course, a book for each lecture (owner, 21 Nov 2026), and its own icon
+              for a reading, practical or other file (owner, 23 Nov 2026; lib/study/material-kind.ts). */}
+          {(() => {
+            const Icon = sc.id === null ? Library : (KIND_ICON[topicKinds[sc.id] ?? "slides"] ?? KIND_ICON.slides);
+            return <Icon size={14} absoluteStrokeWidth strokeWidth={1.5} className="mt-px shrink-0" aria-hidden />;
+          })()}
           <span className="line-clamp-2 min-w-0">{sc.label}</span>
         </button>
         {active && scopeChats.length > 0 && (

@@ -13,6 +13,7 @@ import { PartnerSwitch } from "./partner-switch";
 import { PAST_QUESTIONS_LIVE } from "@/lib/past/feature";
 import { PastPanel } from "./past-panel";
 import { Sidebar } from "./sidebar";
+import { firstMaterial, topicKind } from "@/lib/study/material-kind";
 import { SlidePreview } from "./slide-preview";
 import { FileText, Menu, type LucideIcon } from "lucide-react";
 
@@ -137,15 +138,14 @@ export function Workspace(data: WorkspaceData) {
     document.title = `${courseName(course)}${past === "list" ? " · Past questions" : topic ? ` · ${topic.title}` : ""} · Ask Your Slides`;
   }, [course, data.courses, topic, chatId, past]);
 
-  // Picking a topic opens its first slides (owner, 18 Nov 2026): the topic's first slides or notes
-  // file at page 1, on iPads and laptops (md and up, where the slide sits beside the chat; on phones
-  // it would cover the chat). Not for Whole course. Closing it keeps it closed until the next topic.
+  // Picking a topic opens its first slides (owner, 18 Nov 2026): the topic's first slides file at page 1,
+  // else its lecture notes, else its reading or practical (owner, 23 Nov 2026: a lecture that was only a
+  // reading opened nothing), on iPads and laptops (md and up, where the slide sits beside the chat; on
+  // phones it would cover the chat). Not for Whole course. Closing it keeps it closed until the next topic.
   const firstSlide = useCallback(
     (id: string | null): string | null => {
       if (!id || !window.matchMedia("(min-width: 48rem)").matches) return null;
-      const m = data.materials
-        .filter((x) => x.topic_id === id && (x.kind === "slides" || x.kind === "notes"))
-        .sort((x, y) => x.material_order - y.material_order)[0];
+      const m = firstMaterial(data.materials, id);
       return m ? `${course.code}-${String(m.material_order).padStart(2, "0")}-1` : null;
     },
     [data.materials, course.code],
@@ -233,6 +233,7 @@ export function Workspace(data: WorkspaceData) {
   const sidebar = (
     <Sidebar
       topics={topics}
+      topicKinds={Object.fromEntries(topics.map((t) => [t.id, topicKind(data.materials, t.id)]))}
       chats={courseChats}
       topicId={topicId}
       chatId={chatId}
