@@ -23,7 +23,10 @@ export function attentionReasons(r: AttentionInput): string[] {
   if ((r.output_text ?? "").trimStart().startsWith(NOT_COVERED)) reasons.push("Not covered by the slides");
   const firstSearch = (r.tool_calls ?? []).find((t) => t.name === "search_slides");
   const sims = firstSearch?.detail?.similarities ?? [];
-  if (firstSearch && (sims.length === 0 || Math.max(...sims) < NO_MATCH)) reasons.push("Search found nothing relevant");
+  // Only when the answer then cited no slide either: "keep going" or "quiz me" search weakly by nature
+  // but are answered from the slides (weekly report, 23 Nov 2026: those filled the list).
+  const citedNothing = !/\[\[s:/.test(r.output_text ?? "");
+  if (firstSearch && (sims.length === 0 || Math.max(...sims) < NO_MATCH) && citedNothing) reasons.push("Search found nothing relevant");
   for (const e of r.errors ?? []) {
     const info = errorInfo(e.code);
     if (info.problem && !reasons.includes(info.label)) reasons.push(info.label);
