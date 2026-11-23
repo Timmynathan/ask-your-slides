@@ -67,8 +67,12 @@ describe("thinking aloud in calculation answers (owner's live check, 23 Nov 2026
     expect(plainSlideTalk("Here W_a = 0.7.\n\nLet me calculate it:\n\n$$E = 11.525$$")).toBe("Here W_a = 0.7.\n\n\n$$E = 11.525$$");
     expect(plainSlideTalk("It lands nearer 11.45%. Hmm, check that again: 11.525% is closer to 11.45%.")).toBe("It lands nearer 11.45%. 11.525% is closer to 11.45%.");
   });
+  it("drops 'I'll calculate it with the slide's formula.'", () => {
+    expect(plainSlideTalk("A 70/30 split gives slightly less than 11.58%. I'll calculate it with the slide's formula.\n\nThe formula is…")).toBe("A 70/30 split gives slightly less than 11.58%. \n\nThe formula is…");
+  });
   it("keeps ordinary sentences", () => {
     expect(plainSlideTalk("Let me show you why the weights matter.")).toBe("Let me show you why the weights matter.");
+    expect(plainSlideTalk("I'll show you how the weights change the result.")).toBe("I'll show you how the weights change the result.");
   });
   it("cuts 'Let me calculate it:' before a tool call", () => {
     expect(trimTrailingNarration("Here W_a = 0.7 and W_b = 0.3.\n\nLet me calculate it:").dropped).toBe("Let me calculate it:");

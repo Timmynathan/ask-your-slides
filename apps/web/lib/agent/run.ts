@@ -229,7 +229,7 @@ export function citedRanges(content: string, budget = 40): { material: string; f
 }
 
 /** Words the model uses when planning to itself, never in an answer to the student. */
-export const PLANNING = /\b(the student'?s?\b|I need (?:the|to (?:pull|fetch|get|read|check|look|search|find))|let me (?:pull|fetch|grab|gather|get|check|look|search|read|load|open|find|calculate|compute|work (?:it|this|that) out)|I'?ll (?:pull|fetch|grab|gather|search|look up|load)\b|I'?ll answer the ones)/i;
+export const PLANNING = /\b(the student'?s?\b|I need (?:the|to (?:pull|fetch|get|read|check|look|search|find))|let me (?:pull|fetch|grab|gather|get|check|look|search|read|load|open|find|calculate|compute|work (?:it|this|that) out)|I'?ll (?:pull|fetch|grab|gather|search|look up|load|calculate|compute)\b|I'?ll answer the ones)/i;
 
 const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find|calculate|compute|work|verify)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
 
@@ -280,6 +280,9 @@ const SEARCH_TALK: [RegExp, string][] = [
   // calculate it:" line reached the student.
   [/(?<=^|[.!?]\s+|\n)(?:Hmm+|Wait|Actually, wait)[,.]?\s+(?:let me |let's )?(?:check|recheck|re-check|double-check|look at) (?:that|this|it)(?: again)?[:.]\s*/g, ""],
   [/(?<=^|\n)(?:Let me|Let's) (?:calculate|compute|work out|do the (?:maths?|calculation)) (?:it|this|that|them)?\s*[:.]\s*(?=\n|$)/g, ""],
+  // "I'll calculate it with the slide's formula." (same check, second run): a sentence announcing the
+  // calculation, anywhere a sentence starts.
+  [/(?<=^|[.!?]\s+|\n)I(?:'ll| will| am going to|'m going to) (?:now )?(?:calculate|compute|work (?:it|this|that|them) out|do the (?:maths?|calculation))\b[^.!?\n]*[.!?:][ \t]*/g, ""],
 ];
 /** "My upload", "the PDF I uploaded", "my test", "my notes": the student means their own pages. */
 const MENTIONS_UPLOAD = /\b(upload(?:ed|s)?|my (?:test|notes?|paper|pdf|file|document|scan|worksheet|pages?)|the (?:pdf|file|document|scan) I)\b/i;
