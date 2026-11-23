@@ -591,6 +591,12 @@ export async function runChatTurn(turn: ChatTurn) {
   // "Week 7" / "lecture 3" (owner's review, 21 Nov 2026: asked about week 7, the model taught week
   // 2's three-part test): find the file by its name, read it all, and say which one it is.
   const part = namedPart(turn.userMessage);
+  // A typed "this slide" with a slide open in the viewer (owner's chat review, 23 Nov 2026: the bot
+  // guessed slide 9 when the student had another open). The "Ask about this slide" text names it already.
+  const focusNote =
+    focus && !/\b(slide|page)\s+\d+\s+of\b/i.test(turn.userMessage)
+      ? `The student has slide ${focus.number} of ${focus.material} open beside the chat, and "this slide" or "this page" in their message means that one (its page is given to you above). Answer about it.`
+      : null;
   let partNote: string | null = null;
   if (!preCalls.length && part) {
     const mats = must(
@@ -761,7 +767,7 @@ export async function runChatTurn(turn: ChatTurn) {
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -771,7 +777,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

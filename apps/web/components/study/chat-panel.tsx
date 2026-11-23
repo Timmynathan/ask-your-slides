@@ -27,7 +27,7 @@ import { asksForQuiz, asksForSummary } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
 import { saveUpload, uploadStatus, type UploadStatus } from "@/lib/uploads/client";
-import { BookOpen, FileText, GraduationCap, Lightbulb, MessageCircleQuestion, Plus, X, type LucideIcon } from "lucide-react";
+import { BookOpen, FileText, GraduationCap, Lightbulb, ListChecks, MessageCircleQuestion, Plus, Presentation, X, type LucideIcon } from "lucide-react";
 
 type Meta = {
   citations?: CitationInfo[];
@@ -61,6 +61,8 @@ interface Props {
   onCite(slideKey: string): void;
   /** The slide viewer is open beside the chat (then no slide pictures under answers). */
   slideOpen: boolean;
+  /** The slide open in the viewer: sent with a typed "this slide" question (owner, 23 Nov 2026). */
+  openSlide?: string | null;
   prefill: { text: string; n: number; slideKey?: string } | null;
   /** "Is this helping you study?": due after the 10th question, until answered (or "Not now"). */
   pulseDue: boolean;
@@ -115,12 +117,17 @@ function errorText(e: Error | undefined): string | null {
 }
 
 /** Icons for the starter buttons (Lucide, owner 21 Nov 2026: no hand-drawn icons). */
+/** "this slide", "the current page", "everything on this slide": the one open in the viewer. */
+export const THIS_SLIDE = /\b(this|current|the open|that)\s+(slide|page)\b/i;
+
 const STARTER_ICONS = {
   ask: MessageCircleQuestion,
   overview: BookOpen,
   quiz: Lightbulb,
   explain: GraduationCap,
   summary: FileText,
+  slides: Presentation,
+  practice: ListChecks,
 } satisfies Record<string, LucideIcon>;
 
 export function ChatPanel({
@@ -138,6 +145,7 @@ export function ChatPanel({
   onChatRemoved,
   onCite,
   slideOpen,
+  openSlide = null,
   prefill,
   pulseDue,
   onQuestion,
@@ -384,7 +392,8 @@ export function ChatPanel({
       following.current = true; // a new question: follow its answer
       setAwayFromBottom(false);
       // Still the question that opened from the viewer (its opening kept): say which item it's about.
-      const focusSlide = focus && text.startsWith(focus.text.slice(0, -1)) ? focus.key : undefined;
+      // A typed "this slide" / "this page" with a slide open means that slide (the bot used to guess).
+      const focusSlide = focus && text.startsWith(focus.text.slice(0, -1)) ? focus.key : openSlide && THIS_SLIDE.test(text) ? openSlide : undefined;
       setFocus(null);
       setPhotos([]);
       setPhotoError(null);
@@ -485,6 +494,9 @@ export function ChatPanel({
     ? [
         { label: "Explain like I missed class", send: `Explain "${topic.title}" like I missed the class.`, icon: "explain" },
         { label: "Summarize this topic", send: `Summarize the topic "${topic.title}".`, icon: "summary" },
+        // The two requests students typed most (owner's chat review, 23 Nov 2026).
+        { label: "Explain every slide", send: `Explain every slide of "${topic.title}" in detail.`, icon: "slides" },
+        { label: "Practice questions", send: `Give me 5 practice questions on "${topic.title}" with their answers.`, icon: "practice" },
         { label: "Quiz me on this topic", send: `Quiz me on "${topic.title}".`, icon: "quiz" },
       ]
     : [

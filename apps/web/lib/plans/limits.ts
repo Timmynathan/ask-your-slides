@@ -77,7 +77,7 @@ export function earlyPriceActive(now: Date): boolean {
 
 /** "Quiz me", "test me", "give me practice questions"… */
 export function asksForQuiz(message: string): boolean {
-  return /\b(quiz(z(es|ing))?|test me|test my (knowledge|understanding)|(ask|give) me (some |a few |\d+ )?(practice |test )?questions)\b/i.test(message);
+  return /\b(quiz(z(es|ing))?|test me|test my (knowledge|understanding)|ask me (some |a few |\d+ )?(practice |test )?questions)\b/i.test(message);
 }
 
 /** "Summarize…", "overview of…", "recap…". */

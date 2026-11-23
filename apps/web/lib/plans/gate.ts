@@ -115,7 +115,7 @@ function planNote(quiz: boolean, summariesUsedUp: boolean): string | null {
   const lines: string[] = [];
   if (!quiz) {
     lines.push(
-      "Quiz mode is not on this student's plan (Free). Never quiz them or set questions for them to answer. If they ask for a quiz or practice questions, say in one sentence that quiz mode comes with Finals, then offer to explain the topic instead.",
+      "Quiz mode (asking one question at a time and marking their answers) is not on this student's plan (Free): never quiz them or wait for their answers. Practice questions printed together with their answers are free (owner, 23 Nov 2026): when they ask for practice or test questions with answers, give them in full (rule 12). If they ask to be quizzed, say in one sentence that quiz mode comes with Finals, then offer practice questions with answers instead.",
     );
   }
   if (summariesUsedUp) {

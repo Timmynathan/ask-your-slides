@@ -91,10 +91,10 @@ describe("plan end", () => {
 
 describe("what the student asks for", () => {
   it("recognises quiz requests, including the starter buttons", () => {
-    for (const m of ['Quiz me on "Normalisation".', "Quiz me on this course.", "can you test me on joins", "give me 5 practice questions", "quizzes please"]) {
+    for (const m of ['Quiz me on "Normalisation".', "Quiz me on this course.", "can you test me on joins", "ask me 5 questions", "quizzes please"]) {
       expect(asksForQuiz(m), m).toBe(true);
     }
-    for (const m of ["What is a hash index?", "Explain the test plan in topic 3", "what questions came in the exam?"]) {
+    for (const m of ["What is a hash index?", "Explain the test plan in topic 3", "what questions came in the exam?", "give me 5 practice questions with answers", 'Give me 5 practice questions on "AVL Tree" with their answers.']) {
       expect(asksForQuiz(m), m).toBe(false);
     }
   });

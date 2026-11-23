@@ -32,6 +32,8 @@ interface Case {
   history?: { role: "user" | "assistant"; content: string }[];
   must?: string[];
   mustNot?: string[];
+  /** The slide open in the viewer (sent as focus_slide, like a typed "this slide"). */
+  focus?: string;
 }
 const only = process.argv.slice(2);
 const cases = (JSON.parse(readFileSync(path.join(import.meta.dirname, "../evals/behaviour/cases.json"), "utf8")) as Case[]).filter((c) => !only.length || only.includes(c.id));
@@ -74,7 +76,7 @@ async function run(c: Case): Promise<Result> {
       if (ins.error) throw ins.error;
     }
     const t0 = Date.now();
-    const r = await fetch(`${BASE}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json", cookie }, body: JSON.stringify({ conversation_id: conv.id, message: c.question }) });
+    const r = await fetch(`${BASE}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json", cookie }, body: JSON.stringify({ conversation_id: conv.id, message: c.question, ...(c.focus ? { focus_slide: c.focus } : {}) }) });
     const body = await r.text();
     let tr: { output_text: string | null; cost_usd: number | null; errors: { code: string }[] | null; prompt_version?: string | null } | null = null;
     for (let i = 0; i < 15 && !tr; i++) {
