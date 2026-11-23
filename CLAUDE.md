@@ -14,7 +14,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
 - Programmes live (Nov 2026): 10 final-year programmes, 60 courses: CS, Software Eng, Mechanical Eng (500-level),
   ISMS, Mass Comm, Film & Multimedia, Business Admin, Economics, Finance, Accounting. Placeholder codes
   (code_confirmed: false) show only the title. 11 calculation courses (calculation_heavy: true) get the
-  calculate/optimize tools; their formula pages were read with Sonnet. Slide images are WebP q75 (free 1 GB plan).
+  calculate/optimize tools; their formula pages were read with Sonnet. Slide images are WebP q75 (chosen on the free 1 GB plan; Supabase is on Pro since 23 Nov 2026, so storage is no longer tight).
 - Past questions (Nov 2026): 85 papers across 9 programmes extracted (Sonnet; scans turned upright with
   Tesseract only when proven; SEN reuses the identical CS papers by file hash). Every paper's printed
   code/title is checked against the course (past_course_match report); the owner asked to publish the

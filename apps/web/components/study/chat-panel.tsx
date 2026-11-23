@@ -612,7 +612,7 @@ export function ChatPanel({
             <p className="mt-6 flex items-center gap-3 text-sm text-muted" role="status">
               <Mascot partner={partner} size={28} mood="thinking" />
               {/* Just "Thinking…" (owner, 23 Nov 2026: "Zara is pulling it together…" plus bouncing dots was too much). */}
-              <span>Thinking…</span>
+              <span className="thinking-fade">Thinking…</span>
             </p>
           )}
           {errText && !capped && (
