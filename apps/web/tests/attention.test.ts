@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { attentionReasons } from "@/lib/admin/attention";
+import { attentionReasons, type AttentionInput } from "@/lib/admin/attention";
 
-const base = { rating: null, errors: [], latency_ms: 6000, output_text: "A B+ tree keeps keys sorted. [[s:CSC420-02-21]]", tool_calls: [{ name: "search_slides", detail: { similarities: [0.62, 0.5] } }] } as const;
+const base: AttentionInput = { rating: null, errors: [], latency_ms: 6000, output_text: "A B+ tree keeps keys sorted. [[s:CSC420-02-21]]", tool_calls: [{ name: "search_slides", detail: { similarities: [0.62, 0.5] } }] };
 
 describe("attentionReasons (/admin Answers: Needs attention)", () => {
-  it("a fine answer needs nothing", () => expect(attentionReasons({ ...base, errors: [], tool_calls: [...base.tool_calls] })).toEqual([]));
+  it("a fine answer needs nothing", () => expect(attentionReasons(base)).toEqual([]));
   it("names each reason", () => {
     expect(
       attentionReasons({
