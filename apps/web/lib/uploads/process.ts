@@ -22,6 +22,7 @@ Write out the text of every page, in order, exactly as written. Do not answer, s
 - Start each page with a line "=== Page N ===".
 - Keep question numbers, marks, headings and the student's own answers or working if present.
 - Equations in LaTeX between double dollar signs; tables as Markdown tables; describe a diagram in one short line in [brackets].
+- Keep each label with what it belongs to: in a timeline, chart or diagram write "1895: Lumière public projection", one pair per line, never all the dates and then all the labels.
 - Anything you can't read: [unreadable].
 - A page with no text: [no text].`;
 

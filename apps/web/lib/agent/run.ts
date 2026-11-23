@@ -233,7 +233,8 @@ export const PLANNING = /\b(the student'?s?\b|I need (?:the|to (?:pull|fetch|get
 
 const NARRATION_END = /(^|[.!?:]\s+|\]\]\s+|\n+)([^.!?\n[\]]*\b(let me|let's|I'll|I will|I need to|I'm going to|I am going to)\s+(also\s+)?(pull|fetch|grab|gather|get|check|look|search|read|load|open|find)\b[^.!?\n[\]]*[.!?:…]?)\s*$/i;
 
-const APOLOGY_START = /^\s*((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?re|you are) (?:right|correct)\b[^.!?\n]*\b(my|last|previous|earlier|answer|reply|explanation|response|skimm|missed|skipped)\b)[^.!?\n]*[.!?]+\s*/i;
+// The student's name may come first ("Timmy, I'm sorry to say…": owner's live check, 23 Nov 2026).
+const APOLOGY_START = /^\s*(?:[\p{L}'-]{2,20},\s*)?((?:i'?m |i am )?sorry\b|apolog|my apologies|(?:you'?re|you are) (?:right|correct)\b[^.!?\n]*\b(my|last|previous|earlier|answer|reply|explanation|response|skimm|missed|skipped)\b)[^.!?\n]*[.!?]+\s*/iu;
 
 /** Drops an opening apology or comment on an earlier answer ("Sorry about that, Leko.", "You're
  *  right, my last explanation skipped the steps."). A quiz verdict ("You're right, it's Planning")

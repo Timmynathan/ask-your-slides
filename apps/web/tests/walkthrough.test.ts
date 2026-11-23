@@ -82,6 +82,7 @@ describe("trimApologyOpening", () => {
   it("drops an apology or a comment on the earlier answer", () => {
     expect(trimApologyOpening("You're right, my last explanation skipped the expansion steps. Let's go slowly.")).toBe("Let's go slowly.");
     expect(trimApologyOpening("Sorry about that, Leko. Let's slow down.")).toBe("Let's slow down.");
+    expect(trimApologyOpening("Timmy, I'm sorry to say I can't answer this one from the photo. The slides don't cover it.")).toBe("The slides don't cover it.");
     expect(trimApologyOpening("You're right, Leko. My last answer rushed the steps. Let's slow down.")).toBe("Let's slow down.");
   });
   it("drops a note on method before the answer (owner, 23 Nov 2026)", () => {
