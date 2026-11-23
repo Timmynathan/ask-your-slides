@@ -1,4 +1,5 @@
 import "server-only";
+import { editOpening, OPENING_EDITOR_ON } from "./opening-editor";
 import { anthropic } from "@ai-sdk/anthropic";
 import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type ToolSet } from "ai";
 import { createCitationFilter } from "./citations";
@@ -276,9 +277,15 @@ const NOT_COVERED = "Your slides don't cover this, but here's the idea:";
 /** An opening that says the slides don't cover it in other words ("Kubernetes isn't covered in your FIN410
  *  slides", "your slides don't cover Kubernetes"). */
 export const NOT_COVERED_PREAMBLE =
-  /\b(?:slides?|course|materials)\b[^\n]{0,80}?\b(?:don'?t|do not|doesn'?t|does not|isn'?t|is not|aren'?t|are not)\b[^\n]{0,40}?\bcover|\b(?:isn'?t|is not|aren'?t|are not) (?:covered|part of|something)\b[^\n]{0,80}?\b(?:slides|course|materials)\b/i;
+  /\b(?:slides?|course|materials)\b[^\n]{0,80}?\b(?:don'?t|do not|doesn'?t|does not|isn'?t|is not|aren'?t|are not)\b[^\n]{0,40}?\bcover|\b(?:isn'?t|is not|aren'?t|are not) (?:covered|part of|something|in)\b[^\n]{0,80}?\b(?:slides|course|materials)\b/i;
+
+/** Rule 4's tag (owner, 23 Nov 2026: "let the AI decide, and let the app write the words"): the model
+ *  marks a not-covered answer and the app writes the fixed line, so it can't come out reworded. */
+export const NOT_COVERED_TAG = "[[not-covered]]";
 
 export function trimApologyOpening(text: string): string {
+  const tag = text.indexOf(NOT_COVERED_TAG);
+  if (tag >= 0 && tag < 600) return `${NOT_COVERED}\n\n${text.slice(tag + NOT_COVERED_TAG.length).replace(/^\s+/, "")}`;
   const at = text.indexOf(NOT_COVERED);
   if (at === 0) return text;
   if (at > 0 && at < 600) return text.slice(at);
@@ -366,7 +373,7 @@ export function asksToDraw(message: string): boolean {
 }
 
 export function plainSlideTalk(text: string): string {
-  let out = dropStrayCjk(text);
+  let out = dropStrayCjk(text).replaceAll(`${NOT_COVERED_TAG}`, "");
   for (const [re, by] of SEARCH_TALK) out = out.replace(re, by);
   return out;
 }
@@ -419,6 +426,7 @@ export async function runChatTurn(turn: ChatTurn) {
   const errors: { code: string; detail: string }[] = [];
   let output = "";
   let firstTextAt: number | null = null;
+  let editorCost = 0; // the opening editor's calls (opening-editor.ts)
   const summaryAsked = SUMMARY_WORDS.test(turn.userMessage);
 
   // Validates [[s:…]] markers in every text block before anything reaches the student.
@@ -463,6 +471,9 @@ export async function runChatTurn(turn: ChatTurn) {
     // Let me pull…", ~290 characters, reached the student): a block that reads like the model talking
     // to itself is held up to NARRATION_HARD_MAX before it counts as an answer.
     const NARRATION_HARD_MAX = 600;
+    // With the opening editor on, the answer's first block is held to about this length (two or three
+    // sentences) before the editor reads it.
+    const OPENING_EDITOR_HOLD = 400;
     type Held = { start: TextStreamPart<ToolSet>; raw: string; end?: TextStreamPart<ToolSet> };
     const held = new Map<string, Held>();
     type Ctrl = TransformStreamDefaultController<TextStreamPart<ToolSet>>;
@@ -506,13 +517,27 @@ export async function runChatTurn(turn: ChatTurn) {
       if (text && needsBreak.delete(id)) text = `\n\n${text.replace(/^\s+/, "")}`;
       toTail(controller, id, text);
     };
-    const release = (controller: Ctrl, id: string) => {
+    const release = async (controller: Ctrl, id: string) => {
       const h = held.get(id);
       if (!h) return;
       held.delete(id);
+      let text = h.raw;
+      if (!output.trim()) {
+        // The answer's first words: no apology or comment on an earlier answer (rule 14), the exact rule
+        // 4 line for the tag, then the opening editor (opening-editor.ts) takes out planning, search talk
+        // and filler the phrase filters don't know. Not for greetings or the fixed not-covered line.
+        text = trimApologyOpening(text);
+        if (OPENING_EDITOR_ON && !text.startsWith(NOT_COVERED) && !isSmallTalk(turn.userMessage)) {
+          const edited = await editOpening(text, turn.userMessage);
+          editorCost += edited.cost;
+          if (edited.dropped) {
+            errors.push({ code: "opening_trimmed", detail: edited.dropped.slice(0, 200) });
+            text = edited.text;
+          }
+        }
+      }
       controller.enqueue(h.start);
-      // The answer's first words: no apology or comment on an earlier answer (rule 14).
-      streamText_(controller, id, output.trim() ? h.raw : trimApologyOpening(h.raw));
+      streamText_(controller, id, text);
       if (h.end) {
         toTail(controller, id, filterFor(id).flush());
         const t = tails.get(id);
@@ -521,7 +546,7 @@ export async function runChatTurn(turn: ChatTurn) {
       }
     };
     return new TransformStream<TextStreamPart<ToolSet>, TextStreamPart<ToolSet>>({
-      transform(part, controller) {
+      async transform(part, controller) {
         switch (part.type) {
           case "text-start":
             flushTails(controller, false);
@@ -534,8 +559,10 @@ export async function runChatTurn(turn: ChatTurn) {
               h.raw += part.text;
               // An opening that says the slides don't cover it is held until its explanation starts, so
               // the exact rule 4 line can replace it (trimApologyOpening).
-              const notCoveredPending = !output.trim() && NOT_COVERED_PREAMBLE.test(h.raw) && !h.raw.includes("<general>");
-              if (h.raw.length > NARRATION_HARD_MAX || (h.raw.length > NARRATION_MAX && !PLANNING.test(h.raw) && !notCoveredPending)) release(controller, part.id);
+              const notCoveredPending = !output.trim() && NOT_COVERED_PREAMBLE.test(h.raw) && !h.raw.includes("<general>") && !h.raw.includes(NOT_COVERED_TAG);
+              // The first block waits a little longer when the editor is on, so it sees whole sentences.
+              const max = !output.trim() && OPENING_EDITOR_ON ? OPENING_EDITOR_HOLD : NARRATION_MAX;
+              if (h.raw.length > NARRATION_HARD_MAX || (h.raw.length > max && !PLANNING.test(h.raw) && !notCoveredPending)) await release(controller, part.id);
               return;
             }
             streamText_(controller, part.id, part.text);
@@ -568,7 +595,7 @@ export async function runChatTurn(turn: ChatTurn) {
             break;
           case "finish-step":
           case "finish":
-            for (const id of [...held.keys()]) release(controller, id);
+            for (const id of [...held.keys()]) await release(controller, id);
             flushTails(controller, false);
             break;
         }
@@ -601,7 +628,7 @@ export async function runChatTurn(turn: ChatTurn) {
   const aboutApp = !turn.images?.length && !focus && !smallTalk && !aboutChat && asksAboutApp(turn.userMessage);
   const chitChat = smallTalk || aboutChat || aboutApp;
   const chatNote = aboutApp
-    ? "The student is asking how to use this app (Ask Your Slides), not about the course. Answer in one or two plain sentences from rule 17, then offer to help with the course. No slides, no citations, no <general> block, and not the rule 4 opening."
+    ? "The student is asking how to use this app (Ask Your Slides), not about the course. Answer in one or two plain sentences from rule 17, then offer to help with the course. No slides, no citations, no <general> block, and no [[not-covered]] tag."
     : smallTalk
     ? "The student's message is a greeting or small talk, not a question. Reply in one or two warm sentences in your voice and ask what they'd like to study in this course. No slides, no citations, no <general> block, no list of topics."
     : aboutChat
@@ -919,7 +946,7 @@ export async function runChatTurn(turn: ChatTurn) {
     const uncached = usage.inputTokenDetails?.noCacheTokens ?? Math.max(0, (usage.inputTokens ?? 0) - cacheRead - cacheWrite);
     const cost =
       (uncached * USD_PER_MTOK.input + cacheRead * USD_PER_MTOK.cacheRead + cacheWrite * USD_PER_MTOK.cacheWrite +
-        (usage.outputTokens ?? 0) * USD_PER_MTOK.output) / 1e6;
+        (usage.outputTokens ?? 0) * USD_PER_MTOK.output) / 1e6 + editorCost;
 
     const traceRow = {
         message_id: messageId,
