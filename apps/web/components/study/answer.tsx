@@ -50,6 +50,7 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
             type="button"
             onClick={() => onCite(key)}
             onPointerEnter={() => prefetchSlide(courseId, key)}
+            onPointerDown={() => prefetchSlide(courseId, key)}
             onFocus={() => prefetchSlide(courseId, key)}
             title={`Open ${label}`}
             className="mx-0.5 inline-flex max-w-[20rem] translate-y-[-1px] items-center rounded-full bg-sunken px-2 py-px align-middle text-[11.5px] text-ink/70 transition-colors hover:bg-pau-100 hover:text-brand"

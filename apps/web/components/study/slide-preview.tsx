@@ -45,9 +45,11 @@ export function SlidePreview({ slideKey, courseId, onClose, onAsk, onNavigate }:
         if (cancelled) return;
         setData(d);
         setError(null);
-        // Have the neighbouring pages ready before the student flips.
-        if (d.slide_number < d.material.page_count) prefetchSlide(courseId, pageKey(slideKey, d.slide_number + 1));
-        if (d.slide_number > 1) prefetchSlide(courseId, pageKey(slideKey, d.slide_number - 1));
+        // Have the two pages either side ready before the student flips (two, so quick flipping
+        // doesn't outrun the loading; owner, 23 Nov 2026).
+        for (const n of [d.slide_number + 1, d.slide_number - 1, d.slide_number + 2, d.slide_number - 2]) {
+          if (n >= 1 && n <= d.material.page_count) prefetchSlide(courseId, pageKey(slideKey, n));
+        }
       })
       .catch((e) => !cancelled && setError(e.message));
     return () => {

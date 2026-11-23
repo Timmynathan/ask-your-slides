@@ -101,6 +101,7 @@ export function SourcesPanel({ courseId, courseCode, topics, materials, topic, o
                       <button
                         onClick={() => open1(m)}
                         onPointerEnter={() => prefetchSlide(courseId, firstPage(m))}
+                        onPointerDown={() => prefetchSlide(courseId, firstPage(m))}
                         onFocus={() => prefetchSlide(courseId, firstPage(m))}
                         className="flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-page active:scale-[0.99]"
                         title={`View ${m.title}`}

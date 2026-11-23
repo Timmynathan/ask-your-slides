@@ -19,6 +19,8 @@ import { courseName } from "@/lib/study/course-code";
 import { capReply } from "@/lib/plans/offer";
 import { Typewriter } from "@/components/ui/typewriter";
 import { firstCited, SlideThumb, VISUAL_ASK } from "./slide-thumb";
+import { citedKeys } from "@/lib/agent/citations";
+import { prefetchSlide } from "@/lib/study/slide-cache";
 import { asksForQuiz, asksForSummary } from "@/lib/plans/limits";
 import { CONTINUE_TEXT, CutShort } from "@/components/chat/cut-short";
 import { blobToDataUrl, shrinkImage } from "@/lib/ui/shrink-image";
@@ -81,6 +83,8 @@ function photosOf(m: Msg | undefined): string[] {
 }
 
 const MAX_PHOTOS = 3;
+/** Cited slides loaded in the background after an answer (about 35 KB each). */
+const PREFETCH_CITED = 6;
 
 function textOf(m: Msg | undefined): string {
   return (m?.parts ?? [])
@@ -456,6 +460,14 @@ export function ChatPanel({
   }, [autoAsk, chatId, loadingHistory]);
 
   const last = messages.at(-1);
+  // Once an answer has finished, its first cited slides load in the background, so a tap on a citation
+  // opens at once. Touch screens have no hover to start loading early (owner, 23 Nov 2026).
+  const lastAnswerText = status === "ready" && last?.role === "assistant" ? textOf(last) : "";
+  useEffect(() => {
+    if (!lastAnswerText) return;
+    const t = setTimeout(() => [...new Set(citedKeys(lastAnswerText))].slice(0, PREFETCH_CITED).forEach((k) => prefetchSlide(course.id, k)), 300);
+    return () => clearTimeout(t);
+  }, [lastAnswerText, course.id]);
   const waitingForWords =
     status === "submitted" ||
     (status === "streaming" &&
