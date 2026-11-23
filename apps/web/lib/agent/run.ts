@@ -4,7 +4,7 @@ import { isStepCount, streamText, type ModelMessage, type TextStreamPart, type T
 import { createCitationFilter } from "./citations";
 import { supportsClaim } from "./support";
 import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from "./prompt";
-import { buildTools, getMaterialPages, listTopics, materialKey, newContext, searchSlides, viewSlides, type AgentContext, type Citation } from "./tools";
+import { buildTools, getMaterialPages, listTopics, materialKey, newContext, NO_MATCH_SIMILARITY, searchSlides, viewSlides, type AgentContext, type Citation } from "./tools";
 import { ASKS_VISUAL, pictureSlides } from "./slide-images";
 import { PROMPT_VERSION } from "./prompt-version";
 import { adminClient, must } from "@/lib/supabase/admin";
@@ -303,7 +303,7 @@ const PAPER_WORDS = /\b(answer (?:these|them|all|each|every|the questions?)|ques
 /** "Give me memory aids", "mnemonics for each topic", "help me remember the definitions". */
 /** "hey", "hi Zara", "thanks!", "ok", "good morning": nothing to look up. */
 export function isSmallTalk(message: string): boolean {
-  return /^\s*(?:hey+|hi+|hello+|hiya|yo|sup|good (?:morning|afternoon|evening|night)|thanks(?: (?:a lot|so much|very much))?|thank (?:you|u)(?: (?:so much|a lot|very much))?|thx|ok(?:ay)?|k|cool|alright|great|nice|lol|bye|goodnight)(?:\s+(?:zara|tobi|ada|dr\.? musa|musa|there|again))?[\s!.?,:)]*$/i.test(message);
+  return /^\s*(?:he+y+|hi+|hel+o+|hiya|yo+|su+p|wa+s+u+p+|wh?at'?s+ ?up|how far|how you dey|how body|wetin dey|good (?:morning|afternoon|evening|night|day)|morning|evening|than+ks+(?: (?:a lot|so much|very much))?|thank (?:you|u)(?: (?:so much|a lot|very much))?|thx|ok(?:ay)?|k|cool|alright|great|nice|lol|bye|goodnight)(?:\s+(?:zara|tobi|ada|dr\.? musa|musa|there|again))?[\s!.?,:)]*$/i.test(message);
 }
 
 /** "what was my last question", "what did I ask", "what have we covered": about this chat, not the course. */
@@ -692,7 +692,19 @@ export async function runChatTurn(turn: ChatTurn) {
   // about from the viewer; the top results of a question about a diagram, graph or chart; or top
   // results that are mostly picture. Not for long reads (walkthroughs, summaries, memory aids, papers):
   // too many slides. The model can still call view_slides itself.
-  if (!longAnswer && !summaryAsked && !memoryAids && !paperAsked && !chitChat) {
+  // A short message the slides know nothing about ("hola", "oya", "morning o"): most likely a greeting
+  // the word list missed (owner, 23 Nov 2026: "can't the AI just understand it's a greeting?"). No
+  // extra lookups; the model decides what it is (shortUnclearNote below). Not for replies the previous
+  // answer explains: a quiz answer, a picked list item, "keep going".
+  const firstSims = ((ctx.toolLog.find((t) => t.name === "search_slides")?.detail as { similarities?: number[] } | undefined)?.similarities ?? []) as number[];
+  const shortUnclear =
+    !chitChat && !turn.images?.length && !focus && !picked && !answering && !continuing &&
+    turn.userMessage.trim().split(/\s+/).length <= 3 && !turn.userMessage.includes("?") &&
+    (firstSims.length === 0 || Math.max(...firstSims) < NO_MATCH_SIMILARITY);
+  const shortUnclearNote = shortUnclear
+    ? "The student's short message matched nothing in the slides. If it is a greeting or small talk (in any language or slang), reply in one or two warm sentences and ask what they'd like to study in this course, with no slides, citations or <general> block. If it is a real question or topic, answer it as usual."
+    : null;
+  if (!longAnswer && !summaryAsked && !memoryAids && !paperAsked && !chitChat && !shortUnclear) {
     const found = ctx.toolLog.find((t) => t.name === "search_slides")?.slide_keys ?? [];
     const look = focus && turn.focusSlide
       ? [turn.focusSlide]
@@ -732,13 +744,13 @@ export async function runChatTurn(turn: ChatTurn) {
   const firstSearch = ctx.toolLog.find((t) => t.name === "search_slides");
   const sims = ((firstSearch?.detail as { similarities?: number[] } | undefined)?.similarities ?? []) as number[];
   let lookAgainNote: string | null = null;
-  if (firstSearch && !pre.some((p) => p.name === "list_topics") && (sims.length === 0 || Math.max(...sims) < WEAK_MATCH)) {
+  if (firstSearch && !shortUnclear && !pre.some((p) => p.name === "list_topics") && (sims.length === 0 || Math.max(...sims) < WEAK_MATCH)) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_topics`, name: listTopics.name, input: {}, output: await listTopics.run(ctx, {} as never) });
     lookAgainNote =
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, chat: chatNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -748,7 +760,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), chatNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

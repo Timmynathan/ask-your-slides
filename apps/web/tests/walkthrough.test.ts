@@ -243,7 +243,7 @@ describe("planning and search talk (owner's review, 22 Nov 2026)", () => {
 });
 
 describe("greetings and questions about the chat (owner's chat review, 23 Nov 2026)", () => {
-  it.each(["hey", "Hi Zara!", "hello", "thanks", "thank you so much", "ok", "good morning", "heyyy"])("small talk: %s", (m) => expect(isSmallTalk(m)).toBe(true));
+  it.each(["hey", "Hi Zara!", "hello", "thanks", "thank you so much", "ok", "good morning", "heyyy", "yo", "yooo", "how far", "wetin dey", "wassup", "thankss", "good day"])("small talk: %s", (m) => expect(isSmallTalk(m)).toBe(true));
   it.each(["hey what is NPV", "hi, explain IAS 2", "thanks, now quiz me", "ok next topic", "What is goodwill?"])("not small talk: %s", (m) => expect(isSmallTalk(m)).toBe(false));
   it.each(["what was the last 2 questions i asked", "what did I ask before?", "what were my previous questions", "what have we covered so far", "summarise our chat"])("about the chat: %s", (m) => expect(asksAboutChat(m)).toBe(true));
   it.each(["what was the last question on the 2023 paper?", "summarise this topic", "what did the lecturer say about IAS 16?"])("not about the chat: %s", (m) => expect(asksAboutChat(m)).toBe(false));

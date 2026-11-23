@@ -232,5 +232,20 @@
       "cannot see",
       "\\[\\[s:"
     ]
+  },
+  {
+    "id": "greeting-other",
+    "what": "a greeting not on the word list (\"hola\") still gets a short reply, not a lesson",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "hola",
+    "must": [
+      "\\?"
+    ],
+    "mustNot": [
+      "\\[\\[s:",
+      "<general>"
+    ]
   }
 ]
