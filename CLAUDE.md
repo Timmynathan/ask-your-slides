@@ -53,7 +53,7 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   maths, physics, chemistry, statistics, engineering maths/mechanics, accounting/finance basics, INS401);
   maths turns there think briefly (adaptive, effort low); rules for complex numbers, term-by-term
   expansions, signs, LaTeX, and saying when a slide's worked result is wrong (MTH101-10-53 gives 345° for
-  −3+3i; the bot now says 135°). Still for the owner: CAMA s.96 ratification on the Company Law slides.
+  −3+3i; the bot now says 135°). Slide content is never corrected or flagged as wrong by the app (owner, 24 Nov 2026: too risky unless 100% sure; e.g. Company Law 16-2 vs 07-6 on CAMA s.96).
 - 22–23 Nov 2026: memory aids go topic by topic (one slide search per topic; acronyms must match the
   items' first letters); photographed papers answer every question in the asked structure (ILAC);
   planning text, search talk, stray CJK characters and method-note openers are trimmed on the stream.
@@ -65,6 +65,13 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   GET /api/conversations/recent). Tablets: dashboard side cards beside the courses from 768 px.
 - Past-question answers rerun 23 Nov: the first --analyse run lost its saves to an idle DB connection
   (batch results were cached, so nothing was paid twice); ingestion now reconnects after every batch wait.
+
+- Emails (24 Nov 2026): every email is from "The AskYourSlides Team" (noreply@mail.askyourslides.com, replies to
+  EMAIL_REPLY_TO, default hello@askyourslides.com), one React Email layout (lib/email/templates.tsx; logos in
+  public/email/). Update emails (welcome 1 h after sign-up if no question yet; past questions live; new slides) go
+  through email_queue, sent hourly by .github/workflows/emails.yml → /api/cron/emails: max 90/day, 2 per student per
+  7 days, Finals first, never to email_updates = false. Sign-in codes use the Supabase Send Email hook
+  (/api/auth/email-hook, SEND_EMAIL_HOOK_SECRET). New slides are queued by ingest.py; past questions from /admin/emails.
 
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.

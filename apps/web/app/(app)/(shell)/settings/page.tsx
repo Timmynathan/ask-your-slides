@@ -22,11 +22,14 @@ async function Loaded() {
     // Missing until migration 20261122000001 is pushed: then everyone is shown.
     supabase.from("profiles").select("show_on_leaderboard").eq("id", user.id).maybeSingle(),
   ]);
+  // Missing until migration 20261124000001 is pushed: then shown as on (the default).
+  const { data: mail } = await supabase.from("profiles").select("email_updates").eq("id", user.id).maybeSingle();
   return (
     <SettingsView
       email={user.email ?? ""}
       shell={shell}
       onLeaderboard={(board as { show_on_leaderboard?: boolean } | null)?.show_on_leaderboard ?? true}
+      emailUpdates={(mail as { email_updates?: boolean } | null)?.email_updates ?? true}
       plan={{ id: state.plan, name: PLAN_NAMES[state.plan], endsAt: state.endsAt ? day.format(state.endsAt) : null }}
     />
   );

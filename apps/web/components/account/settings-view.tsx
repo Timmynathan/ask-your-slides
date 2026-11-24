@@ -10,7 +10,7 @@ import { PageFrame } from "./page-frame";
 import type { ShellData } from "@/lib/nav/shell-data";
 
 // Settings: your plan, sign out, and (last, quiet) delete account.
-export function SettingsView({ email, plan, onLeaderboard }: { email: string; plan: { id: PlanId; name: string; endsAt: string | null }; shell: ShellData; onLeaderboard: boolean }) {
+export function SettingsView({ email, plan, onLeaderboard, emailUpdates }: { email: string; plan: { id: PlanId; name: string; endsAt: string | null }; shell: ShellData; onLeaderboard: boolean; emailUpdates: boolean }) {
   const [deleting, setDeleting] = useState(false);
   // "Show me on the leaderboard" (owner, 22 Nov 2026): saved as soon as it is flipped.
   const [shown, setShown] = useState(onLeaderboard);
@@ -26,6 +26,22 @@ export function SettingsView({ email, plan, onLeaderboard }: { email: string; pl
     if (!res?.ok) {
       setShown(!next);
       setSaveError("Couldn't save. Try again.");
+    }
+  }
+  // "Email me updates" (owner, 24 Nov 2026): off stops update emails; sign-in codes always arrive.
+  const [mailOn, setMailOn] = useState(emailUpdates);
+  const [mailSaving, setMailSaving] = useState(false);
+  const [mailError, setMailError] = useState<string | null>(null);
+  async function toggleMail() {
+    const next = !mailOn;
+    setMailOn(next);
+    setMailSaving(true);
+    setMailError(null);
+    const res = await fetch("/api/account/email-updates", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: next }) }).catch(() => null);
+    setMailSaving(false);
+    if (!res?.ok) {
+      setMailOn(!next);
+      setMailError("Couldn't save. Try again.");
     }
   }
   const card = "mt-4 rounded-[22px] bg-card p-6 ring-1 ring-line";
@@ -70,6 +86,28 @@ export function SettingsView({ email, plan, onLeaderboard }: { email: string; pl
           </button>
         </div>
         {saveError && <p role="alert" className="mt-2 text-[13.5px] text-red-700">{saveError}</p>}
+      </section>
+
+      <section className={card}>
+        <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted">Emails</h2>
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[15px] text-ink">Email me updates</p>
+            <p className="text-[13.5px] text-muted">New slides and past questions for your courses, at most twice a week. Sign-in codes always arrive.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={mailOn}
+            aria-label="Email me updates"
+            onClick={toggleMail}
+            disabled={mailSaving}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-70 ${mailOn ? "bg-brand" : "bg-line-strong"}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-[left] ${mailOn ? "left-6" : "left-1"}`} />
+          </button>
+        </div>
+        {mailError && <p role="alert" className="mt-2 text-[13.5px] text-red-700">{mailError}</p>}
       </section>
 
       <section className={card}>

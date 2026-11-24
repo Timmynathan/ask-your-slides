@@ -14,7 +14,7 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 process.loadEnvFile(path.join(ROOT, ".env"));
 const FILE = path.join(ROOT, "data/emails/drafts.json");
-const FROM = "Timmy from Ask Your Slides <hello@askyourslides.com>";
+const FROM = "The AskYourSlides Team <hello@askyourslides.com>";
 const REPLY_TO = "hello@askyourslides.com";
 const send = process.argv.includes("--send");
 

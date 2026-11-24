@@ -104,6 +104,9 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
             <Link href="/admin/promo" className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken">
               Promo codes
             </Link>
+            <Link href="/admin/emails" className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken">
+              Emails
+            </Link>
             <button
               type="button"
               onClick={() => startRefresh(() => router.refresh())}

@@ -222,6 +222,19 @@ def relocate_legacy_images(store: Store, course_id: str) -> int:
     return len(moves)
 
 
+def notify_new_slides(store: Store, course: Course) -> None:
+    """New materials in a course: queue the "new slides" email for its students (owner, 24 Nov 2026).
+    The app's hourly job sends it within the limits (2 a week per student, 90 a day, unsubscribes)."""
+    course_id = store.course_id(course)
+    if not course_id:
+        return
+    try:
+        row = store.db.execute("select public.enqueue_course_email(%s, 'newslides') as n", (course_id,)).fetchone()
+        print(f"  queued the new-slides email for {row['n']} student(s)")
+    except Exception as e:  # before the email migration is pushed, or a DB hiccup: never stop ingestion
+        print(f"  (new-slides email not queued: {type(e).__name__}: {str(e)[:120]})")
+
+
 def ingest_course(store: Store, course: Course, args, stats: Stats) -> None:
     print(f"\n{course.key} — {course.title}, {course.session}  ({len(course.topics)} topics, {len(course.materials)} materials, "
           f"{len(course.skipped)} skipped, {len(course.past_papers)} past papers)")
@@ -498,8 +511,11 @@ def main() -> int:
         for course in selected:
             before = (stats.pages, stats.vision_calls, stats.vision_cached, stats.vision_usd, stats.output_tokens,
                       embed.tokens_used, stats.embed_chars)
+            new_before = stats.materials["new"]
             try:
                 ingest_course(store, course, args, stats)
+                if not args.dry_run and stats.materials["new"] > new_before:
+                    notify_new_slides(store, course)
             except Exception as e:  # one unreadable file must not stop a 300-course run
                 failed.append(f"{course.key}: {type(e).__name__}: {str(e)[:160]}")
                 print(f"  ! FAILED {course.key}: {type(e).__name__}: {str(e)[:160]} (skipped; fix and re-run this course)")

@@ -4,7 +4,7 @@ import { safeNext } from "@/lib/auth/next";
 import { updateSession } from "@/lib/supabase/proxy";
 
 // Optimistic routing only. Every protected page also checks the user on the server.
-const PUBLIC_PATHS = ["/live", "/manifest.webmanifest", "/sign-in", "/sign-up", "/auth/microsoft", "/auth/callback", "/api/auth/otp", "/api/auth/verify", "/api/auth/password", "/api/auth/signup", "/api/cron"];
+const PUBLIC_PATHS = ["/live", "/manifest.webmanifest", "/sign-in", "/sign-up", "/auth/microsoft", "/auth/callback", "/api/auth/otp", "/api/auth/verify", "/api/auth/password", "/api/auth/signup", "/api/auth/email-hook", "/api/cron", "/api/email/unsubscribe", "/unsubscribe"];
 
 export async function proxy(request: NextRequest) {
   const { response, userId, email } = await updateSession(request);

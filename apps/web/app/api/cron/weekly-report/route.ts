@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 //   ?preview=1 while signed in as an admin: the report as a page, nothing sent.
 export const maxDuration = 60;
 
-const FROM = "Ask Your Slides <hello@askyourslides.com>";
+const FROM = "The AskYourSlides Team <hello@askyourslides.com>";
 
 export async function GET(request: Request) {
   const preview = new URL(request.url).searchParams.get("preview") === "1";

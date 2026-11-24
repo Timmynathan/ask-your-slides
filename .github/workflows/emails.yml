@@ -1,0 +1,28 @@
+# Update emails (owner, 24 Nov 2026): every hour, the app queues welcome emails and sends the queue
+# within the limits (90 update emails a day, 2 per student a week, never to unsubscribed students).
+# The token is an HMAC of the Supabase secret key (the same one the behaviour check already uses),
+# so no new secret is needed. Run it by hand any time: Actions → Update emails → Run workflow.
+name: Update emails
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: update-emails
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Run the email queue
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          token=$(printf '%s' "email-cron" | openssl dgst -sha256 -hmac "$SUPABASE_SECRET_KEY" -hex | sed 's/^.*= //')
+          code=$(curl -s -o out.json -w '%{http_code}' -H "Authorization: Bearer $token" https://askyourslides.com/api/cron/emails)
+          cat out.json; echo
+          test "$code" = "200"
