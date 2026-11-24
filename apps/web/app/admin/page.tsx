@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AdminDashboard } from "@/components/admin/dashboard";
 import { isAdminEmail, rangeStart, RANGES, type Overview, type Range } from "@/lib/admin";
-import { TABS, type DeviceStats, type Tab } from "@/lib/admin-shared";
+import { TABS, type DeviceStats, type RecommendStats, type Tab } from "@/lib/admin-shared";
 import { requireUser } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 import { FREE_DAILY } from "@/lib/plans/config";
@@ -35,7 +35,7 @@ async function Loaded({ searchParams }: Props) {
   const db = adminClient();
   const from = rangeStart(range);
   // The overview's own cap count is superseded by limit_events (PRD F12); FREE_DAILY keeps it sensible.
-  const [{ data, error }, plans, courses, heardFrom, { data: appFeedbackRows }, devices] = await Promise.all([
+  const [{ data, error }, plans, courses, heardFrom, { data: appFeedbackRows }, devices, recommend] = await Promise.all([
     loadOverview(db, from),
     planStats(db, from),
     db.from("courses").select("code, department").order("sort_order"),
@@ -43,6 +43,7 @@ async function Loaded({ searchParams }: Props) {
     // General feedback from the Feedback button (missing before its migration: then none).
     db.from("app_feedback").select("id, created_at, message, sentiment, features, page, profiles(email)").order("created_at", { ascending: false }).limit(50),
     deviceCounts(db, from),
+    recommendStats(db, from),
   ]);
   const appFeedback = ((appFeedbackRows ?? []) as unknown as { id: string; created_at: string; message: string; sentiment: "good" | "bad" | null; features: string[]; page: string | null; profiles: { email: string } | null }[]).map((r) => ({
     id: r.id,
@@ -58,7 +59,7 @@ async function Loaded({ searchParams }: Props) {
   // admin_overview lists every course in sort_order (unique), so its rows line up with this list.
   const departments = (courses.data ?? []) as { code: string; department: string }[];
   const withDepartments = overview.courses.map((c, i) => ({ ...c, department: departments[i]?.code === c.code ? departments[i].department : "Other" }));
-  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} devices={devices} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} />;
+  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} devices={devices} recommend={recommend} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} />;
 }
 
 /** "How did you hear about us?" answers from students who signed up in the period (asked since 20 Nov 2026). */
@@ -94,6 +95,34 @@ async function deviceCounts(db: ReturnType<typeof adminClient>, from: string | n
     kinds: tally((r) => KIND[r.kind] ?? r.kind),
     systems: tally((r) => r.os),
     browsers: tally((r) => r.browser),
+  };
+}
+
+/** The recommend-us card (nps_responses, asked since 23 Nov 2026) in the period. A student who answered
+ *  more than once counts once, with their latest score. Admins are left out. */
+async function recommendStats(db: ReturnType<typeof adminClient>, from: string | null): Promise<RecommendStats> {
+  const exclude = new Set((process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
+  let q = db.from("nps_responses").select("user_id, score, reason, created_at, profiles(email, display_name)").order("created_at", { ascending: false }).limit(5000);
+  if (from) q = q.gte("created_at", from);
+  const { data, error } = await q;
+  const rows = (error ? [] : ((data ?? []) as unknown as { user_id: string; score: number; reason: string | null; created_at: string; profiles: { email: string; display_name: string | null } | null }[])).filter(
+    (r) => !exclude.has((r.profiles?.email ?? "").toLowerCase()),
+  );
+  const latest = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) if (!latest.has(r.user_id)) latest.set(r.user_id, r); // newest first
+  const scores = [...latest.values()].map((r) => r.score);
+  const count = (ok: (s: number) => boolean) => scores.filter(ok).length;
+  const promoters = count((s) => s >= 9);
+  const detractors = count((s) => s <= 6);
+  return {
+    students: scores.length,
+    average: scores.length ? Math.round((10 * scores.reduce((a, b) => a + b, 0)) / scores.length) / 10 : null,
+    nps: scores.length ? Math.round((100 * (promoters - detractors)) / scores.length) : null,
+    promoters,
+    passives: scores.length - promoters - detractors,
+    detractors,
+    scores: Array.from({ length: 11 }, (_, s) => ({ score: 10 - s, n: count((x) => x === 10 - s) })),
+    responses: rows.slice(0, 200).map((r) => ({ score: r.score, reason: r.reason, email: r.profiles?.email ?? "", name: r.profiles?.display_name ?? null, createdAt: r.created_at })),
   };
 }
 

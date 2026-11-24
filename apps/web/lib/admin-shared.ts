@@ -56,6 +56,20 @@ export interface DeviceStats {
   browsers: { label: string; n: number }[];
 }
 
+/** The recommend-us card (0-10) in the period (app/admin/page.tsx recommendStats). Each student's latest score counts once. */
+export interface RecommendStats {
+  students: number;
+  average: number | null;
+  /** % who gave 9-10 minus % who gave 0-6, from -100 to 100. */
+  nps: number | null;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  scores: { score: number; n: number }[];
+  /** Every answer in the period, newest first (up to 200): who, the exact score, and their reason if any. */
+  responses: { score: number; reason: string | null; email: string; name: string | null; createdAt: string }[];
+}
+
 export const TABS = [
   { id: "overview", label: "Overview" },
   { id: "students", label: "Students" },

@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { RANGES, TABS, type DeviceStats, type Overview, type Range, type Tab } from "@/lib/admin-shared";
+import { RANGES, TABS, type DeviceStats, type Overview, type RecommendStats, type Range, type Tab } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
 
 const tz = "Africa/Lagos";
@@ -61,7 +61,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, heardFrom, devices, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; devices: DeviceStats; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, devices, recommend, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; devices: DeviceStats; recommend: RecommendStats; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -200,6 +200,8 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, appFe
             </Card>
           </div>
 
+          <Recommend data={recommend} />
+
           <div className="space-y-3">
             <p className="text-sm text-muted">
               Devices · {n(devices.students)} students seen in this period (recorded since 23 Nov 2026). A student who uses a phone and a laptop counts in both.
@@ -224,6 +226,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, appFe
 
         {tab === "feedback" && (
           <div role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback" className="space-y-10">
+            <RecommendAnswers rows={recommend.responses} />
             <GeneralFeedback rows={appFeedback} />
             <Feedback data={data} />
           </div>
@@ -354,6 +357,79 @@ export interface AppFeedbackRow {
 }
 
 /** Messages from the Feedback button (owner, 20 Nov 2026), newest first. */
+/** The recommend-us card (0-10): who would tell a friend about us. */
+function Recommend({ data }: { data: RecommendStats }) {
+  const share = (k: number) => (data.students ? `${Math.round((100 * k) / data.students)}%` : "—");
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted">
+        Would you recommend us to a friend? (0–10) · {n(data.students)} students answered in this period (asked since 23 Nov 2026). A student who answered twice counts once, with their latest score.
+      </p>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card title="Recommend score">
+          <p className="text-[32px] font-normal tabular-nums tracking-tight text-ink">{data.nps == null ? "—" : data.nps > 0 ? `+${data.nps}` : String(data.nps)}</p>
+          <p className="mt-1 text-xs leading-snug text-muted">
+            The share who gave 9–10 minus the share who gave 0–6. Runs from −100 to +100; anything above 0 means more fans than critics. Average score {data.average ?? "—"} of 10.
+          </p>
+          <dl className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between"><dt className="text-ink">Fans (9 or 10)</dt><dd className="tabular-nums text-muted">{n(data.promoters)} · {share(data.promoters)}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink">Neutral (7 or 8)</dt><dd className="tabular-nums text-muted">{n(data.passives)} · {share(data.passives)}</dd></div>
+            <div className="flex justify-between"><dt className="text-ink">Critics (0 to 6)</dt><dd className="tabular-nums text-muted">{n(data.detractors)} · {share(data.detractors)}</dd></div>
+          </dl>
+        </Card>
+        <Card title="Students per exact score">
+          <BarList rows={data.scores.filter((s) => s.n > 0).map((s) => ({ label: `${s.score} out of 10`, n: s.n }))} />
+        </Card>
+        <Card title="Latest answers">
+          {data.responses.length === 0 ? (
+            <p className="text-sm text-muted">Nobody yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {data.responses.slice(0, 6).map((r, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm">
+                  <span className="w-12 shrink-0 tabular-nums font-medium text-ink">{r.score}/10</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-ink">{r.name ?? r.email}</span>
+                    {r.reason && <span className="block text-muted">{r.reason.length > 120 ? `${r.reason.slice(0, 120)}…` : r.reason}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {data.responses.length > 6 && <p className="mt-3 text-xs text-muted">Everyone is in the Feedback tab.</p>}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function RecommendAnswers({ rows }: { rows: RecommendStats["responses"] }) {
+  return (
+    <section className="space-y-4">
+      <SectionTitle title="Would you recommend us? (0–10)" note="Every answer in this period: who gave it, their exact score and the reason they wrote (if any). Newest first." />
+      {rows.length === 0 ? (
+        <Empty>Nothing yet.</Empty>
+      ) : (
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card ring-1 ring-line">
+          {rows.map((r, i) => (
+            <li key={i} className="flex items-start gap-4 px-5 py-4">
+              <span className="w-14 shrink-0 text-lg tabular-nums text-ink">{r.score}/10</span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                  {r.name && <span className="font-medium text-ink">{r.name}</span>}
+                  <span>{r.email}</span>
+                  <span>· {new Date(r.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })}</span>
+                </div>
+                <p className={`mt-1 whitespace-pre-wrap text-sm ${r.reason ? "text-ink" : "text-muted"}`}>{r.reason ?? "No reason written."}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function GeneralFeedback({ rows }: { rows: AppFeedbackRow[] }) {
   return (
     <section className="space-y-4">
