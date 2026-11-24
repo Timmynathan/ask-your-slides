@@ -35,16 +35,21 @@ export function Layout({ preview, children, unsubscribeUrl }: { preview: string;
       <Body style={{ backgroundColor: "#f3f5fc", margin: 0, padding: "24px 0", fontFamily: FONT }}>
         <Container style={{ maxWidth: "560px", width: "100%", margin: "0 auto", backgroundColor: "#ffffff", borderRadius: "16px", overflow: "hidden" }}>
           <Section style={{ backgroundColor: NAVY, padding: "14px 24px" }}>
-            <Link href={`${SITE}/?ref=email-logo`}>
-              <Img className="logo-light" src={`${SITE}/email/logo.png`} width="250" height="49" alt="AskYourSlides" style={{ display: "block", border: 0 }} />
+            {/* When pictures are blocked (many school mail apps do this by default), the alt text shows in
+                white on the navy header instead of a broken image. */}
+            <Link href={`${SITE}/?ref=email-logo`} style={{ color: "#ffffff", textDecoration: "none" }}>
               <Img
-                className="logo-dark"
-                src={`${SITE}/email/logo-dark.png`}
+                className="logo-light"
+                src={`${SITE}/email/logo.png`}
                 width="250"
                 height="49"
-                alt=""
-                style={{ display: "none", maxHeight: 0, overflow: "hidden", border: 0, msoHide: "all" } as React.CSSProperties}
+                alt="AskYourSlides"
+                style={{ display: "block", border: 0, color: "#ffffff", fontFamily: FONT, fontSize: "22px", fontWeight: 700, lineHeight: "49px" }}
               />
+              {/* The dark-mode copy sits in a zero-height box, so it takes no room where it isn't used. */}
+              <div className="logo-dark" style={{ display: "none", maxHeight: 0, overflow: "hidden", msoHide: "all" } as React.CSSProperties}>
+                <Img src={`${SITE}/email/logo-dark.png`} width="250" height="49" alt="" style={{ display: "block", border: 0 }} />
+              </div>
             </Link>
           </Section>
           <Section className="body-pad" style={{ padding: "32px 36px 28px" }}>
