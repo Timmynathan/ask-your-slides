@@ -25,6 +25,10 @@ const MAX_OUTPUT_TOKENS_SUMMARY = 12000; // once the agent has read whole materi
 // depth; Haiku writes it in about 3 minutes (the route allows 5). It only costs what is written.
 const MAX_OUTPUT_TOKENS_WALKTHROUGH = 32000;
 const WALKTHROUGH_PAGES = 120; // pages read before a walkthrough (40 per call)
+const MAX_SPLIT_QUESTIONS = 6; // numbered questions searched one by one (each with fewer results)
+const NAMED_TOPIC_PAGES = 60; // pages read when the student names other topics of the course
+const MAX_NAMED_TOPICS = 3;
+const SPLIT_SEARCH_RESULTS = 5;
 const MISSED_CLASS_PAGES = 80; // pages read before "explain like I missed class" (about 1 US cent more)
 /** Below this best similarity, the first search found little (a second look is offered). */
 const WEAK_MATCH = 0.42;
@@ -146,6 +150,43 @@ export function lastQuestion(answer: string): string | null {
 export function endsWithQuestion(answer: string): boolean {
   const tail = answer.replace(/<\/?general>/g, "").replace(/\[\[s:[^\]]+\]\]/g, "").trim().split("\n").filter((l) => l.trim()).slice(-3).join(" ");
   return /\?/.test(tail);
+}
+
+/** A pasted paper or list of numbered questions ("1. … 2. …", "Q1 … Q2 …"): each question, in order
+ *  (owner's answer review, 24 Nov 2026: four exam questions shared one search, and two were wrongly
+ *  answered as "not in your slides"). Fewer than two numbered items: null. */
+export function numberedQuestions(message: string): string[] | null {
+  const marks = [...message.matchAll(/(?:^|\n)\s*(?:Q(?:uestion)?\s*)?(\d{1,2})\s*[.)]\s+/gi)];
+  if (marks.length < 2) return null;
+  const parts = marks.map((m, i) => message.slice(m.index! + m[0].length, marks[i + 1]?.index ?? message.length).trim()).filter((p) => p.length >= 8);
+  return parts.length >= 2 ? parts.slice(0, MAX_SPLIT_QUESTIONS).map((p) => p.slice(0, 400)) : null;
+}
+
+const ORDINAL_WORDS: Record<string, string> = { first: "1st", second: "2nd", third: "3rd", fourth: "4th", fifth: "5th", sixth: "6th", seventh: "7th", eighth: "8th", ninth: "9th", tenth: "10th" };
+const TOPIC_STOP = new Set(["the", "a", "an", "of", "and", "to", "in", "on", "for", "lite", "notes", "topic", "introduction", "intro", "part", "week", "lecture", "class"]);
+function topicTokens(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .map((w) => ORDINAL_WORDS[w] ?? w)
+    .map((w) => (w.length > 4 && w.endsWith("s") ? w.slice(0, -1) : w))
+    .filter((w) => w && !TOPIC_STOP.has(w));
+}
+
+/** Topics of the course the student names in their message ("the 7th, 8th and 9th commandments" →
+ *  "7th commandment", "8th commandment"), other than the chat's own topic. A title matches when every
+ *  meaningful word of it is in the message; one-word titles only count when that word has a number. */
+export function namedTopics<T extends { id: string; title: string }>(message: string, topics: T[], currentTopicId: string | null): T[] {
+  const said = new Set(topicTokens(message));
+  // "7th, 8th and 9th commandments": each ordinal goes with the noun after the list.
+  return topics.filter((t) => {
+    if (t.id === currentTopicId) return false;
+    const words = [...new Set(topicTokens(t.title))];
+    if (!words.length) return false;
+    if (words.length === 1 && !/\d/.test(words[0])) return false;
+    return words.every((w) => said.has(w));
+  });
 }
 
 export function preSearchQuery(turn: Pick<ChatTurn, "userMessage" | "history">): string {
@@ -658,6 +699,22 @@ export async function runChatTurn(turn: ChatTurn) {
       preCalls.push({ tool: getMaterialPages, input: r });
     }
   }
+  // What "like I missed class" must produce (owner's answer review, 24 Nov 2026): reading the whole topic
+  // wasn't enough. One answer grouped it by theme, left out 4 of 25 slides and claimed it went "in
+  // order"; five "5 questions … explain like I missed class" requests got only the questions.
+  const missedClassNote =
+    missedClass && preCalls.length
+      ? "The student missed this class and wants it taught to them. The topic's slides are given to you above, in order. Go through them slide by slide in that order: every slide with content gets its own short part (a bold heading with the slide number and title, then a plain explanation with its citation). Skip only title, contact, thank-you and reference slides, and don't merge slides into themes or leave any out. Give lists, counts and names exactly as the slide has them (three reasons on a slide means three reasons). Teach like a classmate who was there: what it means and why it matters, with an example in <general> where it helps. If the student also asked for something else (a summary, a quiz), do the full explanation first, then that, completely. Start straight with the first slide; never describe how you are going to answer." +
+        (/\bquestions?\b/i.test(turn.userMessage)
+          ? " Their message asks for two things, and both are required, in this order: first the slide-by-slide teaching of every content slide (the main part), then, under a heading \"Practice questions\", the questions they asked for with their answers. Answering only the questions, or folding the teaching into the answers, does not do what they asked."
+          : "")
+      : null;
+  // "Summarize" (owner's answer review, 24 Nov 2026): one topic's summary came out as a 28-slide
+  // walkthrough while two others were short themed summaries. A summary is always the short kind.
+  const summaryNote =
+    summaryAsked && !walkthrough && !missedClass && !asksForMemoryAids(turn.userMessage)
+      ? "The student asked for a summary. Keep it short (about one screen, roughly 300 to 500 words), grouped by theme under a few bold headings, not slide by slide. Cover every main idea of what they named, with citations; skip repeated slides and title, contact and reference slides. If they want more, they can ask for every slide."
+      : null;
   // "Week 7" / "lecture 3" (owner's review, 21 Nov 2026: asked about week 7, the model taught week
   // 2's three-part test): find the file by its name, read it all, and say which one it is.
   const part = namedPart(turn.userMessage);
@@ -724,10 +781,37 @@ export async function runChatTurn(turn: ChatTurn) {
       }
     }
   }
+  let splitNote: string | null = null;
+  let topicNote: string | null = null;
   if (!preCalls.length && !chitChat) {
-    // A bare "keep going" says nothing to search for: search with the earlier question instead.
-    const query = picked ?? (continuing ? preSearchQuery({ userMessage: "", history: turn.history }) || turn.userMessage : preSearchQuery(turn));
-    preCalls.push({ tool: searchSlides, input: { query, ...(asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {}) } });
+    const include = asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {};
+    // Numbered questions (a pasted paper): one search per question, so none is crowded out.
+    const split = !picked && !continuing ? numberedQuestions(turn.userMessage) : null;
+    if (split) {
+      for (const q of split) preCalls.push({ tool: searchSlides, input: { query: q, k: SPLIT_SEARCH_RESULTS, ...include } });
+      splitNote = `The student's message has ${split.length} numbered questions, and each was searched separately above. Answer every one, in order and numbered as they are, each from its own results; read the slides before deciding one isn't covered.`;
+    } else {
+      // A bare "keep going" says nothing to search for: search with the earlier question instead.
+      const query = picked ?? (continuing ? preSearchQuery({ userMessage: "", history: turn.history }) || turn.userMessage : preSearchQuery(turn));
+      preCalls.push({ tool: searchSlides, input: { query, ...include } });
+      // The previous message was added to the search (the new one looked like a follow-up): the new
+      // message is searched on its own too, so a new subject is never crowded out by the old one
+      // (owner's answer review, 24 Nov 2026: "…5 questions each and their answers" about the 7th–9th
+      // commandments searched the previous abortion question and was told the slides don't cover it).
+      if (!picked && !continuing && query !== turn.userMessage) preCalls.push({ tool: searchSlides, input: { query: turn.userMessage, ...include } });
+    }
+    // Other topics of the course named in the message ("the 7th, 8th and 9th commandments"): read them.
+    const topics = must(await db.from("topics").select("id, title").eq("course_id", turn.courseId).order("topic_order")) as { id: string; title: string }[];
+    // In a topic chat any other named topic counts (Anthony asked about the 7th–9th commandments inside
+    // the 6th commandment's chat); in the whole-course chat only two or more, since search finds one.
+    const named = namedTopics(turn.userMessage, topics, turn.topicId ?? null).slice(0, MAX_NAMED_TOPICS);
+    if (named.length && (turn.topicId || named.length >= 2)) {
+      const mats = must(
+        await db.from("materials").select("material_order, page_count, topic_id").eq("course_id", turn.courseId).in("topic_id", named.map((t) => t.id)).in("kind", ["slides", "notes"]).order("material_order"),
+      ) as { material_order: number; page_count: number; topic_id: string }[];
+      for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), NAMED_TOPIC_PAGES)) preCalls.push({ tool: getMaterialPages, input: r });
+      if (mats.length) topicNote = `The student names ${named.length === 1 ? "this topic" : "these topics"} of the course: ${named.map((t) => `"${t.title}"`).join(", ")}. ${named.length === 1 ? "Its" : "Their"} slides are given to you above: answer from them, with citations.`;
+    }
   }
   const longAnswer = walkthrough || continuing;
   // Photos with the question: read them first, then find their topic in the slides.
@@ -771,10 +855,14 @@ export async function runChatTurn(turn: ChatTurn) {
   if (previous && !continuing && !walkthrough && !focus && !chitChat) {
     for (const r of citedRanges(previous)) preCalls.push({ tool: getMaterialPages, input: r });
   }
-  const pre = [];
-  for (const [i, c] of preCalls.entries()) {
-    pre.push({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: await c.tool.run(ctx, c.input as never) });
-  }
+  // All at once (owner's answer review fixes, 24 Nov 2026: a pasted paper's per-question searches and a
+  // named topic's pages, one after another, held the first word back by several seconds). The tool log
+  // is put back in call order afterwards, since later steps read "the first search".
+  const logStart = ctx.toolLog.length;
+  const outputs = await Promise.all(preCalls.map((c) => c.tool.run(ctx, c.input as never)));
+  const done = ctx.toolLog.splice(logStart);
+  ctx.toolLog.push(...done.sort((a, b) => preCalls.findIndex((c) => c.input === a.input) - preCalls.findIndex((c) => c.input === b.input)));
+  const pre = preCalls.map((c, i) => ({ id: `presearch_${turn.assistantMessageId}_${i}`, name: c.tool.name, input: c.input, output: outputs[i] }));
   // Slide images, only where they help (owner, 23 Nov 2026, option B; slide-images.ts): the slide asked
   // about from the viewer; the top results of a question about a diagram, graph or chart; or top
   // results that are mostly picture. Not for long reads (walkthroughs, summaries, memory aids, papers):
@@ -837,7 +925,7 @@ export async function runChatTurn(turn: ChatTurn) {
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -847,7 +935,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

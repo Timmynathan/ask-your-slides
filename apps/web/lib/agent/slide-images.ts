@@ -37,11 +37,25 @@ async function rows(ctx: AgentContext, keys: string[]): Promise<SlideRow[]> {
   ) as SlideRow[];
 }
 
-/** Of these slides, the ones that are mostly picture (a description, little text), in the given order. */
+/** The slide's text lost its layout: two or more short ALL-CAPS headings sit together at the end, apart
+ *  from the items they head (owner's answer review, 24 Nov 2026: CONVENTIONAL and HYBRID came last on an
+ *  ISM403 slide, and the bot put surveys under the wrong one). The image shows which item is where. */
+export function headingsDetached(body: string | null): boolean {
+  const lines = (body ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+  let caps = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (/^[A-Z][A-Z0-9 &/'()-]{2,40}$/.test(lines[i]) && /[A-Z]{3}/.test(lines[i])) caps++;
+    else break;
+  }
+  return caps >= 2 && lines.length > caps + 2;
+}
+
+/** Of these slides, the ones that are mostly picture (a description, little text) or whose headings were
+ *  separated from their items in the text, in the given order. */
 export async function pictureSlides(ctx: AgentContext, keys: string[]): Promise<string[]> {
   const found = await rows(ctx, keys);
   const picture = new Set(
-    found.filter((r) => r.image_path && r.visual_description && (r.body_text ?? "").trim().length < PICTURE_TEXT_MAX).map((r) => r.slide_key),
+    found.filter((r) => r.image_path && ((r.visual_description && (r.body_text ?? "").trim().length < PICTURE_TEXT_MAX) || headingsDetached(r.body_text))).map((r) => r.slide_key),
   );
   return keys.filter((k) => picture.has(k));
 }

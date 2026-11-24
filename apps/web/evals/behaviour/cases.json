@@ -1,309 +1,431 @@
 [
- {
-  "id": "grounded",
-  "what": "an ordinary question is answered from the slides, with citations",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "What is portfolio diversification?",
-  "must": [
-   "\\[\\[s:FIN410-"
-  ],
-  "mustNot": [
-   "^Your slides don't cover"
-  ]
- },
- {
-  "id": "calculation",
-  "what": "a calculation: correct result, no thinking aloud",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "If I put 70% in security A with an expected return of 11.45% and 30% in security B with 11.7%, what is the portfolio's expected return?",
-  "must": [
-   "11\\.5(25|3)"
-  ],
-  "mustNot": [
-   "I'll calculate",
-   "Hmm"
-  ]
- },
- {
-  "id": "not-covered",
-  "what": "a question the course never covers opens with the exact not-covered line and still teaches",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "How does Kubernetes autoscaling work?",
-  "must": [
-   "^Your slides don't cover this, but here's the idea:",
-   "<general>"
-  ],
-  "mustNot": [
-   "\\[\\[s:"
-  ]
- },
- {
-  "id": "quiz-answer",
-  "what": "a one-word reply to a quiz question is marked, not treated as a new topic",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "history": [
-   {
-    "role": "user",
-    "content": "Quiz me on portfolio risk."
-   },
-   {
-    "role": "assistant",
-    "content": "**Question 1:** Which type of risk can be reduced by holding more securities in a portfolio?"
-   }
-  ],
-  "question": "unsystematic",
-  "must": [
-   "\\b(correct|right|exactly|spot on|well done|yes)\\b"
-  ],
-  "mustNot": [
-   "^Your slides don't cover"
-  ]
- },
- {
-  "id": "pick-item",
-  "what": "\"2\" after a numbered list means item 2",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "history": [
-   {
-    "role": "user",
-    "content": "What topics are in this course?"
-   },
-   {
-    "role": "assistant",
-    "content": "Here are some of the course's topics:\n\n1. Portfolio Risk and Return\n2. Portfolio Diversification\n3. Capital Asset Pricing Model\n\nWhich one would you like to start with?"
-   }
-  ],
-  "question": "2",
-  "must": [
-   "diversif"
-  ],
-  "mustNot": [
-   "ambiguous",
-   "which one do you mean"
-  ]
- },
- {
-  "id": "no-apology",
-  "what": "\"that was too short\" gets a fuller answer with no apology or comment on the earlier one",
-  "programme": "computer-science",
-  "level": 400,
-  "course": "CSC420",
-  "history": [
-   {
-    "role": "user",
-    "content": "What is a B+ tree?"
-   },
-   {
-    "role": "assistant",
-    "content": "A B+ tree is a balanced tree index that keeps keys in sorted order."
-   }
-  ],
-  "question": "That was too short, explain it properly",
-  "must": [
-   "\\[\\[s:CSC420-"
-  ],
-  "mustNot": [
-   "my (last|previous|earlier) (answer|reply|explanation)",
-   "I made a mistake"
-  ]
- },
- {
-  "id": "diagram",
-  "what": "asked to explain something graphically, the answer includes one diagram",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "Explain the efficient frontier graphically",
-  "must": [
-   "```mermaid"
-  ]
- },
- {
-  "id": "law-course",
-  "what": "a law question in another programme is grounded in that course's slides",
-  "programme": "information-science-and-media-studies",
-  "level": 400,
-  "course": "ISM413",
-  "question": "What defences are available in a defamation case?",
-  "must": [
-   "\\[\\[s:ISM413-",
-   "fair comment|justification|privilege"
-  ]
- },
- {
-  "id": "app-help",
-  "what": "a question about the app itself: short, no citations, no not-covered opening",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "Where can I find my recent chats in this app?",
-  "must": [
-   "clock|recent chats"
-  ],
-  "mustNot": [
-   "\\[\\[s:",
-   "^Your slides don't cover",
-   "<general>"
-  ]
- },
- {
-  "id": "exam-day",
-  "what": "\"I have an exam now, tell me what I need to know\" gets full help, not a refusal",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "I have an exam now, tell me all I need to know about CAPM",
-  "must": [
-   "\\[\\[s:FIN410-"
-  ],
-  "mustNot": [
-   "can'?t help",
-   "cannot help",
-   "not able to help",
-   "wouldn'?t be fair"
-  ]
- },
- {
-  "id": "greeting",
-  "what": "\"hey\" gets a short, warm reply and a question back, not a lesson",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "history": [
-   {
-    "role": "user",
-    "content": "What is portfolio diversification?"
-   },
-   {
-    "role": "assistant",
-    "content": "Diversification spreads money across securities so risk falls without giving up return. [[s:FIN410-06-3]]"
-   }
-  ],
-  "question": "hey",
-  "must": [
-   "\\?"
-  ],
-  "mustNot": [
-   "\\[\\[s:",
-   "<general>"
-  ]
- },
- {
-  "id": "chat-memory",
-  "what": "\"what were my last 2 questions\" is answered from the chat, never 'I can't see'",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "history": [
-   {
-    "role": "user",
-    "content": "What is portfolio diversification?"
-   },
-   {
-    "role": "assistant",
-    "content": "Diversification spreads money across securities so risk falls. [[s:FIN410-06-3]]"
-   },
-   {
-    "role": "user",
-    "content": "Explain systematic risk"
-   },
-   {
-    "role": "assistant",
-    "content": "Systematic risk affects the whole market and can't be diversified away. [[s:FIN410-06-3]]"
-   }
-  ],
-  "question": "what was the last 2 questions i asked",
-  "must": [
-   "systematic risk",
-   "diversification"
-  ],
-  "mustNot": [
-   "can'?t see",
-   "cannot see",
-   "\\[\\[s:"
-  ]
- },
- {
-  "id": "greeting-other",
-  "what": "a greeting not on the word list (\"hola\") still gets a short reply, not a lesson",
-  "programme": "finance",
-  "level": 400,
-  "course": "FIN410",
-  "question": "hola",
-  "must": [
-   "\\?"
-  ],
-  "mustNot": [
-   "\\[\\[s:",
-   "<general>"
-  ]
- },
- {
-  "id": "practice-counts",
-  "what": "practice questions with answers: a 'name the N…' question uses the number the slide lists (it once said four properties of natural law; the slide has three)",
-  "programme": "computer-science",
-  "level": 100,
-  "course": "IOH-INTRODUCTION-CHRISTIAN-THEOLOGY",
-  "question": "Give me 5 practice questions on \"Law and Conscience\" with their answers. Include one on the properties of natural law.",
-  "must": [
-   "[Uu]niversal",
-   "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-"
-  ],
-  "mustNot": [
-   "\\b(four|4) properties"
-  ]
- },
- {
-  "id": "generous-reading",
-  "what": "a near term ('business plan' for the proposal topic) is answered from the slide that lists the parts, not 'your slides don't list those'",
-  "programme": "accounting",
-  "level": 200,
-  "course": "IOH-ENGLISH-BUSINESS-PURPOSES",
-  "question": "would u say statement of the problem, objectives, proposed solutions and implementation plan are necessary parts of the structure of a business proposal",
-  "must": [
-   "\\[\\[s:IOH-ENGLISH-BUSINESS-PURPOSES-"
-  ],
-  "mustNot": [
-   "(slides|materials) (don't|do not) (list|mention|include) (those|these|all)",
-   "^Not quite"
-  ]
- },
- {
-  "id": "this-slide",
-  "what": "'explain everything on this slide' with a slide open means that slide (it once guessed another)",
-  "programme": "mass-communication",
-  "level": 200,
-  "course": "MCM217",
-  "question": "explain everything on this slide",
-  "focus": "MCM217-15-12",
-  "must": [
-   "\\[\\[s:MCM217-15-12\\]\\]",
-   "Ethiopia|Cameroon"
-  ]
- },
- {
-  "id": "missed-class-reads-topic",
-  "what": "'Explain like I missed class' reads the whole topic in order and keeps the lecturer's point (it once said the China/Russia model failed in Africa; slide 27 says Western democracy did)",
-  "programme": "mass-communication",
-  "level": 200,
-  "course": "MCM217",
-  "question": "Explain \"Digital authoritarianism in africa\" like I missed the class.",
-  "must": [
-   "\\[\\[s:MCM217-15-2[67]\\]\\]"
-  ],
-  "mustNot": [
-   "(China and Russia|Chinese and Russian) (model|approach)[^.]{0,60}(did ?n.t|did not|failed to) (transfer|work|take)"
-  ],
-  "topic": "Digital authoritarianism in africa"
- }
+  {
+    "id": "grounded",
+    "what": "an ordinary question is answered from the slides, with citations",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "What is portfolio diversification?",
+    "must": [
+      "\\[\\[s:FIN410-"
+    ],
+    "mustNot": [
+      "^Your slides don't cover"
+    ]
+  },
+  {
+    "id": "calculation",
+    "what": "a calculation: correct result, no thinking aloud",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "If I put 70% in security A with an expected return of 11.45% and 30% in security B with 11.7%, what is the portfolio's expected return?",
+    "must": [
+      "11\\.5(25|3)"
+    ],
+    "mustNot": [
+      "I'll calculate",
+      "Hmm"
+    ]
+  },
+  {
+    "id": "not-covered",
+    "what": "a question the course never covers opens with the exact not-covered line and still teaches",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "How does Kubernetes autoscaling work?",
+    "must": [
+      "^Your slides don't cover this, but here's the idea:",
+      "<general>"
+    ],
+    "mustNot": [
+      "\\[\\[s:"
+    ]
+  },
+  {
+    "id": "quiz-answer",
+    "what": "a one-word reply to a quiz question is marked, not treated as a new topic",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "history": [
+      {
+        "role": "user",
+        "content": "Quiz me on portfolio risk."
+      },
+      {
+        "role": "assistant",
+        "content": "**Question 1:** Which type of risk can be reduced by holding more securities in a portfolio?"
+      }
+    ],
+    "question": "unsystematic",
+    "must": [
+      "\\b(correct|right|exactly|spot on|well done|yes)\\b"
+    ],
+    "mustNot": [
+      "^Your slides don't cover"
+    ]
+  },
+  {
+    "id": "pick-item",
+    "what": "\"2\" after a numbered list means item 2",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "history": [
+      {
+        "role": "user",
+        "content": "What topics are in this course?"
+      },
+      {
+        "role": "assistant",
+        "content": "Here are some of the course's topics:\n\n1. Portfolio Risk and Return\n2. Portfolio Diversification\n3. Capital Asset Pricing Model\n\nWhich one would you like to start with?"
+      }
+    ],
+    "question": "2",
+    "must": [
+      "diversif"
+    ],
+    "mustNot": [
+      "ambiguous",
+      "which one do you mean"
+    ]
+  },
+  {
+    "id": "no-apology",
+    "what": "\"that was too short\" gets a fuller answer with no apology or comment on the earlier one",
+    "programme": "computer-science",
+    "level": 400,
+    "course": "CSC420",
+    "history": [
+      {
+        "role": "user",
+        "content": "What is a B+ tree?"
+      },
+      {
+        "role": "assistant",
+        "content": "A B+ tree is a balanced tree index that keeps keys in sorted order."
+      }
+    ],
+    "question": "That was too short, explain it properly",
+    "must": [
+      "\\[\\[s:CSC420-"
+    ],
+    "mustNot": [
+      "my (last|previous|earlier) (answer|reply|explanation)",
+      "I made a mistake"
+    ]
+  },
+  {
+    "id": "diagram",
+    "what": "asked to explain something graphically, the answer includes one diagram",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "Explain the efficient frontier graphically",
+    "must": [
+      "```mermaid"
+    ]
+  },
+  {
+    "id": "law-course",
+    "what": "a law question in another programme is grounded in that course's slides",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "question": "What defences are available in a defamation case?",
+    "must": [
+      "\\[\\[s:ISM413-",
+      "fair comment|justification|privilege"
+    ]
+  },
+  {
+    "id": "app-help",
+    "what": "a question about the app itself: short, no citations, no not-covered opening",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "Where can I find my recent chats in this app?",
+    "must": [
+      "clock|recent chats"
+    ],
+    "mustNot": [
+      "\\[\\[s:",
+      "^Your slides don't cover",
+      "<general>"
+    ]
+  },
+  {
+    "id": "exam-day",
+    "what": "\"I have an exam now, tell me what I need to know\" gets full help, not a refusal",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "I have an exam now, tell me all I need to know about CAPM",
+    "must": [
+      "\\[\\[s:FIN410-"
+    ],
+    "mustNot": [
+      "can'?t help",
+      "cannot help",
+      "not able to help",
+      "wouldn'?t be fair"
+    ]
+  },
+  {
+    "id": "greeting",
+    "what": "\"hey\" gets a short, warm reply and a question back, not a lesson",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "history": [
+      {
+        "role": "user",
+        "content": "What is portfolio diversification?"
+      },
+      {
+        "role": "assistant",
+        "content": "Diversification spreads money across securities so risk falls without giving up return. [[s:FIN410-06-3]]"
+      }
+    ],
+    "question": "hey",
+    "must": [
+      "\\?"
+    ],
+    "mustNot": [
+      "\\[\\[s:",
+      "<general>"
+    ]
+  },
+  {
+    "id": "chat-memory",
+    "what": "\"what were my last 2 questions\" is answered from the chat, never 'I can't see'",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "history": [
+      {
+        "role": "user",
+        "content": "What is portfolio diversification?"
+      },
+      {
+        "role": "assistant",
+        "content": "Diversification spreads money across securities so risk falls. [[s:FIN410-06-3]]"
+      },
+      {
+        "role": "user",
+        "content": "Explain systematic risk"
+      },
+      {
+        "role": "assistant",
+        "content": "Systematic risk affects the whole market and can't be diversified away. [[s:FIN410-06-3]]"
+      }
+    ],
+    "question": "what was the last 2 questions i asked",
+    "must": [
+      "systematic risk",
+      "diversification"
+    ],
+    "mustNot": [
+      "can'?t see",
+      "cannot see",
+      "\\[\\[s:"
+    ]
+  },
+  {
+    "id": "greeting-other",
+    "what": "a greeting not on the word list (\"hola\") still gets a short reply, not a lesson",
+    "programme": "finance",
+    "level": 400,
+    "course": "FIN410",
+    "question": "hola",
+    "must": [
+      "\\?"
+    ],
+    "mustNot": [
+      "\\[\\[s:",
+      "<general>"
+    ]
+  },
+  {
+    "id": "practice-counts",
+    "what": "practice questions with answers: a 'name the N…' question uses the number the slide lists (it once said four properties of natural law; the slide has three)",
+    "programme": "computer-science",
+    "level": 100,
+    "course": "IOH-INTRODUCTION-CHRISTIAN-THEOLOGY",
+    "question": "Give me 5 practice questions on \"Law and Conscience\" with their answers. Include one on the properties of natural law.",
+    "must": [
+      "[Uu]niversal",
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-"
+    ],
+    "mustNot": [
+      "\\b(four|4) properties"
+    ]
+  },
+  {
+    "id": "generous-reading",
+    "what": "a near term ('business plan' for the proposal topic) is answered from the slide that lists the parts, not 'your slides don't list those'",
+    "programme": "accounting",
+    "level": 200,
+    "course": "IOH-ENGLISH-BUSINESS-PURPOSES",
+    "question": "would u say statement of the problem, objectives, proposed solutions and implementation plan are necessary parts of the structure of a business proposal",
+    "must": [
+      "\\[\\[s:IOH-ENGLISH-BUSINESS-PURPOSES-"
+    ],
+    "mustNot": [
+      "(slides|materials) (don't|do not) (list|mention|include) (those|these|all)",
+      "^Not quite"
+    ]
+  },
+  {
+    "id": "this-slide",
+    "what": "'explain everything on this slide' with a slide open means that slide (it once guessed another)",
+    "programme": "mass-communication",
+    "level": 200,
+    "course": "MCM217",
+    "question": "explain everything on this slide",
+    "focus": "MCM217-15-12",
+    "must": [
+      "\\[\\[s:MCM217-15-12\\]\\]",
+      "Ethiopia|Cameroon"
+    ]
+  },
+  {
+    "id": "missed-class-reads-topic",
+    "what": "'Explain like I missed class' reads the whole topic in order and keeps the lecturer's point (it once said the China/Russia model failed in Africa; slide 27 says Western democracy did)",
+    "programme": "mass-communication",
+    "level": 200,
+    "course": "MCM217",
+    "question": "Explain \"Digital authoritarianism in africa\" like I missed the class.",
+    "must": [
+      "\\[\\[s:MCM217-15-2[67]\\]\\]"
+    ],
+    "mustNot": [
+      "(China and Russia|Chinese and Russian) (model|approach)[^.]{0,60}(did ?n.t|did not|failed to) (transfer|work|take)"
+    ],
+    "topic": "Digital authoritarianism in africa"
+  },
+  {
+    "id": "named-topics-not-glued",
+    "what": "Questions on the 7th, 8th and 9th commandments asked inside the 6th commandment's chat, right after an abortion/IVF question, come from those commandments' slides (it once searched the previous question and said the course doesn't cover them)",
+    "programme": "computer-science",
+    "level": 100,
+    "course": "IOH-INTRODUCTION-CHRISTIAN-THEOLOGY",
+    "topic": "6th commandment (lite",
+    "history": [
+      {
+        "role": "user",
+        "content": "Compare abortion and in vitro fertilisation morally. Which commandment does each fall under?"
+      },
+      {
+        "role": "assistant",
+        "content": "Both are treated under the Fifth Commandment, which protects human life from conception. Direct abortion is a grave moral disorder, and IVF that treats embryos as objects to be disposed of is morally wrong."
+      }
+    ],
+    "question": "Talk about the 7th, 8th and 9th commandments with 5 questions each and their answers",
+    "must": [
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-3[34]-\\d+\\]\\]",
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-38-\\d+\\]\\]"
+    ],
+    "mustNot": [
+      "Your slides don.t cover this",
+      "(do ?n.t|does ?n.t|do not|does not) (include|cover|show|list|have)[^.\\n]{0,60}(commandment|later)"
+    ]
+  },
+  {
+    "id": "numbered-paper-split",
+    "what": "A pasted four-question paper: each question is looked up on its own, so praying for the dead is answered from the Purgatory slide (it was once answered as not in the slides)",
+    "programme": "computer-science",
+    "level": 100,
+    "course": "IOH-INTRODUCTION-CHRISTIAN-THEOLOGY",
+    "topic": "6th commandment (lite",
+    "question": "1. Why do Catholics pray for the dead, and which belief does this support? Give a biblical reference.\n2. A trader finds a lost purse in his shop. What does the 7th commandment require him to do?\n3. What is the moral object of a human act?\n4. Compare abortion and in vitro fertilisation: which commandment do they fall under, and why?",
+    "must": [
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-23-\\d+\\]\\]",
+      "purgatory"
+    ],
+    "mustNot": [
+      "^Your slides don.t cover this"
+    ]
+  },
+  {
+    "id": "missed-class-every-slide",
+    "what": "'Explain like I missed the class' goes through every content slide in order (one answer grouped by theme and left out 4 of 25 slides: the multiethnic slide, uniqueness, crafts, private museums)",
+    "programme": "economics",
+    "level": 100,
+    "course": "IOH-NIGERIAN-PEOPLES-CULTURE",
+    "topic": "Harnessing Nigerian Cultural and Natural Heritage",
+    "question": "Explain \"Harnessing Nigerian Cultural and Natural Heritage\" like I missed the class.",
+    "must": [
+      "\\[\\[s:IOH-NIGERIAN-PEOPLES-CULTURE-12-4\\]\\]",
+      "\\[\\[s:IOH-NIGERIAN-PEOPLES-CULTURE-12-11\\]\\]",
+      "\\[\\[s:IOH-NIGERIAN-PEOPLES-CULTURE-12-16\\]\\]",
+      "\\[\\[s:IOH-NIGERIAN-PEOPLES-CULTURE-12-21\\]\\]"
+    ],
+    "mustNot": [
+      "^(I|I've|I have|Here's how|Let me)\\b"
+    ]
+  },
+  {
+    "id": "missed-class-with-questions",
+    "what": "Questions plus 'explain like I missed class' gives the explanation of the whole topic first, then the questions (five such requests once got only the questions)",
+    "programme": "computer-science",
+    "level": 100,
+    "course": "IOH-INTRODUCTION-CHRISTIAN-THEOLOGY",
+    "topic": "8. PERSONAL SIN (lite",
+    "question": "Give me 5 questions on this topic with their answers, and explain it like I missed class",
+    "must": [
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-20-5\\]\\]",
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-20-9\\]\\]",
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-20-11\\]\\]",
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-20-1[234]\\]\\][\\s\\S]*\\n\\s*(\\*\\*)?(Q(uestion)?\\s*)?5[.):]"
+    ]
+  },
+  {
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM403",
+    "id": "standard-model-complete",
+    "topic": "Content creation",
+    "what": "A standard model from general knowledge is given in full (AIDA was once given as attention, desire, action, dropping Interest)",
+    "question": "The radio advert structure on the slides sounds like AIDA. What does AIDA stand for, and how does it match the slide?",
+    "must": [
+      "[Aa]ttention",
+      "[Ii]nterest",
+      "[Dd]esire",
+      "[Aa]ction"
+    ]
+  },
+  {
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM403",
+    "id": "slide-groupings-kept",
+    "topic": "The audience",
+    "what": "Items keep the slide's own groupings (surveys/FGDs are under HYBRID on the audience analysis slide; the bot once put them under conventional)",
+    "question": "Which audience analysis approaches are hybrid, and which are conventional?",
+    "must": [
+      "[Hh]ybrid[^\\n]{0,160}(surveys|FGDs)",
+      "[Dd]igital tracking"
+    ],
+    "mustNot": [
+      "[Cc]onventional[^.\\n]{0,20}(are|:)[^.\\n]{0,80}(surveys|FGDs)"
+    ]
+  },
+  {
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM403",
+    "id": "summary-is-short",
+    "topic": "Content creation",
+    "what": "'Summarize' gives a short summary grouped by theme, not a slide-by-slide walkthrough (one summary once went through all 28 slides)",
+    "question": "Summarize the topic \"Content creation\".",
+    "must": [
+      "\\[\\[s:ISM403-"
+    ],
+    "mustNot": [
+      "(?:^|\\n)\\s*\\*\\*Slide \\d+"
+    ]
+  }
 ]

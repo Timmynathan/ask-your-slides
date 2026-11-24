@@ -13,7 +13,7 @@
 // Runs by itself after a deploy that changes the bot (.github/workflows/behaviour-check.yml).
 // Exit code 1 if any case fails, so the commit gets a red cross and GitHub emails the owner.
 import { createClient } from "@supabase/supabase-js";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { judge } from "../lib/evals/answer-rules.mts";
 
@@ -37,7 +37,9 @@ interface Case {
   /** Ask inside this topic's chat (its title, case-insensitive) instead of the whole-course chat. */
   topic?: string;
 }
-const only = process.argv.slice(2);
+// --save=<folder>: also write every answer there (to read them, not only the pass/fail line).
+const saveTo = process.argv.find((a) => a.startsWith("--save="))?.slice(7);
+const only = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const cases = (JSON.parse(readFileSync(path.join(import.meta.dirname, "../evals/behaviour/cases.json"), "utf8")) as Case[]).filter((c) => !only.length || only.includes(c.id));
 
 interface Result {
@@ -106,6 +108,10 @@ for (let i = 0; i < cases.length; i += 3) {
 let cost = 0;
 let failed = 0;
 for (const r of results) {
+  if (saveTo) {
+    mkdirSync(saveTo, { recursive: true });
+    writeFileSync(path.join(saveTo, `${r.id}-${Date.now()}.md`), `# ${r.id} (${r.pass ? "PASS" : "FAIL"}${r.fails.length ? `: ${r.fails.join("; ")}` : ""})\n\n${r.answer}\n`);
+  }
   cost += r.cost;
   if (!r.pass) failed++;
   console.log(`${r.pass ? "PASS" : "FAIL"} ${r.id}: ${r.what}${r.fails.length ? ` — ${r.fails.join("; ")}` : ""}${r.warnings.length ? ` [warn: ${r.warnings.join("; ")}]` : ""} (${r.secs}s)`);

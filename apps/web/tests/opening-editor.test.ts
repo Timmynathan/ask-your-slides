@@ -31,3 +31,25 @@ describe("not-covered tag", () => {
     expect(plainSlideTalk("Some text [[not-covered]]more")).toBe("Some text more");
   });
 });
+
+describe("dropSelfRemarks (safety net after the editor, owner's answer review 24 Nov 2026)", () => {
+  it("drops the tutor's remarks about what it did, even when they name a slide", async () => {
+    const { dropSelfRemarks } = await import("@/lib/agent/opening-editor");
+    const r = dropSelfRemarks("Slide 25 is the reference list, so I've left it at the end.\n\n**Slide 1: Heritage**\n\nThe title slide…");
+    expect(r.text.startsWith("**Slide 1")).toBe(true);
+    expect(r.dropped).toContain("I've left it");
+  });
+  it("keeps content, lead-ins and cited sentences", async () => {
+    const { dropSelfRemarks } = await import("@/lib/agent/opening-editor");
+    for (const t of [
+      "Here's the whole class, slide by slide.\n\n**Slide 1**",
+      "A codec compresses video. [[s:ISM403-08-3]] I've read the slide.",
+      "Kiishi, week 7 is about digital laws.",
+    ]) expect(dropSelfRemarks(t).text).toBe(t);
+  });
+  it("never drops the cited sentence the remark sits in", async () => {
+    const { dropSelfRemarks } = await import("@/lib/agent/opening-editor");
+    const t = "I've checked slide 4. [[s:FIN209-09-4]] It lists four roles.";
+    expect(dropSelfRemarks(t).text).toBe(t);
+  });
+});
