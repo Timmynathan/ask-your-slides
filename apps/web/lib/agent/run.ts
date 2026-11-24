@@ -979,6 +979,11 @@ export async function runChatTurn(turn: ChatTurn) {
             },
           ]
         : []),
+      // "Questions … explain like I missed class": the order repeated right before the answer (the
+      // note above alone was followed about 5 times in 6 on the live site; the rest gave only questions).
+      ...(missedClassNote && pre.length && /\bquestions?\b/i.test(turn.userMessage)
+        ? [{ role: "user" as const, content: "[From the app, not the student: the topic's slides are above. Teach every content slide in order first, then give the questions they asked for under \"Practice questions\".]" }]
+        : []),
     ],
     tools: chitChat ? {} : buildTools(ctx),
     stopWhen: isStepCount(turn.calculationHeavy ? MAX_STEPS_CALCULATION : paperAsked ? MAX_STEPS_PAPER : MAX_STEPS),

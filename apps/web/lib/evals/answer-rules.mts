@@ -5,7 +5,8 @@ export const GENERAL: { label: string; bad: RegExp }[] = [
   { label: "thin-slides opener", bad: /only outline this/i },
   // Not "the search key" or "the search moves down the tree": database and algorithm courses use the word.
   { label: "talks about searching", bad: /\b(the search (didn'?t|did not|returned|found|turned up|brought|came back|results?)|search results|I searched|let me (gather|pull|fetch|grab))\b/i },
-  { label: "apology opening", bad: /^\s*(?:[\p{L}'-]{2,20},\s*)?(you.?re right|i.?m sorry|sorry|apolog)/iu },
+  // "You're right, I missed that" is an apology; "you're right that the slide follows AIDA" confirms the student.
+  { label: "apology opening", bad: /^\s*(?:[\p{L}'-]{2,20},\s*)?(you.?re right(?!\s+(?:that|to|about)\b)|i.?m sorry|sorry|apolog)/iu },
   { label: "thinking aloud", bad: /\b(Hmm+,|check that again|Let me calculate it)\b/i },
 ];
 
