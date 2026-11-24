@@ -207,6 +207,13 @@ export function asksForMissedClass(message: string): boolean {
   return /\b(like I missed (the )?class|missed (the |that |this )?(class|lecture))\b/i.test(message);
 }
 
+/** The student asks whether something is right ("would you say X and Y are parts of …", "is X part of …",
+ *  "am I right that …"): answered yes-first from what the slides support (owner, 24 Nov 2026). */
+export function asksIfRight(message: string): boolean {
+  if (/^\s*(what|which|how|why|list|name|give|explain|define|describe|summari[sz]e|tell me)\b/i.test(message)) return false;
+  return /\b(would (you|u) say|wouldn'?t you say|is it (true|correct|right) that|am I (right|correct)|do you agree|(is|are) [^?.]{1,120}\b(parts?|elements?|components?|steps?|features?|types?) of)\b/i.test(message);
+}
+
 /** "Explain every slide", "slide by slide", "all the slides in detail", "explain the whole deck". */
 export function asksForWalkthrough(message: string): boolean {
   return (
@@ -709,6 +716,11 @@ export async function runChatTurn(turn: ChatTurn) {
           ? " Their message asks for two things, and both are required, in this order: first the slide-by-slide teaching of every content slide (the main part), then, under a heading \"Practice questions\", the questions they asked for with their answers. Answering only the questions, or folding the teaching into the answers, does not do what they asked."
           : "")
       : null;
+  // "Would you say X, Y and Z are parts of …?" (owner, 24 Nov 2026): it opened "not quite… your slides don't
+  // list those as required parts" and recited the whole structure, though the slides had all four items.
+  const rightNote = asksIfRight(turn.userMessage)
+    ? "The student is asking whether they are right. Start your reply with \"Yes\" when the slides contain what they named in any form (under another name, or in one type of the thing), then show where each item they named is, one by one, with citations. Start with \"No\" only if the slides contradict them. Do not open with \"not quite\", a caveat, or a structure they didn't ask about. After that, add a short paragraph on what more there is (the other parts the slides include, and how it varies by type), so they know their list is the core, not everything."
+    : null;
   // "Summarize" (owner's answer review, 24 Nov 2026): one topic's summary came out as a 28-slide
   // walkthrough while two others were short themed summaries. A summary is always the short kind.
   const summaryNote =
@@ -925,7 +937,7 @@ export async function runChatTurn(turn: ChatTurn) {
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -935,7 +947,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

@@ -43,3 +43,16 @@ describe("the follow-up glue still applies (and the new message is now searched 
     expect(preSearchQuery({ userMessage: msg, history })).not.toBe(msg); // so run.ts adds a second search with msg alone
   });
 });
+
+describe("asksIfRight (owner, 24 Nov 2026: yes-first answers)", async () => {
+  const { asksIfRight } = await import("@/lib/agent/run");
+  it("catches 'would you say …' and 'are X parts of Y' questions", () => {
+    expect(asksIfRight("would u say statement of the problem, objectives and implementation plan are necessary parts of the structure of a business proposal")).toBe(true);
+    expect(asksIfRight("would you say statement of the problem and objectives are necessary parts of a business proposal")).toBe(true);
+    expect(asksIfRight("Is the executive summary part of a proposal?")).toBe(true);
+    expect(asksIfRight("am I right that codecs compress video?")).toBe(true);
+  });
+  it("leaves ordinary questions alone", () => {
+    for (const m of ["What are the parts of a business proposal?", "Explain the types of sin", "Give me 5 practice questions on Law and Conscience", "Summarize the topic Codecs"]) expect(asksIfRight(m)).toBe(false);
+  });
+});

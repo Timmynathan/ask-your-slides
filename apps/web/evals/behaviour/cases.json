@@ -265,17 +265,19 @@
   },
   {
     "id": "generous-reading",
-    "what": "a near term ('business plan' for the proposal topic) is answered from the slide that lists the parts, not 'your slides don't list those'",
+    "what": "A yes/no question about parts the slides list under other names is answered 'yes' first with where each part is, then notes what more a proposal has (it once opened 'not quite' and recited the whole structure first)",
     "programme": "accounting",
     "level": 200,
     "course": "IOH-ENGLISH-BUSINESS-PURPOSES",
     "question": "would u say statement of the problem, objectives, proposed solutions and implementation plan are necessary parts of the structure of a business proposal",
     "must": [
-      "\\[\\[s:IOH-ENGLISH-BUSINESS-PURPOSES-"
+      "^[^\\n]{0,80}\\b([Yy]es|right track|you're right|that's right|correct)\\b",
+      "\\[\\[s:IOH-ENGLISH-BUSINESS-PURPOSES-1[23]-14\\]\\]",
+      "(title page|executive summary|qualifications|costs?|appendix)"
     ],
     "mustNot": [
-      "(slides|materials) (don't|do not) (list|mention|include) (those|these|all)",
-      "^Not quite"
+      "^[^\\n]{0,60}\\b(not quite|no\\b)",
+      "(slides|materials) (don't|do not) (list|mention|include) (those|these|all)"
     ]
   },
   {
