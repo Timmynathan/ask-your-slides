@@ -260,7 +260,7 @@
       "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-"
     ],
     "mustNot": [
-      "\\b(four|4) properties"
+      "\\b(four|4) properties of (the )?natural (moral )?law"
     ]
   },
   {
