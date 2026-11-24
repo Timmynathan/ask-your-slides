@@ -15,7 +15,7 @@ describe("email templates", () => {
     const { buildSignIn } = await import("@/lib/email/send");
     const e = await buildSignIn("482913");
     expect(e.subject).toContain("482913");
-    expect(e.html).toContain("https://askyourslides.com/email/logo.png");
+    expect(e.html).toContain("AskYour</span>");
     expect(e.html).toContain("— The AskYourSlides Team");
     expect(e.html).not.toContain("Unsubscribe");
     expect(e.text).toContain("482913");

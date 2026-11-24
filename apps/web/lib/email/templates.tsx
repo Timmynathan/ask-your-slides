@@ -1,23 +1,19 @@
 // Branded emails (owner, 24 Nov 2026): one shared layout for every email, sign-in codes included.
-// Navy header with the logo (PNG, absolute URL), white body, one navy button, light footer. Arial
+// Navy header with the logo as styled text (owner, 24 Nov 2026: Outlook, PAU's mail, blocks pictures from new
+// senders, so a picture logo showed as a broken icon), white body, one navy button, light footer. Arial
 // stack (web fonts don't load in most email apps), 560px wide. Each email: a few short lines, one button.
-import { Body, Button, Container, Head, Hr, Html, Img, Link, Preview, Section, Text } from "@react-email/components";
+import { Body, Button, Container, Head, Hr, Html, Link, Preview, Section, Text } from "@react-email/components";
 import type { ReactNode } from "react";
 
 export const SITE = "https://askyourslides.com";
 export const TEAM = "The AskYourSlides Team";
 const NAVY = "#0e1664";
 const FONT = "Arial, Helvetica, sans-serif";
+const LOGO_FONT = "Georgia, 'Times New Roman', serif";
 
 const text = { fontFamily: FONT, fontSize: "16px", lineHeight: "24px", color: "#191919", margin: "0 0 16px" } as const;
 
-// Apple Mail and a few others follow the reader's dark mode: they get the logo version without the
-// navy box. Everywhere else the navy logo (which reads on any background) shows.
-const DARK_CSS = `
-  @media (prefers-color-scheme: dark) {
-    .logo-light { display: none !important; }
-    .logo-dark { display: block !important; max-height: none !important; overflow: visible !important; }
-  }
+const MOBILE_CSS = `
   @media only screen and (max-width: 600px) {
     .body-pad { padding: 28px 22px !important; }
   }
@@ -29,27 +25,18 @@ export function Layout({ preview, children, unsubscribeUrl }: { preview: string;
       <Head>
         <meta name="color-scheme" content="light dark" />
         <meta name="supported-color-schemes" content="light dark" />
-        <style>{DARK_CSS}</style>
+        <style>{MOBILE_CSS}</style>
       </Head>
       <Preview>{preview}</Preview>
       <Body style={{ backgroundColor: "#f3f5fc", margin: 0, padding: "24px 0", fontFamily: FONT }}>
         <Container style={{ maxWidth: "560px", width: "100%", margin: "0 auto", backgroundColor: "#ffffff", borderRadius: "16px", overflow: "hidden" }}>
-          <Section style={{ backgroundColor: NAVY, padding: "14px 24px" }}>
-            {/* When pictures are blocked (many school mail apps do this by default), the alt text shows in
-                white on the navy header instead of a broken image. */}
-            <Link href={`${SITE}/?ref=email-logo`} style={{ color: "#ffffff", textDecoration: "none" }}>
-              <Img
-                className="logo-light"
-                src={`${SITE}/email/logo.png`}
-                width="250"
-                height="49"
-                alt="AskYourSlides"
-                style={{ display: "block", border: 0, color: "#ffffff", fontFamily: FONT, fontSize: "22px", fontWeight: 700, lineHeight: "49px" }}
-              />
-              {/* The dark-mode copy sits in a zero-height box, so it takes no room where it isn't used. */}
-              <div className="logo-dark" style={{ display: "none", maxHeight: 0, overflow: "hidden", msoHide: "all" } as React.CSSProperties}>
-                <Img src={`${SITE}/email/logo-dark.png`} width="250" height="49" alt="" style={{ display: "block", border: 0 }} />
-              </div>
+          <Section style={{ backgroundColor: NAVY, padding: "20px 32px" }}>
+            {/* The logo in text: always visible, even where pictures are blocked. The sparkle is a text
+                character (not an emoji); Georgia stands in for the site's Bitter, which mail apps don't load. */}
+            <Link href={`${SITE}/?ref=email-logo`} style={{ textDecoration: "none", fontFamily: LOGO_FONT, fontSize: "26px", lineHeight: "32px", fontWeight: 700, letterSpacing: "-0.3px" }}>
+              <span style={{ color: "#ffffff", fontFamily: FONT, fontSize: "24px", marginRight: "10px" }}>&#10022;</span>
+              <span style={{ color: "#ffffff" }}>AskYour</span>
+              <span style={{ color: "#5ea3ed" }}>Slides</span>
             </Link>
           </Section>
           <Section className="body-pad" style={{ padding: "32px 36px 28px" }}>
