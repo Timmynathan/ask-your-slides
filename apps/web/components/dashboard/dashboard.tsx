@@ -17,6 +17,7 @@ import { EXAMS_START, TIME_ZONE } from "@/lib/plans/config";
 const EXAMS_START_LABEL = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: TIME_ZONE }).format(EXAMS_START);
 import { ExamsCard, RecentLectures, StreakCard, UpgradeCard, type RecentLecture } from "./side-cards";
 import { HoverLink } from "@/components/ui/hover-link";
+import { UpgradeButton } from "@/components/plans/upgrade-dialog";
 import { PartnerSwitch } from "@/components/study/partner-switch";
 import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
@@ -158,15 +159,14 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
               <Crown size={19} absoluteStrokeWidth strokeWidth={1.6} aria-hidden />
             </Link>
           ) : (
-            <Link
-              href="/pricing"
+            <UpgradeButton
               className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#BBEEF0] px-3.5 text-[14px] font-semibold text-brand shadow-sm ring-1 ring-[#8fdde1] transition hover:bg-[#a5e7ea] active:scale-95"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M13 3 5 13.5h6L10 21l8-10.5h-6L13 3Z" />
               </svg>
               Upgrade
-            </Link>
+            </UpgradeButton>
           )}
           <PartnerSwitch partner={partner} onChanged={setPartner} open={pickingPartner} onOpenChange={setPickingPartner} account={user.id} />
           <div className="md:hidden">

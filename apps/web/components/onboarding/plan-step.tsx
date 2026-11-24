@@ -1,6 +1,7 @@
 "use client";
 
-// The last onboarding step, the plan (owner, 22 Nov 2026, modelled on a calm two-column paywall):
+// The last onboarding step, the plan (and, since 24 Nov 2026, the only pricing view: the Upgrade pop-up and
+// /pricing show the same PlanOfferPanel) (owner, 22 Nov 2026, modelled on a calm two-column paywall):
 // on the left the student's study partner and real testimonials; on the right the Finals offer, a
 // "See what's included" comparison, Get Finals, and the promo code. Skip for now starts on Free.
 // No countdown and no invented numbers: the student count is the owner's real figure, and each quote is
@@ -24,6 +25,27 @@ export function PlanStep({ offer, freePast, onFree, promo }: {
   onFree(): void;
   promo: ReactNode;
 }) {
+  return (
+    <div key="plan" className="panel-in w-full max-w-5xl">
+      <div className="flex items-center justify-end">
+        <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:opacity-80">
+          Skip for now
+        </button>
+      </div>
+      <div className="mt-8">
+        <PlanOfferPanel offer={offer} freePast={freePast} promo={promo} />
+      </div>
+    </div>
+  );
+}
+
+/** The plan offer itself (owner, 24 Nov 2026: the one pricing view across the app): testimonials on the
+ *  left, Finals on the right. Used by onboarding, the Upgrade pop-up (upgrade-dialog.tsx) and /pricing. */
+export function PlanOfferPanel({ offer, freePast, promo }: {
+  offer: PlanOffer & { paymentsOpen?: boolean };
+  freePast: boolean;
+  promo: ReactNode;
+}) {
   const [q, setQ] = useState(0);
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -38,14 +60,7 @@ export function PlanStep({ offer, freePast, onFree, promo }: {
   const quote = QUOTES[q];
 
   return (
-    <div key="plan" className="panel-in w-full max-w-5xl">
-      <div className="flex items-center justify-end">
-        <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:opacity-80">
-          Skip for now
-        </button>
-      </div>
-
-      <div className="mt-8 grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
+      <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14">
         {/* Left: the study partner, then the testimonials. */}
         <div className="order-2 flex flex-col items-center lg:order-1">
           {/* A plain black line drawing (owner, 22 Nov 2026: minimalist, no colour): books, a cap, a star. */}
@@ -148,7 +163,6 @@ export function PlanStep({ offer, freePast, onFree, promo }: {
           <div className="mt-3 flex justify-center">{promo}</div>
         </div>
       </div>
-    </div>
   );
 }
 

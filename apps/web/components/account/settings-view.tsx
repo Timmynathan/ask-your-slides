@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { DeleteAccountDialog } from "@/components/ui/delete-account-dialog";
 import { SignOutButton } from "@/components/ui/sign-out-button";
+import { UpgradeButton } from "@/components/plans/upgrade-dialog";
 import type { PlanId } from "@/lib/plans/config";
 import { PageFrame } from "./page-frame";
 import type { ShellData } from "@/lib/nav/shell-data";
@@ -38,9 +39,9 @@ export function SettingsView({ email, plan, onLeaderboard }: { email: string; pl
             <p className="text-[14px] text-muted">{plan.id === "finals" && plan.endsAt ? `Active until ${plan.endsAt}` : "A few questions a day on each course"}</p>
           </div>
           {plan.id === "free" ? (
-            <Link href="/pricing" className="rounded-full bg-[#BBEEF0] px-5 py-2.5 text-[14.5px] font-semibold text-brand ring-1 ring-[#8fdde1] transition hover:bg-[#a5e7ea]">
+            <UpgradeButton className="rounded-full bg-[#BBEEF0] px-5 py-2.5 text-[14.5px] font-semibold text-brand ring-1 ring-[#8fdde1] transition hover:bg-[#a5e7ea]">
               Upgrade
-            </Link>
+            </UpgradeButton>
           ) : (
             <Link href="/pricing" className="rounded-full px-5 py-2.5 text-[14.5px] text-ink ring-1 ring-line-strong transition hover:bg-sunken">
               Plans and pricing

@@ -33,7 +33,7 @@ import type { CourseItem, TopicItem } from "@/lib/study/types";
 import { Answer } from "./answer";
 import { PaperViewer } from "./paper-viewer";
 import type { LimitCode } from "@/components/plans/pricing-sheet";
-import { LockIcon } from "@/components/plans/plan-cards";
+import { LockIcon } from "@/components/plans/icons";
 
 interface PastData {
   /** PRD F12: Free practises its free question(s) per course; Finals everything. */

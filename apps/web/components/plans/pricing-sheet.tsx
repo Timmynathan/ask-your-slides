@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { naira, timeLeft, type PlanOffer } from "@/lib/plans/offer";
 import { FinalsPrice } from "./finals-price";
 import { GetFinalsLink } from "./get-finals-link";
-import { CheckIcon } from "./plan-cards";
+import { CheckIcon } from "./icons";
 
 export type LimitCode = "daily_cap" | "premium_cap" | "summary" | "quiz" | "past";
 export const LIMIT_CODES: LimitCode[] = ["daily_cap", "premium_cap", "summary", "quiz", "past"];

@@ -1,4 +1,4 @@
-// Plans on screen (PRD F12, phase 3): the landing section and the pricing page show the price the
+// Plans on screen (PRD F12, phase 3): the plan view (onboarding, the Upgrade pop-up, /pricing) shows the price the
 // server charges (₦3,000 before PRICE_CHANGE_DATE, ₦5,000 after) and the limits it enforces, all
 // read from lib/plans/config.ts; nothing is typed into the components.
 import { readFileSync, readdirSync } from "node:fs";
@@ -6,15 +6,14 @@ import path from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { PlansSection } from "@/components/landing/plans-section";
-import { PlanCards } from "@/components/plans/plan-cards";
+import { PlanOfferPanel } from "@/components/onboarding/plan-step";
 import { FINALS_PRICE, FINALS_PRICE_EARLY, PRICE_CHANGE_DATE } from "@/lib/plans/config";
 import { finalsPrice } from "@/lib/plans/limits";
-import { comparisonRows, planOffer, timeLeft } from "@/lib/plans/offer";
+import { planOffer, timeLeft } from "@/lib/plans/offer";
 
 const BEFORE = new Date("2026-11-16T12:00:00+01:00");
 const AFTER = new Date(PRICE_CHANGE_DATE.getTime() + 1000);
-const landing = (now: Date) => renderToStaticMarkup(createElement(PlansSection, { offer: planOffer(now) }));
+const panel = (now: Date) => renderToStaticMarkup(createElement(PlanOfferPanel, { offer: { ...planOffer(now), paymentsOpen: true }, freePast: false, promo: null }));
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("plan offer = what the server charges", () => {
@@ -22,28 +21,24 @@ describe("plan offer = what the server charges", () => {
     const o = planOffer(BEFORE);
     expect(o).toMatchObject({ price: 3000, early: true, earlyPrice: 3000, fullPrice: 5000, priceChangeLabel: "27 Nov" });
     expect(o.price).toBe(finalsPrice(BEFORE)); // the checkout route uses finalsPrice
-    const t = text(landing(BEFORE));
+    const t = text(panel(BEFORE));
     expect(t).toContain("₦3,000");
-    expect(t).toMatch(/<s|₦5,000/); // struck-through full price
-    expect(t).not.toContain("₦3,000 until 27 Nov"); // owner removed that line (13 Nov 2026)
-    expect(t).toContain("Goes up to ₦5,000 after 27 Nov"); // still under the button
+    expect(t).toContain("₦5,000"); // struck-through full price
   });
 
   it("after PRICE_CHANGE_DATE: ₦5,000 only, no early price, no countdown", () => {
     const o = planOffer(AFTER);
     expect(o).toMatchObject({ price: 5000, early: false });
     expect(o.price).toBe(finalsPrice(AFTER));
-    const t = text(landing(AFTER));
+    const t = text(panel(AFTER));
     expect(t).toContain("₦5,000");
     expect(t).not.toContain("₦3,000");
-    expect(t).not.toContain("Price goes up");
   });
 
-  it("the in-app pricing cards show the same price", () => {
-    const html = (now: Date) => text(renderToStaticMarkup(createElement(PlanCards, { offer: planOffer(now), freeAction: null, finalsAction: null })));
-    expect(html(BEFORE)).toContain("₦3,000");
-    expect(html(AFTER)).toContain("₦5,000");
-    expect(html(AFTER)).not.toContain("₦3,000");
+  it("the plan view has no comparison table on the page (owner, 24 Nov 2026)", () => {
+    const html = panel(BEFORE);
+    expect(html).not.toContain("<table");
+    expect(text(html)).toContain("Get Finals");
   });
 
   it("countdown wording", () => {
@@ -54,54 +49,11 @@ describe("plan offer = what the server charges", () => {
   });
 });
 
-describe("landing Plans section", () => {
-  const t = text(landing(BEFORE));
-  it("has the spec's wording, buttons and comparison rows", () => {
-    for (const s of [
-      "Free forever",
-      "₦0",
-      "Valid until your last paper",
-      "All your courses, no limits",
-      "Unlimited summaries and quiz mode",
-      "20 messages on your first day, then 10 a day",
-      "1 summary",
-      "Start free",
-      "Lock in Finals · ₦3,000",
-      "Goes up to ₦5,000 after 27 Nov",
-      "One-time payment. No subscription. Pay by bank transfer.",
-    ]) {
-      expect(t, s).toContain(s);
-    }
-    expect(comparisonRows(planOffer(BEFORE))).toEqual([
-      { label: "Daily messages", free: "20 on day one, then 10 a day", finals: "40 a day" },
-      { label: "All your courses", free: true, finals: true },
-      { label: "Answers cite your actual slides", free: true, finals: true },
-      { label: "Summaries", free: "1", finals: "Unlimited" },
-      { label: "Quiz mode", free: false, finals: true },
-      { label: "Upload photos of your tests and notes", free: "Up to 2", finals: "Up to 30" },
-      { label: "Past questions", free: false, finals: "Every past question" }, // Finals only (owner, 14 Nov 2026)
-      { label: "Model answers and marked practice", free: false, finals: true },
-    ]);
-  });
-
-  it("Get Finals goes to sign-up, then straight to the payment page", () => {
-    expect(landing(BEFORE)).toContain(`href="/sign-up?next=${encodeURIComponent("/pay")}"`);
-  });
-
-  it("is accessible: a real heading, one comparison (the cards, no repeated feature table)", () => {
-    const html = landing(BEFORE);
-    expect(html).toMatch(/<h2[^>]*id="plans-title"[^>]*>Plans<\/h2>/);
-    expect(html).toContain('aria-labelledby="plan-finals"');
-    expect(html).toContain('aria-labelledby="plan-free"');
-    expect(html).not.toContain("<table");
-  });
-});
-
 describe("no plan figures typed into the UI", () => {
   it("prices and limits come from the config only", () => {
     const files = [
       ...readdirSync(path.resolve("components/plans")).map((f) => path.join("components/plans", f)),
-      "components/landing/plans-section.tsx",
+      "components/onboarding/plan-step.tsx",
       "app/(app)/(shell)/pricing/page.tsx",
       "app/(app)/pay/page.tsx",
     ];
