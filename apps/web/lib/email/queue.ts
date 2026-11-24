@@ -126,6 +126,13 @@ export async function runEmailQueue(db: Db, now = new Date()): Promise<RunResult
     }
     const email = await buildUpdate(r.type, { userId: r.user_id, name: p.display_name, course: c });
     const res = await sendEmail(p.email, email, r.type);
+    // A setup problem (no Resend key on the server): stop here and keep every row as it is, so the
+    // emails go out as soon as the key is set instead of using up their attempts.
+    if (res.error?.includes("is not set")) {
+      out.failed++;
+      out.waiting += rows.length - 1;
+      break;
+    }
     if (res.error) {
       const attempts = r.attempts + 1;
       await mark(r.id, { attempts, reason: res.error.slice(0, 300), ...(attempts >= 3 ? { status: "failed" } : {}) });
