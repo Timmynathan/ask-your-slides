@@ -260,7 +260,8 @@
     "question": "Give me 5 practice questions on \"Law and Conscience\" with their answers. Include one on the properties of natural law.",
     "must": [
       "[Uu]niversal",
-      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-"
+      "\\[\\[s:IOH-INTRODUCTION-CHRISTIAN-THEOLOGY-",
+      "<answer>[\\s\\S]+?</answer>[\\s\\S]+<answer>"
     ],
     "mustNot": [
       "\\b(four|4) properties of (the )?natural (moral )?law"

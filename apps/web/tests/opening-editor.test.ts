@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const { applyDrop, maxDroppable, openingPieces } = await import("@/lib/agent/opening-editor");
+const { applyDrop, maxDroppable, openingPieces, startsWithVerdict } = await import("@/lib/agent/opening-editor");
 const { trimApologyOpening, plainSlideTalk } = await import("@/lib/agent/run");
 
 describe("opening editor: what it may remove", () => {
@@ -52,4 +52,9 @@ describe("dropSelfRemarks (safety net after the editor, owner's answer review 24
     const t = "I've checked slide 4. [[s:FIN209-09-4]] It lists four roles.";
     expect(dropSelfRemarks(t).text).toBe(t);
   });
+});
+
+describe("yes/no openings are the answer", () => {
+  it.each(["Yes, and the slides back up all four.", "**Yes.** All four are there.", "Tolu, yes: each one is on the slides.", "No, the slides put it under hybrid."])("keeps %s", (t) => expect(startsWithVerdict(t)).toBe(true));
+  it.each(["Your question is about the structure.", "Not quite.", "Nobody knows for sure.", "Yesterday's lecture covered this."])("not a verdict: %s", (t) => expect(startsWithVerdict(t)).toBe(false));
 });

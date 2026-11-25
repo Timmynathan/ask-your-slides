@@ -42,6 +42,8 @@ function readable(text: string | null) {
     .replace(/\s*\[\[s:([A-Za-z0-9-]+)\]\]/g, " [$1]")
     .replace(/<general>/g, "\n┌ beyond the slides\n")
     .replace(/<\/general>/g, "\n└\n")
+    .replace(/<answer>/g, "\n▸ answer (hidden until opened)\n")
+    .replace(/<\/answer>/g, "\n")
     .trim();
 }
 

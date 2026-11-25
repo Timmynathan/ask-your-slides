@@ -72,8 +72,16 @@ export function dropSelfRemarks(text: string): { text: string; dropped: string |
 }
 
 /** Asks the editor about the opening of an answer. Never throws: on any failure the text is kept. */
+/** The reply opens with a yes/no answer ("Yes, and…", "**No.**", "Hi Tolu, yes: …"). */
+export function startsWithVerdict(text: string): boolean {
+  return /^\s*(?:[\p{L}'-]{2,20},\s*)?(?:\*\*)?(?:yes|no)\b/iu.test(text);
+}
+
 export async function editOpening(text: string, question: string): Promise<{ text: string; dropped: string | null; cost: number }> {
   const pieces = openingPieces(text);
+  // A reply that opens "Yes, …" or "No, …" starts with its answer (live check, 25 Nov 2026: "Yes, and the
+  // slides back up all four." was dropped as filler, so a yes-first answer lost its yes).
+  if (startsWithVerdict(text)) return { text, dropped: null, cost: 0 };
   const candidates = maxDroppable(pieces);
   if (!candidates) return { text, dropped: null, cost: 0 };
   const numbered = pieces

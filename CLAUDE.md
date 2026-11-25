@@ -83,6 +83,11 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   everything on X") read the lecture in full (also in the whole-course chat) and teach each point where it
   appears, in the bot's own words; summaries may run to ~700 words for big lectures but must name every main idea.
 
+- Practice questions (25 Nov 2026): each answer is wrapped in <answer> tags and shown under its question as a
+  "Show answer" dropdown (lib/study/format.ts splitReveal, components/study/answer.tsx); normal answers may run to
+  4,000 tokens (five explained practice answers were cut short at 2,000). The opening editor never trims a reply
+  that opens "Yes"/"No" (it once dropped the yes of a yes-first answer).
+
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.
 - Supabase: Auth (email OTP, @pau.edu.ng only, custom SMTP via Resend from noreply@mail.askyourslides.com),

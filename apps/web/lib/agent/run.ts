@@ -19,7 +19,10 @@ const MAX_STEPS = 6; // a search, a follow-up search or reads, and the answer
 const MAX_STEPS_PAPER = 9; // a photographed paper: a search or two per question before the answer
 const MEMORY_AID_TOPICS = 16; // whole-course memory aids: topics searched up front (4 slides each)
 const MAX_STEPS_CALCULATION = 10; // plus calculate (sometimes twice, after a fix) and optimize
-const MAX_OUTPUT_TOKENS = 2000; // room to teach, not just restate the slides
+// Room to teach, not just restate the slides. 4000 since 25 Nov 2026: five practice questions, each with its
+// answer and explanation (now behind "Show answer"), were cut short at 2000. A ceiling only: an ordinary
+// answer still runs ~600–1,000 tokens, and only the tokens written are paid for.
+const MAX_OUTPUT_TOKENS = 4000;
 const MAX_OUTPUT_TOKENS_SUMMARY = 12000; // once the agent has read whole materials (3000, then 6000, cut summaries short)
 // "Explain every slide" (owner, 21 Nov 2026, after a student's 35-slide walkthroughs stopped at slide
 // ~19 four times in a row): the whole deck in one answer. ~32K tokens is ~24K words, a full deck in

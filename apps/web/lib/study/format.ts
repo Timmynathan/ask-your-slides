@@ -38,11 +38,45 @@ export function splitAnswer(raw: string): Segment[] {
   return out.map((s) => ({ ...s, text: s.text.trim() })).filter((s) => s.text.length > 0);
 }
 
+const TAGS = ["<general>", "</general>", "<answer>", "</answer>"];
+
 function hidePartialTag(text: string): string {
   const lt = text.lastIndexOf("<");
   if (lt === -1) return text;
   const tail = text.slice(lt);
-  return (OPEN.startsWith(tail) || CLOSE.startsWith(tail)) && tail !== OPEN && tail !== CLOSE ? text.slice(0, lt) : text;
+  return TAGS.some((t) => t.startsWith(tail) && t !== tail) ? text.slice(0, lt) : text;
+}
+
+export type RevealPart = { kind: "text" | "answer"; text: string };
+
+const ANSWER_OPEN = "<answer>";
+const ANSWER_CLOSE = "</answer>";
+
+/** Practice-question answers sit in <answer> tags (owner, 25 Nov 2026: "the answers shouldn't be immediately
+ *  visible… in a drop down below the question"). Split them out; each part is then split by splitAnswer.
+ *  Works on a half-streamed answer: an unclosed <answer> runs to the end, a tag being typed is hidden. */
+export function splitReveal(raw: string): RevealPart[] {
+  const text = hidePartialTag(raw);
+  const out: RevealPart[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const open = text.indexOf(ANSWER_OPEN, i);
+    if (open === -1) {
+      out.push({ kind: "text", text: text.slice(i) });
+      break;
+    }
+    if (open > i) out.push({ kind: "text", text: text.slice(i, open) });
+    const close = text.indexOf(ANSWER_CLOSE, open + ANSWER_OPEN.length);
+    const end = close === -1 ? text.length : close;
+    out.push({ kind: "answer", text: text.slice(open + ANSWER_OPEN.length, end) });
+    i = close === -1 ? text.length : close + ANSWER_CLOSE.length;
+  }
+  return out.filter((p) => p.text.trim().length > 0);
+}
+
+/** The answer's words without app markup: for copying, and for tools that read answers as plain text. */
+export function plainAnswer(text: string): string {
+  return text.replace(/\s*\[\[s:[^\]]*\]\]/g, "").replace(/<\/?(general|answer)>/g, "").trim();
 }
 
 const MARKER = /\[\[s:([A-Za-z0-9-]+)\]\]/g;

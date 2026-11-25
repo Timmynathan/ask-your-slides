@@ -4,6 +4,7 @@
 // once, then offers an optional reason ("Wrong", "Not in my slides", "Too long", "Other" + a few
 // words). Pressing the same thumb again takes the rating back. Quiet line icons, as elsewhere.
 import { useRef, useState } from "react";
+import { plainAnswer } from "@/lib/study/format";
 
 export type Rating = { rating: 1 | -1; reason: string | null } | null;
 
@@ -63,8 +64,8 @@ export function AnswerActions({ messageId, text, initial }: { messageId: string;
 
   const copy = async () => {
     try {
-      // Copy just the words: drop the [[s:KEY]] citation markers and <general> tags.
-      await navigator.clipboard.writeText(text.replace(/\s*\[\[s:[^\]]*\]\]/g, "").replace(/<\/?general>/g, "").trim());
+      // Copy just the words: drop the [[s:KEY]] citation markers and <general>/<answer> tags.
+      await navigator.clipboard.writeText(plainAnswer(text));
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {}

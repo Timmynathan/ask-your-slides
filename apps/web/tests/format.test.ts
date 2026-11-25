@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chipLabel, markersToLinks, splitAnswer } from "@/lib/study/format";
+import { chipLabel, markersToLinks, plainAnswer, splitAnswer, splitReveal } from "@/lib/study/format";
 
 describe("splitAnswer", () => {
   it("separates slide text and general blocks", () => {
@@ -67,5 +67,30 @@ describe("chips for Word sections, notebooks and code (PRD F11)", () => {
     const long = chipLabel({ slide_key: "X-01-1", material_title: "Notes", material_kind: "notes", label: "Between Government and the Press › 2. Licensing and Operational Restrictions" });
     expect(long.endsWith("…")).toBe(true);
     expect(long.length).toBeLessThan(60);
+  });
+});
+
+describe("practice answers behind Show answer", () => {
+  const text = "**1. What is libel?**\n<answer>\nDefamation in permanent form. [[s:ISM413-07-3]]\n<general>\nThink print.\n</general>\n</answer>\n\n**2. What is slander?**\n<answer>\nTransient form.\n</answer>";
+  it("splits each answer out of the text", () => {
+    expect(splitReveal(text).map((p) => [p.kind, p.text.trim().slice(0, 20)])).toEqual([
+      ["text", "**1. What is libel?*"],
+      ["answer", "Defamation in perman"],
+      ["text", "**2. What is slander"],
+      ["answer", "Transient form."],
+    ]);
+  });
+  it("keeps the explanation box inside an answer", () => {
+    expect(splitAnswer(splitReveal(text)[1].text).map((s) => s.kind)).toEqual(["slides", "general"]);
+  });
+  it("hides a tag still being typed and keeps an unclosed answer hidden", () => {
+    expect(splitReveal("**1. Q?**\n<answ").map((p) => p.kind)).toEqual(["text"]);
+    expect(splitReveal("**1. Q?**\n<answer>\nHalf an ans").map((p) => p.kind)).toEqual(["text", "answer"]);
+  });
+  it("answers without the tag show as before", () => {
+    expect(splitReveal("Plain answer.")).toEqual([{ kind: "text", text: "Plain answer." }]);
+  });
+  it("copies without markup", () => {
+    expect(plainAnswer(text)).not.toMatch(/<\/?(answer|general)>|\[\[s:/);
   });
 });

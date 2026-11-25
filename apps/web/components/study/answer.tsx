@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import "katex/dist/katex.min.css";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { Diagram } from "./diagram";
@@ -12,6 +13,7 @@ import {
   isCiteHref,
   markersToLinks,
   splitAnswer,
+  splitReveal,
   type CitationInfo,
 } from "@/lib/study/format";
 import { BEYOND_BOX, BeyondSlidesLabel } from "./beyond-slides";
@@ -34,7 +36,6 @@ interface Props {
 
 export const Answer = memo(function Answer({ text, citations, fallback, topicTitle, courseName, courseId, onCite, partnerName = "Your study partner" }: Props) {
   const byKey = new Map(citations.map((c) => [c.slide_key, c]));
-  const segments = splitAnswer(text);
   // The label comes from the server (citations outside the topic), not from the model's wording.
   const usedOtherTopics = !!topicTitle && (fallback?.used ?? citations.some((c) => c.outside_topic));
 
@@ -96,6 +97,18 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
     </ReactMarkdown>
   );
 
+  const segments = (s: string): ReactNode =>
+    splitAnswer(s).map((seg, i) =>
+      seg.kind === "general" ? (
+        <aside key={i} className={`my-4 first:mt-0 ${BEYOND_BOX}`}>
+          <BeyondSlidesLabel name={partnerName} />
+          {md(seg.text)}
+        </aside>
+      ) : (
+        <div key={i}>{md(seg.text)}</div>
+      ),
+    );
+
   return (
     <div className="text-[15px] text-ink">
       {usedOtherTopics && (
@@ -108,14 +121,19 @@ export const Answer = memo(function Answer({ text, citations, fallback, topicTit
           </span>
         </p>
       )}
-      {segments.map((seg, i) =>
-        seg.kind === "general" ? (
-          <aside key={i} className={`my-4 first:mt-0 ${BEYOND_BOX}`}>
-            <BeyondSlidesLabel name={partnerName} />
-            {md(seg.text)}
-          </aside>
+      {splitReveal(text).map((part, p) =>
+        part.kind === "answer" ? (
+          // A practice question's answer, closed until the student opens it (owner, 25 Nov 2026).
+          <details key={p} className="group my-3 rounded-xl bg-sunken/60 px-3.5 py-2">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 py-0.5 text-[14px] font-medium text-brand [&::-webkit-details-marker]:hidden">
+              <ChevronDown size={16} absoluteStrokeWidth strokeWidth={1.6} className="shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+              <span className="group-open:hidden">Show answer</span>
+              <span className="hidden group-open:inline">Hide answer</span>
+            </summary>
+            <div className="pb-1 pt-2">{segments(part.text)}</div>
+          </details>
         ) : (
-          <div key={i}>{md(seg.text)}</div>
+          <div key={p}>{segments(part.text)}</div>
         ),
       )}
     </div>
