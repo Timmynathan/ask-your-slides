@@ -73,8 +73,11 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   7 days, Finals first, never to email_updates = false. Sign-in codes use the Supabase Send Email hook
   (/api/auth/email-hook, SEND_EMAIL_HOOK_SECRET). New slides are queued by ingest.py; past questions from /admin/emails.
 
-- Student feedback (25 Nov 2026, Alheri + Barakah, ISMS): case questions are looked up on the web before the
-  answer (lib/agent/case-research.ts, Haiku + web search, max 4 searches, ~2–5 US cents); the answer keeps the
+- Student feedback (25 Nov 2026, Alheri + Barakah, ISMS): background on cases, laws, people and events is looked
+  up on the web when a small model call decides the question needs it (no word lists: owner frowns on text
+  matching; a tool the bot could call was never called by Haiku). lib/agent/background-research.ts: decideLookup
+  (every message, alongside the first search, ~0.01 c) then researchBackground (Haiku + web search, max 4, ~1.5–5 c),
+  max 50 lookups a day site-wide (LOOKUPS_PER_DAY, tools.ts), logged as background_lookup on traces. The answer keeps the
   slide's version and notes differences neutrally ("Some sources describe this differently: … Your slides present
   it as …"), never calling a slide wrong, and says "I couldn't confirm" when unsure. Whole-topic asks ("tell me
   everything on X") read the lecture in full (also in the whole-course chat) and teach each point where it
@@ -122,6 +125,13 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   new files are detected by LMS cmid and added to the course manifest, then ingestion runs for new files only.
   After new slides: `npm run ingest:past -- --analyse --recheck --course <programme/CODE>` regenerates the
   partial/general past answers that the new slides now cover (prints the cost first).
+
+### Weekly sync watchlist (check these first each sync)
+- COS101 Introduction to Computer Science (100 level): students are asking for it, but the LMS pages had no
+  files on 17 Nov 2026, so the folders are empty: computer-science/COS101 (LMS 4924), data-science/COS101
+  (LMS 4835), software-engineering/COS101 (LMS 4837). Re-check these pages every sync; if still empty, ask
+  the course rep or lecturer for the slides.
+- Other empty 100–300 level folders are listed in data/_reports/ays4-gaps.md (section 3).
 
 ## How to work with the owner
 - Build in phases; stop after each phase so the owner can test; commit after each phase.

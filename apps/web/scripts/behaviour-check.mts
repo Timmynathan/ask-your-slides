@@ -36,6 +36,9 @@ interface Case {
   focus?: string;
   /** Ask inside this topic's chat (its title, case-insensitive) instead of the whole-course chat. */
   topic?: string;
+  /** Tools the bot must (or must not) have called for this answer, e.g. look_up_background. */
+  calls?: string[];
+  callsNot?: string[];
 }
 // --save=<folder>: also write every answer there (to read them, not only the pass/fail line).
 const saveTo = process.argv.find((a) => a.startsWith("--save="))?.slice(7);
@@ -98,6 +101,9 @@ async function run(c: Case): Promise<Result> {
     }
     const answer = tr?.output_text ?? "";
     const { fails, warnings } = judge({ answer, httpOk: r.ok, body, errors: tr?.errors ?? [], must: c.must, mustNot: c.mustNot });
+    const called = new Set((tr?.tool_calls ?? []).map((t) => t.name));
+    for (const name of c.calls ?? []) if (!called.has(name)) fails.push(`didn't call ${name}`);
+    for (const name of c.callsNot ?? []) if (called.has(name)) fails.push(`called ${name}`);
     return { id: c.id, what: c.what, pass: !fails.length, fails, warnings, secs: Math.round((Date.now() - t0) / 1000), cost: Number(tr?.cost_usd ?? 0), prompt: tr?.prompt_version ?? null, answer, errors: tr?.errors ?? [], tools: (tr?.tool_calls ?? []).map((t) => ({ name: t.name, input: t.input, slide_keys: t.slide_keys })) };
   } finally {
     if (userId) await db.auth.admin.deleteUser(userId);

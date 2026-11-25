@@ -11,6 +11,9 @@
     ],
     "mustNot": [
       "^Your slides don't cover"
+    ],
+    "callsNot": [
+      "background_lookup"
     ]
   },
   {
@@ -367,6 +370,9 @@
     ],
     "mustNot": [
       "^(I|I've|I have|Here's how|Let me)\\b"
+    ],
+    "callsNot": [
+      "background_lookup"
     ]
   },
   {
@@ -454,7 +460,10 @@
       "[Gg]ood[- ]faith",
       "(2|two) years"
     ],
-    "mustNot": []
+    "mustNot": [],
+    "callsNot": [
+      "background_lookup"
+    ]
   },
   {
     "id": "topic-explained-as-it-goes",
@@ -468,7 +477,10 @@
       "Hicklin",
       "\\[\\[s:ISM413-09-7\\]\\]"
     ],
-    "mustNot": []
+    "mustNot": [],
+    "callsNot": [
+      "background_lookup"
+    ]
   },
   {
     "id": "cases-background",
@@ -489,6 +501,9 @@
     "mustNot": [
       "(slide|slides) (is|are|was|were) (wrong|incorrect|mistaken)",
       "simplification"
+    ],
+    "calls": [
+      "background_lookup"
     ]
   },
   {
@@ -505,6 +520,9 @@
     ],
     "mustNot": [
       "(slide|slides) (is|are|was|were) (wrong|incorrect|mistaken)"
+    ],
+    "calls": [
+      "background_lookup"
     ]
   },
   {
@@ -528,17 +546,74 @@
     ],
     "mustNot": [
       "(?:^|\\n)\\s*\\*\\*Slide \\d+"
+    ],
+    "callsNot": [
+      "background_lookup"
     ]
   },
   {
     "id": "not-a-case-question",
-    "what": "An ordinary law question (no case asked about) is answered from the slides without a web search",
+    "what": "An ordinary law question (nothing outside the slides needed) is answered from the slides, without a web lookup",
     "programme": "information-science-and-media-studies",
     "level": 400,
     "course": "ISM413",
     "question": "What is the difference between libel and slander?",
     "must": [
       "\\[\\[s:ISM413-07-"
+    ],
+    "mustNot": [],
+    "callsNot": [
+      "background_lookup"
+    ]
+  },
+  {
+    "id": "lookup-name-only",
+    "what": "'Tell me more about Hicklin' (no word 'case') still gets the case's background: the bot decides to look it up",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "topic": "Obscenity and indecency law",
+    "question": "tell me more about Hicklin",
+    "calls": [
+      "background_lookup"
+    ],
+    "must": [
+      "Hicklin",
+      "(Cockburn|Confessional|Queen's Bench|Scott|pamphlet)"
+    ],
+    "mustNot": [
+      "(slide|slides) (is|are|was|were) (wrong|incorrect|mistaken)"
+    ]
+  },
+  {
+    "id": "lookup-law",
+    "what": "Asked for more on a law the slides name, it looks up the law's background (when and how it was made, what it covers)",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "question": "Can you tell me more about the Cybercrimes Act 2015, beyond what my slides say?",
+    "calls": [
+      "background_lookup"
+    ],
+    "must": [
+      "\\[\\[s:ISM413-",
+      "(Jonathan|May 2015|signed|amend|2024)"
+    ],
+    "mustNot": []
+  },
+  {
+    "id": "lookup-event",
+    "what": "Asked for more on an event the slides name (the MacBride Commission), it looks up its background",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "CMS411",
+    "question": "Who was on the MacBride Commission and what happened after the report? My slides only mention it briefly.",
+    "calls": [
+      "background_lookup"
+    ],
+    "must": [
+      "\\[\\[s:CMS411-",
+      "(Se[a\u00e1]n MacBride|1977|Nobel|sixteen|16 members|members)"
     ],
     "mustNot": []
   }

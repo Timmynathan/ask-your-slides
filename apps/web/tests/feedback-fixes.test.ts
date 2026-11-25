@@ -1,28 +1,17 @@
-// Student feedback (owner, 25 Nov 2026): case questions may search the web, and a whole-course chat reads a
+// Student feedback (owner, 25 Nov 2026): the bot may look up background on the web when it decides to, and a whole-course chat reads a
 // lecture in full when a student asks broadly about it.
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-const { asksAboutCases, asksBroadly, namedTopics } = await import("@/lib/agent/run");
+const { asksBroadly, namedTopics } = await import("@/lib/agent/run");
+const { lagosDayStart } = await import("@/lib/agent/tools");
 
-describe("case questions", () => {
-  it.each([
-    "could you give me more information on the important cases",
-    "Tell me about chike obi case",
-    "what happened in DPP v Whyte",
-    "explain R v. Hicklin",
-    "what was the judgment in Nwankwo v State",
-    "which precedents apply to sedition?",
-  ])("is a case question: %s", (m) => expect(asksAboutCases(m)).toBe(true));
-
-  it.each([
-    "What is the difference between libel and slander?",
-    "in that case what is the penalty",
-    "explain the Nokia case study",
-    "what is a use case diagram",
-    "in the worst case, how long does the search take",
-    "libel vs slander",
-    "summarize this topic",
-  ])("is not a case question: %s", (m) => expect(asksAboutCases(m)).toBe(false));
+describe("background lookups", () => {
+  it("counts the day from midnight in Lagos", () => {
+    // 23:30 UTC on 24 Nov is 00:30 on 25 Nov in Lagos: the day began at 23:00 UTC on 24 Nov.
+    expect(lagosDayStart(Date.UTC(2026, 10, 24, 23, 30))).toBe("2026-11-24T23:00:00.000Z");
+    // 22:30 UTC on 24 Nov is 23:30 on 24 Nov in Lagos: the day began at 23:00 UTC on 23 Nov.
+    expect(lagosDayStart(Date.UTC(2026, 10, 24, 22, 30))).toBe("2026-11-23T23:00:00.000Z");
+  });
 });
 
 describe("broad asks about a topic", () => {

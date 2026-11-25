@@ -520,6 +520,24 @@ export const viewSlides = defineTool({
   },
 });
 
+// ── Web background lookups (background-research.ts, run.ts) ────────────────────
+// A site-wide daily cap keeps a small API credit safe (each lookup ~2–5 US cents; owner, 25 Nov 2026).
+export const LOOKUPS_PER_DAY = 50;
+export const LOOKUP_LOG_NAME = "background_lookup";
+
+/** Web lookups already run today (Lagos day), across the site. */
+export async function lookupsToday(db: SupabaseClient): Promise<number> {
+  const { count } = await db.from("traces").select("id", { count: "exact", head: true }).gte("created_at", lagosDayStart()).contains("tool_calls", [{ name: LOOKUP_LOG_NAME }]);
+  return count ?? 0;
+}
+
+/** Midnight in Lagos (UTC+1, no daylight saving), as an ISO time. */
+export function lagosDayStart(now = Date.now()): string {
+  const lagos = new Date(now + 3600_000);
+  lagos.setUTCHours(0, 0, 0, 0);
+  return new Date(lagos.getTime() - 3600_000).toISOString();
+}
+
 export const TOOLS = [searchSlides, listTopics, getMaterialPages, viewSlides];
 export const CALC_TOOLS = [calculateTool, optimizeTool];
 
