@@ -11,6 +11,11 @@ export const MARKER = /\[\[s:([A-Za-z0-9-]{1,40})\]\]/;
 const ONE_BRACKET = /^\[\[s:([A-Za-z0-9-]{1,40})\](?=[^\]]|$)/;
 // A string that could still grow into a marker: "[", "[[", "[[s", "[[s:", "[[s:CSC4", "[[s:CSC401-04-12]".
 const PARTIAL = /^\[(?:\[(?:s(?::[A-Za-z0-9-]{0,40}\]?)?)?)?$/;
+// A made-up marker ("[[nothing cited here]]", owner's eval 25 Nov 2026: written inside a background block to
+// show it had no slide): dropped. [[not-covered]] is the app's own tag and passes through.
+// Words with spaces only, so code such as [[nested]] or df[['col']] is left alone.
+const STRAY = /^\[\[(?!s:|not-covered\]\])[A-Za-z][A-Za-z,.'-]*(?: [A-Za-z,.'-]+){1,8}\]\]/;
+const STRAY_PARTIAL = /^\[\[(?!s:)[A-Za-z][A-Za-z ,.'-]{0,60}\]?$/;
 
 export interface CitationFilterEvents {
   isAllowed(key: string): boolean;
@@ -28,6 +33,8 @@ export function createCitationFilter(events: CitationFilterEvents) {
   // ("… [[s:A]] [[s:B]]") all support the same claim.
   let sinceMarker = "";
   let lastClaim = "";
+  // After a dropped made-up marker that followed a space: the next space is dropped too.
+  let skipSpace = false;
   const claimFor = () => {
     if (sinceMarker.trim()) lastClaim = sinceMarker.split(/\n\s*\n/).pop()!.replace(/<\/?general>/g, "").slice(-400);
     sinceMarker = "";
@@ -41,6 +48,11 @@ export function createCitationFilter(events: CitationFilterEvents) {
       sinceMarker += text;
     };
     while (pending.length) {
+      if (skipSpace) {
+        skipSpace = false;
+        if (pending.startsWith(" ")) pending = pending.slice(1);
+        if (!pending.length) break;
+      }
       const open = pending.indexOf("[");
       if (open === -1) {
         keep(pending);
@@ -70,7 +82,14 @@ export function createCitationFilter(events: CitationFilterEvents) {
         pending = pending.slice(m[0].length);
         continue;
       }
-      if (!final && PARTIAL.test(pending)) break; // wait for more text
+      const stray = pending.match(STRAY);
+      if (stray) {
+        // Drop it with one of the spaces around it, so no double space is left behind.
+        pending = pending.slice(stray[0].length);
+        skipSpace = /\s$/.test(sinceMarker);
+        continue;
+      }
+      if (!final && (PARTIAL.test(pending) || STRAY_PARTIAL.test(pending))) break; // wait for more text
       keep("[");
       pending = pending.slice(1);
     }

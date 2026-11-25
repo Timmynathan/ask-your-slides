@@ -24,6 +24,15 @@ describe("citation filter", () => {
     }
   });
 
+  it("drops a made-up marker but keeps [[not-covered]] and ordinary brackets, however the stream splits it", () => {
+    const text = "[[not-covered]]\nThe Supreme Court decided it in 1961. [[nothing cited here]] Obi lost [1] the case. [[s:MCM405-04-5]]";
+    for (let size = 1; size <= 9; size++) {
+      const chunks = text.match(new RegExp(`[\\s\\S]{1,${size}}`, "g"))!;
+      const r = run(chunks, ["MCM405-04-5"]);
+      expect(r.text).toBe("[[not-covered]]\nThe Supreme Court decided it in 1961. Obi lost [1] the case. [[s:MCM405-04-5]]");
+    }
+  });
+
   it("keeps valid markers and drops invalid ones", () => {
     const r = run(["Indexes speed up reads. [[s:CSC420-02-21]] Made up. [[s:CSC420-99-1]]"], ["CSC420-02-21"]);
     expect(r.text).toBe("Indexes speed up reads. [[s:CSC420-02-21]] Made up. ");

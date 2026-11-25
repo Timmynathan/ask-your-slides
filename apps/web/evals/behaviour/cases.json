@@ -250,7 +250,7 @@
   },
   {
     "id": "practice-counts",
-    "what": "practice questions with answers: a 'name the N…' question uses the number the slide lists (it once said four properties of natural law; the slide has three)",
+    "what": "practice questions with answers: a 'name the N\u2026' question uses the number the slide lists (it once said four properties of natural law; the slide has three)",
     "programme": "computer-science",
     "level": 100,
     "course": "IOH-INTRODUCTION-CHRISTIAN-THEOLOGY",
@@ -429,5 +429,117 @@
     "mustNot": [
       "(?:^|\\n)\\s*\\*\\*Slide \\d+"
     ]
+  },
+  {
+    "id": "named-topic-read-in-full",
+    "what": "In the whole-course chat, 'talk to me about <one lecture>' reads that lecture in full and covers its core (Barakah's sedition answer missed the deck's first two slides)",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "history": [
+      {
+        "role": "user",
+        "content": "tell me everything on Obscenity and Indecency law"
+      },
+      {
+        "role": "assistant",
+        "content": "Tolu, obscenity and indecency law is about what the Nigerian legal system lets people publish, broadcast or share. The core idea is that obscene material is the most serious category, indecent material is offensive to public decency, and harmful material puts minors or public morality at risk. [[s:ISM413-09-1]] [[s:ISM413-09-2]]\n\n**1. Definitions**\n\nMaterial is **obscene** if its dominant effect, taken as a whole, \"is to deprave or corrupt those likely to see, read or hear it.\" This comes from the Hicklin Test (R v. Hicklin, 1868), which still influences Nigerian reasoning. [[s:ISM413-09-1]] Examples include graphic sexual content made for arousal, explicit sexual acts, child sexual content and pornographic films or magazines. [[s:ISM413-09-1]]\n\n**Indecent** material is content that is immoral, lewd or offensive to public decency, even if it is not obscene. The test is broader: would a reasonable, right-thinking member of society consider it indecent? Examples are semi-nude images, vulgar sexual jokes, lewd music videos and suggestive adverts. [[s:ISM413-09-2]]\n\n**Harmful** material is detrimental to minors or public morality, including violence, drugs and sexual exploitation. Examples are depictions of self-harm, instructions on criminal behaviour, violent pornography and content glamourising drug use. [[s:ISM413-09-2]]\n\n**2. Legal framework in Nigeria**\n\n- **Criminal Code (South), ss. 233\u2013236:** criminalises selling, distributing or publicly exhibiting obscene material, importing it, exposing it to children, and keeping a place for distributing it. Penalties are a fine and/or imprisonment. [[s:ISM413-09-2]]\n- **Penal Code (North), ss. 285\u2013287:** covers the sale, distribution, possession for commercial purposes and exhibition of obscene books and drawings. [[s:ISM413-09-3]]\n- **Cybercrimes Act 2015, s. 23:** prohibits distributing sexual material intended to cause emotional harm, and criminalises digital obscenity involving minors. [[s:ISM413-09-3]]\n- **Child Rights Act 2003 and VAPP Act 2015:** prohibit child pornography, exposing minors to harmful sexual or violent material, and exploiting children in media, films and adverts. [[s:ISM413-09-3]]\n- **Nigerian Broadcasting Code (NBC Code):** TV and radio must avoid obscene, indecent, profane or vulgar content. A watershed period of 10pm to 5am applies, and adverts must not sexualise children, contain explicit sexual content, show nudity or encourage immorality. [[s:ISM413-09-3]]\n- **National Film and Video Censors Board (NFVCB Act):** the Board may refuse classification for films that are indecent, obscene, harmful to children or against the public interest. [[s:ISM413-09-4]]\n\n**3. Elements of the offence**\n\nTo establish obscenity, the prosecution must show that the material is obscene (dominant effect is to deprave or corrupt), that publication occurred (including online uploads), that the accused knew the nature of the content, and that they intended to distribute, display or share it. Indecent or harmful publication has a lower threshold: the content only needs to offend public morality or endanger minors. [[s:ISM413-09-4]]\n\nLikely defences include public good (medical, scientific or artistic value), lack of knowledge that the content was obscene, accidental or technical upload error, no intent to publish, and the material not being obscene when judged as a whole. [[s:ISM413-09-4]]\n\n**4. Penalties**\n\nPenalties include imprisonment (up to 3 years for some offences), fines, seizure of devices, deletion orders, suspension of broadcasting licences, platform takedown orders and delisting of adverts or films from registration. [[s:ISM413-09-5]]\n\n**5. Key cases**\n\n- **R v. Hicklin (1868):** the classic definition of obscenity, based on whether the material tends to deprave or corrupt those exposed to it. [[s:ISM413-09-5]]\n- **DPP v. Whyte (1972):** the effect on the most vulnerable audience is the key test. [[s:ISM413-09-5]]\n- **Awofeso v. Commissioner of Police:** indecency and obscenity are judged by community moral standards. [[s:ISM413-09-5]]\n- **R v. Stanley (1965, US, persuasive only):** recognises limits on state regulation of private viewing, relevant to online content that is consumed privately but distributed publicly. [[s:ISM413-09-5]]\n\n**6. Digital context and scenarios**\n\nSocial media uploads count as \"publication.\" [[s:ISM413-09-7]] In the class scenarios, an influencer's bikini dance videos raise the question of whether content is obscene or merely indecent, a WhatsApp group can make both the poster and the group admin liable for pornographic memes, and a music video with nudity can attract NBC action such as fines, suspension or restrictions. [[s:ISM413-09-7]]\n\n<general>\n**The big idea in one sentence:** the law sorts content by how strongly it offends or harms. Obscene is the most serious, indecent is a lower threshold based on public decency, and harmful content is judged by its risk to children and public morality.\n\n**A simple way to remember the three categories:** think of a ladder. At the top is obscene (corrupts people), in the middle is indecent (offends decency), and at the base is harmful (could hurt children or society). The lower you go, the less the prosecution has to prove about the effect on viewers.\n\n**The tests in plain words:** Hicklin asks about the likely effect on the most easily corrupted viewer. Community standards asks what reasonable, right-thinking people would find acceptable. Both matter because a court must decide whether the material is truly corrupting, or simply offensive to ordinary decency.\n\n**Exam tip:** when a scenario is given, first classify the content (obscene, indecent or harmful), then list the offence elements and the likely defences, and finish with the penalty or regulator involved (court, NBC or NFVCB). Cite a case for the test you apply.\n\n**Quick check:** an online comedian posts a sketch with crude sexual jokes but no explicit images, aimed at adults. Would you classify it as obscene or indecent, and why? Tell me what you think.\n</general>"
+      }
+    ],
+    "question": "talk to me about LAW OF SEDITION IN MEDIA",
+    "must": [
+      "\\[\\[s:ISM413-16-1\\]\\]",
+      "\\[\\[s:ISM413-16-2\\]\\]",
+      "seditious intention",
+      "[Gg]ood[- ]faith",
+      "(2|two) years"
+    ],
+    "mustNot": []
+  },
+  {
+    "id": "topic-explained-as-it-goes",
+    "what": "'Tell me everything on X' teaches each part where it appears (several explanation blocks), not the slides retold with one explanation at the end",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "question": "tell me everything on Obscenity and Indecency law",
+    "must": [
+      "(<general>[\\s\\S]*?</general>[\\s\\S]*?){4}",
+      "Hicklin",
+      "\\[\\[s:ISM413-09-7\\]\\]"
+    ],
+    "mustNot": []
+  },
+  {
+    "id": "cases-background",
+    "what": "Asked for more on the important cases, it covers all four the slide lists with real background (court, facts) beyond the slide's one line, and never calls the slide wrong",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "topic": "Obscenity and indecency law",
+    "question": "could you give me more information on the important cases",
+    "must": [
+      "Hicklin",
+      "Whyte",
+      "(Cockburn|Confessional|pamphlet|Protestant|Wolverhampton|Queen's Bench)",
+      "(bookshop|bookseller|Obscene Publications Act|1959|House of Lords)",
+      "Awofeso",
+      "Stanley"
+    ],
+    "mustNot": [
+      "(slide|slides) (is|are|was|were) (wrong|incorrect|mistaken)",
+      "simplification"
+    ]
+  },
+  {
+    "id": "case-chike-obi",
+    "what": "A named Nigerian case gets its background (who, what happened, which court) as well as the slides' points",
+    "programme": "mass-communication",
+    "level": 400,
+    "course": "MCM405",
+    "question": "Tell me about chike obi case",
+    "must": [
+      "\\[\\[s:MCM405-",
+      "pamphlet",
+      "(Supreme Court|1961|1962)"
+    ],
+    "mustNot": [
+      "(slide|slides) (is|are|was|were) (wrong|incorrect|mistaken)"
+    ]
+  },
+  {
+    "id": "summary-keeps-main-ideas",
+    "what": "A summary of a big lecture (25 slides) is short but names every main idea: libel, slander, innuendo, the defences, remedies, criminal defamation",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "topic": "Law of defamation",
+    "question": "Summarize the topic \"Law of defamation\".",
+    "must": [
+      "[Ll]ibel",
+      "[Ss]lander",
+      "[Ii]nnuendo",
+      "([Jj]ustification|[Tt]ruth)",
+      "[Ff]air comment",
+      "[Pp]rivilege",
+      "[Ii]nnocent dissemination",
+      "([Dd]amages|[Rr]emed)",
+      "[Cc]riminal"
+    ],
+    "mustNot": [
+      "(?:^|\\n)\\s*\\*\\*Slide \\d+"
+    ]
+  },
+  {
+    "id": "not-a-case-question",
+    "what": "An ordinary law question (no case asked about) is answered from the slides without a web search",
+    "programme": "information-science-and-media-studies",
+    "level": 400,
+    "course": "ISM413",
+    "question": "What is the difference between libel and slander?",
+    "must": [
+      "\\[\\[s:ISM413-07-"
+    ],
+    "mustNot": []
   }
 ]

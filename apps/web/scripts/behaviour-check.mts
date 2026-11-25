@@ -52,6 +52,9 @@ interface Result {
   cost: number;
   prompt: string | null;
   answer: string;
+  /** With --save: the trace's warnings and what the bot read, for before/after measurements. */
+  errors?: { code: string; detail?: string }[];
+  tools?: { name: string; input: unknown; slide_keys?: string[] }[];
 }
 const broken = (c: Case, why: string): Result => ({ id: c.id, what: c.what, pass: false, fails: [`could not run: ${why}`], warnings: [], secs: 0, cost: 0, prompt: null, answer: "" });
 
@@ -88,14 +91,14 @@ async function run(c: Case): Promise<Result> {
     const t0 = Date.now();
     const r = await fetch(`${BASE}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json", cookie }, body: JSON.stringify({ conversation_id: conv.id, message: c.question, ...(c.focus ? { focus_slide: c.focus } : {}) }) });
     const body = await r.text();
-    let tr: { output_text: string | null; cost_usd: number | null; errors: { code: string }[] | null; prompt_version?: string | null } | null = null;
+    let tr: { output_text: string | null; cost_usd: number | null; errors: { code: string }[] | null; prompt_version?: string | null; tool_calls?: Result["tools"] | null } | null = null;
     for (let i = 0; i < 15 && !tr; i++) {
       await new Promise((done) => setTimeout(done, 1000)); // the trace is written after the stream ends
-      tr = (await db.from("traces").select("output_text, cost_usd, errors, prompt_version").eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle()).data;
+      tr = (await db.from("traces").select("output_text, cost_usd, errors, prompt_version, tool_calls").eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(1).maybeSingle()).data;
     }
     const answer = tr?.output_text ?? "";
     const { fails, warnings } = judge({ answer, httpOk: r.ok, body, errors: tr?.errors ?? [], must: c.must, mustNot: c.mustNot });
-    return { id: c.id, what: c.what, pass: !fails.length, fails, warnings, secs: Math.round((Date.now() - t0) / 1000), cost: Number(tr?.cost_usd ?? 0), prompt: tr?.prompt_version ?? null, answer };
+    return { id: c.id, what: c.what, pass: !fails.length, fails, warnings, secs: Math.round((Date.now() - t0) / 1000), cost: Number(tr?.cost_usd ?? 0), prompt: tr?.prompt_version ?? null, answer, errors: tr?.errors ?? [], tools: (tr?.tool_calls ?? []).map((t) => ({ name: t.name, input: t.input, slide_keys: t.slide_keys })) };
   } finally {
     if (userId) await db.auth.admin.deleteUser(userId);
   }
@@ -110,7 +113,9 @@ let failed = 0;
 for (const r of results) {
   if (saveTo) {
     mkdirSync(saveTo, { recursive: true });
-    writeFileSync(path.join(saveTo, `${r.id}-${Date.now()}.md`), `# ${r.id} (${r.pass ? "PASS" : "FAIL"}${r.fails.length ? `: ${r.fails.join("; ")}` : ""})\n\n${r.answer}\n`);
+    const stamp = Date.now();
+    writeFileSync(path.join(saveTo, `${r.id}-${stamp}.md`), `# ${r.id} (${r.pass ? "PASS" : "FAIL"}${r.fails.length ? `: ${r.fails.join("; ")}` : ""})\n\n${r.answer}\n`);
+    writeFileSync(path.join(saveTo, `${r.id}-${stamp}.json`), JSON.stringify(r, null, 1));
   }
   cost += r.cost;
   if (!r.pass) failed++;

@@ -8,6 +8,7 @@ import { CORE_INSTRUCTIONS, TURN_REMINDER, chatContext, partnerContext } from ".
 import { buildTools, getMaterialPages, listTopics, materialKey, newContext, NO_MATCH_SIMILARITY, searchSlides, viewSlides, type AgentContext, type Citation } from "./tools";
 import { ASKS_VISUAL, pictureSlides } from "./slide-images";
 import { PROMPT_VERSION } from "./prompt-version";
+import { researchCases } from "./case-research";
 import { adminClient, must } from "@/lib/supabase/admin";
 import { parseSlideKey } from "@/lib/study/course-code";
 
@@ -34,6 +35,7 @@ const MISSED_CLASS_PAGES = 80; // pages read before "explain like I missed class
 const WEAK_MATCH = 0.42;
 // Claude Haiku 5.5, prompts <= 100K tokens (check the provider page before launch).
 const USD_PER_MTOK = { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 };
+
 
 export interface ChatTurn {
   userId: string;
@@ -200,6 +202,21 @@ const SUMMARY_WORDS = /\b(summar|overview|recap|outline of|go through|walk me th
 /** A maths question: solving, expanding, examples, or a question with numbers or symbols in it. */
 export function asksForWorking(message: string): boolean {
   return /\b(solve|calculat|comput|find|expand|example|work (it )?out|evaluat|differentiat|integrat|simplif|prove|coefficient|polar form|show me how|step by step)\w*/i.test(message) || /\d\s*[-+×x*/^=]\s*\d|[=^√∫]/.test(message);
+}
+
+/** A question about court cases: "the important cases", "Chike Obi case", "DPP v Whyte" (owner, 25 Nov 2026:
+ *  Alheri asked for more on her Media Law cases and got only the slides' one line per case). Not "in this
+ *  case", "case study", "use case" and the like. */
+export function asksAboutCases(message: string): boolean {
+  const m = message.replace(/\b(in|this|that|which|each|either|any|every|such|whatever|worst|best|base|use|test|edge|upper|lower|special|general|just in)\s+cases?\b/gi, " ").replace(/\bcases?[\s-]+stud(y|ies)\b/gi, " ");
+  return /\b(cases?|judge?ments?|rulings?|precedents?|case\s*law)\b/i.test(m) || /\b[a-z][\w.'&-]*\s+v\.?\s+[a-z][\w.'&-]*/i.test(m);
+}
+
+/** A broad ask about a whole topic ("tell me everything on X", "talk to me about X", "explain X"): in the
+ *  whole-course chat, a single named topic is then read in full (owner, 25 Nov 2026: Barakah's "talk to me
+ *  about LAW OF SEDITION" was answered from 8 search hits that missed the deck's core slides). */
+export function asksBroadly(message: string): boolean {
+  return /\b(everything|all about|talk (to me )?about|tell me about|teach|explain|go (through|over)|break (it |this )?down|walk me through|notes? on|cover|overview|summar\w*)\b/i.test(message);
 }
 
 /** "Explain … like I missed the class" (the topic button) or "I missed the lecture on …". */
@@ -723,9 +740,11 @@ export async function runChatTurn(turn: ChatTurn) {
     : null;
   // "Summarize" (owner's answer review, 24 Nov 2026): one topic's summary came out as a 28-slide
   // walkthrough while two others were short themed summaries. A summary is always the short kind.
+  // Up to ~700 words for big lectures, and never by dropping a main idea (owner, 25 Nov 2026, after
+  // a student's feedback: "summarising shouldn't mean leaving out major concepts").
   const summaryNote =
     summaryAsked && !walkthrough && !missedClass && !asksForMemoryAids(turn.userMessage)
-      ? "The student asked for a summary. Keep it short (about one screen, roughly 300 to 500 words), grouped by theme under a few bold headings, not slide by slide. Cover every main idea of what they named, with citations; skip repeated slides and title, contact and reference slides. If they want more, they can ask for every slide."
+      ? "The student asked for a summary. Keep it short: about 300 to 500 words, or up to about 700 words for a big lecture (20 or more slides) or several topics. Group it by theme under a few bold headings, not slide by slide. Every main idea of what they named must appear, at least in a line, with citations: short means fewer words per idea, never leaving out a major concept, definition, list or case. Skip repeated slides and title, contact and reference slides. If they want more, they can ask for every slide."
       : null;
   // "Week 7" / "lecture 3" (owner's review, 21 Nov 2026: asked about week 7, the model taught week
   // 2's three-part test): find the file by its name, read it all, and say which one it is.
@@ -795,6 +814,7 @@ export async function runChatTurn(turn: ChatTurn) {
   }
   let splitNote: string | null = null;
   let topicNote: string | null = null;
+  let wholeTopicNamed = false; // a whole lecture named and read for a broad ask (whole-course chat)
   if (!preCalls.length && !chitChat) {
     const include = asksForOtherMaterial(turn.userMessage) ? { include: ["other" as const] } : {};
     // Numbered questions (a pasted paper): one search per question, so none is crowded out.
@@ -815,14 +835,24 @@ export async function runChatTurn(turn: ChatTurn) {
     // Other topics of the course named in the message ("the 7th, 8th and 9th commandments"): read them.
     const topics = must(await db.from("topics").select("id, title").eq("course_id", turn.courseId).order("topic_order")) as { id: string; title: string }[];
     // In a topic chat any other named topic counts (Anthony asked about the 7th–9th commandments inside
-    // the 6th commandment's chat); in the whole-course chat only two or more, since search finds one.
+    // the 6th commandment's chat); in the whole-course chat two or more, or one asked about broadly
+    // ("tell me everything on X"), since a search alone can miss the deck's core slides.
     const named = namedTopics(turn.userMessage, topics, turn.topicId ?? null).slice(0, MAX_NAMED_TOPICS);
-    if (named.length && (turn.topicId || named.length >= 2)) {
+    if (named.length && (turn.topicId || named.length >= 2 || asksBroadly(turn.userMessage))) {
       const mats = must(
         await db.from("materials").select("material_order, page_count, topic_id").eq("course_id", turn.courseId).in("topic_id", named.map((t) => t.id)).in("kind", ["slides", "notes"]).order("material_order"),
       ) as { material_order: number; page_count: number; topic_id: string }[];
       for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), NAMED_TOPIC_PAGES)) preCalls.push({ tool: getMaterialPages, input: r });
-      if (mats.length) topicNote = `The student names ${named.length === 1 ? "this topic" : "these topics"} of the course: ${named.map((t) => `"${t.title}"`).join(", ")}. ${named.length === 1 ? "Its" : "Their"} slides are given to you above: answer from them, with citations.`;
+      if (mats.length && !turn.topicId && asksBroadly(turn.userMessage)) wholeTopicNamed = true;
+      if (mats.length) topicNote = `The student names ${named.length === 1 ? "this topic" : "these topics"} of the course: ${named.map((t) => `"${t.title}"`).join(", ")}. ${named.length === 1 ? "Its" : "Their"} slides are given to you above: answer from them, with citations${asksBroadly(turn.userMessage) ? ", covering every main point (rule 8, topic explanations)" : ""}.`;
+    }
+    // A case question inside a lecture's chat ("more on the important cases"): that lecture is read first,
+    // so the cases looked up are the ones it lists (a search once returned another lecture's cases).
+    if (!named.length && turn.topicId && asksAboutCases(turn.userMessage)) {
+      const mats = must(
+        await db.from("materials").select("material_order, page_count").eq("course_id", turn.courseId).eq("topic_id", turn.topicId).in("kind", ["slides", "notes"]).order("material_order"),
+      ) as { material_order: number; page_count: number }[];
+      for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), NAMED_TOPIC_PAGES)) preCalls.push({ tool: getMaterialPages, input: r });
     }
   }
   const longAnswer = walkthrough || continuing;
@@ -936,8 +966,44 @@ export async function runChatTurn(turn: ChatTurn) {
     lookAgainNote =
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
   }
+  // A whole topic explained ("tell me everything on X"; owner, 25 Nov 2026, after a student's feedback: "it was
+  // basically repeating what was already written in my notes almost word for word"). The eval showed the
+  // rule alone gave one-line explanations after long retellings of the slides.
+  const wholeTopic =
+    !summaryNote && !walkthrough && !missedClass && !memoryAids &&
+    (wholeTopicNamed || (!!turn.topicId && /\b(everything|all about|(this|the) (whole )?(topic|lecture|note|deck)|whole topic)\b/i.test(turn.userMessage)));
+  const wholeTopicNote = wholeTopic
+    ? "The student wants this whole topic explained. Cover every main point of its slides in order, under short bold headings. For each point: first the slide's point briefly, in your own words (keep its terms, section numbers, case names and the items of its lists), with citations; then teach it in a <general> block: what it means in plain words, a concrete example (a Nigerian one when it fits), and why it matters or how to use it in an exam. The teaching should be at least as long as the slide part. Don't repeat the slides' sentences one by one, and don't save the explanation for the end."
+    : null;
+  // Court cases: the model may search the web for them (owner, 25 Nov 2026), with the slides kept as the
+  // main answer and any difference noted neutrally (rule 5).
+  const casesAsked = !chitChat && asksAboutCases(turn.userMessage);
+  let caseCost = 0;
+  let caseNote: string | null = null;
+  if (casesAsked) {
+    // The slides the answer will use, case-like ones first ("R v. Hicklin", "Nwankwo v. State", "case").
+    const slideLines = [...ctx.slideText].map(([key, text]) => `[${key}] ${text}`);
+    const caseLike = (t: string) => /\b\w+\s+v\.?\s+\w+|\bcases?\b/i.test(t);
+    const slides = [...slideLines.filter(caseLike), ...slideLines.filter((t) => !caseLike(t))].join("\n\n");
+    const t0 = Date.now();
+    const research = await researchCases(turn.userMessage, slides, previous ?? null, turn.topicTitle ?? null, turn.abortSignal);
+    caseCost = research?.cost ?? 0;
+    ctx.toolLog.push({
+      name: "case_research",
+      purpose: "Look up the court cases asked about on the web, before the answer",
+      input: { queries: research?.queries ?? [] },
+      status: research ? "ok" : "failed",
+      slide_keys: [],
+      latency_ms: Date.now() - t0,
+      ...(research ? { detail: { notes: research.notes } } : { error: "research call failed" }),
+    });
+    const rules = "Then, for each case: first what the slides say about it, in your own words, with citations; then a <general> block with the background from outside the slides. If a detail differs from the slide (a different year, court or country), follow rule 5: keep the slide's version as the main answer, then note the difference in these words: \"Some sources describe this differently: … Your slides present it as …; for the exam, follow your slides, and check with your lecturer if unsure.\" Never call the slide wrong, a simplification, incomplete or outdated. Cover every case the student asked about (for \"the important cases\", every case the slides list). Never write about searching, sources you checked or what you found (\"my search\", \"the search returned\"): say what is known, or that you couldn't confirm it.";
+    caseNote = research?.notes
+      ? `The student is asking about court cases. Background notes on them, looked up on the web before this reply, are below. Use only these notes for anything beyond the slides; where they say a detail is not confirmed, say "I couldn't confirm …" instead of stating it. ${rules}\n\nBackground notes (from the web, not the slides):\n${research.notes}`
+      : `The student is asking about court cases, and no reliable background on them could be found outside the slides. Answer from the slides, and for each case say in one line that you couldn't confirm more about it, rather than adding facts from memory. ${rules}`;
+  }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote, cases: caseNote, wholeTopic: wholeTopicNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -947,7 +1013,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, caseNote, wholeTopicNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
@@ -1051,7 +1117,7 @@ export async function runChatTurn(turn: ChatTurn) {
     const uncached = usage.inputTokenDetails?.noCacheTokens ?? Math.max(0, (usage.inputTokens ?? 0) - cacheRead - cacheWrite);
     const cost =
       (uncached * USD_PER_MTOK.input + cacheRead * USD_PER_MTOK.cacheRead + cacheWrite * USD_PER_MTOK.cacheWrite +
-        (usage.outputTokens ?? 0) * USD_PER_MTOK.output) / 1e6 + editorCost;
+        (usage.outputTokens ?? 0) * USD_PER_MTOK.output) / 1e6 + editorCost + caseCost;
 
     const traceRow = {
         message_id: messageId,
