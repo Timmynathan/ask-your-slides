@@ -487,6 +487,9 @@ export async function runChatTurn(turn: ChatTurn) {
   const summaryAsked = SUMMARY_WORDS.test(turn.userMessage);
 
   // Validates [[s:…]] markers in every text block before anything reaches the student.
+  // An answer that opens with the not-covered line cites no slide at all (live check, 25 Nov 2026: a Kubernetes
+  // answer in a finance course ended with a stretched "closest idea is diversification" and a citation).
+  let notCoveredAnswer = false;
   const citationTransform = () => {
     const filters = new Map<string, ReturnType<typeof createCitationFilter>>();
     const filterFor = (id: string) => {
@@ -495,8 +498,8 @@ export async function runChatTurn(turn: ChatTurn) {
         f = createCitationFilter({
           isAllowed: (k) => ctx.retrieved.has(k),
           // A loaded slide that clearly says nothing of the sentence is dropped (support.ts).
-          supports: (k, claim) => supportsClaim(claim, ctx.slideText.get(k)).ok,
-          onUnsupported: (k) => errors.push({ code: "citation_unsupported", detail: k }),
+          supports: (k, claim) => !notCoveredAnswer && supportsClaim(claim, ctx.slideText.get(k)).ok,
+          onUnsupported: (k) => errors.push({ code: notCoveredAnswer ? "citation_not_covered" : "citation_unsupported", detail: k }),
           onCited: (k) => cited.set(k, ctx.retrieved.get(k)!),
           onInvalid: (k) => {
             invalid.push(k);
@@ -593,6 +596,7 @@ export async function runChatTurn(turn: ChatTurn) {
           }
         }
       }
+      if (!output.trim() && text.startsWith(NOT_COVERED)) notCoveredAnswer = true;
       controller.enqueue(h.start);
       streamText_(controller, id, text);
       if (h.end) {
