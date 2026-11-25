@@ -59,7 +59,7 @@ export function applyDrop(text: string, drop: number): { text: string; dropped: 
 
 /** The tutor telling the student what it did ("so I've left it at the end", "I've read all 25 slides").
  *  A safety net after the editor, which keeps such a sentence when it also names a slide. */
-const SELF_REMARK = /\b(?:I've|I have|I'll|I will|I'm going to)\s+(?:now\s+|also\s+|just\s+)?(?:read|checked|left|put|moved|kept|skipped|gone|covered|included|ordered|placed|added|looked)\b/i;
+const SELF_REMARK = /\b(?:I've|I have|I'll|I will|I'm going to)\s+(?:now\s+|also\s+|just\s+)?(?:read|checked|left|put|moved|kept|skipped|gone|covered|included|ordered|placed|added|looked|go through|walk you through|take you through|start with|begin with)\b/i;
 
 /** Drops leading sentences that are only the tutor's remarks about its own reply (within the safe limit). */
 export function dropSelfRemarks(text: string): { text: string; dropped: string | null } {
@@ -71,11 +71,12 @@ export function dropSelfRemarks(text: string): { text: string; dropped: string |
   return { text: pieces.slice(n).join("").replace(/^\s+/, ""), dropped: pieces.slice(0, n).join("").trim() };
 }
 
-/** Asks the editor about the opening of an answer. Never throws: on any failure the text is kept. */
 /** The reply opens with a yes/no answer ("Yes, and…", "**No.**", "Hi Tolu, yes: …"). */
 export function startsWithVerdict(text: string): boolean {
   return /^\s*(?:[\p{L}'-]{2,20},\s*)?(?:\*\*)?(?:yes|no)\b/iu.test(text);
 }
+
+/** Asks the editor about the opening of an answer. Never throws: on any failure the text is kept. */
 
 export async function editOpening(text: string, question: string): Promise<{ text: string; dropped: string | null; cost: number }> {
   const pieces = openingPieces(text);
