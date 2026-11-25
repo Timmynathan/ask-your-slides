@@ -77,5 +77,6 @@ export const TABS = [
   { id: "feedback", label: "Feedback" },
   { id: "courses", label: "Courses" },
   { id: "health", label: "Health" },
+  { id: "emails", label: "Emails" },
 ] as const;
 export type Tab = (typeof TABS)[number]["id"];

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { EmailsPanel } from "@/components/admin/emails-panel";
 import { AdminDashboard } from "@/components/admin/dashboard";
 import { isAdminEmail, rangeStart, RANGES, type Overview, type Range } from "@/lib/admin";
 import { TABS, type DeviceStats, type RecommendStats, type Tab } from "@/lib/admin-shared";
@@ -59,7 +60,7 @@ async function Loaded({ searchParams }: Props) {
   // admin_overview lists every course in sort_order (unique), so its rows line up with this list.
   const departments = (courses.data ?? []) as { code: string; department: string }[];
   const withDepartments = overview.courses.map((c, i) => ({ ...c, department: departments[i]?.code === c.code ? departments[i].department : "Other" }));
-  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} devices={devices} recommend={recommend} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} />;
+  return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} devices={devices} recommend={recommend} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} emails={<EmailsPanel />} />;
 }
 
 /** "How did you hear about us?" answers from students who signed up in the period (asked since 20 Nov 2026). */

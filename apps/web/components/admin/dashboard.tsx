@@ -13,7 +13,7 @@ import { featureLabel } from "@/lib/feedback-features";
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
 import { RANGES, TABS, type DeviceStats, type Overview, type RecommendStats, type Range, type Tab } from "@/lib/admin-shared";
@@ -63,7 +63,7 @@ function downloadCsv(name: string, rows: Record<string, unknown>[]) {
 
 export type CourseRow = Overview["courses"][number] & { department: string };
 
-export function AdminDashboard({ data, courses, plans, heardFrom, devices, recommend, appFeedback, range, tab: initialTab, email }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; devices: DeviceStats; recommend: RecommendStats; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string }) {
+export function AdminDashboard({ data, courses, plans, heardFrom, devices, recommend, appFeedback, range, tab: initialTab, email, emails }: { data: Overview; courses: CourseRow[]; plans: PlanStats; heardFrom: { label: string; n: number }[]; devices: DeviceStats; recommend: RecommendStats; appFeedback: AppFeedbackRow[]; range: Range; tab: Tab; email: string; emails: ReactNode }) {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -105,9 +105,6 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
             </Link>
             <Link href="/admin/promo" className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken">
               Promo codes
-            </Link>
-            <Link href="/admin/emails" className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken">
-              Emails
             </Link>
             <button
               type="button"
@@ -246,6 +243,12 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
         {tab === "answers" && (
           <div role="tabpanel" id="panel-answers" aria-labelledby="tab-answers">
             <Answers range={range} />
+          </div>
+        )}
+
+        {tab === "emails" && (
+          <div role="tabpanel" id="panel-emails" aria-labelledby="tab-emails">
+            {emails}
           </div>
         )}
 
