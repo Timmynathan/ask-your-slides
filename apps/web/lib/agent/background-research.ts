@@ -22,14 +22,20 @@ const RESEARCH_TIMEOUT_MS = 30_000;
 const cost = (usage: { inputTokens?: number; outputTokens?: number }, searches = 0) =>
   ((usage.inputTokens ?? 0) * USD_PER_MTOK.input + (usage.outputTokens ?? 0) * USD_PER_MTOK.output) / 1e6 + searches * USD_PER_WEB_SEARCH;
 
-const DECIDE = `You help a study app for university students in Nigeria decide one thing: does a good reply to the student's latest message need facts from outside their lecture slides about specific named things, such as court cases, laws and statutes, people, organisations, events, treaties, reports or historical episodes?
+const DECIDE = `You help a study app for university students in Nigeria decide two things about the student's latest message.
+
+1. wellbeing: does it suggest the student may be in danger or serious distress (thoughts of ending their life or harming themselves, abuse or assault, feeling unsafe, a crisis)? Ordinary exam stress, tiredness or frustration ("I'm so stressed", "I'm going to fail", "this course is killing me") is not this.
+
+2. lookup: does a good reply to the student's latest message need facts from outside their lecture slides about specific named things, such as court cases, laws and statutes, people, organisations, events, treaties, reports or historical episodes?
 
 Answer yes when the student wants to know more about such a thing than lecture slides usually give: what happened in it, who was involved, when, what was decided or enacted, what a law contains or how it came about, its background or consequences ("tell me more about Hicklin", "the important cases", "what does the Cybercrimes Act do", "tell me more about the NBC Code", "who was on the MacBride Commission"). Always yes when they ask for more than, or beyond, what their slides say about a named thing. Use the previous reply for what "it", "that case" or "the second one" refers to.
 Answer no for ideas, definitions, theories, processes and calculations a tutor explains from knowledge; for questions about what the slides themselves say; for explaining a whole topic or lecture ("tell me everything on X", "talk to me about X", "explain like I missed class"), summaries, overviews, quizzes, practice questions, "explain every slide", and small talk or questions about the app: the student can ask about a particular case or law afterwards.
 
-Reply with JSON only: {"lookup": true or false, "about": "what the student is asking about, in their own terms, or empty"}. In "about", never add names or examples the student and the previous reply didn't mention: for "the important cases", write "the important cases in this lecture's slides".`;
+Reply with JSON only: {"wellbeing": true or false, "lookup": true or false, "about": "what the student is asking about, in their own terms, or empty"}. In "about", never add names or examples the student and the previous reply didn't mention: for "the important cases", write "the important cases in this lecture's slides".`;
 
 export interface LookupDecision {
+  /** The student may be in danger or serious distress (prompt rule 18; owner, 25 Nov 2026). */
+  wellbeing: boolean;
   lookup: boolean;
   about: string;
   cost: number;
@@ -50,10 +56,10 @@ export async function decideLookup(message: string, previousAnswer: string | nul
       abortSignal: abortSignal ? AbortSignal.any([abortSignal, AbortSignal.timeout(DECIDE_TIMEOUT_MS)]) : AbortSignal.timeout(DECIDE_TIMEOUT_MS),
       providerOptions: { anthropic: { thinking: { type: "disabled" } } },
     });
-    const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { lookup?: unknown; about?: unknown };
-    return { lookup: json.lookup === true, about: typeof json.about === "string" ? json.about.slice(0, 200) : "", cost: cost(usage) };
+    const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { wellbeing?: unknown; lookup?: unknown; about?: unknown };
+    return { wellbeing: json.wellbeing === true, lookup: json.lookup === true, about: typeof json.about === "string" ? json.about.slice(0, 200) : "", cost: cost(usage) };
   } catch {
-    return { lookup: false, about: "", cost: 0 };
+    return { wellbeing: false, lookup: false, about: "", cost: 0 };
   }
 }
 

@@ -612,8 +612,10 @@ function Answers({ range }: { range: Range }) {
                     </span>
                   ))}
                   {(() => {
-                    const { problems, fixes } = splitErrors(r.errors);
-                    return problems.length > 0 ? (
+                    const { problems, flags, fixes } = splitErrors(r.errors);
+                    return flags.length > 0 ? (
+                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-900 dark:bg-rose-950 dark:text-rose-200" title="The student may be in distress: read this one">Wellbeing</span>
+                    ) : problems.length > 0 ? (
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-800">{problems.length} problem{problems.length > 1 ? "s" : ""}</span>
                     ) : fixes > 0 ? (
                       <span className="rounded-full bg-sunken px-2 py-0.5 text-xs text-muted" title="Fixed before the student saw the answer">{fixes} fixed</span>
@@ -631,8 +633,8 @@ function Answers({ range }: { range: Range }) {
                   {r.errors.length > 0 && (
                     <ul className="space-y-1 rounded-xl bg-page px-3 py-2 text-xs">
                       {r.errors.map((e, i) => (
-                        <li key={i} className={errorInfo(e.code).problem ? "text-red-800" : "text-muted"}>
-                          <span className="font-medium">{errorInfo(e.code).problem ? "Problem: " : "Fixed: "}{errorInfo(e.code).label}</span>
+                        <li key={i} className={errorInfo(e.code).problem ? "text-red-800" : errorInfo(e.code).flag ? "text-rose-900 dark:text-rose-200" : "text-muted"}>
+                          <span className="font-medium">{errorInfo(e.code).flag ? "" : errorInfo(e.code).problem ? "Problem: " : "Fixed: "}{errorInfo(e.code).label}</span>
                           {e.detail ? <span className="text-muted"> · {e.detail}</span> : null}
                         </li>
                       ))}

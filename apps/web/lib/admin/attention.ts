@@ -19,6 +19,8 @@ export interface AttentionInput {
 
 export function attentionReasons(r: AttentionInput): string[] {
   const reasons: string[] = [];
+  // First: a student who may be in distress (prompt rule 18; owner, 25 Nov 2026).
+  if ((r.errors ?? []).some((e) => e.code === "wellbeing")) reasons.push("Wellbeing: student may be in distress");
   if (r.rating === -1) reasons.push("Thumbs down");
   if ((r.output_text ?? "").trimStart().startsWith(NOT_COVERED)) reasons.push("Not covered by the slides");
   const firstSearch = (r.tool_calls ?? []).find((t) => t.name === "search_slides");

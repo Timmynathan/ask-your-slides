@@ -88,6 +88,12 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   4,000 tokens (five explained practice answers were cut short at 2,000). The opening editor never trims a reply
   that opens "Yes"/"No" (it once dropped the yes of a yes-first answer).
 
+- Wellbeing (25 Nov 2026): the decision call (background-research.ts decideLookup) also judges whether the student
+  may be in danger or serious distress; if so, prompt rule 18 + a turn note give a caring reply with only the contacts
+  in lib/agent/wellbeing.ts (PAU counselling via Student Affairs, 112, someone nearby; add PAU's exact contact there),
+  the opening is never trimmed, and the trace is logged `wellbeing` (admin: rose "Wellbeing" pill, first in Needs
+  attention). Ordinary exam stress gets one warm line and normal help.
+
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.
 - Supabase: Auth (email OTP, @pau.edu.ng only, custom SMTP via Resend from noreply@mail.askyourslides.com),

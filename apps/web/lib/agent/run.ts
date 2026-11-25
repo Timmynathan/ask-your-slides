@@ -585,7 +585,9 @@ export async function runChatTurn(turn: ChatTurn) {
       if (!h) return;
       held.delete(id);
       let text = h.raw;
-      if (!output.trim()) {
+      // A wellbeing reply (prompt rule 18): its first words stay exactly as written (the apology trim and the
+      // opening editor could cut "Thank you for telling me…" as filler).
+      if (!output.trim() && !careTurn) {
         // The answer's first words: no apology or comment on an earlier answer (rule 14), the exact rule
         // 4 line for the tag, then the opening editor (opening-editor.ts) takes out planning, search talk
         // and filler the phrase filters don't know. Not for greetings or the fixed not-covered line.
@@ -894,7 +896,9 @@ export async function runChatTurn(turn: ChatTurn) {
   // Does this answer need facts from outside the slides (a case, law, person, event)? A small model call
   // decides, alongside the first search (background-research.ts). Not for replies the previous answer
   // explains (a quiz answer, a picked item, "keep going") or small talk.
-  const decision = !chitChat && !continuing && !picked && !answering && !walkthrough
+  // The same call says whether the student may be in danger or serious distress (prompt rule 18): it runs for
+  // every new message, even a short reply or small talk, since a crisis can come at any point in a chat.
+  const decision = !continuing && !picked
     ? decideLookup(turn.userMessage, previous ?? null, turn.topicTitle ?? null, turn.courseTitle, turn.abortSignal)
     : null;
   const logStart = ctx.toolLog.length;
@@ -981,7 +985,12 @@ export async function runChatTurn(turn: ChatTurn) {
     lookupCost += decided.cost;
     ctx.toolLog.push({ name: "lookup_decision", purpose: "Decide whether the answer needs facts from outside the slides", input: {}, status: "ok", slide_keys: [], latency_ms: 0, detail: { lookup: decided.lookup, about: decided.about, cost_usd: decided.cost } });
   }
-  if (decided?.lookup) {
+  const careTurn = !!decided?.wellbeing;
+  const careNote = careTurn
+    ? "This student may be in danger or serious distress. Follow rule 18 for this reply: put them first, with care and the support contacts it lists; no slides, citations or study content unless they ask."
+    : null;
+  if (careTurn) errors.push({ code: "wellbeing", detail: turn.userMessage.slice(0, 120) });
+  if (decided?.lookup && !careTurn && !chitChat && !answering && !walkthrough) {
     const used = await lookupsToday(db).catch(() => LOOKUPS_PER_DAY);
     if (used >= LOOKUPS_PER_DAY) {
       backgroundNote = "The student wants background beyond the slides (on a case, law, person or event), but outside lookups are paused for today. Answer from the slides; for anything beyond them, say in a line that you couldn't confirm more details, rather than adding facts from memory.";
@@ -1023,7 +1032,7 @@ export async function runChatTurn(turn: ChatTurn) {
     }
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote, wholeTopic: wholeTopicNote, background: backgroundNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote, wholeTopic: wholeTopicNote, background: backgroundNote, care: careNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -1033,7 +1042,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, wholeTopicNote, backgroundNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, wholeTopicNote, backgroundNote, careNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,
