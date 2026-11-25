@@ -4,7 +4,7 @@
 // opens the course's study workspace. Tabs (all / recently studied), search, sort, and a grid/list
 // toggle (remembered per browser). The course list is data: new courses and departments just appear.
 import Link from "next/link";
-import { Crown } from "lucide-react";
+import { Crown, Flame } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Logo, LogoMark } from "@/components/brand/logo";
@@ -147,6 +147,19 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
               <path d="M3 5h14M3 10h14M3 15h14" />
             </ViewButton>
           </div>
+          {/* The study streak beside Upgrade (owner, 25 Nov 2026); opens the leaderboard. Just the number on phones. */}
+          <Link
+            href="/leaderboard"
+            title={streak.days === 0 ? "Ask one question today to start a streak" : streak.today ? `${streak.days} day streak. You studied today.` : `${streak.days} day streak. Ask a question today to keep it going.`}
+            aria-label={streak.days === 0 ? "No streak yet. View leaderboard" : `${streak.days} day streak. View leaderboard`}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-sunken px-3 text-[14px] font-semibold text-ink transition hover:bg-black/10 active:scale-95 dark:hover:bg-white/10 sm:px-3.5"
+          >
+            <Flame size={17} absoluteStrokeWidth strokeWidth={1.6} className={streak.days > 0 ? "text-orange-500" : "text-muted"} aria-hidden />
+            <span>
+              {streak.days}
+              <span className="hidden sm:inline"> {streak.days === 1 ? "day" : "days"}</span>
+            </span>
+          </Link>
           {/* Always in view (owner, 20 Nov 2026): Upgrade for Free students in its own bright aqua (#BBEEF0), a quiet badge on Finals. */}
           {onFinals ? (
             // A premium crown instead of a text badge (owner, 22 Nov 2026), on phones too.
