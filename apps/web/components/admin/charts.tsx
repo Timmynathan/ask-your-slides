@@ -26,16 +26,17 @@ export function ColumnChart({
   label: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
-  const W = 640;
-  const H = 180;
-  const pad = { l: 44, r: 8, t: 10, b: 22 };
+  // Drawn about the size it shows in a card, so the axis labels stay readable (at 640 wide they shrank to ~6px).
+  const W = 420;
+  const H = 210;
+  const pad = { l: 46, r: 6, t: 12, b: 26 };
   const iw = W - pad.l - pad.r;
   const ih = H - pad.t - pad.b;
   const max = niceMax(Math.max(0, ...points.map((p) => p.y)));
   const band = iw / Math.max(points.length, 1);
-  const bw = Math.max(2, Math.min(24, band - 2));
+  const bw = Math.max(2, Math.min(18, band - 3));
   const ticks = [0, max / 2, max];
-  const every = Math.ceil(points.length / 8); // x labels: at most ~8
+  const every = Math.ceil(points.length / 5); // x labels: at most ~5
   const h = hover !== null ? points[hover] : null;
 
   return (
@@ -46,7 +47,7 @@ export function ColumnChart({
           return (
             <g key={t}>
               <line x1={pad.l} x2={W - pad.r} y1={y} y2={y} stroke="currentColor" className="text-line" strokeWidth={1} />
-              <text x={pad.l - 8} y={y + 4} textAnchor="end" className="fill-muted text-[11px]">
+              <text x={pad.l - 8} y={y + 4} textAnchor="end" className="fill-muted text-[12px] tabular-nums">
                 {format(t)}
               </text>
             </g>
@@ -67,7 +68,7 @@ export function ColumnChart({
                 />
               )}
               {i % every === 0 && (
-                <text x={pad.l + i * band + band / 2} y={H - 6} textAnchor="middle" className="fill-muted text-[10.5px]">
+                <text x={pad.l + i * band + band / 2} y={H - 7} textAnchor="middle" className="fill-muted text-[12px]">
                   {p.x}
                 </text>
               )}
@@ -105,16 +106,17 @@ export function BarList({ rows, format = (v) => String(v) }: { rows: { label: st
   const max = Math.max(1, ...rows.map((r) => r.n));
   if (rows.length === 0) return <p className="text-sm text-muted">Nothing yet.</p>;
   return (
-    <ul className="space-y-2.5">
+    // Label and number on one line, the bar under them on a pale track: long labels are never cut off.
+    <ul className="space-y-3">
       {rows.map((r) => (
-        <li key={r.label} className="grid grid-cols-[minmax(0,9rem)_1fr] items-center gap-3 text-sm">
-          <span className="truncate text-ink" title={r.label}>
-            {r.label}
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 rounded-r-[4px]" style={{ width: `${(r.n / max) * 85}%`, minWidth: r.n ? 3 : 0, background: NAVY }} />
-            <span className="tabular-nums text-muted">{format(r.n)}</span>
-          </span>
+        <li key={r.label} className="text-[14px]">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 text-ink">{r.label}</span>
+            <span className="shrink-0 font-semibold tabular-nums text-ink">{format(r.n)}</span>
+          </div>
+          <div className="mt-1.5 h-2 rounded-full bg-pau-50">
+            <div className="h-2 rounded-full" style={{ width: `${(r.n / max) * 100}%`, minWidth: r.n ? 4 : 0, background: NAVY }} />
+          </div>
         </li>
       ))}
     </ul>

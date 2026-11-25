@@ -47,8 +47,8 @@ export async function EmailsPanel() {
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-[20px] font-normal tracking-tight text-ink">Emails</h2>
-        <p className="mt-1 text-sm text-muted">
+        <h2 className="font-heading text-[24px] font-medium tracking-tight text-ink">Emails</h2>
+        <p className="mt-1 text-[14px] text-muted">
           Update emails go out every hour from the queue: students on Finals first, then the most recently active. Sign-in codes are counted here once the Supabase email hook is switched on.
         </p>
       </div>
@@ -62,7 +62,7 @@ export async function EmailsPanel() {
       </div>
 
       <section>
-        <h3 className="text-lg font-medium">Sent, by email</h3>
+        <h3 className="text-[17px] font-semibold">Sent, by email</h3>
         <div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-line">
           <table className="w-full text-left text-sm">
             <thead className="bg-tint text-muted">
@@ -83,7 +83,7 @@ export async function EmailsPanel() {
       </section>
 
       <section>
-        <h3 className="text-lg font-medium">Latest emails sent</h3>
+        <h3 className="text-[17px] font-semibold">Latest emails sent</h3>
         {(recent.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nothing sent yet.</p>
         ) : (
@@ -110,7 +110,7 @@ export async function EmailsPanel() {
       <EmailControls courses={(courses.data ?? []) as { id: string; code: string; title: string; programme: string }[]} />
 
       <section>
-        <h3 className="text-lg font-medium">Queue (latest 100)</h3>
+        <h3 className="text-[17px] font-semibold">Queue (latest 100)</h3>
         {(queue.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nothing queued yet.</p>
         ) : (
@@ -141,8 +141,8 @@ export async function EmailsPanel() {
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-2xl bg-card p-4 ring-1 ring-line">
-      <p className="text-[13px] text-muted">{label}</p>
-      <p className="mt-1 text-2xl tabular-nums">{value}</p>
+      <p className="text-[14px] font-medium text-muted">{label}</p>
+      <p className="mt-2 text-[30px] font-semibold leading-none tracking-tight tabular-nums text-ink">{value}</p>
     </div>
   );
 }

@@ -8,7 +8,7 @@
 //   Health: error codes, slowest and most expensive answers.
 // Read-only. Data: public.admin_overview() via the server. The tab is kept in the URL (?tab=).
 import { errorInfo, splitErrors } from "@/lib/admin/error-codes";
-import { Download, ThumbsDown, ThumbsUp } from "lucide-react";
+import { Activity, AlertTriangle, Coins, Crown, Download, Gauge, HeartHandshake, MessageSquare, Repeat, Smile, ThumbsDown, ThumbsUp, Timer, Users, Wallet, type LucideIcon } from "lucide-react";
 import { featureLabel } from "@/lib/feedback-features";
 import type { PlanStats } from "@/lib/plans/admin-stats";
 import Link from "next/link";
@@ -26,7 +26,8 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short
 const n = (v: number | null | undefined) => (v ?? 0).toLocaleString("en-GB");
 const usd = (v: number | null | undefined) => {
   const x = Number(v ?? 0);
-  return x === 0 ? "$0" : x < 0.01 ? `$${x.toFixed(4)}` : x < 10 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`;
+  // Two decimals from $1 up ("$4.970" read as four thousand); more only for fractions of a cent.
+  return x === 0 ? "$0" : x < 0.01 ? `$${x.toFixed(4)}` : x < 1 ? `$${x.toFixed(3)}` : `$${x.toFixed(2)}`;
 };
 const secs = (ms: number | null | undefined) => (ms == null ? "—" : `${(ms / 1000).toFixed(1)} s`);
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((100 * a) / b)}%` : "—");
@@ -83,10 +84,10 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
     <div className="min-h-dvh bg-page text-ink">
       <header className="sticky top-0 z-20 bg-page/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:px-6">
-          <Link href="/dashboard" aria-label="My courses">
+          <Link href="/dashboard" aria-label="My courses" className="shrink-0 whitespace-nowrap">
             <Logo size={24} />
           </Link>
-          <span className="text-[14px] text-muted">Admin</span>
+          <span className="hidden rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-brand-ink sm:inline">Admin</span>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden rounded-full bg-sunken p-1 sm:flex" role="group" aria-label="Period">
               {RANGES.map((r) => (
@@ -103,14 +104,14 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
             <Link href="/admin/payments" className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-ink transition hover:bg-navy-hover">
               Payments
             </Link>
-            <Link href="/admin/promo" className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken">
+            <Link href="/admin/promo" className="hidden rounded-full px-4 py-2 text-sm sm:inline-flex text-ink ring-1 ring-line-strong transition hover:bg-sunken">
               Promo codes
             </Link>
             <button
               type="button"
               onClick={() => startRefresh(() => router.refresh())}
               disabled={refreshing}
-              className="rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95 disabled:opacity-50"
+              className="hidden rounded-full px-4 py-2 sm:inline-flex text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95 disabled:opacity-50"
             >
               {refreshing ? "Refreshing…" : "Refresh"}
             </button>
@@ -121,7 +122,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
 
       <main className="mx-auto max-w-[1400px] space-y-10 px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
         <div>
-          <h1 className="text-[28px] font-normal tracking-tight text-ink sm:text-[32px]">Admin</h1>
+          <h1 className="font-heading text-[30px] font-medium tracking-tight text-ink sm:text-[36px]">Admin</h1>
           <p className="mt-1 text-sm text-muted">
             {RANGES.find((r) => r.id === range)?.label} · from {when(data.from)} · updated {when(data.generated_at)} (WAT)
           </p>
@@ -139,7 +140,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
                 aria-selected={tab === x.id}
                 aria-controls={`panel-${x.id}`}
                 onClick={() => open(x.id)}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition active:scale-95 ${tab === x.id ? "bg-sunken font-medium text-ink" : "text-ink hover:bg-sunken/60"}`}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-[15px] transition active:scale-95 ${tab === x.id ? "bg-brand font-medium text-brand-ink" : "text-ink hover:bg-sunken"}`}
               >
                 {x.label}
                 {x.id === "health" && withProblems > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 text-xs text-red-800">{withProblems}</span>}
@@ -153,26 +154,36 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
 
         {/* Overview */}
         <section id="overview" className="scroll-mt-24 space-y-6">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <Tile label="Students signed up" value={n(t.students_signed_up)} sub={`${n(t.students_onboarded)} onboarded · ${n(t.new_students)} new in period`} />
-            <Tile label="Active students" value={n(t.active_students)} sub="asked a question or practised past questions, in this period" />
-            <Tile
-              label="Regular students"
-              value={t.regular_students != null ? n(t.regular_students) : "—"}
-              sub={t.regular_students != null ? "studied on 3+ different days in this period" : "appears once the database update is pushed"}
-            />
-            <Tile label="Questions" value={n(t.questions)} sub={`${n(t.answers)} answers`} />
-            <Tile label="Cost" value={usd(t.cost_usd)} sub={`${usd(t.cost_per_answer)} per answer`} />
-            <Tile label="Is it helping? (1–5)" value={t.helping_avg != null ? String(t.helping_avg) : "—"} sub={`${n(t.helping_n)} answers`} />
-            <Tile label="Time to first word" value={secs(t.avg_ttft_ms)} sub="average" />
-            <Tile label="Slowest 5% of answers" value={secs(t.p95_latency_ms)} sub="p95 full answer" />
-            <Tile
-              label="Answers with problems"
-              value={pct(withProblems, studentAnswers.length)}
-              sub={`${n(withProblems)} of the latest ${n(studentAnswers.length)} students' answers`}
-              warn={studentAnswers.length > 0 && withProblems / studentAnswers.length > 0.05}
-            />
-            <Tile label="Cost per student" value={usd(t.active_students ? t.cost_usd / t.active_students : 0)} sub="per active student" />
+          {/* The four numbers that matter most, large (owner, 25 Nov 2026: "important metrics should be super readable"). */}
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <Hero icon={Users} label="Students signed up" value={n(t.students_signed_up)} sub={`${n(t.new_students)} new in this period · ${n(t.students_onboarded)} onboarded`} />
+            <Hero icon={Activity} label="Active students" value={n(t.active_students)} sub="asked a question or practised past questions" />
+            <Hero icon={MessageSquare} label="Questions asked" value={n(t.questions)} sub={`${n(t.answers)} answers given`} />
+            <Hero icon={Wallet} label="Revenue" value={`₦${n(plans.revenueNaira)}`} sub={`${n(plans.paid)} Finals sold · ${n(plans.pending)} waiting for approval`} tone="brand" />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <MetricGroup title="Students">
+              <Tile icon={Repeat} label="Regular students" value={t.regular_students != null ? n(t.regular_students) : "—"} sub="studied on 3+ different days" />
+              <Tile icon={Crown} label="On Finals now" value={n(plans.activeFinals.manual + plans.activeFinals.comp + plans.activeFinals.promo)} sub={`${n(plans.activeFinals.manual)} paid · ${n(plans.activeFinals.promo)} promo · ${n(plans.activeFinals.comp)} comp`} />
+              <Tile icon={Smile} label="Is it helping? (1–5)" value={t.helping_avg != null ? String(t.helping_avg) : "—"} sub={`${n(t.helping_n)} answers`} tone={t.helping_avg == null ? "plain" : t.helping_avg >= 4 ? "good" : t.helping_avg < 3 ? "bad" : "plain"} />
+              <Tile icon={HeartHandshake} label="Recommend score" value={recommend.nps != null ? `${recommend.nps > 0 ? "+" : ""}${recommend.nps}` : "—"} sub={`${n(recommend.students)} students answered`} tone={recommend.nps == null ? "plain" : recommend.nps >= 30 ? "good" : recommend.nps < 0 ? "bad" : "plain"} />
+            </MetricGroup>
+            <MetricGroup title="Speed and quality">
+              <Tile icon={Timer} label="Time to first word" value={secs(t.avg_ttft_ms)} sub="average" tone={(t.avg_ttft_ms ?? 0) > 6000 ? "warn" : "good"} />
+              <Tile icon={Gauge} label="Slowest 5% of answers" value={secs(t.p95_latency_ms)} sub="full answer" tone={(t.p95_latency_ms ?? 0) > 30000 ? "warn" : "plain"} />
+              <Tile
+                icon={AlertTriangle}
+                label="Answers with problems"
+                value={pct(withProblems, studentAnswers.length)}
+                sub={`${n(withProblems)} of the latest ${n(studentAnswers.length)}`}
+                tone={studentAnswers.length === 0 ? "plain" : withProblems / studentAnswers.length > 0.05 ? "bad" : "good"}
+              />
+            </MetricGroup>
+            <MetricGroup title="AI cost">
+              <Tile icon={Coins} label="Cost in this period" value={usd(t.cost_usd)} sub={`${usd(t.cost_per_answer)} per answer`} />
+              <Tile icon={Users} label="Cost per active student" value={usd(t.active_students ? t.cost_usd / t.active_students : 0)} sub="in this period" />
+            </MetricGroup>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
@@ -187,7 +198,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
             </Card>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Card title="Is this helping you study? (1–5)">
               <BarList rows={data.helping.map((h) => ({ label: `${h.score} ${h.score === 1 ? "· not really" : h.score === 5 ? "· a lot" : ""}`, n: h.n }))} />
             </Card>
@@ -208,7 +219,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
             <p className="text-sm text-muted">
               Devices · {n(devices.students)} students seen in this period (recorded since 23 Nov 2026). A student who uses a phone and a laptop counts in both.
             </p>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <Card title="Kind of device">
                 <BarList rows={devices.kinds} />
               </Card>
@@ -222,7 +233,6 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
           </div>
         </section>
 
-        <Plans plans={plans} />
           </div>
         )}
 
@@ -263,9 +273,9 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
         {/* Health */}
         <section id="health" className="scroll-mt-24 space-y-4">
           <SectionTitle title="Health" note="Slow or expensive answers, and what went wrong." />
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid items-start gap-4 lg:grid-cols-3">
             <Card title="What the server fixed or flagged">
-              <BarList rows={data.error_codes.map((e) => ({ label: `${errorInfo(e.code).problem ? "Problem: " : "Fixed: "}${errorInfo(e.code).label}`, n: e.n }))} />
+              <BarList rows={data.error_codes.map((e) => ({ label: `${errorInfo(e.code).flag ? "" : errorInfo(e.code).problem ? "Problem: " : "Fixed: "}${errorInfo(e.code).label}`, n: e.n }))} />
               <p className="mt-3 text-xs text-muted">&ldquo;Fixed&rdquo; happened before the student saw the answer. Counts include test runs.</p>
             </Card>
             <Card title="Slowest answers" className="lg:col-span-2">
@@ -786,27 +796,54 @@ function Students({ data }: { data: Overview }) {
 
 
 /** PRD F12: what Finals is earning, who referred it, and which limits push students to the sheet. */
-function Plans({ plans: p }: { plans: PlanStats }) {
+// ── small pieces ───────────────────────────────────────────
+
+type Tone = "plain" | "good" | "warn" | "bad" | "brand";
+const TONE: Record<Tone, { icon: string; value: string }> = {
+  plain: { icon: "bg-pau-50 text-brand", value: "text-ink" },
+  brand: { icon: "bg-brand text-brand-ink", value: "text-ink" },
+  good: { icon: "bg-emerald-50 text-emerald-700", value: "text-ink" },
+  warn: { icon: "bg-amber-50 text-amber-700", value: "text-amber-800" },
+  bad: { icon: "bg-red-50 text-red-700", value: "text-red-700" },
+};
+
+/** A headline number: big, bold, tabular, with an icon. */
+function Hero({ icon: Icon, label, value, sub, tone = "plain" }: { icon: LucideIcon; label: string; value: string; sub?: string; tone?: Tone }) {
   return (
-    <section id="plans" className="scroll-mt-24 space-y-4">
-      <SectionTitle title="Plans" note="Payments in the period; active plans right now." />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <Tile label="Finals sold" value={n(p.paid)} sub={`${n(p.pending)} waiting for approval`} />
-        <Tile label="Revenue" value={`₦${n(p.revenueNaira)}`} sub="approved bank transfers" />
-        <Tile label="Finals active now" value={n(p.activeFinals.manual + p.activeFinals.comp + p.activeFinals.promo)} sub={`${n(p.activeFinals.manual)} paid · ${n(p.activeFinals.promo)} promo trial · ${n(p.activeFinals.comp)} comp`} />
+    <div className="rounded-2xl bg-card p-5 ring-1 ring-line sm:p-6">
+      <div className="flex items-center gap-2.5">
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONE[tone].icon}`}>
+          <Icon size={18} absoluteStrokeWidth strokeWidth={1.75} aria-hidden />
+        </span>
+        <p className="text-[14px] font-medium text-muted">{label}</p>
       </div>
-    </section>
+      <p className={`mt-4 text-[28px] font-semibold leading-none tracking-tight tabular-nums sm:text-[42px] ${TONE[tone].value}`}>{value}</p>
+      {sub && <p className="mt-2.5 text-[13px] leading-snug text-muted">{sub}</p>}
+    </div>
   );
 }
 
-// ── small pieces ───────────────────────────────────────────
-
-function Tile({ label, value, sub, warn = false }: { label: string; value: string; sub?: string; warn?: boolean }) {
+/** A labelled group of smaller numbers, one card. */
+function MetricGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className={`rounded-2xl p-4 ring-1 ${warn ? "bg-amber-50 ring-amber-200 dark:bg-amber-400/10 dark:ring-amber-400/30" : "bg-card ring-line"}`}>
-      <p className="text-[13px] text-muted">{label}</p>
-      <p className="mt-1.5 text-[26px] font-normal tabular-nums tracking-tight text-ink">{value}</p>
-      {sub && <p className="mt-1 text-xs leading-snug text-muted">{sub}</p>}
+    <div className="rounded-2xl bg-card p-5 ring-1 ring-line">
+      <h3 className="mb-1 text-[13px] font-semibold uppercase tracking-wider text-muted">{title}</h3>
+      <div className="divide-y divide-line/70">{children}</div>
+    </div>
+  );
+}
+
+function Tile({ icon: Icon, label, value, sub, tone = "plain" }: { icon: LucideIcon; label: string; value: string; sub?: string; tone?: Tone }) {
+  return (
+    <div className="flex items-center gap-3 py-3">
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${TONE[tone].icon}`}>
+        <Icon size={16} absoluteStrokeWidth strokeWidth={1.75} aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] text-ink">{label}</p>
+        {sub && <p className="text-[12.5px] leading-snug text-muted">{sub}</p>}
+      </div>
+      <p className={`text-[24px] font-semibold tabular-nums tracking-tight ${TONE[tone].value}`}>{value}</p>
     </div>
   );
 }
@@ -816,7 +853,7 @@ function Tile({ label, value, sub, warn = false }: { label: string; value: strin
 function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={`rounded-2xl bg-card p-5 ring-1 ring-line ${className}`}>
-      <h3 className="mb-4 text-sm font-medium text-ink">{title}</h3>
+      <h3 className="mb-4 text-[15px] font-semibold text-ink">{title}</h3>
       {children}
     </div>
   );
@@ -826,8 +863,8 @@ function SectionTitle({ title, note, action }: { title: string; note?: string; a
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
       <div>
-        <h2 className="text-[20px] font-normal tracking-tight text-ink">{title}</h2>
-        {note && <p className="mt-0.5 text-sm text-muted">{note}</p>}
+        <h2 className="font-heading text-[24px] font-medium tracking-tight text-ink">{title}</h2>
+        {note && <p className="mt-1 text-[14px] text-muted">{note}</p>}
       </div>
       {action}
     </div>
@@ -840,9 +877,9 @@ function Table({ head, rows, compact = false, empty = "Nothing yet." }: { head: 
     <div className={`overflow-x-auto ${compact ? "" : "rounded-2xl bg-card ring-1 ring-line"}`}>
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="text-xs text-muted">
+          <tr className="text-[12px] font-semibold uppercase tracking-wider text-muted">
             {head.map((h, i) => (
-              <th key={h} className={`whitespace-nowrap px-4 py-2.5 font-normal ${i > 0 ? "text-right" : ""}`}>
+              <th key={h} className={`whitespace-nowrap px-4 py-2.5 ${numericColumn(rows, i) ? "text-right" : ""}`}>
                 {h}
               </th>
             ))}
@@ -850,9 +887,9 @@ function Table({ head, rows, compact = false, empty = "Nothing yet." }: { head: 
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-t border-line/70">
+            <tr key={i} className="border-t border-line/70 hover:bg-tint/60">
               {r.map((c, j) => (
-                <td key={j} className={`px-4 py-2.5 ${j > 0 ? "whitespace-nowrap text-right tabular-nums" : ""}`}>
+                <td key={j} className={`whitespace-nowrap px-4 py-2.5 ${j === 0 ? "text-muted" : ""} ${numericColumn(rows, j) ? "text-right tabular-nums" : ""}`}>
                   {c}
                 </td>
               ))}
@@ -864,9 +901,15 @@ function Table({ head, rows, compact = false, empty = "Nothing yet." }: { head: 
   );
 }
 
+/** A column of numbers, money or durations: right-aligned so the digits line up. */
+function numericColumn(rows: React.ReactNode[][], j: number) {
+  const cells = rows.map((r) => r[j]).filter((c) => typeof c === "string" || typeof c === "number");
+  return cells.length > 0 && cells.length === rows.length && cells.every((c) => /^[\s$₦—\-+]*[\d.,]+\s*(s|%|k)?$|^—$/.test(String(c)));
+}
+
 function Clip({ text }: { text: string }) {
   return (
-    <span className="block max-w-[28rem] truncate text-left" title={text}>
+    <span className="block max-w-[14rem] truncate text-left sm:max-w-[20rem] 2xl:max-w-[28rem]" title={text}>
       {text}
     </span>
   );

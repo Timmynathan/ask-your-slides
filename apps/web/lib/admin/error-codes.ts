@@ -4,6 +4,7 @@
 export const ERROR_INFO: Record<string, { label: string; problem: boolean; flag?: boolean }> = {
   // Not an error: the student may be in danger or serious distress, and got a caring reply (prompt rule 18).
   wellbeing: { label: "Wellbeing: the student may be in distress; a caring reply with support contacts was given", problem: false, flag: true },
+  live_exam: { label: "Declined: student said they were in an exam (old rule, removed 23 Nov)", problem: false },
   opening_trimmed: { label: "Opening sentence removed (filler or planning)", problem: false },
   citation_not_covered: { label: "Slide link removed from a 'not covered' answer", problem: false },
   narration_dropped: { label: "Planning sentence removed (\"Let me pull the slides…\")", problem: false },
