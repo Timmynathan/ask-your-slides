@@ -1,5 +1,6 @@
 "use client";
 
+import { firstName } from "@/lib/agent/student-name";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AccountMenu } from "@/components/ui/account-menu";
@@ -116,7 +117,7 @@ export function Workspace(data: WorkspaceData) {
   const [pulseClosed, setPulseClosed] = useState(data.pulse.answered);
   const onQuestion = useCallback(() => setQuestions((n) => n + 1), []);
   const onPulseDone = useCallback(() => setPulseClosed(true), []);
-  const studentName = data.user.displayName?.trim().split(/\s+/)[0] ?? null;
+  const studentName = firstName(data.user.displayName);
   // PRD F12: the pricing sheet, opened when a limit or lock stops the student.
   const [sheet, setSheet] = useState<{ code: LimitCode; resetsAt: string | null } | null>(null);
   const onLimit = useCallback((code: LimitCode, resetsAt: string | null) => setSheet({ code, resetsAt }), []);

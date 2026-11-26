@@ -988,10 +988,15 @@ export async function runChatTurn(turn: ChatTurn) {
   // A second look (owner's review, 21 Nov 2026: "shares" was said not to be in the slides, though a
   // lecture is called Share Capital): when the first search finds little, the lecture list comes
   // too, so the model can open a likely lecture before saying the slides don't cover it.
+  // The decision ran alongside the first search; it is needed here, so a request to make something from the
+  // lecture is never treated as content the slides might lack (Oma, 25 Nov 2026: "I can't find a 'set' or any
+  // fill-in-the-blank content").
+  const decided = decision ? await decision : null;
+  const makeTurn = !!decided?.make && !decided.wellbeing;
   const firstSearch = ctx.toolLog.find((t) => t.name === "search_slides");
   const sims = ((firstSearch?.detail as { similarities?: number[] } | undefined)?.similarities ?? []) as number[];
   let lookAgainNote: string | null = null;
-  if (firstSearch && !shortUnclear && !pre.some((p) => p.name === "list_topics") && (sims.length === 0 || Math.max(...sims) < WEAK_MATCH)) {
+  if (firstSearch && !shortUnclear && !makeTurn && !pre.some((p) => p.name === "list_topics") && (sims.length === 0 || Math.max(...sims) < WEAK_MATCH)) {
     pre.push({ id: `presearch_${turn.assistantMessageId}_topics`, name: listTopics.name, input: {}, output: await listTopics.run(ctx, {} as never) });
     lookAgainNote =
       "The first search found little. The course's lecture list is above: if a lecture's title suggests it covers the question, read it with get_material_pages (or search with that lecture's terms) before saying the slides don't cover it.";
@@ -1009,17 +1014,28 @@ export async function runChatTurn(turn: ChatTurn) {
   // important cases" are the ones it lists), then the research call, whose notes go to the answer below the slides.
   let lookupCost = 0;
   let backgroundNote: string | null = null;
-  const decided = decision ? await decision : null;
   if (decided) {
     lookupCost += decided.cost;
-    ctx.toolLog.push({ name: "lookup_decision", purpose: "Decide whether the answer needs facts from outside the slides", input: {}, status: "ok", slide_keys: [], latency_ms: 0, detail: { lookup: decided.lookup, about: decided.about, cost_usd: decided.cost } });
+    ctx.toolLog.push({ name: "lookup_decision", purpose: "Decide whether the answer needs facts from outside the slides", input: {}, status: "ok", slide_keys: [], latency_ms: 0, detail: { lookup: decided.lookup, make: decided.make, about: decided.about, cost_usd: decided.cost } });
   }
   const careTurn = !!decided?.wellbeing;
   const careNote = careTurn
     ? "This student may be in danger or serious distress. Follow rule 18 for this reply: put them first, with care and the support contacts it lists; no slides, citations or study content unless they ask."
     : null;
   if (careTurn) errors.push({ code: "wellbeing", detail: turn.userMessage.slice(0, 120) });
-  if (decided?.lookup && !careTurn && !chitChat && !answering && !walkthrough) {
+  let makeNote: string | null = null;
+  if (makeTurn && !answering && !walkthrough && !missedClass) {
+    if (turn.topicId && !ctx.readMaterial) {
+      const mats = must(
+        await db.from("materials").select("material_order, page_count").eq("course_id", turn.courseId).eq("topic_id", turn.topicId).in("kind", ["slides", "notes"]).order("material_order"),
+      ) as { material_order: number; page_count: number }[];
+      for (const [i, r] of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), NAMED_TOPIC_PAGES).entries()) {
+        pre.push({ id: `presearch_${turn.assistantMessageId}_make${i}`, name: getMaterialPages.name, input: r, output: await getMaterialPages.run(ctx, r as never) });
+      }
+    }
+    makeNote = `The student is asking you to make something from ${turn.topicId ? "this lecture (its slides are above)" : "the course"}: questions, flashcards, notes or the like. Make it now, from the slides, covering the whole ${turn.topicId ? "lecture" : "part they name"}, in the form they asked for. It is a request, not a question about the slides: never look for it in the slides or say the slides don't contain it.`;
+  }
+  if (decided?.lookup && !careTurn && !makeTurn && !chitChat && !answering && !walkthrough) {
     const used = await lookupsToday(db).catch(() => LOOKUPS_PER_DAY);
     if (used >= LOOKUPS_PER_DAY) {
       backgroundNote = "The student wants background beyond the slides (on a case, law, person or event), but outside lookups are paused for today. Answer from the slides; for anything beyond them, say in a line that you couldn't confirm more details, rather than adding facts from memory.";
@@ -1054,14 +1070,14 @@ export async function runChatTurn(turn: ChatTurn) {
         latency_ms: Date.now() - t0,
         detail: { cost_usd: research?.cost ?? 0, notes: research?.notes ?? null },
       });
-      const rules = "Give the slides' version first, in your own words with citations; then the background in a <general> block. If a detail differs from the slide (a year, court, country, title), keep the slide's version as the main answer and note the difference in these words: \"Some sources describe this differently: … Your slides present it as …; for the exam, follow your slides, and check with your lecturer if unsure.\" Never call the slide wrong, a simplification, incomplete or outdated. Cover every item the student asked about (for \"the important cases\" and the like, every one the slides list). Never write about searching, sources you checked or what you found (\"my search\", \"the search returned\"): say what is known, or that you couldn't confirm it.";
+      const rules = "Give the slides' version first, in your own words with citations; then the background in a <general> block. If the notes give a detail that differs from the slide (a year, court, country, title), keep the slide's version as the main answer and note the difference in these words: \"Some sources describe this differently: … Your slides present it as …; for the exam, follow your slides, and check with your lecturer if unsure.\" Only for a real difference the notes state: when the notes simply couldn't confirm something, say so in one short line (\"I couldn't confirm what the circulars contained.\"), with no \"some sources\", no \"follow your slides\" and no \"check with your lecturer\", and never suggest where to look it up. Never call the slide wrong, a simplification, incomplete or outdated. Cover every item the student asked about (for \"the important cases\" and the like, every one the slides list). Never write about searching, sources you checked or what you found (\"my search\", \"the search returned\"): say what is known, or that you couldn't confirm it.";
       backgroundNote = research?.notes
         ? `The student wants background beyond the slides. Notes on it, looked up on the web before this reply, are below. Use only these notes for facts beyond the slides; where they say a detail is not confirmed, say "I couldn't confirm …" instead of stating it. ${rules}\n\nBackground notes (from the web, not the slides):\n${research.notes}`
-        : `The student wants background beyond the slides, but nothing reliable could be found outside them. Answer from the slides, and say in one line per item that you couldn't confirm more, rather than adding facts from memory. ${rules}`;
+        : `The student wants background beyond the slides, but nothing reliable could be found outside them. Answer from the slides, and say in one short line that you couldn't confirm more, rather than adding facts from memory. ${rules}`;
     }
   }
   // Recorded on the trace with the prompt version: which situation notes this turn added.
-  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote, wholeTopic: wholeTopicNote, background: backgroundNote, care: careNote })
+  const activeNotes = Object.entries({ plan: turn.planNote, focus: focusNote, chat: chatNote, shortUnclear: shortUnclearNote, resume: resumeNote, answer: answerNote, photo: photoNote, paper: paperNote, uploads: uploadsNote, part: partNote, lookAgain: lookAgainNote, make: makeNote, draw: drawNote, memory: memoryNote, split: splitNote, topics: topicNote, missedClass: missedClassNote, summary: summaryNote, right: rightNote, wholeTopic: wholeTopicNote, background: backgroundNote, care: careNote })
     .filter(([, note]) => !!note)
     .map(([name]) => name);
 
@@ -1071,7 +1087,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null, turn.studentFullName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, wholeTopicNote, backgroundNote, careNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null, turn.studentFullName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, makeNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, wholeTopicNote, backgroundNote, careNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

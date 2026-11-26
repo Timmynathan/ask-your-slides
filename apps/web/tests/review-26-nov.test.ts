@@ -74,4 +74,13 @@ describe("instructions", () => {
     expect(p).toMatch(/\[Matric number\]/);
     expect(p).not.toMatch(/\[Your name\]/);
   });
+  it("writes the typed first name as a name, in code", async () => {
+    const { firstName } = await import("@/lib/agent/student-name");
+    expect(firstName("oma")).toBe("Oma");
+    expect(firstName("  kika  adebayo")).toBe("Kika");
+    expect(firstName("mary-jane")).toBe("Mary-Jane");
+    expect(firstName("Tolu")).toBe("Tolu");
+    expect(firstName("")).toBeNull();
+    expect(firstName(null)).toBeNull();
+  });
 });

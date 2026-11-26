@@ -16,3 +16,11 @@ export function nameFromEmail(email: string | null | undefined): string | null {
     .map((part) => part.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join("-"))
     .join(" ");
 }
+
+/** The first word of the name a student typed, written as a name: "oma" → "Oma", "mary-jane" → "Mary-Jane".
+ *  Done here, not by the model (owner's review, 26 Nov 2026: a prompt rule to capitalise it was ignored). */
+export function firstName(displayName: string | null | undefined): string | null {
+  const word = displayName?.trim().split(/\s+/)[0];
+  if (!word) return null;
+  return word.replace(/(^|[-'])(\p{Ll})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
+}

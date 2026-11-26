@@ -31,12 +31,18 @@ const DECIDE = `You help a study app for university students in Nigeria decide t
 Answer yes when the student wants to know more about such a thing than lecture slides usually give: what happened in it, who was involved, when, what was decided or enacted, what a law contains or how it came about, its background or consequences ("tell me more about Hicklin", "the important cases", "what does the Cybercrimes Act do", "tell me more about the NBC Code", "who was on the MacBride Commission"). Always yes when they ask for more than, or beyond, what their slides say about a named thing. Use the previous reply for what "it", "that case" or "the second one" refers to.
 Answer no for ideas, definitions, theories, processes and calculations a tutor explains from knowledge; for questions about what the slides themselves say; for explaining a whole topic or lecture ("tell me everything on X", "talk to me about X", "explain like I missed class"), summaries, overviews, quizzes, practice questions, "explain every slide", and small talk or questions about the app: the student can ask about a particular case or law afterwards.
 
-Reply with JSON only: {"wellbeing": true or false, "lookup": true or false, "about": "what the student is asking about, in their own terms, or empty"}. In "about", never add names or examples the student and the previous reply didn't mention: for "the important cases", write "the important cases in this lecture's slides".`;
+Also answer no when the student only restates or quotes what their slides say ("it said the Lagos Weekly Record inspired Azikiwe") or asks what a phrase on a slide means.
+
+3. make: is the student asking the tutor to produce study material from the lecture or course, rather than asking about its content? Questions of any kind (fill-in-the-gap, multiple choice, true/false, practice, exam-style, a quiz), flashcards, notes, an outline or a table, in any wording or English ("set fill in the blank questions from this", "drop some MCQs", "give me questions on this topic", "make flashcards"). No for questions about what something is or means, and for answering a question the tutor asked.
+
+Reply with JSON only: {"wellbeing": true or false, "lookup": true or false, "make": true or false, "about": "what the student is asking about, in their own terms, or empty"}. In "about", never add names or examples the student and the previous reply didn't mention: for "the important cases", write "the important cases in this lecture's slides".`;
 
 export interface LookupDecision {
   /** The student may be in danger or serious distress (prompt rule 18; owner, 25 Nov 2026). */
   wellbeing: boolean;
   lookup: boolean;
+  /** The student wants something made from the lecture (questions, flashcards, notes), not a question answered (owner, 26 Nov 2026: Oma's "set fill in the blank questions from this" was searched for as content). */
+  make: boolean;
   about: string;
   cost: number;
 }
@@ -52,14 +58,14 @@ export async function decideLookup(message: string, previousAnswer: string | nul
           content: `Course: ${course}${lecture ? `\nLecture: ${lecture}` : ""}${previousAnswer ? `\n\nThe previous reply (start):\n${previousAnswer.slice(0, 1500)}` : ""}\n\nThe student's latest message:\n${message.slice(0, 1500)}`,
         },
       ],
-      maxOutputTokens: 60,
+      maxOutputTokens: 90,
       abortSignal: abortSignal ? AbortSignal.any([abortSignal, AbortSignal.timeout(DECIDE_TIMEOUT_MS)]) : AbortSignal.timeout(DECIDE_TIMEOUT_MS),
       providerOptions: { anthropic: { thinking: { type: "disabled" } } },
     });
-    const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { wellbeing?: unknown; lookup?: unknown; about?: unknown };
-    return { wellbeing: json.wellbeing === true, lookup: json.lookup === true, about: typeof json.about === "string" ? json.about.slice(0, 200) : "", cost: cost(usage) };
+    const json = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as { wellbeing?: unknown; lookup?: unknown; make?: unknown; about?: unknown };
+    return { wellbeing: json.wellbeing === true, lookup: json.lookup === true, make: json.make === true, about: typeof json.about === "string" ? json.about.slice(0, 200) : "", cost: cost(usage) };
   } catch {
-    return { wellbeing: false, lookup: false, about: "", cost: 0 };
+    return { wellbeing: false, lookup: false, make: false, about: "", cost: 0 };
   }
 }
 

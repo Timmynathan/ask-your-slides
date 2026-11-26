@@ -34,6 +34,8 @@ interface Case {
   mustNot?: string[];
   /** The slide open in the viewer (sent as focus_slide, like a typed "this slide"). */
   focus?: string;
+  /** The name the student typed at sign-up (default "Tolu"). */
+  name?: string;
   /** Sign in as <email>@pau.edu.ng (a firstname.lastname shape) instead of a throwaway address. */
   email?: string;
   /** Ask inside this topic's chat (its title, case-insensitive) instead of the whole-course chat. */
@@ -81,7 +83,7 @@ async function run(c: Case): Promise<Result> {
     const res = await fetch(`${BASE}/api/auth/verify`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, code: link.properties!.email_otp }) });
     if (!res.ok) throw new Error(`sign-in ${res.status}`);
     const cookie = res.headers.getSetCookie().map((x) => x.split(";")[0]).join("; ");
-    const up = await db.from("profiles").update({ onboarded: true, display_name: "Tolu", study_partner: "zara", programme: c.programme, level: c.level }).eq("id", userId);
+    const up = await db.from("profiles").update({ onboarded: true, display_name: c.name ?? "Tolu", study_partner: "zara", programme: c.programme, level: c.level }).eq("id", userId);
     if (up.error) throw up.error;
     let topicId: string | null = null;
     if (c.topic) {

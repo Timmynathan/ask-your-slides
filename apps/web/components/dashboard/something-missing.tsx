@@ -85,7 +85,7 @@ function MissingDialog({ onClose }: { onClose(): void }) {
               onChange={(e) => setText(e.target.value)}
               maxLength={500}
               autoFocus
-              placeholder="e.g. COS101 Computer Science"
+              placeholder="e.g. a course code and title"
               aria-label="What's missing"
               className="mt-4 w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-[15px] text-ink outline-none placeholder:text-muted focus:border-brand focus:ring-4 focus:ring-pau-200"
             />

@@ -817,5 +817,58 @@
       "(typo|\\bslip\\b|is wrong|goes wrong|incorrect|mistake|an error|check (this |it )?with your lecturer|[Ss]ome sources describe)",
       "(\\b[Tt]he calculator\\b|[Tt]he tool\\b|[Ll]et me (check|verify)|I'll (check|verify|run)|\\bWait,)"
     ]
+  },
+  {
+    "id": "make-fill-in-the-gap",
+    "what": "'set fill in the blank questions from this' in a lecture chat makes the questions (Oma's first message got 'I can't find a \"set\" or any fill-in-the-blank content'); her lowercase name is written Oma",
+    "name": "oma",
+    "topic": "Introduction: Exploring the Significance of the Past",
+    "question": "set fill in the blank questions from this",
+    "programme": "information-science-and-media-studies",
+    "level": 200,
+    "course": "CMS211",
+    "must": [
+      "_{3,}",
+      "<answer>"
+    ],
+    "mustNot": [
+      "(can't|cannot|couldn't|could not) find",
+      "no fill-in",
+      "\\boma\\b"
+    ]
+  },
+  {
+    "id": "make-mcq-informal",
+    "what": "An informal request for multiple-choice questions on the lecture makes them, not a search for them",
+    "topic": "The Birth of Print",
+    "question": "drop like 5 mcqs on this for me",
+    "programme": "information-science-and-media-studies",
+    "level": 200,
+    "course": "CMS211",
+    "must": [
+      "<answer>",
+      "\\b(A|a)[).]"
+    ],
+    "mustNot": [
+      "(can't|cannot|couldn't|could not) find",
+      "[Ss]ome sources describe"
+    ]
+  },
+  {
+    "id": "unconfirmed-no-hedging",
+    "what": "When background can't be confirmed, one short 'I couldn't confirm' line: no 'Some sources describe this differently' or 'check with your lecturer' when nothing differs (Oma's circulars question)",
+    "topic": "Pioneer Nigerian Publishers and Newspapers",
+    "question": "wait what exactly was in the colonial government circulars",
+    "programme": "information-science-and-media-studies",
+    "level": 200,
+    "course": "CMS211",
+    "must": [
+      "\\[\\[s:CMS211-06-2\\]\\]"
+    ],
+    "mustNot": [
+      "[Ss]ome sources describe",
+      "check with your lecturer",
+      "archive catalog"
+    ]
   }
 ]
