@@ -10,15 +10,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: PAU_EMAIL_ERROR }, { status: 400 });
   }
   if (!isOtpCode(body?.code)) {
+    console.warn("auth: code not a code", { email });
     return NextResponse.json({ error: "Enter the code from the email." }, { status: 400 });
   }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ email, token: body.code.trim(), type: "email" });
   if (error || !data.user) {
+    console.warn("auth: code rejected", { email, reason: error?.code ?? error?.message ?? "no user" });
     return NextResponse.json({ error: "That code is wrong or has expired. Request a new one." }, { status: 401 });
   }
 
+  console.info("auth: code accepted", { email });
   const { data: profile } = await supabase.from("profiles").select("onboarded").eq("id", data.user.id).single();
   return NextResponse.json({ ok: true, next: profile?.onboarded ? "/dashboard" : "/welcome" });
 }

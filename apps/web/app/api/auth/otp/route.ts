@@ -32,6 +32,7 @@ export async function POST(request: Request) {
   const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
   if (error) {
     if (error.status === 429) {
+      console.warn("auth: code refused (rate limit)", { email });
       return NextResponse.json({ error: "Too many codes requested. Wait a minute and try again." }, { status: 429 });
     }
     // The auth hook's message ("Use your PAU email.") or a mail delivery problem.
@@ -42,5 +43,7 @@ export async function POST(request: Request) {
       { status: blocked ? 400 : 502 },
     );
   }
+  // Sign-up funnel (owner, 26 Nov 2026): each step is logged so a stuck student can be traced in Vercel logs.
+  console.info("auth: code sent", { email, intent: intent ?? "login" });
   return NextResponse.json({ ok: true });
 }

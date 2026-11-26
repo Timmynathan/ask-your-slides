@@ -15,10 +15,53 @@ type Mode = "signup" | "login" | "reset";
 type Step =
   | { kind: "password" }
   | { kind: "code-email" }
-  | { kind: "code"; email: string }
+  // note: "slow" = the send didn't answer in time (the code usually arrived anyway); "had-code" = "I already have a code".
+  | { kind: "code"; email: string; note?: "slow" | "had-code" }
   | { kind: "new-password"; email: string };
 
 const MIN_PASSWORD = 8;
+// Owner, 26 Nov 2026 (Anselm): the code reached his phone but the page sat on "Sending…" because the reply
+// never reached his laptop, so there was nowhere to type it. The page now never waits more than this, and
+// remembers the code step for a while so a reload or a trip to Outlook comes back to the code box.
+const SEND_TIMEOUT_MS = 10_000;
+const CODE_STEP_KEY = "pau.codeStep";
+const CODE_STEP_TTL_MS = 15 * 60_000;
+const PAU_EMAIL = /^[^\s@]+@pau\.edu\.ng$/;
+
+function saveCodeStep(email: string, mode: "signup" | "reset") {
+  try {
+    localStorage.setItem(CODE_STEP_KEY, JSON.stringify({ email, mode, at: Date.now() }));
+  } catch {
+    /* storage blocked */
+  }
+}
+function clearCodeStep() {
+  try {
+    localStorage.removeItem(CODE_STEP_KEY);
+  } catch {
+    /* storage blocked */
+  }
+}
+function readCodeStep(): { email: string; mode: "signup" | "reset" } | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(CODE_STEP_KEY) ?? "null");
+    if (!v || typeof v.email !== "string" || Date.now() - Number(v.at) > CODE_STEP_TTL_MS) return null;
+    return { email: v.email, mode: v.mode === "reset" ? "reset" : "signup" };
+  } catch {
+    return null;
+  }
+}
+/** fetch that gives up after `ms`: rejects with a TimeoutError instead of hanging. */
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(new DOMException("timeout", "TimeoutError")), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+const isTimeout = (e: unknown) => e instanceof DOMException && (e.name === "TimeoutError" || e.name === "AbortError");
 // On for everyone since PAU IT approved the app (owner, 17 Nov 2026). Kill switch: NEXT_PUBLIC_MICROSOFT_LOGIN=0.
 const MICROSOFT = process.env.NEXT_PUBLIC_MICROSOFT_LOGIN !== "0";
 
@@ -106,6 +149,11 @@ export function SignInForm({
     } catch {
       /* storage blocked: just don't prefill */
     }
+    const pending = readCodeStep();
+    if (pending) {
+      setMode(pending.mode);
+      setStep({ kind: "code", email: pending.email, note: "had-code" });
+    }
   }, []);
 
   function remember(email: string) {
@@ -128,18 +176,25 @@ export function SignInForm({
     go(m === "login" ? { kind: "password" } : { kind: "code-email" });
   }
 
-  async function post(url: string, body: object) {
+  const timedOut = useRef(false);
+  async function post(url: string, body: object, timeoutMs?: number) {
     if (inFlight.current) return null;
+    timedOut.current = false;
     inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+      const res = timeoutMs ? await fetchWithTimeout(url, init, timeoutMs) : await fetch(url, init);
       const data = await res.json().catch(() => ({}));
       lastCode.current = res.ok ? null : (data.code ?? null);
       if (!res.ok) setError(data.error ?? "Something went wrong. Try again.");
       return res.ok ? data : null;
-    } catch {
+    } catch (e) {
+      if (timeoutMs && isTimeout(e)) {
+        timedOut.current = true;
+        return null;
+      }
       setError("Couldn't reach the server. Check your connection.");
       return null;
     } finally {
@@ -159,6 +214,7 @@ export function SignInForm({
   // The server says /welcome (onboarding) or /dashboard; a link the student came from wins, and
   // survives onboarding too.
   function finish(serverNext: string | undefined) {
+    clearCodeStep();
     const target =
       serverNext === "/welcome" ? `/welcome${next ? `?next=${encodeURIComponent(next)}` : ""}` : (next ?? serverNext ?? "/dashboard");
     router.replace(target);
@@ -196,7 +252,16 @@ export function SignInForm({
   async function sendCode(form: FormData) {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
     setNotice(null);
-    const data = await post("/api/auth/otp", { email, intent: mode === "reset" ? "reset" : "signup" });
+    const intent = mode === "reset" ? "reset" : "signup";
+    const data = await post("/api/auth/otp", { email, intent }, SEND_TIMEOUT_MS);
+    if (!data && timedOut.current && PAU_EMAIL.test(email)) {
+      // No answer in time: the code has usually been sent anyway, so show the box for it.
+      remember(email);
+      setSavedEmail(email);
+      saveCodeStep(email, intent);
+      go({ kind: "code", email, note: "slow" });
+      return;
+    }
     if (!data) {
       if (lastCode.current === "account_exists" || lastCode.current === "no_account") {
         setError(null);
@@ -208,13 +273,26 @@ export function SignInForm({
     }
     remember(email);
     setSavedEmail(email);
+    saveCodeStep(email, intent);
     go({ kind: "code", email });
+  }
+
+  /** "I already have a code": straight to the code box for the email typed above. */
+  function haveCode(form: HTMLFormElement | null) {
+    const email = String(new FormData(form ?? undefined).get("email") ?? "").trim().toLowerCase();
+    if (!PAU_EMAIL.test(email)) return setError("Type your PAU email above first, then enter the code.");
+    remember(email);
+    setSavedEmail(email);
+    saveCodeStep(email, mode === "reset" ? "reset" : "signup");
+    go({ kind: "code", email, note: "had-code" });
   }
 
   async function verify(form: FormData) {
     if (step.kind !== "code") return;
     const data = await post("/api/auth/verify", { email: step.email, code: String(form.get("code") ?? "") });
-    if (data) go({ kind: "new-password", email: step.email });
+    if (!data) return;
+    clearCodeStep();
+    go({ kind: "new-password", email: step.email });
   }
 
   async function setPassword(form: FormData) {
@@ -401,6 +479,9 @@ export function SignInForm({
               arrow={mode !== "reset" && !microsoftSignup}
             />
           </button>
+          <button type="button" onClick={(e) => haveCode(e.currentTarget.form)} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
+            I already have a code
+          </button>
           <p className="mt-5 text-center text-sm text-muted">
             {mode === "reset" ? "Remembered it? " : "Already have an account? "}
             <button type="button" onClick={() => switchMode("login")} disabled={busy} className={link}>
@@ -414,8 +495,22 @@ export function SignInForm({
           {/* Owner, 26 Nov 2026: every code was delivered, yet students asked for up to 3 and half never entered one.
               The page said "6-digit" (the codes have 8), said "spam" (Outlook says Junk Email) and had no resend. */}
           <p className="text-[15px] text-muted">
-            We emailed a code to <span className="font-medium text-ink">{step.email}</span>. It usually arrives within a minute, with the
-            subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
+            {step.note === "slow" ? (
+              <>
+                We&apos;re sending a code to <span className="font-medium text-ink">{step.email}</span>. This is taking longer than usual, but
+                the code usually arrives anyway. Look for the subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
+              </>
+            ) : step.note === "had-code" ? (
+              <>
+                Enter the newest code we emailed to <span className="font-medium text-ink">{step.email}</span>, subject{" "}
+                <span className="font-medium text-ink">Your AskYourSlides code</span>.
+              </>
+            ) : (
+              <>
+                We emailed a code to <span className="font-medium text-ink">{step.email}</span>. It usually arrives within a minute, with the
+                subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
+              </>
+            )}
           </p>
           <p className="mt-3 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
             Not in your inbox? In Outlook, check <span className="font-medium">Junk Email</span> and the <span className="font-medium">Other</span> tab.
@@ -429,7 +524,7 @@ export function SignInForm({
             <BusyLabel busy={busy} label="Continue" busyLabel="Checking…" />
           </button>
           <ResendCode email={step.email} intent={mode === "reset" ? "reset" : "signup"} />
-          <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={`${link} mt-3 block w-full text-center`}>
+          <button type="button" onClick={() => { clearCodeStep(); go({ kind: "code-email" }); }} disabled={busy} className={`${link} mt-3 block w-full text-center`}>
             Use a different email
           </button>
         </form>
@@ -490,7 +585,8 @@ function QueryReader({ onQuery }: { onQuery(q: URLSearchParams): void }) {
 
 /** "Send a new code", after a wait: Supabase allows one code a minute per address. Sends to the same address,
  *  so a student never has to retype it (they used "Use a different email" to get a new code, up to 3 times). */
-const RESEND_WAIT_S = 60;
+// 65, not 60: Supabase allows one code a minute per address and refused a press at 59 s (26 Nov 2026).
+const RESEND_WAIT_S = 65;
 function ResendCode({ email, intent }: { email: string; intent: "signup" | "reset" }) {
   const [wait, setWait] = useState(RESEND_WAIT_S);
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -504,12 +600,19 @@ function ResendCode({ email, intent }: { email: string; intent: "signup" | "rese
     setState("sending");
     setMessage(null);
     try {
-      const res = await fetch("/api/auth/otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, intent }) });
+      const res = await fetchWithTimeout("/api/auth/otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, intent }) }, SEND_TIMEOUT_MS);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Couldn't send a new code. Try again in a minute.");
       setState("sent");
       setMessage("New code sent. Use the newest one.");
     } catch (e) {
+      if (isTimeout(e)) {
+        // Like the first send: no answer in time, but the code has usually gone.
+        setState("sent");
+        setMessage("Sending a new code. If it arrives, use the newest one.");
+        setWait(RESEND_WAIT_S);
+        return;
+      }
       setState("error");
       setMessage(e instanceof Error ? e.message : "Couldn't send a new code. Try again in a minute.");
     }
