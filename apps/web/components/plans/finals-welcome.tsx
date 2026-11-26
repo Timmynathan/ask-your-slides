@@ -30,6 +30,8 @@ function Icon({ d, size = 18 }: { d: string; size?: number }) {
 }
 
 const key = (id: string) => `ays:finals-welcome:${id}`;
+/** Pop-ups open on this page right now, so two copies never stack. */
+const SHOWING = new Set<string>();
 const COLORS = ["#f5b700", "#ff5c8a", "#2bd9a0", "#5ea3ed", "#9b6bff", "#ff8a3d", "#ffffff"];
 
 // Deterministic pseudo-random, so server and client agree and every opening looks the same.
@@ -60,9 +62,15 @@ export function FinalsWelcome({ id, endsAt, daily, trial = false }: { id: string
     try {
       seen = localStorage.getItem(key(id)) !== null;
     } catch {}
+    // Another copy is already open (FinalsWatcher opened it, then the refreshed page rendered its own).
+    if (seen || SHOWING.has(id)) return;
+    SHOWING.add(id);
     // Runs once after mount: reading storage has to wait for the browser.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!seen) setOpen(true);
+    setOpen(true);
+    return () => {
+      SHOWING.delete(id);
+    };
   }, [id]);
 
   useEffect(() => {

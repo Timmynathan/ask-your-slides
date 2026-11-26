@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/nav/app-shell";
 import { DeviceBeacon } from "@/components/nav/device-beacon";
+import { FinalsWatcher } from "@/components/plans/finals-watcher";
 import { ShellSkeleton } from "@/components/nav/shell-skeleton";
 import { requireUser } from "@/lib/auth/session";
 import { shellData } from "@/lib/nav/shell-data";
@@ -14,6 +15,7 @@ async function Shell({ children }: { children: ReactNode }) {
   return (
     <AppShell title={shell.title} courses={shell.courses} recent={shell.recent} user={shell.user}>
       <DeviceBeacon />
+      <FinalsWatcher />
       {children}
     </AppShell>
   );

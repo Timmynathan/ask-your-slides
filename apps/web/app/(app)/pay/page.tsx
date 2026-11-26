@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
+import { FinalsWatcher } from "@/components/plans/finals-watcher";
 import { PayForm } from "@/components/plans/pay-form";
 import { requireUser } from "@/lib/auth/session";
 import { PLAN_END_DATE, TIME_ZONE } from "@/lib/plans/config";
@@ -78,6 +79,7 @@ async function Loaded() {
       <main className="mx-auto max-w-lg px-4 pb-20 pt-4 sm:px-5">
         <h1 className="font-heading text-4xl font-semibold tracking-tight text-ink">Get Finals</h1>
         <div className="mt-6">{body}</div>
+        <FinalsWatcher />
       </main>
     </div>
   );

@@ -17,7 +17,8 @@
     "check:walkthrough": "tsx scripts/walkthrough-check.mts",
     "check:replay": "tsx scripts/replay-check.mts",
     "check:retrieval": "tsx scripts/retrieval-check.mts",
-    "check:behaviour": "tsx scripts/behaviour-check.mts"
+    "check:behaviour": "tsx scripts/behaviour-check.mts",
+    "check:finals-live": "node scripts/finals-live.mts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.99",
