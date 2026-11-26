@@ -46,6 +46,17 @@ describe("instructions", () => {
     expect(TURN_REMINDER).toMatch(/Never call a slide wrong, a typo, a slip or an error/);
     expect(CALCULATION_RULES).toMatch(/never "some sources describe this differently" for a calculation/);
   });
+  it("rounding gets no comment; a clearly different result gets one neutral cross-check line", () => {
+    expect(CALCULATION_RULES).toMatch(/using the slide's own constants, table values and rounding/);
+    expect(CALCULATION_RULES).toMatch(/differ by less than 1%[^\n]*Say nothing about it at all/);
+    expect(CALCULATION_RULES).toMatch(/Cross-check this step against your slides and notes/);
+    expect(CALCULATION_RULES).toMatch(/never for wording, notation or labels/);
+    expect(TURN_REMINDER).toMatch(/Cross-check this step against your slides and notes/);
+  });
+  it("the cleaner keeps the cross-check line", () => {
+    const line = "So θ = 135°.\n\nYour slide shows 345° here, while the working above gives 135°. Cross-check this step against your slides and notes. [[s:MTH101-10-53]]";
+    expect(plainSlideTalk(line)).toBe(line);
+  });
   it("never invent the student's name, and blank it in documents", () => {
     const p = partnerContext(null, "osasereee");
     expect(p).toMatch(/Never invent a name, surname/);

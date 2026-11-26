@@ -798,5 +798,24 @@
       "Author: (?!Evalina Checkwell-Test)(?!\\[)[A-Z][a-z]+ [A-Z][a-z]+"
     ],
     "email": "evalina.checkwell-test"
+  },
+  {
+    "id": "calc-differs-cross-check",
+    "what": "A worked example whose result is clearly not a rounding difference (MTH101 slide 53 gives 345° for −3+3i; the angle is 135°) gets the working and one neutral cross-check line, never 'wrong' or 'typo'",
+    "programme": "mechanical-engineering",
+    "level": 100,
+    "course": "MTH101",
+    "focus": "MTH101-10-53",
+    "question": "Explain this example step by step",
+    "must": [
+      "135",
+      "345",
+      "[Cc]ross-check",
+      "\\[\\[s:MTH101-10-53\\]\\]"
+    ],
+    "mustNot": [
+      "(typo|\\bslip\\b|is wrong|goes wrong|incorrect|mistake|an error|check (this |it )?with your lecturer|[Ss]ome sources describe)",
+      "(calculator|[Tt]he tool\\b|[Ll]et me (check|verify)|I'll (check|verify|run)|\\bWait,)"
+    ]
   }
 ]
