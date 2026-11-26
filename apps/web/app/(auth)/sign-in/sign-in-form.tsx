@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { BusyLabel } from "@/components/ui/spinner";
+import { isPauEmail, PAU_EMAIL_ERROR } from "@/lib/auth/email";
 import { safeNext } from "@/lib/auth/next";
 import { passwordHelpMailto, SUPPORT_EMAIL } from "@/lib/auth/support";
 
@@ -15,18 +16,18 @@ type Mode = "signup" | "login" | "reset";
 type Step =
   | { kind: "password" }
   | { kind: "code-email" }
-  // note: "slow" = the send didn't answer in time (the code usually arrived anyway); "had-code" = "I already have a code".
-  | { kind: "code"; email: string; note?: "slow" | "had-code" }
+  | { kind: "code"; email: string }
   | { kind: "new-password"; email: string };
 
 const MIN_PASSWORD = 8;
 // Owner, 26 Nov 2026 (Anselm): the code reached his phone but the page sat on "Sending…" because the reply
-// never reached his laptop, so there was nowhere to type it. The page now never waits more than this, and
-// remembers the code step for a while so a reload or a trip to Outlook comes back to the code box.
-const SEND_TIMEOUT_MS = 10_000;
+// never reached his laptop, so there was nowhere to type it. Now the code box opens the moment the student
+// asks for a code (the send carries on behind it; a refusal brings them back with the reason), and the code
+// step is remembered for as long as a code lasts (Supabase otp_expiry: 1 hour), so a reload or a trip to
+// Outlook comes back to the code box.
+const SEND_TIMEOUT_MS = 20_000;
 const CODE_STEP_KEY = "pau.codeStep";
-const CODE_STEP_TTL_MS = 15 * 60_000;
-const PAU_EMAIL = /^[^\s@]+@pau\.edu\.ng$/;
+const CODE_STEP_TTL_MS = 60 * 60_000;
 
 function saveCodeStep(email: string, mode: "signup" | "reset") {
   try {
@@ -152,7 +153,7 @@ export function SignInForm({
     const pending = readCodeStep();
     if (pending) {
       setMode(pending.mode);
-      setStep({ kind: "code", email: pending.email, note: "had-code" });
+      setStep({ kind: "code", email: pending.email });
     }
   }, []);
 
@@ -176,25 +177,18 @@ export function SignInForm({
     go(m === "login" ? { kind: "password" } : { kind: "code-email" });
   }
 
-  const timedOut = useRef(false);
-  async function post(url: string, body: object, timeoutMs?: number) {
+  async function post(url: string, body: object) {
     if (inFlight.current) return null;
-    timedOut.current = false;
     inFlight.current = true;
     setBusy(true);
     setError(null);
     try {
-      const init = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
-      const res = timeoutMs ? await fetchWithTimeout(url, init, timeoutMs) : await fetch(url, init);
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
       lastCode.current = res.ok ? null : (data.code ?? null);
       if (!res.ok) setError(data.error ?? "Something went wrong. Try again.");
       return res.ok ? data : null;
-    } catch (e) {
-      if (timeoutMs && isTimeout(e)) {
-        timedOut.current = true;
-        return null;
-      }
+    } catch {
       setError("Couldn't reach the server. Check your connection.");
       return null;
     } finally {
@@ -251,40 +245,37 @@ export function SignInForm({
 
   async function sendCode(form: FormData) {
     const email = String(form.get("email") ?? "").trim().toLowerCase();
-    setNotice(null);
     const intent = mode === "reset" ? "reset" : "signup";
-    const data = await post("/api/auth/otp", { email, intent }, SEND_TIMEOUT_MS);
-    if (!data && timedOut.current && PAU_EMAIL.test(email)) {
-      // No answer in time: the code has usually been sent anyway, so show the box for it.
-      remember(email);
-      setSavedEmail(email);
-      saveCodeStep(email, intent);
-      go({ kind: "code", email, note: "slow" });
+    setNotice(null);
+    if (!isPauEmail(email)) {
+      setError(PAU_EMAIL_ERROR);
       return;
     }
-    if (!data) {
-      if (lastCode.current === "account_exists" || lastCode.current === "no_account") {
-        setError(null);
-        remember(email);
-        setSavedEmail(email);
-        setNotice({ kind: lastCode.current === "account_exists" ? "exists" : "none", email });
-      }
-      return;
-    }
+    // Open the code box straight away; the send finishes behind it.
     remember(email);
     setSavedEmail(email);
     saveCodeStep(email, intent);
     go({ kind: "code", email });
-  }
-
-  /** "I already have a code": straight to the code box for the email typed above. */
-  function haveCode(form: HTMLFormElement | null) {
-    const email = String(new FormData(form ?? undefined).get("email") ?? "").trim().toLowerCase();
-    if (!PAU_EMAIL.test(email)) return setError("Type your PAU email above first, then enter the code.");
-    remember(email);
-    setSavedEmail(email);
-    saveCodeStep(email, mode === "reset" ? "reset" : "signup");
-    go({ kind: "code", email, note: "had-code" });
+    let res: Response;
+    try {
+      res = await fetchWithTimeout(
+        "/api/auth/otp",
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, intent }) },
+        SEND_TIMEOUT_MS,
+      );
+    } catch {
+      return; // no answer: the code has usually gone anyway, and the box is already open
+    }
+    if (res.ok) return;
+    // Refused (account exists / no account / not allowed / too many): back to the email step with the reason.
+    const data = await res.json().catch(() => ({}));
+    clearCodeStep();
+    go({ kind: "code-email" });
+    if (data.code === "account_exists" || data.code === "no_account") {
+      setNotice({ kind: data.code === "account_exists" ? "exists" : "none", email });
+    } else {
+      setError(data.error ?? "We couldn't send the code. Try again in a moment.");
+    }
   }
 
   async function verify(form: FormData) {
@@ -479,9 +470,6 @@ export function SignInForm({
               arrow={mode !== "reset" && !microsoftSignup}
             />
           </button>
-          <button type="button" onClick={(e) => haveCode(e.currentTarget.form)} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
-            I already have a code
-          </button>
           <p className="mt-5 text-center text-sm text-muted">
             {mode === "reset" ? "Remembered it? " : "Already have an account? "}
             <button type="button" onClick={() => switchMode("login")} disabled={busy} className={link}>
@@ -495,22 +483,8 @@ export function SignInForm({
           {/* Owner, 26 Nov 2026: every code was delivered, yet students asked for up to 3 and half never entered one.
               The page said "6-digit" (the codes have 8), said "spam" (Outlook says Junk Email) and had no resend. */}
           <p className="text-[15px] text-muted">
-            {step.note === "slow" ? (
-              <>
-                We&apos;re sending a code to <span className="font-medium text-ink">{step.email}</span>. This is taking longer than usual, but
-                the code usually arrives anyway. Look for the subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
-              </>
-            ) : step.note === "had-code" ? (
-              <>
-                Enter the newest code we emailed to <span className="font-medium text-ink">{step.email}</span>, subject{" "}
-                <span className="font-medium text-ink">Your AskYourSlides code</span>.
-              </>
-            ) : (
-              <>
-                We emailed a code to <span className="font-medium text-ink">{step.email}</span>. It usually arrives within a minute, with the
-                subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
-              </>
-            )}
+            We emailed a code to <span className="font-medium text-ink">{step.email}</span>. It usually arrives within a minute, with the
+            subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
           </p>
           <p className="mt-3 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
             Not in your inbox? In Outlook, check <span className="font-medium">Junk Email</span> and the <span className="font-medium">Other</span> tab.
