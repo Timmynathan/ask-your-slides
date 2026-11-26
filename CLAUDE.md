@@ -94,9 +94,11 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   the opening is never trimmed, and the trace is logged `wellbeing` (admin: rose "Wellbeing" pill, first in Needs
   attention). Ordinary exam stress gets one warm line and normal help.
 
-- Answer review (26 Nov 2026, 81 answers): calculations never comment on a slide (no "typo/slip/check with your lecturer",
-  and NOT the "Some sources describe this differently" wording, which is for facts only); rounding gets no comment; a
-  different result is just taught step by step. Tool talk ("let me check with the calculator", "the tool confirms",
+- Answer review (26 Nov 2026, 81 answers): calculations never call a slide wrong (no "typo/slip/check with your lecturer",
+  and NOT the "Some sources describe this differently" wording, which is for facts only). The bot recalculates with the
+  slide's own constants and rounding; rounding (same at the slide's precision or under 1% apart) gets no comment; a clearly
+  different result is taught step by step plus one neutral line: "Your slide shows X here, while the working above gives Y.
+  Cross-check this step against your slides and notes." (computed results only, never wording or notation). Tool talk ("let me check with the calculator", "the tool confirms",
   "Wait, …") is cleaned anywhere in an answer. "Next slide" = one slide; "overview"/"summary" in a topic chat reads the
   whole lecture. Never invent a student's name ([Your name] in documents). 57 loader notes ("typo", "should be dD") were
   removed from slide descriptions, and ingestion/vision.py now forbids them. Root cause of remaining wrong facts: Haiku's

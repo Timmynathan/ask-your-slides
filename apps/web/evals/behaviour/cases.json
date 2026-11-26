@@ -788,7 +788,7 @@
         "content": "Slide 20 gives the standard skeleton of a business report, from the title page to the appendices. [[s:MCM213-16-20]]\n\n- **Title Page:** report title, author name, organisation and date. [[s:MCM213-16-20]]"
       }
     ],
-    "question": "an actual report with actual information",
+    "question": "Now write me a full sample report using this structure, with the title page filled in",
     "must": [
       "Evalina Checkwell-Test",
       "(made[- ]up|invented|fictional|illustrat|replace)"
@@ -801,7 +801,7 @@
   },
   {
     "id": "calc-differs-cross-check",
-    "what": "A worked example whose result is clearly not a rounding difference (MTH101 slide 53 gives 345° for −3+3i; the angle is 135°) gets the working and one neutral cross-check line, never 'wrong' or 'typo'",
+    "what": "A worked example whose result is clearly not a rounding difference (MTH101 slide 53 gives 345° for −3+3i; the angle is 135°) gets the working and one neutral cross-check line, never 'wrong' or 'typo'. 'Your calculator gives −45°' (the student's own calculator) is fine teaching",
     "programme": "mechanical-engineering",
     "level": 100,
     "course": "MTH101",
@@ -815,7 +815,7 @@
     ],
     "mustNot": [
       "(typo|\\bslip\\b|is wrong|goes wrong|incorrect|mistake|an error|check (this |it )?with your lecturer|[Ss]ome sources describe)",
-      "(calculator|[Tt]he tool\\b|[Ll]et me (check|verify)|I'll (check|verify|run)|\\bWait,)"
+      "(\\b[Tt]he calculator\\b|[Tt]he tool\\b|[Ll]et me (check|verify)|I'll (check|verify|run)|\\bWait,)"
     ]
   }
 ]
