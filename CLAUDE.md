@@ -94,6 +94,14 @@ Read this first, then PRD.md (source of truth for behaviour) and `git log -20`.
   the opening is never trimmed, and the trace is logged `wellbeing` (admin: rose "Wellbeing" pill, first in Needs
   attention). Ordinary exam stress gets one warm line and normal help.
 
+- Answer review (26 Nov 2026, 81 answers): calculations never comment on a slide (no "typo/slip/check with your lecturer",
+  and NOT the "Some sources describe this differently" wording, which is for facts only); rounding gets no comment; a
+  different result is just taught step by step. Tool talk ("let me check with the calculator", "the tool confirms",
+  "Wait, …") is cleaned anywhere in an answer. "Next slide" = one slide; "overview"/"summary" in a topic chat reads the
+  whole lecture. Never invent a student's name ([Your name] in documents). 57 loader notes ("typo", "should be dD") were
+  removed from slide descriptions, and ingestion/vision.py now forbids them. Root cause of remaining wrong facts: Haiku's
+  own explanations aren't checked; options are tighter rules (done), a checker call, or a bigger model (owner's call).
+
 ## Stack and models
 - Next.js (App Router) on Vercel, Vercel AI SDK for streaming + tools.
 - Supabase: Auth (email OTP, @pau.edu.ng only, custom SMTP via Resend from noreply@mail.askyourslides.com),

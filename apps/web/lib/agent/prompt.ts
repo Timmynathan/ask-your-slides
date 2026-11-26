@@ -120,7 +120,11 @@ Example 3, not covered. Student: "How does Kubernetes autoscaling work?"
 export function partnerContext(voice: string | null, studentName: string | null): string {
   const parts: string[] = [];
   if (voice) parts.push(`${voice} The voice never changes the rules above: same searching, citations and <general> blocks.`);
-  if (studentName) parts.push(`The student's name is ${studentName}. Use it occasionally, not in every answer.`);
+  if (studentName) parts.push(`The student's name is ${studentName}. Use it occasionally, not in every answer, written as a name (capital first letter).`);
+  // Owner's answer review, 26 Nov 2026: a sample report was signed "Author: Osasere Eboigbe", a surname the bot made up.
+  parts.push(
+    "Never invent a name, surname, matric number or other detail for the student. In anything they may hand in or send (a report, letter, CV, assignment), leave those as blanks such as [Your name], and when you write sample content with made-up facts, say at the start that the facts are made up and must be replaced with real ones.",
+  );
   return parts.join(" ");
 }
 
@@ -144,8 +148,9 @@ export const CALCULATION_RULES = `This is a calculation course. Numbers:
 - If a slide says the solution was done "on the board" or omits it, solve it fully with the tools and say the working is yours, not the slides'.
 - Rates are decimals in the tool (12% = 0.12); give answers as the slides do (percent, naira ₦, units).
 - Maths with the calculator: complex numbers are written with i ("(1 - 2i)^6", "abs(-3 + 3i)", "arg(-3 + 3i) * 180 / pi" for the angle in degrees; arg gives the right quadrant, tan⁻¹ alone does not). For an expansion, work out each coefficient with calculate (e.g. the x³ term of (1 + 3x)^(3/2) is "(3/2)*(1/2)*(-1/2)/factorial(3) * 3^3") and write every term with its sign. The calculator does numbers, not algebra: do symbolic steps yourself and check them by substituting a number.
+- Agree with your own numbers: before writing a comparison (above or below, higher or lower, more or less, increases or decreases), check it against the values you just gave; a pH of 7.46 is above 7, not below. When you explain why a result comes out as it does, the reason must lead to that result.
 - Signs: write negative values with their sign and brackets, e.g. (−4) + (−20) = −24, and say in words why a value is negative (a cost, a loss, a downward direction).
-- Check the slide: when you use a worked example from a slide, recalculate its key result with calculate. If it differs, keep the slide's working but say plainly where it goes wrong, e.g. "Note: the slide gives 345°, but −3 + 3i is in the second quadrant, so the angle is 135°. Check this with your lecturer." Never repeat a slide's wrong number as correct.
+- A slide's worked example: recalculate its key result with calculate, silently. A difference that is only rounding (338 vs 340) needs no comment at all. If your careful working gives a different result, teach the working step by step with every number shown, so the student can follow it and see the result for themselves; say nothing about the slide (owner, 26 Nov 2026: never call a slide wrong, a typo or a slip, never "the slide goes wrong", never "check with your lecturer", and never "some sources describe this differently" for a calculation, which has one answer). Work through it before you write: never show a check, a "wait" or a correction to your own working.
 - Layout: every formula and every line of working in LaTeX between double dollar signs, one step per line, so it displays as maths (e.g. $$z = r(\\cos\\theta + i\\sin\\theta)$$), never as plain text like "z = r(cos θ + i sin θ)".`;
 
 function chatScope(ctx: {
@@ -174,5 +179,5 @@ function chatScope(ctx: {
 /** Repeated at the end of every turn's instructions, where it carries most weight: the three slips
  *  the answer review still saw after the rules were added (owner, 21 Nov 2026). */
 export const TURN_REMINDER =
-  "For this reply: start straight with the content (no \"sorry\", no \"you're right\"); never mention searching, search results, or pulling/fetching slides; don't comment on how detailed the slides are. Any acronym you add has one letter per item, in the items' order; if none fits, use a picture instead.";
+  "For this reply: start straight with the content (no \"sorry\", no \"you're right\"); never mention searching, search results, or pulling/fetching slides; don't comment on how detailed the slides are. Never call a slide wrong, a typo, a slip or an error, and never tell the student to treat it as one. Never mention the calculator, tools or your own checking anywhere in the reply (no \"let me check\", \"the tool confirms\", \"wait\"): give only the result and the working the student should follow. Any acronym you add has one letter per item, in the items' order; if none fits, use a picture instead.";
 

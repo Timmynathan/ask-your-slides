@@ -27,6 +27,7 @@ These are part of the answer and must be kept:
 - a greeting with the student's name that leads into content ("Kika, week 7 is about digital laws.")
 - a one-line lead-in that tells the student what they are getting ("Here are five practice questions on Law and Conscience, with answers.", "Here's the whole class, slide by slide.")
 - anything with real content: a definition, a fact, a direct answer, a reference to a slide.
+- a warning or caveat the student needs ("The facts are invented for illustration, so replace them with real data before you submit.", "This is a sample, not your own work.").
 
 Reply with only JSON: {"drop": N}, where N is how many of the numbered sentences, counted from sentence 1, to remove from the start (consecutive, from the start only). Such sentences often come two or three in a row: count all of them, up to the first sentence that teaches or answers. A sentence in which the tutor says what it did or chose ("I've read…", "I've checked…", "I've left slide 25 to the end", "I'll go through…") is a remark about the reply even when it names a slide. If sentence 1 is already part of the answer, N is 0. When unsure, keep it.`;
 

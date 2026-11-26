@@ -248,11 +248,17 @@ export function matchesPart(text: string, part: { kind: "week" | "lecture"; n: n
   return new RegExp(`(?:^|[^a-z])${word}[\\s_.-]*0?${part.n}(?!\\d)`, "i").test(text);
 }
 
+/** "next slide", "next slide pls", "next page": one slide on, not the rest of the deck. */
+export function asksForNextSlide(message: string): boolean {
+  const m = message.trim();
+  return m.length <= 60 && /\bnext (?:slide|page)\b(?!s)/i.test(m) && !/\b(?:slides|pages|all|rest|every)\b/i.test(m);
+}
+
 /** "keep going", "continue", "go on", "you stopped at 19… keep going", "why did you stop". */
 export function isContinuation(message: string): boolean {
   const m = message.trim();
   if (m.length > 120) return false;
-  return /\b(keep+\s*-?\s*go+i*n+g?|continue|carry on|go on|proceed|don'?t stop|why did ?you sto+p+|you stopped|finish (it|the rest)|the rest|next slides?)\b/i.test(m);
+  return /\b(keep+\s*-?\s*go+i*n+g?|continue|carry on|go on|proceed|don'?t stop|why did ?you sto+p+|you stopped|finish (it|the rest)|the rest|next (?:slides?|pages?))\b/i.test(m);
 }
 
 /** The last slide an earlier answer cited ([[s:CSC402-03-19]] → CSC402-03, slide 19). */
@@ -392,6 +398,17 @@ const SEARCH_TALK: [RegExp, string][] = [
   // "I'll calculate it with the slide's formula." (same check, second run): a sentence announcing the
   // calculation, anywhere a sentence starts.
   [/(?<=^|[.!?]\s+|\n)I(?:'ll| will| am going to|'m going to) (?:now )?(?:calculate|compute|work (?:it|this|that|them) out|do the (?:maths?|calculation))\b[^.!?\n]*[.!?:][ \t]*/g, ""],
+  // Checking out loud in the middle of an answer (owner's answer review, 26 Nov 2026: "Let me check that with the
+  // calculator.", "I'll work this through with the calculator", "Let me verify the slide's arithmetic.", "I'll run
+  // that calculation for you.", five times in one CHM101 answer, often alone in a <general> block).
+  [/(?<=^|[.!?]\s+|\n|<general>\s*)(?:Let me|Let's|I'll|I will|I'm going to) (?:quickly )?(?:check|verify|recheck|re-check|double-check|confirm|run|work)\b[^.!?\n]*\b(?:calculator|calculation|arithmetic|numbers|maths?|working|tool|it|this|that|them)\b[^.!?\n]*[.!?:][ \t]*/g, ""],
+  // "Wait, I need to correct the 2024 step: …, so I should recompute that." (same review): the model correcting itself.
+  [/(?<=^|[.!?]\s+|\n)(?:Wait|Hold on|Oops)[,.!]\s[^.!?\n]*[.!?:][ \t]*/g, ""],
+  // "The tool confirms 3.54 × 10⁻⁵ M/s", "The calculator gives 3.5376": the result stays, the tool goes.
+  [/\bThe (?:calculator|tool|calculate tool)(?:'s result)? (?:gives|confirms|shows|returns|says|agrees)\b/g, "This gives"],
+  [/\bthe (?:calculator|tool|calculate tool)(?:'s result)? (?:gives|confirms|shows|returns|says|agrees)\b/g, "this gives"],
+  // What is left of a <general> block that held only that: an empty box on screen.
+  [/<general>\s*<\/general>\s*/g, ""],
 ];
 /** "My upload", "the PDF I uploaded", "my test", "my notes": the student means their own pages. */
 const MENTIONS_UPLOAD = /\b(upload(?:ed|s)?|my (?:test|notes?|paper|pdf|file|document|scan|worksheet|pages?)|the (?:pdf|file|document|scan) I)\b/i;
@@ -716,11 +733,14 @@ export async function runChatTurn(turn: ChatTurn) {
   // search hits, out of order, and misread a slide whose "It" pointed back to the one before. Now the
   // topic's lectures are read in order first, as for every-slide requests (up to MISSED_CLASS_PAGES).
   const missedClass = !walkthrough && asksForMissedClass(turn.userMessage);
-  if (!preCalls.length && (walkthrough || missedClass) && turn.topicId && !namesOtherPart) {
+  // "Give me an overview" / "summarise this" in a topic chat: the whole lecture is read first (owner's answer
+  // review, 26 Nov 2026: an ECO205 overview came from the first 8 search hits and listed one subsector of four).
+  const topicSummary = summaryAsked && !walkthrough && !missedClass && !asksForMemoryAids(turn.userMessage) && !!turn.topicId && !namesOtherPart;
+  if (!preCalls.length && (walkthrough || missedClass || topicSummary) && turn.topicId && !namesOtherPart) {
     const mats = must(
       await db.from("materials").select("material_order, page_count").eq("course_id", turn.courseId).eq("topic_id", turn.topicId).in("kind", ["slides", "notes"]).order("material_order"),
     ) as { material_order: number; page_count: number }[];
-    for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), missedClass ? MISSED_CLASS_PAGES : WALKTHROUGH_PAGES)) {
+    for (const r of pageReads(turn.courseCode, mats.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })), missedClass || topicSummary ? MISSED_CLASS_PAGES : WALKTHROUGH_PAGES)) {
       preCalls.push({ tool: getMaterialPages, input: r });
     }
   }
@@ -802,14 +822,21 @@ export async function runChatTurn(turn: ChatTurn) {
       if (here) {
         // The rest of this file, then the topic's later lecture files.
         const later = mats.filter((m) => m.material_order > order && m.topic_id && m.topic_id === here.topic_id && (m.kind === "slides" || m.kind === "notes"));
-        const reads = pageReads(turn.courseCode, [
+        // "Next slide pls" means one slide, in the same depth (owner's answer review, 26 Nov 2026: after slide
+        // 12 it covered slides 13 to 22 at once, a line or two each).
+        if (asksForNextSlide(turn.userMessage) && at.number < here.page_count) {
+          const next = at.number + 1;
+          preCalls.push({ tool: getMaterialPages, input: { material: materialKey(turn.courseCode, order), from: next, to: next } });
+          resumeNote = `The student wants the next slide: slide ${next} of ${at.material} only. Explain just that slide, in the same style and depth as your previous answer, without repeating or recapping it, and stop there (they will ask for the one after).`;
+        }
+        const reads = resumeNote ? [] : pageReads(turn.courseCode, [
           { material_order: order, from: at.number + 1, pages: here.page_count },
           ...later.map((m) => ({ material_order: m.material_order, from: 1, pages: m.page_count })),
         ]);
         for (const r of reads) preCalls.push({ tool: getMaterialPages, input: r });
-        resumeNote = reads.length
+        resumeNote = resumeNote ?? (reads.length
           ? `The student wants you to continue your previous answer. It ended at slide ${at.number} of ${at.material}. Carry on from slide ${at.number + 1} in the same style, without repeating, recapping or apologising, and finish everything that was asked.`
-          : `The student wants you to continue your previous answer. It already reached the last slide (${at.material}, slide ${at.number}). Finish any part of the request still missing (for example the learning objectives), or say in one sentence that everything has been covered and offer a next step.`;
+          : `The student wants you to continue your previous answer. It already reached the last slide (${at.material}, slide ${at.number}). Finish any part of the request still missing (for example the learning objectives), or say in one sentence that everything has been covered and offer a next step.`);
       }
     }
   }

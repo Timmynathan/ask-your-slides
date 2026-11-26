@@ -21,6 +21,8 @@ import anthropic
 
 from config import CACHE, VISION_MODEL
 
+# The no-corrections line (owner, 26 Nov 2026: 57 descriptions said "typo"/"should be", and the bot repeated it)
+# was added without a version bump, so slides already described are not paid for twice.
 PROMPT_VERSION = "1"
 
 DESCRIBE = """This image is {where}.
@@ -32,6 +34,7 @@ Text already extracted from it:
 
 Describe only what that text does not already capture: diagrams, charts, figures, photos, handwriting, and any equations or tables (transcribe these exactly; write equations in plain text or LaTeX). If a title or heading appears only in the image, start with it.
 If there is nothing meaningful beyond the extracted text (only a logo, a decorative picture or a background), reply with exactly NONE.
+Describe what is there; never comment on whether the slide is right (no "typo", "should be", "(sic)", "appears to be an error"): students read these descriptions as the slide.
 Under 150 words. Plain sentences, no preamble."""
 
 # Calculation courses (course.yaml calculation_heavy): formulas and worked solutions are often
@@ -53,6 +56,7 @@ Transcribe exactly everything the extracted text misses:
 If a symbol or number is unreadable, write [unclear] instead of guessing. If text runs off the edge of the slide, transcribe only what is visible and write [cut off]; never complete it.
 Don't repeat what the extracted text already says, except where a formula or table needs it for context. If a title or heading appears only in the image, start with it.
 If there is nothing beyond the extracted text (only a logo, a decorative picture or a background), reply with exactly NONE.
+Describe what is there; never comment on whether the slide is right (no "typo", "should be", "(sic)", "appears to be an error"): students read these descriptions as the slide.
 No preamble."""
 
 
