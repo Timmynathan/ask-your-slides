@@ -60,6 +60,8 @@ export interface ChatTurn {
   /** Study partner's voice (lib/partners.ts) and the student's first name, if known. */
   partnerVoice?: string | null;
   studentName?: string | null;
+  /** Full name from a firstname.lastname@pau.edu.ng email (student-name.ts), for documents only. */
+  studentFullName?: string | null;
   assistantMessageId: string;
   /** The saved question this turn answers. If the student edits it (deleting it) before the
    *  answer finishes, the stale answer is not saved. */
@@ -1069,7 +1071,7 @@ export async function runChatTurn(turn: ChatTurn) {
     // students (Haiku 5.5 caches from 512 tokens). The chat-specific line comes after it.
     instructions: [
       { role: "system", content: CORE_INSTRUCTIONS, providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
-      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, wholeTopicNote, backgroundNote, careNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
+      { role: "system", content: [chatContext(turn), turn.planNote, partnerContext(turn.partnerVoice ?? null, turn.studentName ?? null, turn.studentFullName ?? null), focusNote, chatNote, shortUnclearNote, resumeNote, answerNote, photoNote, paperNote, uploadsNote, partNote, lookAgainNote, drawNote, memoryNote, splitNote, topicNote, missedClassNote, summaryNote, rightNote, wholeTopicNote, backgroundNote, careNote, TURN_REMINDER].filter(Boolean).join("\n\n") },
     ],
     messages: [
       ...turn.history,

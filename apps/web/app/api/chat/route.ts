@@ -8,6 +8,7 @@ import { adminClient, must } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { SLIDE_KEY_RE } from "@/lib/study/course-code";
 import { admitChatTurn, LIMIT_MESSAGES } from "@/lib/plans/gate";
+import { nameFromEmail } from "@/lib/agent/student-name";
 
 // A whole deck explained slide by slide takes Haiku about 3 minutes (lib/agent/run.ts).
 export const maxDuration = 300;
@@ -171,6 +172,7 @@ export async function POST(request: Request) {
     history,
     partnerVoice: partner?.voice ?? null,
     studentName: profile?.display_name?.split(/\s+/)[0] ?? null,
+    studentFullName: nameFromEmail(auth.user.email),
     assistantMessageId,
     userMessageId,
     startedAt,

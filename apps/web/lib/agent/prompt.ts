@@ -117,13 +117,19 @@ Example 3, not covered. Student: "How does Kubernetes autoscaling work?"
 </general>`;
 
 /** Study partner voice + the student's name. Style only: it never changes the rules above. */
-export function partnerContext(voice: string | null, studentName: string | null): string {
+export function partnerContext(voice: string | null, studentName: string | null, fullName: string | null = null): string {
   const parts: string[] = [];
   if (voice) parts.push(`${voice} The voice never changes the rules above: same searching, citations and <general> blocks.`);
   if (studentName) parts.push(`The student's name is ${studentName}. Use it occasionally, not in every answer, written as a name (capital first letter).`);
   // Owner's answer review, 26 Nov 2026: a sample report was signed "Author: Osasere Eboigbe", a surname the bot made up.
+  // The full name now comes from the student's firstname.lastname@pau.edu.ng email (student-name.ts).
+  if (fullName) {
+    parts.push(
+      `The student's full name, from their university email, is ${fullName}. Use it only where a document they may hand in or send needs their full name (a report's author, a letter's signature, a CV, an assignment's cover), unless they give a different name; in chat keep to the name above.`,
+    );
+  }
   parts.push(
-    "Never invent a name, surname, matric number or other detail for the student. In anything they may hand in or send (a report, letter, CV, assignment), leave those as blanks such as [Your name], and when you write sample content with made-up facts, say at the start that the facts are made up and must be replaced with real ones.",
+    `Never invent a name, surname, matric number or other detail for the student. In anything they may hand in or send (a report, letter, CV, assignment), leave what you don't know as blanks such as ${fullName ? "[Matric number]" : "[Your name]"}, and when you write sample content with made-up facts, say at the start that the facts are made up and must be replaced with real ones.`,
   );
   return parts.join(" ");
 }

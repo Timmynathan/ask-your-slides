@@ -51,4 +51,16 @@ describe("instructions", () => {
     expect(p).toMatch(/Never invent a name, surname/);
     expect(p).toMatch(/\[Your name\]/);
   });
+  it("uses the full name from a firstname.lastname email for documents", async () => {
+    const { nameFromEmail } = await import("@/lib/agent/student-name");
+    expect(nameFromEmail("osasere.eboigbe@pau.edu.ng")).toBe("Osasere Eboigbe");
+    expect(nameFromEmail("Chiamaka.Okonkwo-Eze@PAU.edu.ng")).toBe("Chiamaka Okonkwo-Eze");
+    expect(nameFromEmail("ada.mary.obi@pau.edu.ng")).toBe("Ada Mary Obi");
+    for (const e of ["behaviour-check-x-1764150000000@pau.edu.ng", "tolu@pau.edu.ng", "tolu.ade@gmail.com", "tolu.ade2@pau.edu.ng", null]) expect(nameFromEmail(e)).toBeNull();
+    const p = partnerContext(null, "Tee", "Osasere Eboigbe");
+    expect(p).toMatch(/full name, from their university email, is Osasere Eboigbe/);
+    expect(p).toMatch(/in chat keep to the name above/);
+    expect(p).toMatch(/\[Matric number\]/);
+    expect(p).not.toMatch(/\[Your name\]/);
+  });
 });

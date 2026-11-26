@@ -34,6 +34,8 @@ interface Case {
   mustNot?: string[];
   /** The slide open in the viewer (sent as focus_slide, like a typed "this slide"). */
   focus?: string;
+  /** Sign in as <email>@pau.edu.ng (a firstname.lastname shape) instead of a throwaway address. */
+  email?: string;
   /** Ask inside this topic's chat (its title, case-insensitive) instead of the whole-course chat. */
   topic?: string;
   /** Tools the bot must (or must not) have called for this answer, e.g. look_up_background. */
@@ -64,9 +66,14 @@ const broken = (c: Case, why: string): Result => ({ id: c.id, what: c.what, pass
 async function run(c: Case): Promise<Result> {
   const { data: course } = await db.from("courses").select("id").eq("programme", c.programme).eq("code", c.course).single();
   if (!course) return broken(c, `no course ${c.programme}/${c.course}`);
-  const email = `behaviour-check-${c.id}-${Date.now()}@pau.edu.ng`;
+  const email = c.email ? `${c.email}@pau.edu.ng` : `behaviour-check-${c.id}-${Date.now()}@pau.edu.ng`;
   let userId = "";
   try {
+    if (c.email) {
+      // A fixed address: remove a test user an earlier, interrupted run left behind.
+      const { data: stale } = await db.from("profiles").select("id").eq("email", email).maybeSingle();
+      if (stale) await db.auth.admin.deleteUser(stale.id);
+    }
     const { data: created, error: createError } = await db.auth.admin.createUser({ email, email_confirm: true });
     if (createError) throw createError;
     userId = created.user.id;
