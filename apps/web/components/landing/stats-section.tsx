@@ -5,7 +5,7 @@ import { StatVideo } from "./stat-video";
 // ── The three figures on the landing page. Real counts on 20 Nov 2026: 63 sign-ups, 9,625 past
 //    questions, 264 courses. Update them by hand as they grow. ──
 const STATS = {
-  students: "100+",
+  students: "200+",
   gradeImprovement: "91%", // owner, 20 Nov 2026: confirmed with their users
   courses: "260+",
 };

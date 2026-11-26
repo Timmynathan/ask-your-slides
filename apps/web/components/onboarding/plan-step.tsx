@@ -118,7 +118,7 @@ export function PlanOfferPanel({ offer, freePast, promo }: {
         {/* Right: the offer. */}
         <div className="order-1 lg:order-2">
           <h1 className="font-heading text-[28px] font-normal leading-tight tracking-tight text-brand sm:text-[34px]">
-            Join 100+ PAU students already studying with Ask Your Slides
+            Join 200+ PAU students already studying with Ask Your Slides
           </h1>
           <p className="mt-2 text-[15px] text-muted">Start free. Get Finals when exams are close.</p>
 
