@@ -114,7 +114,7 @@ async function main() {
       "sign-in shows Create account / Log in tabs");
     await sp.getByRole("button", { name: "Create a free account" }).click();
     check(await sp.getByRole("heading", { name: "Create your free account" }).isVisible() && await sp.getByRole("link", { name: "Continue with Microsoft" }).isVisible()
-      && await sp.getByRole("button", { name: "Continue", exact: true }).isVisible() && !(await sp.locator("#new-password").count()),
+      && await sp.getByRole("button", { name: "Email me a code", exact: true }).isVisible() && !(await sp.locator("#new-password").count()),
       "'Create a free account' switches to sign-up: Continue with Microsoft or email + code, no unverified password sign-up");
     await anon.close();
 
@@ -241,8 +241,8 @@ async function main() {
       // ?code=1: the owner can test the emailed-code sign-up without changing it for students.
       const cp = await browser.newPage();
       await cp.goto(`${BASE}/sign-up?code=1`);
-      await cp.getByRole("button", { name: "Continue", exact: true }).waitFor({ timeout: 10000 }).catch(() => null);
-      check((await cp.getByRole("button", { name: "Continue", exact: true }).isVisible()) && (await cp.locator("#new-password").count()) === 0,
+      await cp.getByRole("button", { name: "Email me a code", exact: true }).waitFor({ timeout: 10000 }).catch(() => null);
+      check((await cp.getByRole("button", { name: "Email me a code", exact: true }).isVisible()) && (await cp.locator("#new-password").count()) === 0,
         "/sign-up?code=1 shows the emailed-code sign-up even while direct sign-up is on");
       await cp.close();
       // A real direct sign-up: lands on onboarding, account confirmed.

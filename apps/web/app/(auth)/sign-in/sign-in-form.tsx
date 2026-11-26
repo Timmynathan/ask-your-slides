@@ -23,16 +23,18 @@ const MIN_PASSWORD = 8;
 const MICROSOFT = process.env.NEXT_PUBLIC_MICROSOFT_LOGIN !== "0";
 
 /** One click with the PAU Microsoft 365 account (Outlook/Teams): no emailed code needed. */
-function MicrosoftButton({ next }: { next: string | null }) {
+function MicrosoftButton({ next, primary = false }: { next: string | null; primary?: boolean }) {
   const [busy, setBusy] = useState(false);
   return (
     <a
       href={`/auth/microsoft${next ? `?next=${encodeURIComponent(next)}` : ""}`}
       onClick={() => setBusy(true)}
       aria-busy={busy}
-      className="flex w-full items-center justify-center gap-3 rounded-full bg-card px-4 py-3 text-base font-medium text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-[0.98]"
+      className={`flex w-full items-center justify-center gap-3 rounded-full px-4 py-3 text-base font-medium transition active:scale-[0.98] ${
+        primary ? "bg-brand text-brand-ink shadow-sm hover:opacity-90" : "bg-card text-ink ring-1 ring-line-strong hover:bg-sunken"
+      }`}
     >
-      <svg width="20" height="20" viewBox="0 0 21 21" aria-hidden>
+      <svg width="20" height="20" viewBox="0 0 21 21" aria-hidden className={primary ? "rounded-[3px] bg-white p-[2px]" : undefined}>
         <rect x="1" y="1" width="9" height="9" fill="#f25022" />
         <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
         <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
@@ -226,6 +228,8 @@ export function SignInForm({
     "mt-1.5 w-full rounded-xl border border-line-strong bg-white px-4 shadow-[0_1px_2px_rgba(14,22,100,0.06)] py-3 text-base text-ink outline-none transition-shadow placeholder:text-muted/70 focus:border-brand focus:ring-4 focus:ring-pau-200";
   const button =
     "mt-5 w-full rounded-full bg-brand px-4 py-3 text-base font-medium text-brand-ink hover:opacity-90 disabled:opacity-60";
+  const secondaryButton =
+    "mt-5 w-full rounded-full bg-card px-4 py-3 text-base font-medium text-brand ring-1 ring-line-strong transition hover:bg-sunken disabled:opacity-60";
   const link = "rounded text-sm font-medium text-ink underline decoration-pau-400 decoration-2 underline-offset-4 hover:decoration-pau-800 disabled:opacity-50";
   const emailField = (
     <>
@@ -306,10 +310,13 @@ export function SignInForm({
       <div className="mt-6">
       {showMicrosoft && (step.kind === "password" || (step.kind === "code-email" && mode !== "reset")) && (
         <div className="mb-6">
-          <MicrosoftButton next={next} />
+          {/* Create account: Microsoft is the main way (owner, 26 Nov 2026: 14 of 14 Microsoft sign-ups got in, but
+              half of one day's emailed-code sign-ups never did, though every code was delivered). */}
+          <MicrosoftButton next={next} primary={microsoftSignup} />
+          {microsoftSignup && <p className="mt-2.5 text-center text-sm text-muted">Use your PAU Outlook account. No code to wait for.</p>}
           <div className="mt-6 flex items-center gap-3 text-xs text-muted" aria-hidden>
             <span className="h-px flex-1 bg-line" />
-            or
+            {microsoftSignup ? "or get a code by email" : "or"}
             <span className="h-px flex-1 bg-line" />
           </div>
         </div>
@@ -386,8 +393,13 @@ export function SignInForm({
       {step.kind === "code-email" && !(mode === "signup" && directSignup) && (
         <form onSubmit={(e) => run(e, sendCode)} noValidate>
           {emailField}
-          <button type="submit" disabled={busy} className={button}>
-            <BusyLabel busy={busy} label={mode === "reset" ? "Send me a code" : "Continue"} busyLabel="Sending…" arrow={mode !== "reset"} />
+          <button type="submit" disabled={busy} className={microsoftSignup ? secondaryButton : button}>
+            <BusyLabel
+              busy={busy}
+              label={mode === "reset" ? "Send me a code" : microsoftSignup ? "Email me a code" : "Continue"}
+              busyLabel="Sending…"
+              arrow={mode !== "reset" && !microsoftSignup}
+            />
           </button>
           <p className="mt-5 text-center text-sm text-muted">
             {mode === "reset" ? "Remembered it? " : "Already have an account? "}
@@ -399,9 +411,14 @@ export function SignInForm({
       )}
       {step.kind === "code" && (
         <form onSubmit={(e) => run(e, verify)} noValidate>
+          {/* Owner, 26 Nov 2026: every code was delivered, yet students asked for up to 3 and half never entered one.
+              The page said "6-digit" (the codes have 8), said "spam" (Outlook says Junk Email) and had no resend. */}
           <p className="text-[15px] text-muted">
-            We sent a 6-digit code to <span className="font-medium text-ink">{step.email}</span>. It can take a minute; check your
-            spam folder too.
+            We emailed a code to <span className="font-medium text-ink">{step.email}</span>. It usually arrives within a minute, with the
+            subject <span className="font-medium text-ink">Your AskYourSlides code</span>.
+          </p>
+          <p className="mt-3 rounded-2xl bg-sunken px-4 py-3 text-sm text-ink">
+            Not in your inbox? In Outlook, check <span className="font-medium">Junk Email</span> and the <span className="font-medium">Other</span> tab.
           </p>
           <label htmlFor="code" className="mt-4 block text-sm font-medium">
             Code
@@ -411,7 +428,8 @@ export function SignInForm({
           <button type="submit" disabled={busy} className={button}>
             <BusyLabel busy={busy} label="Continue" busyLabel="Checking…" />
           </button>
-          <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={`${link} mt-4 block w-full text-center`}>
+          <ResendCode email={step.email} intent={mode === "reset" ? "reset" : "signup"} />
+          <button type="button" onClick={() => go({ kind: "code-email" })} disabled={busy} className={`${link} mt-3 block w-full text-center`}>
             Use a different email
           </button>
         </form>
@@ -468,4 +486,50 @@ function QueryReader({ onQuery }: { onQuery(q: URLSearchParams): void }) {
     latest.current(new URLSearchParams(query));
   }, [query]);
   return null;
+}
+
+/** "Send a new code", after a wait: Supabase allows one code a minute per address. Sends to the same address,
+ *  so a student never has to retype it (they used "Use a different email" to get a new code, up to 3 times). */
+const RESEND_WAIT_S = 60;
+function ResendCode({ email, intent }: { email: string; intent: "signup" | "reset" }) {
+  const [wait, setWait] = useState(RESEND_WAIT_S);
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (wait <= 0) return;
+    const t = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
+  async function resend() {
+    setState("sending");
+    setMessage(null);
+    try {
+      const res = await fetch("/api/auth/otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, intent }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Couldn't send a new code. Try again in a minute.");
+      setState("sent");
+      setMessage("New code sent. Use the newest one.");
+    } catch (e) {
+      setState("error");
+      setMessage(e instanceof Error ? e.message : "Couldn't send a new code. Try again in a minute.");
+    }
+    setWait(RESEND_WAIT_S);
+  }
+  return (
+    <div className="mt-4 text-center">
+      <button
+        type="button"
+        onClick={resend}
+        disabled={wait > 0 || state === "sending"}
+        className="rounded text-sm font-medium text-ink underline decoration-pau-400 decoration-2 underline-offset-4 hover:decoration-pau-800 disabled:cursor-default disabled:text-muted disabled:no-underline"
+      >
+        {state === "sending" ? "Sending…" : wait > 0 ? `Send a new code in ${wait}s` : "Send a new code"}
+      </button>
+      {message && (
+        <p role={state === "error" ? "alert" : "status"} className={`mt-2 text-sm ${state === "error" ? "text-red-700" : "text-muted"}`}>
+          {message}
+        </p>
+      )}
+    </div>
+  );
 }
