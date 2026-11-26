@@ -23,6 +23,7 @@ import { AccountMenu } from "@/components/ui/account-menu";
 import type { PartnerId } from "@/lib/partners";
 import { CourseIcon } from "./course-icon";
 import { EnrollDialog, prefetchEnrollments } from "./enroll-dialog";
+import { SomethingMissing } from "./something-missing";
 import { useClickAway } from "@/lib/ui/use-click-away";
 
 export interface DashboardCourse {
@@ -237,6 +238,7 @@ export function Dashboard({ courses, user, partner: initialPartner, onFinals, la
             ))}
           </ul>
         )}
+        <SomethingMissing />
       </div>
       <aside className="grid content-start gap-4 sm:grid-cols-2 md:grid-cols-1 md:max-lg:gap-3 md:max-lg:[&>*]:p-4" aria-label="Your plan and progress">
         {/* Encouragement for everyone (owner, 22 Nov 2026); the payment option sits below the progress cards. */}
