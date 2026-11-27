@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { Logo } from "@/components/brand/logo";
 import { AccountMenu } from "@/components/ui/account-menu";
-import { RANGES, TABS, type DeviceStats, type Overview, type RecommendStats, type Range, type Tab } from "@/lib/admin-shared";
+import { onboardingStage, RANGES, TABS, type DeviceStats, type Overview, type RecommendStats, type Range, type StageId, type Tab } from "@/lib/admin-shared";
 import { BarList, ColumnChart } from "./charts";
 
 const tz = "Africa/Lagos";
@@ -715,24 +715,39 @@ function ReplayCaseButton({ row }: { row: Overview["recent"][number] }) {
   );
 }
 
+// Onboarding stages, in order, each with a colour dot (owner, 27 Nov 2026).
+const STAGES: { id: StageId; short: string; dot: string; text: string }[] = [
+  { id: "code", short: "No code entered", dot: "bg-amber-500", text: "text-amber-800" },
+  { id: "setup", short: "Didn't start setup", dot: "bg-orange-500", text: "text-orange-800" },
+  { id: "partner", short: "Stopped at study partner", dot: "bg-rose-500", text: "text-rose-800" },
+  { id: "quiet", short: "No question yet", dot: "bg-sky-500", text: "text-sky-800" },
+  { id: "active", short: "Active", dot: "bg-emerald-500", text: "text-emerald-800" },
+];
+
 function Students({ data }: { data: Overview }) {
-  // Its own tab (owner, 21 Nov 2026): newest sign-up at the top, earliest at the bottom; search by
-  // email or name, filter by department. Thumbs up/down left out (students don't use them yet).
+  // Its own tab (owner, 21 Nov 2026): newest sign-up first; search by email or name, filter by department.
+  // 27 Nov 2026: cards with the full email and where each student stopped, filterable by that stage.
   const [q, setQ] = useState("");
   const [dept, setDept] = useState("");
-  const departments = useMemo(() => [...new Set(data.students.map((s) => s.department).filter(Boolean))].sort() as string[], [data.students]);
+  const [stage, setStage] = useState<StageId | "">("");
+  const all = useMemo(() => data.students.map((s) => ({ ...s, stage: onboardingStage(s) })), [data.students]);
+  const departments = useMemo(() => [...new Set(all.map((s) => s.department).filter(Boolean))].sort() as string[], [all]);
+  const counts = useMemo(() => Object.fromEntries(STAGES.map((st) => [st.id, all.filter((s) => s.stage.id === st.id).length])), [all]);
   const rows = useMemo(
     () =>
-      data.students
-        .filter((s) => (!q.trim() || `${s.email} ${s.name ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())) && (!dept || s.department === dept))
+      all
+        .filter((s) => (!q.trim() || `${s.email} ${s.name ?? ""}`.toLowerCase().includes(q.trim().toLowerCase())) && (!dept || s.department === dept) && (!stage || s.stage.id === stage))
         .sort((a, b) => b.joined.localeCompare(a.joined)),
-    [data.students, q, dept],
+    [all, q, dept, stage],
   );
   const csv = rows.map((s) => ({
     name: s.name ?? "",
     email: s.email,
+    stage: s.stage.label,
     department: s.department ?? "",
-    onboarded: s.onboarded ? "yes" : "no",
+    microsoft: s.signin?.microsoft ? "yes" : "no",
+    code_sent: s.signin?.codeSentAt ?? "",
+    last_sign_in: s.signin?.lastSignIn ?? "",
     questions_in_period: s.questions,
     questions_all_time: s.questions_all_time,
     cost_usd: s.cost_usd,
@@ -741,13 +756,30 @@ function Students({ data }: { data: Overview }) {
     last_active: s.last_active ?? "",
     joined: s.joined,
   }));
+  const chip = (active: boolean) =>
+    `inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] transition ${active ? "bg-navy text-white" : "bg-card text-ink ring-1 ring-line hover:bg-sunken"}`;
+
   return (
-    <section id="students" className="scroll-mt-24 space-y-4">
+    <section id="students" className="scroll-mt-24 space-y-5">
       <SectionTitle
         title="Students"
-        note={`${n(rows.length)} of ${n(data.students.length)} students, newest first. Questions and cost are for the selected period; the rest is all-time.`}
+        note={`${n(rows.length)} of ${n(all.length)} students, newest first. Questions and cost are for the selected period; the rest is all-time.`}
         action={<DownloadButton onClick={() => downloadCsv("students.csv", csv)} />}
       />
+
+      {/* Where students are in getting started: tap one to see only those students. */}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => setStage("")} className={chip(stage === "")}>
+          All <span className={stage === "" ? "text-white/70" : "text-muted"}>{n(all.length)}</span>
+        </button>
+        {STAGES.map((st) => (
+          <button key={st.id} type="button" onClick={() => setStage(stage === st.id ? "" : st.id)} className={chip(stage === st.id)}>
+            <span className={`h-2 w-2 rounded-full ${st.dot}`} aria-hidden />
+            {st.short} <span className={stage === st.id ? "text-white/70" : "text-muted"}>{n(counts[st.id])}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <input
           type="search"
@@ -755,13 +787,13 @@ function Students({ data }: { data: Overview }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by email or name"
           aria-label="Search students"
-          className="h-9 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
+          className="h-10 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-80"
         />
         <select
           value={dept}
           onChange={(e) => setDept(e.target.value)}
           aria-label="Filter by department"
-          className="h-9 rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200"
+          className="h-10 rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200"
         >
           <option value="">All departments</option>
           {departments.map((d) => (
@@ -771,25 +803,65 @@ function Students({ data }: { data: Overview }) {
           ))}
         </select>
       </div>
-      <Table
-        head={["Student", "Department", "Questions", "All time", "Cost", "Helping", "Partner", "Last active", "Joined"]}
-        rows={rows.map((s) => [
-          <span key="s" className="block max-w-[16rem] truncate" title={s.email}>
-            {s.name ? <span className="font-medium">{s.name} </span> : null}
-            <span className="text-muted">{s.email}</span>
-            {!s.onboarded && <span className="ml-1 text-xs text-amber-800">(not onboarded)</span>}
-          </span>,
-          s.department ?? "—",
-          n(s.questions),
-          n(s.questions_all_time),
-          usd(s.cost_usd),
-          s.helping ?? "—",
-          s.partner ? PARTNER[s.partner] ?? s.partner : "—",
-          when(s.last_active),
-          when(s.joined),
-        ])}
-        empty="No students match."
-      />
+
+      {rows.length === 0 ? (
+        <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted ring-1 ring-line">No students match.</p>
+      ) : (
+        <ul className="space-y-2.5">
+          {rows.map((s) => {
+            const st = STAGES.find((x) => x.id === s.stage.id)!;
+            const initial = (s.name?.trim()[0] ?? s.email[0] ?? "?").toUpperCase();
+            const detail =
+              s.stage.id === "code" && s.signin?.codeSentAt
+                ? `last code sent ${when(s.signin.codeSentAt)}`
+                : s.stage.id !== "active" && s.signin?.lastSignIn
+                  ? `last signed in ${when(s.signin.lastSignIn)}`
+                  : s.last_active
+                    ? `last active ${when(s.last_active)}`
+                    : null;
+            return (
+              <li key={s.email} className="rounded-2xl bg-card p-4 ring-1 ring-line sm:p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-pau-100 font-heading text-[17px] text-brand" aria-hidden>
+                      {initial}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-medium text-ink">{s.name ?? <span className="text-muted">No name yet</span>}</span>
+                        {s.department && <span className="rounded-full bg-sunken px-2 py-0.5 text-[11.5px] text-muted">{s.department}</span>}
+                        {s.signin?.microsoft && <span className="rounded-full bg-sunken px-2 py-0.5 text-[11.5px] text-muted">Microsoft</span>}
+                      </p>
+                      {/* The full email, never cut short; one click selects it to copy. */}
+                      <p className="mt-0.5 select-all break-all text-[14px] text-ink/80">{s.email}</p>
+                      <p className={`mt-2 flex flex-wrap items-center gap-x-2 text-[13px] ${st.text}`}>
+                        <span className={`h-2 w-2 rounded-full ${st.dot}`} aria-hidden />
+                        <span className="font-medium">{s.stage.label}</span>
+                        {detail && <span className="text-muted">· {detail}</span>}
+                      </p>
+                    </div>
+                  </div>
+                  <dl className="grid shrink-0 grid-cols-3 gap-x-5 gap-y-2 text-[12.5px] sm:grid-cols-6 lg:w-[40rem]">
+                    {[
+                      ["Questions", `${n(s.questions)}`],
+                      ["All time", n(s.questions_all_time)],
+                      ["Cost", usd(s.cost_usd)],
+                      ["Helping", s.helping != null ? `${s.helping}/5` : "—"],
+                      ["Partner", s.partner ? PARTNER[s.partner] ?? s.partner : "—"],
+                      ["Joined", when(s.joined)],
+                    ].map(([k, v]) => (
+                      <div key={k} className="min-w-0">
+                        <dt className="text-muted">{k}</dt>
+                        <dd className="whitespace-nowrap font-medium text-ink">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 }

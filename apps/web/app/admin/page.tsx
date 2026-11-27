@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { EmailsPanel } from "@/components/admin/emails-panel";
 import { AdminDashboard } from "@/components/admin/dashboard";
 import { isAdminEmail, rangeStart, RANGES, type Overview, type Range } from "@/lib/admin";
-import { TABS, type DeviceStats, type RecommendStats, type Tab } from "@/lib/admin-shared";
+import { TABS, type DeviceStats, type RecommendStats, type SignInInfo, type Tab } from "@/lib/admin-shared";
 import { requireUser } from "@/lib/auth/session";
 import { adminClient } from "@/lib/supabase/admin";
 import { FREE_DAILY } from "@/lib/plans/config";
@@ -46,6 +46,7 @@ async function Loaded({ searchParams }: Props) {
     deviceCounts(db, from),
     recommendStats(db, from),
   ]);
+  const signin = await signInInfo(db);
   const appFeedback = ((appFeedbackRows ?? []) as unknown as { id: string; created_at: string; message: string; sentiment: "good" | "bad" | null; features: string[]; page: string | null; profiles: { email: string } | null }[]).map((r) => ({
     id: r.id,
     createdAt: r.created_at,
@@ -57,10 +58,38 @@ async function Loaded({ searchParams }: Props) {
   }));
   if (error) throw new Error(`Couldn't load the admin numbers: ${error.message}`);
   const overview = data as Overview;
+  overview.students = overview.students.map((st) => ({ ...st, signin: signin.get(st.email.toLowerCase()) }));
   // admin_overview lists every course in sort_order (unique), so its rows line up with this list.
   const departments = (courses.data ?? []) as { code: string; department: string }[];
   const withDepartments = overview.courses.map((c, i) => ({ ...c, department: departments[i]?.code === c.code ? departments[i].department : "Other" }));
   return <AdminDashboard data={overview} courses={withDepartments} plans={plans} heardFrom={heardFrom} devices={devices} recommend={recommend} appFeedback={appFeedback} range={range} tab={tab} email={user.email ?? ""} emails={<EmailsPanel />} />;
+}
+
+/** Each account's sign-in state (owner, 27 Nov 2026: the Students tab shows where each student stopped):
+ *  whether they ever entered the emailed code, when the last one was sent, Microsoft, and their programme. */
+async function signInInfo(db: ReturnType<typeof adminClient>): Promise<Map<string, SignInInfo>> {
+  const out = new Map<string, SignInInfo>();
+  const { data: profiles } = await db.from("profiles").select("email, programme, level").limit(10000);
+  const prog = new Map(((profiles ?? []) as { email: string; programme: string | null; level: number | null }[]).map((p) => [p.email.toLowerCase(), p]));
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) break;
+    for (const u of data.users) {
+      const email = (u.email ?? "").toLowerCase();
+      if (!email) continue;
+      const providers = ((u.app_metadata?.providers as string[] | undefined) ?? []);
+      out.set(email, {
+        confirmed: !!u.email_confirmed_at,
+        codeSentAt: (u as { confirmation_sent_at?: string }).confirmation_sent_at ?? null,
+        lastSignIn: u.last_sign_in_at ?? null,
+        microsoft: providers.includes("azure"),
+        programme: prog.get(email)?.programme ?? null,
+        level: prog.get(email)?.level ?? null,
+      });
+    }
+    if (data.users.length < 1000) break;
+  }
+  return out;
 }
 
 /** "How did you hear about us?" answers from students who signed up in the period (asked since 20 Nov 2026). */

@@ -44,7 +44,29 @@ export interface Overview {
   students: {
     email: string; name: string | null; department: string | null; partner: string | null; joined: string; onboarded: boolean;
     questions: number; questions_all_time: number; cost_usd: number; last_active: string | null; thumbs_up: number; thumbs_down: number; helping: number | null;
+    /** From the sign-in records (app/admin/page.tsx signInInfo), for the onboarding stage. */
+    signin?: SignInInfo;
   }[];
+}
+
+export interface SignInInfo {
+  confirmed: boolean;
+  codeSentAt: string | null;
+  lastSignIn: string | null;
+  microsoft: boolean;
+  programme: string | null;
+  level: number | null;
+}
+
+export type StageId = "code" | "setup" | "partner" | "quiet" | "active";
+/** Where a student is in getting started (owner, 27 Nov 2026: one specific line per student on /admin). */
+export function onboardingStage(s: { onboarded: boolean; questions_all_time: number; signin?: SignInInfo }): { id: StageId; label: string } {
+  const si = s.signin;
+  if (si && !si.confirmed) return { id: "code", label: "Never entered the sign-up code" };
+  if (!s.onboarded && !si?.programme) return { id: "setup", label: "Entered the code, didn't start setup" };
+  if (!s.onboarded) return { id: "partner", label: "Picked a course, stopped before the study partner" };
+  if (s.questions_all_time === 0) return { id: "quiet", label: "Set up, hasn't asked a question yet" };
+  return { id: "active", label: `Active · ${s.questions_all_time.toLocaleString("en-GB")} question${s.questions_all_time === 1 ? "" : "s"}` };
 }
 
 /** The /admin tabs (?tab=); Overview is the default. */
