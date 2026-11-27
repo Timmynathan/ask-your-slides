@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Mascot } from "@/components/mascot/mascot";
 import { BusyLabel } from "@/components/ui/spinner";
@@ -11,6 +11,8 @@ import type { PlanOffer } from "@/lib/plans/offer";
 import { FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { PlanStep } from "./plan-step";
+import { ReadyStep, type OnboardingData } from "./ready-step";
+import { PathStep } from "./path-step";
 import { BackPill } from "./back-pill";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 import type { HeardFrom } from "@/lib/heard-from";
@@ -20,7 +22,9 @@ const DEFAULT_PARTNER: PartnerId = "zara";
 // The default first, so it is the first card a student sees (also on a phone).
 const ORDER: PartnerId[] = [DEFAULT_PARTNER, ...PARTNER_IDS.filter((id) => id !== DEFAULT_PARTNER)];
 
-type Step = "name" | "heard" | "partner" | "hello" | "plan";
+// "ready" and "path" (owner, 27 Nov 2026): a "Let's start learning!" moment before the plan, and the
+// first course laid out as a path after it, instead of dropping straight into the dashboard.
+type Step = "name" | "heard" | "partner" | "hello" | "ready" | "plan" | "path";
 
 // First words from the chosen partner. {department} comes from the courses' data, never hard-coded.
 const HELLO: Record<PartnerId, string> = {
@@ -29,7 +33,7 @@ const HELLO: Record<PartnerId, string> = {
   musa: "Welcome, {name}. I'm Dr. Musa. I know {department} can be demanding, and the exams reward clear, well-structured answers. I'll show you how, straight from your school slides.",
   zara: "Hey {name}, I'm Zara! I know {department} can be hard, but I've got you. Quick answer or deep dive, straight from your school slides, with an exam tip when it helps.",
 };
-const STEPS: Step[] = ["name", "heard", "partner", "hello", "plan"];
+const STEPS: Step[] = ["name", "heard", "partner", "hello", "ready", "plan", "path"];
 
 interface Props {
   /** Programmes + levels in the catalog ("What do you study?"). */
@@ -95,8 +99,24 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
     if (await save({ study_partner: partner, onboarded: true })) setStep("hello");
   }
 
-  // Coming from the landing page's "Lock in Finals" (next=/pay): no need to ask which plan.
-  const steps = next === "/pay" ? STEPS.filter((s) => s !== "plan") : STEPS;
+  // Coming from the landing page's "Lock in Finals" (next=/pay): no need to ask which plan, and they go
+  // on to pay rather than to the study path.
+  const steps = next === "/pay" ? STEPS.filter((s) => s !== "plan" && s !== "path") : STEPS;
+  // The student's courses, slides and first topics for the last pages: loaded once the programme is
+  // saved (from "hello" on), so "ready" has its numbers by the time it shows.
+  const [data, setData] = useState<OnboardingData | null>(null);
+  const wantData = step === "hello" || step === "ready" || step === "plan" || step === "path";
+  useEffect(() => {
+    if (!wantData || data) return;
+    let live = true;
+    fetch("/api/onboarding")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => live && d && setData(d))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [wantData, data]);
   const index = steps.indexOf(step);
   const finish = () => {
     router.replace(next ?? "/dashboard");
@@ -107,15 +127,17 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
 
   return (
     <div className="flex min-h-dvh flex-col bg-page">
-      <header className="flex items-center justify-between px-5 py-5 sm:px-8">
-        <Logo />
+      <header className="flex items-center justify-between gap-4 px-5 py-5 sm:px-8">
+        <span className="shrink-0 whitespace-nowrap">
+          <Logo />
+        </span>
         <div className="flex items-center gap-3 text-xs text-muted">
           <span className="hidden sm:inline">
             Step {index + 1} of {steps.length}
           </span>
-          <div className="flex gap-1.5" aria-hidden>
+          <div className="flex gap-1 sm:gap-1.5" aria-hidden>
             {steps.map((s, i) => (
-              <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i <= index ? "w-8 bg-brand" : "w-4 bg-line-strong"}`} />
+              <span key={s} className={`h-1.5 rounded-full transition-all duration-300 ${i <= index ? "w-4 bg-brand sm:w-8" : "w-2 bg-line-strong sm:w-4"}`} />
             ))}
           </div>
         </div>
@@ -249,22 +271,28 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
               <Mascot partner={chosen.id} size={200} mood="happy" />
             </div>
             <button
-              onClick={() => (steps.includes("plan") ? setStep("plan") : finish())}
+              onClick={() => setStep("ready")}
               className="mt-8 rounded-full bg-brand px-10 py-3.5 text-base font-medium text-brand-ink hover:opacity-90"
             >
-              {steps.includes("plan") ? "Continue" : "Start studying"}
+              Continue
             </button>
           </div>
+        )}
+
+        {step === "ready" && chosen && (
+          <ReadyStep partner={chosen.id} data={data} onContinue={() => (steps.includes("plan") ? setStep("plan") : finish())} />
         )}
 
         {step === "plan" && (
           <PlanStep
             offer={offer}
             freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
-            onFree={finish}
-            promo={<PromoCodeForm onRedeemed={finish} plain />}
+            onFree={() => setStep("path")}
+            promo={<PromoCodeForm onRedeemed={() => setStep("path")} plain />}
           />
         )}
+
+        {step === "path" && <PathStep data={data} onStart={finish} />}
 
         {error && (
           <p role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-red-50 px-4 py-2 text-sm text-red-700 ring-1 ring-red-200">

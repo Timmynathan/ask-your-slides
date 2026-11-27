@@ -39,6 +39,13 @@ function markSeen(account: string) {
   window.dispatchEvent(new Event(HINT_EVENT));
 }
 
+// The phone menu tip (app-shell.tsx) marks itself on <html data-menu-tip="1"> while it shows.
+function subscribeMenuTip(onChange: () => void) {
+  window.addEventListener("ays-menu-tip", onChange);
+  return () => window.removeEventListener("ays-menu-tip", onChange);
+}
+const menuTipShowing = () => document.documentElement.dataset.menuTip === "1";
+
 export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account, quiet = false }: {
   partner: PartnerId;
   /** Hold the first-time hint back (the course page's tour is showing). */
@@ -54,13 +61,18 @@ export function PartnerSwitch({ partner, onChanged, open, onOpenChange, account,
   // Seen before? Read from this browser; the server (no storage) renders no hint.
   const seen = useSyncExternalStore(subscribe, () => readSeen(account), () => true);
   // A few seconds after arriving, not straight away (owner, 22 Nov 2026: instant felt like too much).
+  // Never at the same time as the menu tip: while it shows, the wait starts again from its end.
+  const menuTip = useSyncExternalStore(subscribeMenuTip, menuTipShowing, () => false);
   const [due, setDue] = useState(false);
   useEffect(() => {
-    if (seen) return;
+    if (seen || menuTip) return;
     const t = setTimeout(() => setDue(true), HINT_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [seen]);
-  const hint = !seen && !quiet && due;
+    return () => {
+      clearTimeout(t);
+      setDue(false);
+    };
+  }, [seen, menuTip]);
+  const hint = !seen && !quiet && due && !menuTip;
   const dismissHint = () => markSeen(account);
 
   return (

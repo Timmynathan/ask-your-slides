@@ -227,6 +227,12 @@ export function AppShell({
     const t = setTimeout(() => setTip(true), 1500);
     return () => clearTimeout(t);
   }, [user.email]);
+  // Tell the study-partner hint the menu tip is showing, so the two never show together (owner, 27 Nov
+  // 2026: on phones they overlapped). The partner hint waits until this one is gone (partner-switch.tsx).
+  useEffect(() => {
+    document.documentElement.dataset.menuTip = tip ? "1" : "";
+    window.dispatchEvent(new Event("ays-menu-tip"));
+  }, [tip]);
   // Any tap hides the tip (a tap on the menu button also opens the menu).
   useEffect(() => {
     if (!tip) return;
