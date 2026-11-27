@@ -6,6 +6,9 @@
 // Drag the front card away (mouse or finger) to bring the next one forward, or pick a tab. It also
 // moves on by itself every few seconds (AUTO_MS).
 // Keyboard: the tabs are a tablist (arrow keys). Reduced motion: no flying, cards just swap.
+// Phones (owner, 27 Nov 2026): no deck and nothing moves by itself. One card per screen in a row the
+// student swipes by hand, the next card peeking in on the right; the tabs follow the swipe (and a tab
+// scrolls to its card).
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { Mascot } from "@/components/mascot/mascot";
@@ -175,6 +178,29 @@ const CARDS: Card[] = [
   },
 ];
 
+/** A card's words, buttons and preview (the deck on laptops and the swipe row on phones share it). */
+function CardContent({ c, active = true }: { c: Card; active?: boolean }) {
+  return (
+    <>
+      {/* Cards behind show only a hint of their content (none on phones), like a real stack. */}
+      <div className={`flex flex-col transition-opacity duration-300 md:w-[44%] md:py-2 ${active ? "" : "opacity-0 md:opacity-30"}`}>
+        <p className="font-heading text-[16px] italic text-ink/80">{c.eyebrow}</p>
+        <h3 className="mt-2 font-heading text-[30px] font-semibold leading-[1.1] tracking-tight text-ink sm:text-[36px]">{c.title}</h3>
+        <p className="mt-4 text-[15px] leading-relaxed text-ink/70">{c.body}</p>
+        <div className="mt-6 flex flex-wrap gap-3 md:mt-auto">
+          <Link href="/sign-up" tabIndex={active ? 0 : -1} className="rounded-full bg-navy px-5 py-2.5 text-[14.5px] font-medium text-white transition hover:opacity-90">
+            Try for free
+          </Link>
+          <a href="#demo" tabIndex={active ? 0 : -1} className="rounded-full px-5 py-2.5 text-[14.5px] font-medium text-ink ring-1 ring-ink/70 transition hover:bg-white/40">
+            See it in action
+          </a>
+        </div>
+      </div>
+      <div className={`flex min-h-0 flex-1 items-center justify-center rounded-2xl p-4 transition-opacity duration-300 md:p-6 ${c.inner} ${active ? "" : "opacity-0 md:opacity-30"}`}>{c.preview}</div>
+    </>
+  );
+}
+
 function PreviewCard({ children }: { children: ReactNode }) {
   return <div className="w-full rounded-2xl bg-white/95 p-4 shadow-[0_10px_30px_-12px_rgb(14_22_100/0.25)] ring-1 ring-black/5">{children}</div>;
 }
@@ -241,12 +267,12 @@ export function FeatureDeck() {
     return () => io.disconnect();
   }, []);
   useEffect(() => {
-    if (!inView || hovered || drag || flying !== null || reduced.current) return;
+    if (narrow || !inView || hovered || drag || flying !== null || reduced.current) return;
     const t = setTimeout(() => {
       if (document.visibilityState === "visible") sendFrontToBack(-1);
     }, AUTO_MS);
     return () => clearTimeout(t);
-  }, [inView, hovered, drag, flying, front, sendFrontToBack]);
+  }, [narrow, inView, hovered, drag, flying, front, sendFrontToBack]);
 
   function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if ((e.target as HTMLElement).closest("a,button")) return; // links and buttons still work
@@ -266,11 +292,33 @@ export function FeatureDeck() {
     if (Math.abs(dx) > THRESHOLD) sendFrontToBack(Math.sign(dx));
   }
 
+  // Phones: which card is in view, and a tab scrolls the row to its card.
+  const row = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(0);
+  function onRowScroll() {
+    const el = row.current;
+    if (!el) return;
+    const card = el.firstElementChild as HTMLElement | null;
+    const step = card ? card.offsetWidth + 12 : el.clientWidth;
+    const i = Math.max(0, Math.min(CARDS.length - 1, Math.round(el.scrollLeft / step)));
+    if (i !== shown) {
+      setShown(i);
+      const tab = document.getElementById(`deck-tab-${i}`);
+      const tabs = tab?.closest("[data-tab-row]") as HTMLElement | null;
+      if (tab && tabs) tabs.scrollTo({ left: tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2, behavior: "smooth" });
+    }
+  }
+  function scrollToCard(i: number) {
+    const card = row.current?.children[i] as HTMLElement | undefined;
+    if (card && row.current) row.current.scrollTo({ left: card.offsetLeft - row.current.offsetLeft - 20, behavior: reduced.current ? "auto" : "smooth" });
+  }
+
   function onTabKey(e: React.KeyboardEvent, i: number) {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     e.preventDefault();
     const next = (i + (e.key === "ArrowRight" ? 1 : -1) + CARDS.length) % CARDS.length;
-    bringToFront(next);
+    if (narrow) scrollToCard(next);
+    else bringToFront(next);
     document.getElementById(`deck-tab-${next}`)?.focus();
   }
 
@@ -285,12 +333,12 @@ export function FeatureDeck() {
               id={`deck-tab-${i}`}
               role="tab"
               type="button"
-              aria-selected={front === i}
+              aria-selected={(narrow ? shown : front) === i}
               aria-controls="deck-card"
-              tabIndex={front === i ? 0 : -1}
-              onClick={() => bringToFront(i)}
+              tabIndex={(narrow ? shown : front) === i ? 0 : -1}
+              onClick={() => (narrow ? scrollToCard(i) : bringToFront(i))}
               onKeyDown={(e) => onTabKey(e, i)}
-              className={`flex-1 whitespace-nowrap rounded-full px-4 py-2.5 text-[14.5px] transition-colors sm:px-6 ${front === i ? "bg-sunken font-medium text-ink" : "text-ink/75 hover:text-ink"}`}
+              className={`flex-1 whitespace-nowrap rounded-full px-4 py-2.5 text-[14.5px] transition-colors sm:px-6 ${(narrow ? shown : front) === i ? "bg-sunken font-medium text-ink" : "text-ink/75 hover:text-ink"}`}
             >
               {c.tab}
             </button>
@@ -298,8 +346,22 @@ export function FeatureDeck() {
         </div>
       </div>
 
-      {/* Deck */}
-      <div className="relative mx-auto mt-10 max-w-5xl">
+      {/* Phones: swipe row. Each card is most of the screen wide; the next one peeks in on the right. */}
+      <div
+        ref={row}
+        onScroll={onRowScroll}
+        className="-mx-5 mt-8 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-5 px-5 pb-4 [scrollbar-width:none] md:hidden"
+        aria-label="What you can do"
+      >
+        {CARDS.map((c) => (
+          <div key={c.tab} className={`flex w-[86%] shrink-0 snap-start flex-col gap-5 rounded-[28px] p-6 shadow-[0_18px_40px_-24px_rgb(14_22_100/0.35)] ring-1 ring-black/5 ${c.tint}`}>
+            <CardContent c={c} />
+          </div>
+        ))}
+      </div>
+
+      {/* Deck (tablets and laptops) */}
+      <div className="relative mx-auto mt-10 hidden max-w-5xl md:block">
         <BooksDoodle className="pointer-events-none absolute -bottom-6 -left-24 hidden w-40 xl:block" />
         <div className="relative mx-auto h-[640px] w-full max-w-[880px] sm:h-[560px] md:h-[440px]">
           {order
@@ -331,21 +393,7 @@ export function FeatureDeck() {
                     transition: isFront && drag ? "none" : `transform ${flying !== null && isFront ? FLY_MS : 420}ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 300ms`,
                   }}
                 >
-                  {/* Cards behind show only a hint of their content (none on phones), like a real stack. */}
-                  <div className={`flex flex-col transition-opacity duration-300 md:w-[44%] md:py-2 ${isFront ? "" : "opacity-0 md:opacity-30"}`}>
-                    <p className="font-heading text-[16px] italic text-ink/80">{c.eyebrow}</p>
-                    <h3 className="mt-2 font-heading text-[30px] font-semibold leading-[1.1] tracking-tight text-ink sm:text-[36px]">{c.title}</h3>
-                    <p className="mt-4 text-[15px] leading-relaxed text-ink/70">{c.body}</p>
-                    <div className="mt-6 flex flex-wrap gap-3 md:mt-auto">
-                      <Link href="/sign-up" tabIndex={isFront ? 0 : -1} className="rounded-full bg-navy px-5 py-2.5 text-[14.5px] font-medium text-white transition hover:opacity-90">
-                        Try for free
-                      </Link>
-                      <a href="#demo" tabIndex={isFront ? 0 : -1} className="rounded-full px-5 py-2.5 text-[14.5px] font-medium text-ink ring-1 ring-ink/70 transition hover:bg-white/40">
-                        See it in action
-                      </a>
-                    </div>
-                  </div>
-                  <div className={`flex min-h-0 flex-1 items-center justify-center rounded-2xl p-4 transition-opacity duration-300 md:p-6 ${c.inner} ${isFront ? "" : "opacity-0 md:opacity-30"}`}>{c.preview}</div>
+                  <CardContent c={c} active={isFront} />
                 </div>
               );
             })}

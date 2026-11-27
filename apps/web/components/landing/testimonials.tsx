@@ -16,13 +16,14 @@ export function Testimonials() {
       </h2>
       <div className="mt-12 space-y-12 sm:mt-14 sm:space-y-14">
         {QUOTES.map((q, i) => (
-          <figure key={q.name} className={`flex max-w-3xl flex-col gap-5 sm:flex-row sm:gap-8 ${STEP[i % STEP.length]}`}>
+          // Phones too (owner, 27 Nov 2026): photo beside the quote, top-aligned, the text running down beside it.
+          <figure key={q.name} className={`flex max-w-3xl flex-row items-start gap-4 sm:gap-8 ${STEP[i % STEP.length]}`}>
             {q.photo ? (
-              <img src={q.photo} alt="" width={80} height={80} className="h-16 w-16 shrink-0 rounded-full object-cover sm:h-20 sm:w-20" />
+              <img src={q.photo} alt="" width={80} height={80} className="mt-1 h-12 w-12 shrink-0 rounded-full object-cover sm:mt-0 sm:h-20 sm:w-20" />
             ) : (
-              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-white/10 font-heading text-2xl sm:h-20 sm:w-20">{q.initial}</span>
+              <span className="mt-1 grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white/10 font-heading text-xl sm:mt-0 sm:h-20 sm:w-20 sm:text-2xl">{q.initial}</span>
             )}
-            <div>
+            <div className="min-w-0">
               <blockquote className="font-heading text-[22px] font-normal leading-snug text-white sm:text-[28px]">&ldquo;{q.text}&rdquo;</blockquote>
               <figcaption className="mt-4 text-[13.5px] text-white/60">
                 {q.name}, {q.detail.replace(", Pan-Atlantic University", " at Pan-Atlantic University")}
