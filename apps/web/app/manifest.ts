@@ -1,13 +1,14 @@
 import type { MetadataRoute } from "next";
 
-// Installable on phones ("Add to Home screen"): opens like an app, straight into the courses.
+// Name and icons for phones and bookmarks. Not installable (owner, 27 Nov 2026: no "Add to Home screen" /
+// "Install app" prompt on mobile): display "browser" means Chrome doesn't offer to install it.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Ask Your Slides",
     short_name: "Ask Your Slides",
     description: "Answers straight from your school slides, explained by a study partner you choose.",
     start_url: "/dashboard",
-    display: "standalone",
+    display: "browser",
     background_color: "#f7f6ef",
     theme_color: "#f7f6ef",
     icons: [

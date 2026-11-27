@@ -20,7 +20,7 @@ function slowOrSaving(): boolean {
   return typeof c.downlink === "number" && c.downlink > 0 && c.downlink < 1.5;
 }
 
-export function StatVideo({ src, poster, label }: { src: string; poster: string; label: string }) {
+export function StatVideo({ src, poster, label, className = "" }: { src: string; poster: string; label: string; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -53,5 +53,5 @@ export function StatVideo({ src, poster, label }: { src: string; poster: string;
     };
   }, [src]);
 
-  return <video ref={ref} poster={poster} aria-label={label} muted loop playsInline preload="none" className="absolute inset-0 h-full w-full object-cover" />;
+  return <video ref={ref} poster={poster} aria-label={label} muted loop playsInline preload="none" className={`absolute inset-0 h-full w-full object-cover ${className}`} />;
 }

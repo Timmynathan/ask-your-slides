@@ -1,6 +1,8 @@
 "use client";
 
-// "Your PAU courses are already here": six fixed pills whose codes take turns (lib/landing-pills.ts).
+// "Your PAU courses are already here". Phones (owner, 27 Nov 2026): one thin row of every course gliding
+// left to right on a loop, instead of pills that swap. Laptops and tablets: six fixed pills whose codes
+// take turns (lib/landing-pills.ts).
 // They start the moment the visitor scrolls or the band comes into view: one swap at once, then one
 // every SWAP_MS. With reduced motion, or six codes or fewer, they simply stay put.
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +21,8 @@ export function CoursePills({ codes }: { codes: string[] }) {
 
   const band = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (queue.length <= VISIBLE_PILLS || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Phones show the gliding row instead, so the swapping only runs from tablet width up.
+    if (queue.length <= VISIBLE_PILLS || !window.matchMedia("(min-width: 640px)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const swap = () =>
       setSt((s) => {
         const slot = (s.slot + 1) % s.showing.length;
@@ -48,7 +51,9 @@ export function CoursePills({ codes }: { codes: string[] }) {
   }, [queue]);
 
   return (
-    <div ref={band} className="mx-auto mt-5 grid max-w-sm grid-cols-3 gap-2 sm:mt-7 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center sm:gap-3" data-course-count={queue.length}>
+    <>
+    <CourseRow queue={queue} />
+    <div ref={band} className="mx-auto mt-5 hidden max-w-sm grid-cols-3 gap-2 sm:mt-7 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center sm:gap-3" data-course-count={queue.length}>
       {st.showing.map((code, i) => (
         <span
           key={i}
@@ -62,6 +67,30 @@ export function CoursePills({ codes }: { codes: string[] }) {
           </span>
         </span>
       ))}
+    </div>
+    </>
+  );
+}
+
+/** Phones: the whole list twice in one row, moved by half its width so the loop is seamless. About
+ *  2.2 s per course, so it reads as a gentle drift. With reduced motion it's a row you can swipe. */
+function CourseRow({ queue }: { queue: string[] }) {
+  const pill = (code: string, k: string) => (
+    <span key={k} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[13px] font-semibold text-[#0e1664] shadow-md shadow-black/20">
+      <span className={`h-2 w-2 rounded-full ${courseDot(queue.indexOf(code) + 1)}`} aria-hidden />
+      {displayCode(code)}
+    </span>
+  );
+  return (
+    <div
+      className="course-row -mx-5 mt-5 overflow-hidden py-1 sm:hidden"
+      style={{ maskImage: "linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent)" }}
+      aria-label={`${queue.length} PAU courses`}
+    >
+      <div className="course-row-track flex w-max gap-2 pr-2" style={{ animationDuration: `${Math.max(20, queue.length * 2.2)}s` }}>
+        {queue.map((c) => pill(c, `a-${c}`))}
+        <span aria-hidden className="contents">{queue.map((c) => pill(c, `b-${c}`))}</span>
+      </div>
     </div>
   );
 }

@@ -10,9 +10,15 @@ const STATS = {
   courses: "260+",
 };
 
-function Label({ children, onMedia = false }: { children: React.ReactNode; onMedia?: boolean }) {
+function Label({ children, onMedia = false, compact = false }: { children: React.ReactNode; onMedia?: boolean; compact?: boolean }) {
   return onMedia ? (
-    <p className="rounded-[14px] bg-white/95 px-3.5 py-2.5 text-[14px] leading-snug text-ink shadow-sm">{children}</p>
+    <p
+      className={`rounded-[14px] bg-white/95 leading-snug text-ink shadow-sm ${
+        compact ? "self-start rounded-[10px] px-2.5 py-1.5 text-[12px] sm:self-auto sm:rounded-[14px] sm:px-3.5 sm:py-2.5 sm:text-[14px]" : "px-3.5 py-2.5 text-[14px]"
+      }`}
+    >
+      {children}
+    </p>
   ) : (
     <p className="text-[14px] leading-snug">{children}</p>
   );
@@ -31,12 +37,14 @@ export function StatsSection() {
             video card in front overlapping both; widths are shares of the space, so it shrinks a little on
             a tablet and keeps the same look. */}
         <div className="grid grid-cols-2 gap-3 sm:relative sm:mx-auto sm:block sm:h-[430px] sm:w-full sm:max-w-[620px] lg:h-[470px] lg:max-w-none">
-          {/* Second student video (owner, 27 Nov 2026): 0:17–0:32 of her clip, notes to the app on a tablet. */}
+          {/* Second student video (owner, 27 Nov 2026): her selfie, then her tablet with the app. On phones the
+              card is small, so the label is compact and the picture is shifted to keep her face clear. */}
           <div className="relative aspect-square overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
-            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student opening her course on Ask Your Slides" />
+            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student opening her course on Ask Your Slides"
+              className="object-[30%_62%] sm:object-center" /* phones: her face sits between the figure and the label */ />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
               <p className={big}>{STATS.students}</p>
-              <Label onMedia>PAU students signed up</Label>
+              <Label onMedia compact>PAU students signed up</Label>
             </div>
           </div>
 

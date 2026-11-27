@@ -180,6 +180,14 @@ body {
   100% { opacity: 1; transform: none; filter: none; }
 }
 .pill-swap { animation: pill-swap 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+/* Phones: the course row glides left to right (owner, 27 Nov 2026). Starts shifted by half (the
+   second copy), ends at 0, so the pills travel rightwards and the loop is seamless. */
+@keyframes course-row { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+.course-row-track { animation: course-row linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .course-row { overflow-x: auto; }
+  .course-row-track { animation: none; }
+}
 /* Landing Plans section: cards rise in once, on the pills' curve (components/landing/reveal.tsx). */
 .reveal-wait { opacity: 0; }
 /* Course tour: the pointer that clicks the Sources icon (components/study/laptop-tour.tsx). */
