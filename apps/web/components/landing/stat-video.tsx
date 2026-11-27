@@ -1,10 +1,12 @@
 "use client";
 
-// The student video inside a stat card: plays muted on a loop while it's on screen, on laptops and
-// tablets only. Everyone else sees the still poster (~10 KB) and downloads no video:
-//   - phones (often on mobile data) and "save data" visitors;
-//   - slow connections (owner, 27 Nov 2026): the browser's estimate says 3G or slower, or under ~1.5 Mbps
-//     (each clip needs ~0.5 Mbps, and two play at once), so it would stutter rather than play.
+// The student video inside a stat card: plays muted on a loop while it's on screen, phones included
+// (owner, 27 Nov 2026: the clips are ~1 MB each now). Only these see the still poster (~10 KB) and
+// download no video:
+//   - "save data" visitors;
+//   - genuinely slow connections: the browser's estimate says 2G/3G, or under ~0.7 Mbps (each clip
+//     needs ~0.5 Mbps). The bar was 1.5 Mbps, but Chrome's estimate often dips below that on Nigerian
+//     Wi-Fi that plays the clips fine, so laptops showed stills.
 // When the card is well off screen, the video is unloaded (not just paused) so the browser frees its
 // memory; it loads again when the card comes back. Until the first frame plays, the poster shows, and
 // on a stall the video holds its last frame: never a blank card.
@@ -17,7 +19,7 @@ function slowOrSaving(): boolean {
   if (!c) return false; // Safari/Firefox don't say: assume fine (the clips are small)
   if (c.saveData) return true;
   if (c.effectiveType && c.effectiveType !== "4g") return true; // "slow-2g", "2g", "3g"
-  return typeof c.downlink === "number" && c.downlink > 0 && c.downlink < 1.5;
+  return typeof c.downlink === "number" && c.downlink > 0 && c.downlink < 0.7;
 }
 
 export function StatVideo({ src, poster, label, className = "" }: { src: string; poster: string; label: string; className?: string }) {
@@ -26,7 +28,7 @@ export function StatVideo({ src, poster, label, className = "" }: { src: string;
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
-    if (slowOrSaving() || !window.matchMedia("(min-width: 640px)").matches || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (slowOrSaving() || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     // On screen: load and play. Just off screen: pause. Far off screen: unload to free memory.
     const play = new IntersectionObserver(([e]) => {
