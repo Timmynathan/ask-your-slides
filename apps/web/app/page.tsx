@@ -70,7 +70,8 @@ export default async function Landing() {
           <div className="pointer-events-none absolute -bottom-28 right-0 h-80 w-80 rounded-full bg-[#2a3591] blur-3xl" aria-hidden />
           <div className="relative mx-auto max-w-6xl px-5 py-8 text-center sm:py-12">
             <p className="font-heading text-xl font-semibold sm:text-3xl">Your PAU courses are already here</p>
-            <p className="mt-1.5 text-sm text-white/75 sm:mt-2 sm:text-base">Same slides as on the e-learning portal. No downloading.</p>
+            {/* One line on phones too (owner, 27 Nov 2026): the size follows the screen width. */}
+            <p className="mt-1.5 whitespace-nowrap text-[clamp(10px,3.1vw,14px)] text-white/75 sm:mt-2 sm:text-base">Same slides as on the e-learning portal. No downloading.</p>
             <CoursePills codes={catalog.courseCodes} />
           </div>
         </section>
