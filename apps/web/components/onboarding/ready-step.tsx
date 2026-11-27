@@ -6,7 +6,8 @@
 // lecture slides, their topics, and their courses gliding left to right. Numbers come from
 // /api/onboarding (the student's own courses). Modelled on the owner's reference screenshot.
 import { useEffect, useState } from "react";
-import { BookOpen, Check } from "lucide-react";
+/* eslint-disable @next/next/no-img-element -- a small local crest */
+import { Check } from "lucide-react";
 import { Mascot } from "@/components/mascot/mascot";
 import type { PartnerId } from "@/lib/partners";
 
@@ -17,8 +18,6 @@ export interface OnboardingData {
   path: { course: { title: string; code: string | null; href: string }; topics: { title: string; href: string }[] } | null;
 }
 
-const TINTS = ["bg-[#dfe8fb]", "bg-[#ddf1e4]", "bg-[#ece4fb]", "bg-[#fbe6d6]", "bg-[#fbf0c9]", "bg-[#d8eef3]"];
-const INK = ["text-[#2f4a9a]", "text-[#2d7a4f]", "text-[#6b46c1]", "text-[#b4572a]", "text-[#9a7b12]", "text-[#22798a]"];
 
 /** Counts up to `to` once `on` turns true. */
 function useCount(to: number, on: boolean, ms = 900) {
@@ -102,10 +101,11 @@ export function ReadyStep({ partner, data, onContinue }: { partner: PartnerId; d
               <div className="course-row-track flex w-max gap-2.5 pr-2.5" style={{ animationDuration: `${Math.max(14, courses.length * 3.2)}s` }}>
                 {[0, 1].map((copy) => (
                   <span key={copy} aria-hidden={copy === 1} className="contents">
-                    {courses.map((c, i) => (
+                    {courses.map((c) => (
                       <span key={`${copy}-${c.title}`} className="w-[132px] shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-line">
-                        <span className={`grid h-[60px] place-items-center ${TINTS[i % TINTS.length]} ${INK[i % INK.length]}`}>
-                          <BookOpen size={26} absoluteStrokeWidth strokeWidth={1.4} aria-hidden />
+                        {/* The PAU crest on the site's navy, the same on every course (owner, 27 Nov 2026). */}
+                        <span className="grid h-[60px] place-items-center bg-navy">
+                          <img src="/brand/pau-crest-white.png" alt="" width={29} height={32} className="h-8 w-auto" />
                         </span>
                         <span className="block px-2.5 py-2">
                           {c.code && <span className="block text-[11px] font-medium text-muted">{c.code}</span>}
