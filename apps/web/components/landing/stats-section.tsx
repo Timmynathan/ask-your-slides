@@ -31,9 +31,13 @@ export function StatsSection() {
             video card in front overlapping both; widths are shares of the space, so it shrinks a little on
             a tablet and keeps the same look. */}
         <div className="grid grid-cols-2 gap-3 sm:relative sm:mx-auto sm:block sm:h-[430px] sm:w-full sm:max-w-[620px] lg:h-[470px] lg:max-w-none">
-          <div className="flex aspect-square flex-col justify-between rounded-[22px] bg-pau-100 p-5 text-ink sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
-            <p className={big}>{STATS.students}</p>
-            <Label>PAU students signed up</Label>
+          {/* Second student video (owner, 27 Nov 2026): 0:17–0:32 of her clip, notes to the app on a tablet. */}
+          <div className="relative aspect-square overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
+            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student opening her course on Ask Your Slides" />
+            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
+              <p className={big}>{STATS.students}</p>
+              <Label onMedia>PAU students signed up</Label>
+            </div>
           </div>
 
           <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:h-[290px] sm:w-[40%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
