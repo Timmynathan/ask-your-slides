@@ -15,7 +15,6 @@ export interface OnboardingData {
   courses: { title: string; code: string | null }[];
   slides: number;
   topics: number;
-  path: { course: { title: string; code: string | null; href: string }; topics: { title: string; href: string }[] } | null;
 }
 
 

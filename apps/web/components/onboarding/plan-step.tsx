@@ -3,7 +3,7 @@
 // The last onboarding step, the plan (and, since 24 Nov 2026, the only pricing view: the Upgrade pop-up and
 // /pricing show the same PlanOfferPanel) (owner, 22 Nov 2026, modelled on a calm two-column paywall):
 // on the left the student's study partner and real testimonials; on the right the Finals offer, a
-// "See what's included" comparison, Get Finals, and the promo code. Skip for now starts on Free.
+// "See what's included" comparison, Get Finals, and the promo code. Start studying starts on Free.
 // No countdown and no invented numbers: the student count is the owner's real figure, and each quote is
 // something that student said.
 /* eslint-disable @next/next/no-img-element -- a small local photo */
@@ -28,8 +28,9 @@ export function PlanStep({ offer, freePast, onFree, promo }: {
   return (
     <div key="plan" className="panel-in w-full max-w-5xl">
       <div className="flex items-center justify-end">
-        <button type="button" onClick={onFree} className="text-[14px] text-muted underline underline-offset-4 hover:opacity-80">
-          Skip for now
+        {/* The end of onboarding (owner, 27 Nov 2026): "Start studying" goes to the dashboard on Free. */}
+        <button type="button" onClick={onFree} className="rounded-full bg-card px-5 py-2.5 text-[14.5px] font-medium text-brand ring-1 ring-line-strong transition hover:bg-sunken active:scale-95">
+          Start studying
         </button>
       </div>
       <div className="mt-8">

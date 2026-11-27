@@ -12,7 +12,6 @@ import { FREE_PAST_PROGRAMMES } from "@/lib/plans/config";
 import { PromoCodeForm } from "@/components/plans/promo-code-form";
 import { PlanStep } from "./plan-step";
 import { ReadyStep, type OnboardingData } from "./ready-step";
-import { PathStep } from "./path-step";
 import { BackPill } from "./back-pill";
 import { ProgrammePicker, type ProgrammeValue } from "./programme-picker";
 import type { HeardFrom } from "@/lib/heard-from";
@@ -22,9 +21,9 @@ const DEFAULT_PARTNER: PartnerId = "zara";
 // The default first, so it is the first card a student sees (also on a phone).
 const ORDER: PartnerId[] = [DEFAULT_PARTNER, ...PARTNER_IDS.filter((id) => id !== DEFAULT_PARTNER)];
 
-// "ready" and "path" (owner, 27 Nov 2026): a "Let's start learning!" moment before the plan, and the
-// first course laid out as a path after it, instead of dropping straight into the dashboard.
-type Step = "name" | "heard" | "partner" | "hello" | "ready" | "plan" | "path";
+// "ready" (owner, 27 Nov 2026): a "Let's start learning!" moment before the plan, instead of dropping
+// straight into the dashboard. Onboarding ends on the plan step's "Start studying".
+type Step = "name" | "heard" | "partner" | "hello" | "ready" | "plan";
 
 // First words from the chosen partner. {department} comes from the courses' data, never hard-coded.
 const HELLO: Record<PartnerId, string> = {
@@ -33,7 +32,7 @@ const HELLO: Record<PartnerId, string> = {
   musa: "Welcome, {name}. I'm Dr. Musa. I know {department} can be demanding, and the exams reward clear, well-structured answers. I'll show you how, straight from your school slides.",
   zara: "Hey {name}, I'm Zara! I know {department} can be hard, but I've got you. Quick answer or deep dive, straight from your school slides, with an exam tip when it helps.",
 };
-const STEPS: Step[] = ["name", "heard", "partner", "hello", "ready", "plan", "path"];
+const STEPS: Step[] = ["name", "heard", "partner", "hello", "ready", "plan"];
 
 interface Props {
   /** Programmes + levels in the catalog ("What do you study?"). */
@@ -99,13 +98,12 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
     if (await save({ study_partner: partner, onboarded: true })) setStep("hello");
   }
 
-  // Coming from the landing page's "Lock in Finals" (next=/pay): no need to ask which plan, and they go
-  // on to pay rather than to the study path.
-  const steps = next === "/pay" ? STEPS.filter((s) => s !== "plan" && s !== "path") : STEPS;
-  // The student's courses, slides and first topics for the last pages: loaded once the programme is
+  // Coming from the landing page's "Lock in Finals" (next=/pay): no need to ask which plan.
+  const steps = next === "/pay" ? STEPS.filter((s) => s !== "plan") : STEPS;
+  // The student's courses and slide counts for "ready": loaded once the programme is
   // saved (from "hello" on), so "ready" has its numbers by the time it shows.
   const [data, setData] = useState<OnboardingData | null>(null);
-  const wantData = step === "hello" || step === "ready" || step === "plan" || step === "path";
+  const wantData = step === "hello" || step === "ready";
   useEffect(() => {
     if (!wantData || data) return;
     let live = true;
@@ -287,12 +285,10 @@ export function Onboarding({ choices, next, initialName, initialProgramme, initi
           <PlanStep
             offer={offer}
             freePast={FREE_PAST_PROGRAMMES.includes(studying.programme ?? "")}
-            onFree={() => setStep("path")}
-            promo={<PromoCodeForm onRedeemed={() => setStep("path")} plain />}
+            onFree={finish}
+            promo={<PromoCodeForm onRedeemed={finish} plain />}
           />
         )}
-
-        {step === "path" && <PathStep data={data} onStart={finish} />}
 
         {error && (
           <p role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-red-50 px-4 py-2 text-sm text-red-700 ring-1 ring-red-200">
