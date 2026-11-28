@@ -667,7 +667,7 @@
       "\\[\\[s:CHM101-11-41\\]\\]"
     ],
     "mustNot": [
-      "(typo|\\bslip\\b|is wrong|goes wrong|should (be|read) dD|check (this |it )?with your lecturer|[Ss]ome sources describe)",
+      "(typo|slide('s)? (has|contains|makes) a slip|\\bslip (on|in) (the|this|your) slide|is wrong|goes wrong|should (be|read) dD|check (this |it )?with your lecturer|[Ss]ome sources describe)",
       "(calculator|[Tt]he tool\\b|[Ll]et me (check|verify)|I'll (check|verify|run)|\\bWait,)"
     ]
   },
@@ -685,7 +685,7 @@
       "[Pp]yramidal"
     ],
     "mustNot": [
-      "(typo|\\bslip\\b|is wrong|goes wrong|should (be|read) dD|check (this |it )?with your lecturer|[Ss]ome sources describe)"
+      "(typo|slide('s)? (has|contains|makes) a slip|\\bslip (on|in) (the|this|your) slide|is wrong|goes wrong|should (be|read) dD|check (this |it )?with your lecturer|[Ss]ome sources describe)"
     ]
   },
   {
@@ -702,7 +702,7 @@
     "mustNot": [
       "(calculator|[Tt]he tool\\b|[Ll]et me (check|verify)|I'll (check|verify|run)|\\bWait,)",
       "below 7",
-      "(typo|\\bslip\\b|is wrong|goes wrong|should (be|read) dD|check (this |it )?with your lecturer|[Ss]ome sources describe)"
+      "(typo|slide('s)? (has|contains|makes) a slip|\\bslip (on|in) (the|this|your) slide|is wrong|goes wrong|should (be|read) dD|check (this |it )?with your lecturer|[Ss]ome sources describe)"
     ]
   },
   {
@@ -828,13 +828,13 @@
     "level": 200,
     "course": "CMS211",
     "must": [
-      "_{3,}",
+      "(\\\\?_){3,}",
       "<answer>"
     ],
     "mustNot": [
       "(can't|cannot|couldn't|could not) find",
       "no fill-in",
-      "\\boma\\b"
+      "(?-i:\\boma\\b)"
     ]
   },
   {

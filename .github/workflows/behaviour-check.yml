@@ -1,9 +1,10 @@
 # Behaviour check after each deploy that changes the bot (owner, 23 Nov 2026, option A).
 #
 # Vercel marks each commit with a "Vercel" status when its deploy finishes. When that status is a
-# success and the bot's prompt or logic changed since the last commit that passed this check, the
+# success and the bot's prompt or logic changed since the last commit this check ran on, the
 # committed cases (apps/web/evals/behaviour/cases.json) are asked on the live site. A failing case
-# fails this workflow: the commit gets a red cross and GitHub emails the owner. About 5 US cents a run.
+# fails this workflow: the commit gets a red cross and GitHub emails the owner. About 25 US cents a run
+# (46 cases).
 #
 # Needs two repository secrets (Settings → Secrets and variables → Actions):
 #   NEXT_PUBLIC_SUPABASE_URL   the Supabase project address
@@ -35,8 +36,10 @@ jobs:
           ref: ${{ github.event.sha || github.sha }}
           fetch-depth: 0
 
-      # Only when the bot changed since the last commit that passed (a failure keeps the old tag, so
-      # the next deploy is checked again). A manual run always checks.
+      # Only when the bot changed since the last commit that was checked, pass or fail (owner, 28 Nov
+      # 2026: a failure used to keep the old tag, so every later deploy, even a video change, re-ran
+      # the whole check at ~25 cents). A failure still gives a red cross and an email, once.
+      # A manual run always checks.
       - name: Did the bot change?
         id: changed
         run: |
@@ -67,7 +70,7 @@ jobs:
         run: npm run check:behaviour
 
       - name: Mark this commit as checked
-        if: steps.changed.outputs.run == 'true' && github.event_name != 'workflow_dispatch'
+        if: always() && steps.changed.outputs.run == 'true' && github.event_name != 'workflow_dispatch'
         run: |
           git tag -f behaviour-checked "$SHA"
           git push -f origin refs/tags/behaviour-checked
