@@ -33,13 +33,14 @@ export function StatsSection() {
           The trusted AI learning platform for PAU students
         </h2>
 
-        {/* Phones: a simple grid. From tablets (owner, 22 Nov 2026: iPads too): two cards side by side, the
+        {/* 28 Nov 2026 (owner): the two video cards (200+ and 91%) are the same size everywhere.
+            Phones: the two side by side, the 260+ card across the full width below. From tablets (owner, 22 Nov 2026: iPads too): two cards side by side, the
             video card in front overlapping both; widths are shares of the space, so it shrinks a little on
             a tablet and keeps the same look. */}
         <div className="grid grid-cols-2 gap-3 sm:relative sm:mx-auto sm:block sm:h-[430px] sm:w-full sm:max-w-[620px] lg:h-[470px] lg:max-w-none">
           {/* Second student video (owner, 27 Nov 2026): her selfie, then her tablet with the app. On phones the
               card is small, so the label is compact and the picture is shifted to keep her face clear. */}
-          <div className="relative aspect-square overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[290px] sm:w-[42%] lg:h-[310px]">
             {/* 28 Nov 2026: 0:16–0:25 of the owner's new clip (studying with her notes and the app on her tablet). */}
             <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student studying with her notes and Ask Your Slides on her tablet" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
@@ -48,15 +49,15 @@ export function StatsSection() {
             </div>
           </div>
 
-          <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:h-[290px] sm:w-[40%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:aspect-auto sm:h-[290px] sm:w-[42%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
             <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
-            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-4 text-white">
+            <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
               <p className={big}>{STATS.gradeImprovement}</p>
-              <Label onMedia>of regularly active users reported grade improvements</Label>
+              <Label onMedia compact>of regularly active users reported grade improvements</Label>
             </div>
           </div>
 
-          <div className="flex aspect-square flex-col justify-between rounded-[22px] bg-navy p-5 text-white sm:absolute sm:right-0 sm:top-0 sm:justify-start sm:gap-3 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
+          <div className="col-span-2 flex flex-col gap-3 rounded-[22px] bg-navy p-5 text-white sm:absolute sm:right-0 sm:top-0 sm:justify-start sm:gap-3 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
             <p className={big}>{STATS.courses}</p>
             <Label>PAU courses with their slides already loaded</Label>
           </div>
