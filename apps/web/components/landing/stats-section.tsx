@@ -40,8 +40,8 @@ export function StatsSection() {
           {/* Second student video (owner, 27 Nov 2026): her selfie, then her tablet with the app. On phones the
               card is small, so the label is compact and the picture is shifted to keep her face clear. */}
           <div className="relative aspect-square overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[230px] sm:w-[47%] lg:h-[250px]">
-            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student opening her course on Ask Your Slides"
-              className="object-[30%_62%] sm:object-center" /* phones: her face sits between the figure and the label */ />
+            {/* 28 Nov 2026: 0:16–0:25 of the owner's new clip (studying with her notes and the app on her tablet). */}
+            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student studying with her notes and Ask Your Slides on her tablet" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
               <p className={big}>{STATS.students}</p>
               <Label onMedia compact>PAU students signed up</Label>
@@ -49,7 +49,7 @@ export function StatsSection() {
           </div>
 
           <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:h-[290px] sm:w-[40%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
-            <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student studying with her notes and Ask Your Slides on her tablet" />
+            <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-4 text-white">
               <p className={big}>{STATS.gradeImprovement}</p>
               <Label onMedia>of regularly active users reported grade improvements</Label>
