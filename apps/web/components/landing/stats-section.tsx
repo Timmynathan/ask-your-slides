@@ -49,7 +49,7 @@ export function StatsSection() {
           </div>
 
           <div className="relative row-span-2 overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:h-[290px] sm:w-[40%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
-            <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
+            <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student studying with her notes and Ask Your Slides on her tablet" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-4 text-white">
               <p className={big}>{STATS.gradeImprovement}</p>
               <Label onMedia>of regularly active users reported grade improvements</Label>
