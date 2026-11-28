@@ -47,8 +47,8 @@ export async function EmailsPanel() {
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="font-heading text-[24px] font-medium tracking-tight text-ink">Emails</h2>
-        <p className="mt-1 text-[14px] text-muted">
+        <h2 className="font-heading text-[20px] font-medium tracking-tight text-ink">Emails</h2>
+        <p className="mt-0.5 text-[13px] text-muted">
           Update emails go out every hour from the queue: students on Finals first, then the most recently active. Sign-in codes are counted here once the Supabase email hook is switched on.
         </p>
       </div>
@@ -62,11 +62,11 @@ export async function EmailsPanel() {
       </div>
 
       <section>
-        <h3 className="text-[17px] font-semibold">Sent, by email</h3>
-        <div className="mt-3 overflow-hidden rounded-2xl ring-1 ring-line">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-tint text-muted">
-              <tr><th className="px-4 py-2 font-normal">Email</th><th className="px-4 py-2 font-normal">Today</th><th className="px-4 py-2 font-normal">Last 7 days</th><th className="px-4 py-2 font-normal">All time</th></tr>
+        <h3 className="text-[14px] font-semibold">Sent, by email</h3>
+        <div className="mt-3 overflow-hidden rounded-xl bg-card ring-1 ring-line">
+          <table className="w-full text-left text-[13.5px]">
+            <thead className="bg-tint text-[11.5px] font-semibold uppercase tracking-wider text-muted">
+              <tr><th className="px-4 py-2 ">Email</th><th className="px-4 py-2 ">Today</th><th className="px-4 py-2 ">Last 7 days</th><th className="px-4 py-2 ">All time</th></tr>
             </thead>
             <tbody>
               {TYPES.map((t) => (
@@ -83,14 +83,14 @@ export async function EmailsPanel() {
       </section>
 
       <section>
-        <h3 className="text-[17px] font-semibold">Latest emails sent</h3>
+        <h3 className="text-[14px] font-semibold">Latest emails sent</h3>
         {(recent.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nothing sent yet.</p>
         ) : (
-          <div className="mt-3 max-h-[480px] overflow-auto rounded-2xl ring-1 ring-line">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="sticky top-0 bg-tint text-muted">
-                <tr>{["Sent", "Student", "Email", "Course"].map((h) => <th key={h} className="px-4 py-2 font-normal">{h}</th>)}</tr>
+          <div className="mt-3 max-h-[480px] overflow-auto rounded-xl bg-card ring-1 ring-line">
+            <table className="w-full min-w-[640px] text-left text-[13.5px]">
+              <thead className="sticky top-0 bg-tint text-[11.5px] font-semibold uppercase tracking-wider text-muted">
+                <tr>{["Sent", "Student", "Email", "Course"].map((h) => <th key={h} className="px-4 py-2 ">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {(recent.data as unknown as SRow[]).map((s) => (
@@ -110,14 +110,14 @@ export async function EmailsPanel() {
       <EmailControls courses={(courses.data ?? []) as { id: string; code: string; title: string; programme: string }[]} />
 
       <section>
-        <h3 className="text-[17px] font-semibold">Queue (latest 100)</h3>
+        <h3 className="text-[14px] font-semibold">Queue (latest 100)</h3>
         {(queue.data ?? []).length === 0 ? (
           <p className="mt-3 text-sm text-muted">Nothing queued yet.</p>
         ) : (
-          <div className="mt-3 max-h-[480px] overflow-auto rounded-2xl ring-1 ring-line">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="sticky top-0 bg-tint text-muted">
-                <tr>{["Added", "Student", "Email", "Course", "Status"].map((h) => <th key={h} className="px-4 py-2 font-normal">{h}</th>)}</tr>
+          <div className="mt-3 max-h-[480px] overflow-auto rounded-xl bg-card ring-1 ring-line">
+            <table className="w-full min-w-[720px] text-left text-[13.5px]">
+              <thead className="sticky top-0 bg-tint text-[11.5px] font-semibold uppercase tracking-wider text-muted">
+                <tr>{["Added", "Student", "Email", "Course", "Status"].map((h) => <th key={h} className="px-4 py-2 ">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {(queue.data as unknown as QRow[]).map((q) => (
@@ -140,7 +140,7 @@ export async function EmailsPanel() {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-2xl bg-card p-4 ring-1 ring-line">
+    <div className="rounded-xl bg-card p-4 ring-1 ring-line">
       <p className="text-[14px] font-medium text-muted">{label}</p>
       <p className="mt-2 text-[30px] font-semibold leading-none tracking-tight tabular-nums text-ink">{value}</p>
     </div>

@@ -82,7 +82,7 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
 
   return (
     <div className="min-h-dvh bg-page text-ink">
-      <header className="sticky top-0 z-20 bg-page/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-line/60 bg-page/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:px-6">
           <Link href="/dashboard" aria-label="My courses" className="shrink-0 whitespace-nowrap">
             <Logo size={24} />
@@ -120,32 +120,31 @@ export function AdminDashboard({ data, courses, plans, heardFrom, devices, recom
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] space-y-10 px-4 pb-24 pt-6 sm:px-6 sm:pt-10">
+      <main className="mx-auto max-w-[1400px] space-y-8 px-4 pb-24 pt-6 sm:px-6 sm:pt-8">
+        {/* Title and tabs: a quiet underline tab bar (owner, 28 Nov 2026: "don't overdo it"). */}
         <div>
-          <h1 className="font-heading text-[30px] font-medium tracking-tight text-ink sm:text-[36px]">Admin</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="font-heading text-[26px] font-medium tracking-tight text-ink sm:text-[30px]">Admin</h1>
+          <p className="mt-0.5 text-[13px] text-muted">
             {RANGES.find((r) => r.id === range)?.label} · from {when(data.from)} · updated {when(data.generated_at)} (WAT)
           </p>
-        </div>
-
-        {/* Tabs as pills, like the student dashboard's "All courses / Recently studied". */}
-        <div className="-mt-4 overflow-x-auto" role="tablist" aria-label="Dashboard sections">
-          <div className="flex min-w-max gap-1">
-            {TABS.map((x) => (
-              <button
-                key={x.id}
-                type="button"
-                role="tab"
-                id={`tab-${x.id}`}
-                aria-selected={tab === x.id}
-                aria-controls={`panel-${x.id}`}
-                onClick={() => open(x.id)}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-[15px] transition active:scale-95 ${tab === x.id ? "bg-brand font-medium text-brand-ink" : "text-ink hover:bg-sunken"}`}
-              >
-                {x.label}
-                {x.id === "health" && withProblems > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 text-xs text-red-800">{withProblems}</span>}
-              </button>
-            ))}
+          <div className="mt-5 overflow-x-auto border-b border-line" role="tablist" aria-label="Dashboard sections">
+            <div className="flex min-w-max gap-6">
+              {TABS.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  role="tab"
+                  id={`tab-${x.id}`}
+                  aria-selected={tab === x.id}
+                  aria-controls={`panel-${x.id}`}
+                  onClick={() => open(x.id)}
+                  className={`-mb-px whitespace-nowrap border-b-2 pb-2.5 pt-1 text-[14.5px] transition ${tab === x.id ? "border-brand font-medium text-ink" : "border-transparent text-muted hover:text-ink"}`}
+                >
+                  {x.label}
+                  {x.id === "health" && withProblems > 0 && <span className="ml-1.5 rounded-full bg-red-50 px-1.5 text-xs text-red-800">{withProblems}</span>}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -319,7 +318,7 @@ function Courses({ courses }: { courses: CourseRow[] }) {
   }, [courses, active]);
   const asked = courses.filter((c) => c.questions > 0).length;
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <SectionTitle
         title="Courses"
         note={`${asked} of ${courses.length} courses had questions in this period. Students are counted per course, so one student can appear in several.`}
@@ -336,9 +335,9 @@ function Courses({ courses }: { courses: CourseRow[] }) {
       />
       {groups.length === 0 && <Empty>No questions in this period.</Empty>}
       {groups.map((g) => (
-        <div key={g.department} className="rounded-[22px] bg-sunken/60 pt-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pb-1">
-            <h3 className="text-[17px] font-medium">{g.department}</h3>
+        <div key={g.department} className="overflow-hidden rounded-xl bg-card ring-1 ring-line">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-3">
+            <h3 className="text-[15px] font-semibold">{g.department}</h3>
             <p className="text-xs tabular-nums text-muted">
               {n(g.questions)} questions · {usd(g.cost)}
             </p>
@@ -347,7 +346,7 @@ function Courses({ courses }: { courses: CourseRow[] }) {
             compact
             head={["Course", "Students", "Questions", "Cost", "Up", "Down", "Thumbs up"]}
             rows={g.rows.map((c) => [
-              <span key="c" className={c.questions ? "" : "text-muted"}>
+              <span key="c" className={c.questions ? "text-ink" : "text-muted"}>
                 <span className="font-medium">{c.code.replace(/^([A-Z]+)/, "$1 ")}</span> <span className="text-muted">{c.title}</span>
               </span>,
               n(c.students),
@@ -428,7 +427,7 @@ function RecommendAnswers({ rows }: { rows: RecommendStats["responses"] }) {
       {rows.length === 0 ? (
         <Empty>Nothing yet.</Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card ring-1 ring-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl bg-card ring-1 ring-line">
           {rows.map((r, i) => (
             <li key={i} className="flex items-start gap-4 px-5 py-4">
               <span className="w-14 shrink-0 text-lg tabular-nums text-ink">{r.score}/10</span>
@@ -455,7 +454,7 @@ function GeneralFeedback({ rows }: { rows: AppFeedbackRow[] }) {
       {rows.length === 0 ? (
         <Empty>Nothing yet.</Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card ring-1 ring-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl bg-card ring-1 ring-line">
           {rows.map((r) => (
             <li key={r.id} className="px-5 py-4">
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -509,7 +508,7 @@ function Feedback({ data }: { data: Overview }) {
             <ul className="space-y-2">
               {items.map((f, i) => (
                 <li key={i}>
-                  <details className="group rounded-2xl bg-card px-4 py-3 ring-1 ring-line">
+                  <details className="group rounded-xl bg-card px-4 py-3 ring-1 ring-line">
                     <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-800">{REASON[f.reason ?? "no reason"] ?? f.reason}</span>
                       <span className="min-w-0 flex-1 truncate text-[15px]">{f.question ?? "(question not logged)"}</span>
@@ -538,8 +537,8 @@ function Feedback({ data }: { data: Overview }) {
 function Answers({ range }: { range: Range }) {
   // One page at a time from /api/admin/answers: every student answer in the period, with the
   // filter and search applied to all of them (owner, 21 Nov 2026).
-  // Opens on "Needs attention" (owner, 23 Nov 2026): the answers worth a look, each with its reasons.
-  const [filter, setFilter] = useState<"attention" | "all" | "down" | "errors" | "slow">("attention");
+  // Opens on "All" (owner, 28 Nov 2026; was "Needs attention" from 23 Nov).
+  const [filter, setFilter] = useState<"attention" | "all" | "down" | "errors" | "slow">("all");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState(""); // the search, once typing pauses
   const [page, setPage] = useState(1);
@@ -578,8 +577,8 @@ function Answers({ range }: { range: Range }) {
       <div className="flex flex-wrap items-center gap-1.5">
         {(
           [
-            ["attention", "Needs attention"],
             ["all", "All"],
+            ["attention", "Needs attention"],
             ["down", "Thumbs down"],
             ["errors", "With problems"],
             ["slow", "Slower than 15 s"],
@@ -602,7 +601,7 @@ function Answers({ range }: { range: Range }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search questions, courses, students"
           aria-label="Search answers"
-          className="ml-auto h-9 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
+          className="ml-auto h-9 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-line outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
         />
       </div>
       {loading && !items.length ? (
@@ -610,10 +609,10 @@ function Answers({ range }: { range: Range }) {
       ) : items.length === 0 ? (
         <Empty>No answers match.</Empty>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {items.map((r) => (
             <li key={r.id}>
-              <details className="rounded-2xl bg-card px-4 py-3 ring-1 ring-line">
+              <details className="rounded-xl bg-card px-4 py-2.5 ring-1 ring-line">
                 <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="grid w-5 place-items-center text-muted" aria-label={r.rating === 1 ? "thumbs up" : r.rating === -1 ? "thumbs down" : "not rated"}>
                     {r.rating === 1 ? <ThumbsUp size={14} absoluteStrokeWidth strokeWidth={1.5} aria-hidden /> : r.rating === -1 ? <ThumbsDown size={14} absoluteStrokeWidth strokeWidth={1.5} className="text-red-700" aria-hidden /> : "·"}
@@ -756,11 +755,9 @@ function Students({ data }: { data: Overview }) {
     last_active: s.last_active ?? "",
     joined: s.joined,
   }));
-  const chip = (active: boolean) =>
-    `inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] transition ${active ? "bg-navy text-white" : "bg-card text-ink ring-1 ring-line hover:bg-sunken"}`;
 
   return (
-    <section id="students" className="scroll-mt-24 space-y-5">
+    <section id="students" className="scroll-mt-24 space-y-4">
       <SectionTitle
         title="Students"
         note={`${n(rows.length)} of ${n(all.length)} students, newest first. Questions and cost are for the selected period; the rest is all-time.`}
@@ -768,15 +765,15 @@ function Students({ data }: { data: Overview }) {
       />
 
       {/* Where students are in getting started: tap one to see only those students. */}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setStage("")} className={chip(stage === "")}>
-          All <span className={stage === "" ? "text-white/70" : "text-muted"}>{n(all.length)}</span>
-        </button>
+      <div className="flex flex-wrap gap-1.5">
+        <Chip on={stage === ""} onClick={() => setStage("")}>
+          All <span className="ml-1 opacity-60">{n(all.length)}</span>
+        </Chip>
         {STAGES.map((st) => (
-          <button key={st.id} type="button" onClick={() => setStage(stage === st.id ? "" : st.id)} className={chip(stage === st.id)}>
-            <span className={`h-2 w-2 rounded-full ${st.dot}`} aria-hidden />
-            {st.short} <span className={stage === st.id ? "text-white/70" : "text-muted"}>{n(counts[st.id])}</span>
-          </button>
+          <Chip key={st.id} on={stage === st.id} onClick={() => setStage(stage === st.id ? "" : st.id)}>
+            <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${st.dot}`} aria-hidden />
+            {st.short} <span className="ml-1 opacity-60">{n(counts[st.id])}</span>
+          </Chip>
         ))}
       </div>
 
@@ -787,13 +784,13 @@ function Students({ data }: { data: Overview }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by email or name"
           aria-label="Search students"
-          className="h-10 w-full rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200 sm:w-80"
+          className="h-9 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-line outline-none focus:ring-2 focus:ring-pau-200 sm:w-72"
         />
         <select
           value={dept}
           onChange={(e) => setDept(e.target.value)}
           aria-label="Filter by department"
-          className="h-10 rounded-full bg-sunken px-4 text-sm outline-none focus:ring-2 focus:ring-pau-200"
+          className="h-9 w-full rounded-lg bg-card px-3 text-sm ring-1 ring-line outline-none focus:ring-2 focus:ring-pau-200 sm:w-60"
         >
           <option value="">All departments</option>
           {departments.map((d) => (
@@ -804,63 +801,62 @@ function Students({ data }: { data: Overview }) {
         </select>
       </div>
 
+      {/* One line per student (owner, 28 Nov 2026: a list again, compact, about 15 on the first screen). */}
       {rows.length === 0 ? (
-        <p className="rounded-2xl bg-card p-6 text-center text-sm text-muted ring-1 ring-line">No students match.</p>
+        <Empty>No students match.</Empty>
       ) : (
-        <ul className="space-y-2.5">
-          {rows.map((s) => {
-            const st = STAGES.find((x) => x.id === s.stage.id)!;
-            const initial = (s.name?.trim()[0] ?? s.email[0] ?? "?").toUpperCase();
-            const detail =
-              s.stage.id === "code" && s.signin?.codeSentAt
-                ? `last code sent ${when(s.signin.codeSentAt)}`
-                : s.stage.id !== "active" && s.signin?.lastSignIn
-                  ? `last signed in ${when(s.signin.lastSignIn)}`
-                  : s.last_active
-                    ? `last active ${when(s.last_active)}`
-                    : null;
-            return (
-              <li key={s.email} className="rounded-2xl bg-card p-4 ring-1 ring-line sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-                  <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-pau-100 font-heading text-[17px] text-brand" aria-hidden>
-                      {initial}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-medium text-ink">{s.name ?? <span className="text-muted">No name yet</span>}</span>
-                        {s.department && <span className="rounded-full bg-sunken px-2 py-0.5 text-[11.5px] text-muted">{s.department}</span>}
-                        {s.signin?.microsoft && <span className="rounded-full bg-sunken px-2 py-0.5 text-[11.5px] text-muted">Microsoft</span>}
-                      </p>
-                      {/* The full email, never cut short; one click selects it to copy. */}
-                      <p className="mt-0.5 select-all break-all text-[14px] text-ink/80">{s.email}</p>
-                      <p className={`mt-2 flex flex-wrap items-center gap-x-2 text-[13px] ${st.text}`}>
+        <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-line">
+          <table className="w-full min-w-[980px] text-left text-[13.5px]">
+            <thead>
+              <tr className="whitespace-nowrap border-b border-line bg-tint/60 text-[11.5px] font-semibold uppercase tracking-wider text-muted">
+                <th className="px-4 py-2">Name</th>
+                <th className="px-4 py-2">Email</th>
+                <th className="px-4 py-2">Where they are</th>
+                <th className="px-4 py-2">Department</th>
+                <th className="px-4 py-2 text-right">Questions</th>
+                <th className="px-4 py-2 text-right">All time</th>
+                <th className="px-4 py-2 text-right">Cost</th>
+                <th className="px-4 py-2">Last active</th>
+                <th className="px-4 py-2">Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((s) => {
+                const st = STAGES.find((x) => x.id === s.stage.id)!;
+                const detail =
+                  s.stage.id === "code" && s.signin?.codeSentAt
+                    ? `last code sent ${when(s.signin.codeSentAt)}`
+                    : s.signin?.lastSignIn
+                      ? `last signed in ${when(s.signin.lastSignIn)}`
+                      : "";
+                return (
+                  <tr key={s.email} className="border-t border-line/70 first:border-t-0 hover:bg-tint/50">
+                    <td className="max-w-[12rem] truncate px-4 py-2 font-medium text-ink" title={s.name ?? undefined}>
+                      {s.name ?? <span className="font-normal text-muted">—</span>}
+                    </td>
+                    {/* The full email, never cut short; one click selects it to copy. */}
+                    <td className="whitespace-nowrap px-4 py-2 text-ink/80">
+                      <span className="select-all">{s.email}</span>
+                      {s.signin?.microsoft && <span className="ml-2 rounded bg-sunken px-1.5 py-0.5 text-[10.5px] text-muted" title="Has signed in with Microsoft">MS</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2" title={[s.stage.label, detail].filter(Boolean).join(" · ")}>
+                      <span className={`inline-flex items-center gap-1.5 ${st.text}`}>
                         <span className={`h-2 w-2 rounded-full ${st.dot}`} aria-hidden />
-                        <span className="font-medium">{s.stage.label}</span>
-                        {detail && <span className="text-muted">· {detail}</span>}
-                      </p>
-                    </div>
-                  </div>
-                  <dl className="grid shrink-0 grid-cols-3 gap-x-5 gap-y-2 text-[12.5px] sm:grid-cols-6 lg:w-[40rem]">
-                    {[
-                      ["Questions", `${n(s.questions)}`],
-                      ["All time", n(s.questions_all_time)],
-                      ["Cost", usd(s.cost_usd)],
-                      ["Helping", s.helping != null ? `${s.helping}/5` : "—"],
-                      ["Partner", s.partner ? PARTNER[s.partner] ?? s.partner : "—"],
-                      ["Joined", when(s.joined)],
-                    ].map(([k, v]) => (
-                      <div key={k} className="min-w-0">
-                        <dt className="text-muted">{k}</dt>
-                        <dd className="whitespace-nowrap font-medium text-ink">{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                        {s.stage.id === "active" ? s.stage.label : st.short}
+                      </span>
+                    </td>
+                    <td className="max-w-[11rem] truncate px-4 py-2 text-muted" title={s.department ?? undefined}>{s.department ?? "—"}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{n(s.questions)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{n(s.questions_all_time)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{usd(s.cost_usd)}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-muted">{when(s.last_active)}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-muted">{when(s.joined)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );
@@ -882,7 +878,7 @@ const TONE: Record<Tone, { icon: string; value: string }> = {
 /** A headline number: big, bold, tabular, with an icon. */
 function Hero({ icon: Icon, label, value, sub, tone = "plain" }: { icon: LucideIcon; label: string; value: string; sub?: string; tone?: Tone }) {
   return (
-    <div className="rounded-2xl bg-card p-5 ring-1 ring-line sm:p-6">
+    <div className="rounded-xl bg-card p-5 ring-1 ring-line sm:p-6">
       <div className="flex items-center gap-2.5">
         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONE[tone].icon}`}>
           <Icon size={18} absoluteStrokeWidth strokeWidth={1.75} aria-hidden />
@@ -898,7 +894,7 @@ function Hero({ icon: Icon, label, value, sub, tone = "plain" }: { icon: LucideI
 /** A labelled group of smaller numbers, one card. */
 function MetricGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl bg-card p-5 ring-1 ring-line">
+    <div className="rounded-xl bg-card p-5 ring-1 ring-line">
       <h3 className="mb-1 text-[13px] font-semibold uppercase tracking-wider text-muted">{title}</h3>
       <div className="divide-y divide-line/70">{children}</div>
     </div>
@@ -924,8 +920,8 @@ function Tile({ icon: Icon, label, value, sub, tone = "plain" }: { icon: LucideI
 
 function Card({ title, children, className = "" }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl bg-card p-5 ring-1 ring-line ${className}`}>
-      <h3 className="mb-4 text-[15px] font-semibold text-ink">{title}</h3>
+    <div className={`rounded-xl bg-card p-5 ring-1 ring-line ${className}`}>
+      <h3 className="mb-4 text-[14px] font-semibold text-ink">{title}</h3>
       {children}
     </div>
   );
@@ -933,10 +929,10 @@ function Card({ title, children, className = "" }: { title: string; children: Re
 
 function SectionTitle({ title, note, action }: { title: string; note?: string; action?: React.ReactNode }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+    <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
       <div>
-        <h2 className="font-heading text-[24px] font-medium tracking-tight text-ink">{title}</h2>
-        {note && <p className="mt-1 text-[14px] text-muted">{note}</p>}
+        <h2 className="font-heading text-[20px] font-medium tracking-tight text-ink">{title}</h2>
+        {note && <p className="mt-0.5 text-[13px] text-muted">{note}</p>}
       </div>
       {action}
     </div>
@@ -946,12 +942,12 @@ function SectionTitle({ title, note, action }: { title: string; note?: string; a
 function Table({ head, rows, compact = false, empty = "Nothing yet." }: { head: string[]; rows: React.ReactNode[][]; compact?: boolean; empty?: string }) {
   if (rows.length === 0) return <Empty>{empty}</Empty>;
   return (
-    <div className={`overflow-x-auto ${compact ? "" : "rounded-2xl bg-card ring-1 ring-line"}`}>
-      <table className="w-full text-left text-sm">
+    <div className={`overflow-x-auto ${compact ? "" : "rounded-xl bg-card ring-1 ring-line"}`}>
+      <table className="w-full text-left text-[13.5px]">
         <thead>
-          <tr className="text-[12px] font-semibold uppercase tracking-wider text-muted">
+          <tr className="bg-tint/60 text-[11.5px] font-semibold uppercase tracking-wider text-muted">
             {head.map((h, i) => (
-              <th key={h} className={`whitespace-nowrap px-4 py-2.5 ${numericColumn(rows, i) ? "text-right" : ""}`}>
+              <th key={h} className={`whitespace-nowrap px-4 py-2 ${numericColumn(rows, i) ? "text-right" : ""}`}>
                 {h}
               </th>
             ))}
@@ -959,9 +955,9 @@ function Table({ head, rows, compact = false, empty = "Nothing yet." }: { head: 
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-t border-line/70 hover:bg-tint/60">
+            <tr key={i} className="border-t border-line/70 hover:bg-tint/50">
               {r.map((c, j) => (
-                <td key={j} className={`whitespace-nowrap px-4 py-2.5 ${j === 0 ? "text-muted" : ""} ${numericColumn(rows, j) ? "text-right tabular-nums" : ""}`}>
+                <td key={j} className={`whitespace-nowrap px-4 py-2 ${j === 0 ? "text-muted" : ""} ${numericColumn(rows, j) ? "text-right tabular-nums" : ""}`}>
                   {c}
                 </td>
               ))}
@@ -993,7 +989,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick(): void; childre
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`rounded-full px-3 py-1.5 text-[13px] transition active:scale-95 ${on ? "bg-brand text-brand-ink" : "bg-sunken text-ink hover:bg-pau-100"}`}
+      className={`inline-flex items-center rounded-full px-3 py-1 text-[13px] transition active:scale-95 ${on ? "bg-navy text-white" : "bg-card text-ink ring-1 ring-line hover:bg-sunken"}`}
     >
       {children}
     </button>
@@ -1002,7 +998,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick(): void; childre
 
 function DownloadButton({ onClick }: { onClick(): void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95">
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-[13px] text-ink ring-1 ring-line-strong transition hover:bg-sunken active:scale-95">
       <Download size={15} absoluteStrokeWidth strokeWidth={1.5} aria-hidden />
       Download CSV
     </button>
@@ -1010,5 +1006,5 @@ function DownloadButton({ onClick }: { onClick(): void }) {
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted ring-1 ring-line">{children}</p>;
+  return <p className="rounded-xl bg-card px-4 py-6 text-center text-sm text-muted ring-1 ring-line">{children}</p>;
 }
