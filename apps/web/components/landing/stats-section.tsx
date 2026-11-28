@@ -42,7 +42,7 @@ export function StatsSection() {
               card is small, so the label is compact and the picture is shifted to keep her face clear. */}
           <div className="relative aspect-[3/4] overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-0 sm:top-0 sm:aspect-auto sm:h-[290px] sm:w-[42%] lg:h-[310px]">
             {/* 28 Nov 2026: 0:16–0:25 of the owner's new clip (studying with her notes and the app on her tablet). */}
-            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student studying with her notes and Ask Your Slides on her tablet" />
+            <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
               <p className={big}>{STATS.students}</p>
               <Label onMedia compact>PAU students signed up</Label>
@@ -50,7 +50,7 @@ export function StatsSection() {
           </div>
 
           <div className="relative aspect-[3/4] overflow-hidden rounded-[22px] bg-navy sm:absolute sm:left-[38%] sm:top-[135px] sm:z-10 sm:aspect-auto sm:h-[290px] sm:w-[42%] sm:ring-4 sm:ring-page lg:top-[150px] lg:h-[310px]">
-            <StatVideo src="/social/peer-1.mp4" poster="/social/peer-1-poster.webp" label="A PAU student revising with Ask Your Slides" />
+            <StatVideo src="/social/peer-2.mp4" poster="/social/peer-2-poster.webp" label="A PAU student studying with her notes and Ask Your Slides on her tablet" />
             <div className="pointer-events-none absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/35 via-transparent to-transparent p-5 text-white">
               <p className={big}>{STATS.gradeImprovement}</p>
               <Label onMedia compact>of regularly active users reported grade improvements</Label>
